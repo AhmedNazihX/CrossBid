@@ -9,7 +9,7 @@ Pre-code. The repository holds two documents and nothing else:
 - `135.md` — the course brief (Sprint capstone: build an AI agent with LangGraph/LangChain, OpenAI API, Streamlit or Next.js). Graded on problem definition, understanding of agent concepts, technical implementation, and reflection. Bonus requires at least 2 medium and 1 hard optional task.
 - `project.md` — the project spec for **Crossbid**, a cross-border EU tender go/no-go qualification agent for SMEs. Sections 3 and 4 describe the intended LangGraph graph and tech stack; section 5 maps the brief's optional tasks; section 9 logs decisions.
 
-There are no build, lint, or test commands yet. When the code lands, add them here. Intended layout: `backend/` (FastAPI, `uv`, own pyproject and Dockerfile), `frontend/` (Next.js, own package.json and Dockerfile), `infra/` (Docker Compose), `docs/`. The two apps share nothing but the OpenAPI contract, which generates `frontend/lib/api.ts`. Full tree and layering rules are in `docs/project-plan.md` → Repository layout.
+There are no build, lint, or test commands yet. When the code lands, add them here. Intended layout: `backend/` (FastAPI, `uv`, own pyproject and Dockerfile), `frontend/` (Next.js, own package.json and Dockerfile), `infra/` (Docker Compose), `docs/`, plus a root `Makefile` (`dev`, `test`, `lint`, `deps`, `deps-check`, `migrate`, `eval`) and `scripts/gen_dependencies.py`, which writes the generated `dependencies.txt` from `backend/uv.lock` and `frontend/package-lock.json`. The two apps share nothing but the OpenAPI contract, which generates `frontend/lib/api.ts`. Full tree and layering rules are in `docs/project-plan.md` → Repository layout.
 
 ## Settled product decisions (do not reopen without new facts)
 
@@ -50,7 +50,7 @@ These were checked against live endpoints; rely on them rather than re-deriving.
 - Never add "Co-Authored-By" lines to commits or include Claude attribution in commit messages and PR descriptions.
 - Do NOT Commit any secrets — no API keys, passwords, or tokens in the files.
 - Never Push without my approval first.
-- After any dependency change, regenerate `dependencies.txt` with `make deps` (or `python3 scripts/gen_dependencies.py`) — never edit it by hand. `make lint` runs `make deps-check`, which fails on drift, so a stale file will be caught; adding a dependency and not regenerating went unnoticed for two work packages before that guard existed.
-- Don't add any external libraries or packages without asking me first.
+- After any dependency change, regenerate `dependencies.txt` with `make deps` (or `python3 scripts/gen_dependencies.py`) — never edit it by hand.
+- Don't add any external libraries or packages without asking me first. Exception: everything named in the tech stack and settled decisions of `docs/project-plan.md` is pre-approved (user, 2026-09-10); anything outside that list needs a question first.
 - Never delete anything without asking for permission while providing a sentance summary of why you are deleting it.
 - If anything is unclear, ask me a question before making assumptions.

@@ -111,6 +111,10 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 ├── infra/
 │   ├── docker-compose.yml            postgres+pgvector, api, web
 │   └── .env.example
+├── scripts/
+│   └── gen_dependencies.py           reads backend/uv.lock + frontend/package-lock.json → dependencies.txt
+├── Makefile                          dev · test · lint (runs deps-check) · deps · migrate · eval
+├── dependencies.txt                  generated manifest of every third-party package, both apps; never hand-edited
 ├── docs/
 │   ├── project-plan.md               this file
 │   ├── architecture.md               graph diagram, agent-vs-workflow explanation
@@ -208,9 +212,11 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 - **S0.1.2** (M) *As a maintainer, I want one command to start Postgres with pgvector, the API, and the web app, so that local development mirrors the deployed topology.* `needs S0.1.1`
   - Given `.env` copied from `infra/.env.example`, when I run `docker compose up`, then the API answers on :8000, the web app on :3000, and Postgres has the `vector` extension.
   - Given the README, then `dev`, `test`, `migrate`, and `eval` tasks are documented and work.
-- **S0.1.3** (S) *As a maintainer, I want linting, type checks, and test runners configured, so that quality checks run identically on every machine.* `needs S0.1.1`
-  - Given the empty skeleton, when I run `ruff`, `pyright`, `pytest`, and `npm run lint`, then all pass.
-  - Given a commit, then a pre-commit hook runs ruff and prettier.
+- **S0.1.3** (M) *As a maintainer, I want linting, type checks, test runners, and a dependency manifest guard configured, so that quality checks run identically on every machine and no dependency change goes unrecorded.* `needs S0.1.1`
+  - Given the empty skeleton, when I run `make lint`, then ruff, pyright, `npm run lint`, and `make deps-check` all pass.
+  - Given a dependency added to `backend/pyproject.toml` or `frontend/package.json`, when I run `make deps`, then `scripts/gen_dependencies.py` rewrites `dependencies.txt` at the repo root from `backend/uv.lock` and `frontend/package-lock.json` with name, version, and owning app; running `make lint` without `make deps` fails on drift.
+  - Given a commit, then a pre-commit hook runs ruff, prettier, and `make deps-check`.
+  - Notes: `dependencies.txt` is generated, never edited by hand (rule in CLAUDE.md).
 
 **F0.2 Database and persistence** — one EU Postgres holds app data, vectors, checkpoints, and the long-term store.
 

@@ -265,7 +265,7 @@ Order inside each lane is the intended execution order. `needs` lists hard prere
 |---|---|---|---|---|
 | gate | 1 | S0.1.1 layout, uv, create-next-app, shadcn | S | — |
 | gate | 2 | S0.1.2 docker-compose, env, task runner | M | — |
-| gate | 3 | S0.1.3 ruff, pyright, pytest, eslint, pre-commit | S | — |
+| gate | 3 | S0.1.3 ruff, pyright, pytest, eslint, pre-commit, `make deps` / `deps-check` guard | M | — |
 | gate | 4 | S0.2.1 Supabase EU project, bucket, migrations runner | M | — |
 | gate | 5 | S0.2.2 db.py pool, checkpointer + store factories | M | S0.2.1 |
 | gate | 6 | S0.2.3 read-model tables incl. provider_keys, llm_usage | M | S0.2.1 |
