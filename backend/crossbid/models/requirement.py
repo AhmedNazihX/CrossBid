@@ -1,0 +1,145 @@
+"""What a tender demands of a bidder.
+
+A `Requirement` is one obligation, quoted verbatim from the source-language document with the
+page it came from, so the reviewer can always open the paragraph the agent read.
+
+Three of the fields here exist because the SP.1 spike measured what happens without them
+(ADR-0003) — `stage`, `checkable`, and `threshold`. They are not speculative.
+"""
+
+from __future__ import annotations
+
+from datetime import date
+from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from crossbid.models.ecertis_criteria import EcertisCriterionId
+
+MAX_QUOTE_CHARS = 2000
+
+
+class RequirementCategory(StrEnum):
+    """Which part of the qualification decision this requirement belongs to."""
+
+    FORMAL = "formal"
+    ECONOMIC_FINANCIAL = "economic_financial"
+    TECHNICAL_PROFESSIONAL = "technical_professional"
+    EXCLUSION_GROUND = "exclusion_ground"
+    OTHER = "other"
+
+
+class RequirementKind(StrEnum):
+    """How badly non-compliance hurts."""
+
+    MANDATORY = "mandatory"
+    OPTIONAL = "optional"
+    INFORMATIONAL = "informational"
+
+
+class RequirementStage(StrEnum):
+    """When the obligation bites.
+
+    The test is: *would the company still have to do this if it never won the contract?*
+    If no, it is `CONTRACT_PERFORMANCE` and it does not belong in a go/no-go matrix.
+
+    Without this discriminator the SP.1 spike extracted 579 "mandatory" requirements from one
+    tender, because the AGB, EVB-IT, VOL/B, framework agreement and data-processing agreement
+    are all genuinely phrased as obligations. Adding it cut the set to 238 with no loss of
+    recall (ADR-0003).
+    """
+
+    BID_ELIGIBILITY = "bid_eligibility"
+    CONTRACT_PERFORMANCE = "contract_performance"
+
+
+class Checkability(StrEnum):
+    """Whether evidence can settle this requirement at all.
+
+    SP.1's first checking round returned `unclear` for all eight rows it tried, because they
+    were all document-submission duties and no corpus of company facts can establish "we
+    submitted form X". Only `COMPANY_PROPERTY` rows are worth spending tool calls on;
+    `DOCUMENT_SUBMISSION` rows go to the reviewer as "attach this" (ADR-0003).
+    """
+
+    COMPANY_PROPERTY = "company_property"
+    DOCUMENT_SUBMISSION = "document_submission"
+    NEITHER = "neither"
+
+
+class ThresholdComparator(StrEnum):
+    """How a measured value is compared with the required one."""
+
+    AT_LEAST = "at_least"
+    AT_MOST = "at_most"
+    MAX_AGE = "max_age"
+    EQUALS = "equals"
+
+
+class ThresholdUnit(StrEnum):
+    """What is being measured. Closed, because a free-text unit cannot be compared."""
+
+    CURRENCY = "currency"
+    FTE = "fte"
+    HEADCOUNT = "headcount"
+    PERSON_DAYS = "person_days"
+    REFERENCES = "references"
+    YEARS = "years"
+    PERCENT = "percent"
+
+
+class Threshold(BaseModel):
+    """A number the bidder must clear.
+
+    Every quantified requirement in the German fixture reduced to one of these — turnover
+    >= EUR 3,000,000 per year, >= 29 FTE, >= 25 person-days, references no older than 3 years.
+    Keeping it typed is what lets the scorer compare rather than ask a model to judge.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    comparator: ThresholdComparator
+    value: float
+    unit: ThresholdUnit
+    currency: str | None = Field(
+        default=None,
+        description="ISO 4217 code, set only when unit is CURRENCY",
+        min_length=3,
+        max_length=3,
+    )
+    period: str | None = Field(
+        default=None, description="e.g. 'per_year', 'last_three_fiscal_years'"
+    )
+
+
+class Requirement(BaseModel):
+    """One obligation, with the evidence trail back to the page it was read from."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str
+    bid_id: str
+
+    category: RequirementCategory
+    kind: RequirementKind
+    stage: RequirementStage
+    checkable: Checkability
+
+    source_text: str = Field(
+        max_length=MAX_QUOTE_CHARS,
+        description="Verbatim quote in the tender's own language. Never paraphrased.",
+    )
+    source_lang: str = Field(min_length=2, max_length=5, description="BCP 47, e.g. 'de'")
+    document_name: str = Field(description="File the quote came from, for the citation")
+    page: int = Field(ge=1, description="1-indexed, so it matches what the PDF viewer shows")
+
+    translation: str | None = Field(
+        default=None, description="Bidder-language rendering; None until translated"
+    )
+
+    # Typed against the generated eCertis Literal (S1.1.3), so the extractor cannot invent an
+    # id. Nullable because most requirements map to no ESPD criterion at all.
+    ecertis_criterion_id: EcertisCriterionId | None = None
+
+    threshold: Threshold | None = None
+    deadline: date | None = None

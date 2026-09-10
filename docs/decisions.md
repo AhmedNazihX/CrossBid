@@ -550,3 +550,114 @@ The lesson worth carrying: real API data is a weak test of merge and ordering lo
 is accidentally well-behaved. The bugs appeared only under hand-built adversarial fixtures and
 shuffled input. Later stories that merge or deduplicate — the extraction dedupe pass in S3.2.1
 above all — should be tested the same way.
+
+---
+
+## ADR-0008 — Contracts, parsing, chunking and settings
+
+**Date:** 2026-09-10 · **Stories:** S0.4.1, S0.3.2, S0.3.3, S2.1.1, S2.1.3 · **Status:** accepted
+
+Four decisions from the same batch of work. Grouped because each is small on its own and they
+share one theme: putting invariants somewhere a later story cannot quietly violate them.
+
+### Invariants live in the models, not in the callers (S0.4.1)
+
+`crossbid/models/` is the contract layer, and the rules that matter are enforced by validators
+rather than trusted to graph nodes:
+
+- **A `MET` row must carry a citation or an attached document.** This is the product's central
+  promise — every matrix cell cites or says unclear. A row the agent believes is satisfied but
+  cannot cite is `UNCLEAR`, which routes it to a human instead of counting towards a `go`.
+- **A blocking gap forces `no_go`, and `no_go` requires a blocking gap.** A verdict that
+  contradicts its own gap list would mislead the reviewer, and the reviewer is the safety
+  boundary.
+- **An override requires a reason**, because the review record is the audit trail.
+- **A weighted score below the buyer's threshold must appear as a blocking gap** (ADR-0006),
+  or a bid could be recommended while sitting below the buyer's own cut-off.
+
+SP.1's findings are now types rather than prose: `RequirementStage` and `Checkability` carry the
+reasoning from ADR-0003 in their docstrings, and `ecertis_criterion_id` is typed against the
+generated 56-id Literal so the extractor cannot invent a criterion.
+
+Two structural tests exist because nothing else would catch their failures: one asserts
+`models/` imports nothing else from `crossbid` (a stray import would compile, pass every other
+test, and invert the layering), and one asserts the criterion annotation has not silently
+degraded to `str | None`.
+
+### Parsing is a Protocol so Docling can slot in, and unread pages are stated twice (S2.1.1)
+
+`Parser` is a `runtime_checkable` Protocol taking `Path | bytes` (so an upload needs no temp
+file) and returning `ParsedDocument`. No backend types appear in the signature, and every
+library exception is funnelled into one `ParserError`, so a caller never catches a pymupdf
+error and swapping implementations changes no call site.
+
+The decision worth recording: **`ParsedDocument` validates that `pages` is the complete run
+1..N, and `unread_pages` is a computed field derived from `pages`.** A second implementation
+cannot *disagree* about which pages were readable, because it does not get to say. That is what
+makes S2.1.2's "the page count and shape match the default parser" checkable rather than
+hopeful. An unread page stays in `pages` with empty text **and** appears in `unread_pages` —
+listed twice, never dropped, because OCR was cut and "we could not read it" is the honest
+terminal state.
+
+**The trap this uncovered:** `pymupdf4llm` returns `"\n\n\n\n"` for an image-only page, not
+`""`. A `text != ""` check would have called it readable and emitted a chunk of whitespace —
+and ADR-0003's cheerful "zero text-free pages" would have hidden it, because no real fixture
+has such a page. It was found only by *building* one. Recorded in `CLAUDE.md`.
+
+### A chunk cites the page it starts on (S2.1.3)
+
+`Chunk.pages` is every page the text came from; `Chunk.page` is `pages[0]`. First page, not
+majority share: the reviewer opens one page and reads forward from the top of the retrieved
+passage, and the passage begins there. A majority page can sit past the beginning of the
+evidence, which is the wrong place to land someone. `pages` stays honest when pages are not
+adjacent — if only the middle of three pages was unreadable, a chunk cites `(1, 3)`.
+
+Measured with the 800/100 defaults: DE 191 pages → 202 chunks, 174 of them exactly 800 tokens;
+FR 25 → 25; EN 138 → 109. **Zero non-final chunks fall outside ±10% of target** across all 28
+DE documents; the 28 short chunks are exactly the 28 document tails, which is arithmetic rather
+than a defect.
+
+`cl100k_base` is pinned by name, because it is exact for `openai/text-embedding-3-small` — the
+only consumer with a hard limit — while `encoding_for_model` raises `KeyError` on an OpenRouter
+slug. Since `get_encoding` downloads its table on first use, the chunker takes an injectable
+encoder so tests stay offline.
+
+### Settings: secrets and behaviour never overlap (S0.3.2, S0.3.3)
+
+Precedence is `settings.default.yaml` → `app_settings` row for **behaviour**, and environment →
+root `.env` for **secrets and wiring**. The two sets of keys are disjoint, so "which one wins"
+is never a judgement call. `RuntimeSettings` uses `extra="forbid"`, so a typo'd YAML key fails
+at startup instead of doing nothing.
+
+- Secrets are `SecretStr` and a test asserts no key appears in `repr`, `str`, or a JSON dump —
+  including a password embedded in `DATABASE_URL`.
+- Fail-fast messages are built from the error's *location*, never its input, so a bad value
+  cannot leak through a validation error.
+- **The transaction-pooler guard** refuses a DSN only when the host ends `.pooler.supabase.com`
+  *and* the port is 6543, or when `pgbouncer=true` is present. Port 6543 alone is not the
+  signal, because a local database could legitimately be mapped there. Compose, CI, the direct
+  connection and the session pooler all pass; the message names the session pooler as the fix
+  and prints only `host:port`, never credentials.
+- `AUTH_MODE=dev` with `ENV=production` is refused at startup, and `ENV` is a closed enum so
+  `ENV=prod` fails rather than quietly meaning "not production" and letting dev auth through.
+- The no-key tracing path writes `false` to all four LangSmith flags and logs nothing —
+  asserted with `caplog.records == []`. Writing only one flag would let a developer's stale
+  exported value win.
+- The `app_settings` override is implemented as a pure merge returning a **new** `Settings`;
+  only the database *fetch* is left unimplemented, typed and pointing at S0.2.3.
+
+### Consequences
+
+- 334 tests, 100% line and branch coverage, all offline.
+- Six defects in the config files were found by the story that consumed them, and fixed:
+  `settings.default.yaml` had no `system_prompt` despite S0.3.2 asking for one (now present,
+  and it is where the untrusted-data rule is stated to the model); `.env.example` did not
+  document `VERIFY_MODEL_SLUGS`, `ENV=test`, or that the app owns the LangSmith flags; it
+  claimed the Compose Postgres would be used when `DATABASE_URL` was unset, but **nothing in
+  the backend derives a DSN from the `POSTGRES_*` variables** — only Compose does — so a host
+  `make dev-api` had no database at all; and the `APP_ENCRYPTION_KEY` placeholder passes the
+  presence check while not being a valid Fernet key, so `crypto.py` must validate its shape at
+  startup when S5.4 lands.
+- One test was rewritten rather than deleted: it had pinned the missing `system_prompt` as
+  expected behaviour. Once the gap was fixed, the test asserts the prompt loads and states the
+  untrusted-data rule.

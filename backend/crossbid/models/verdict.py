@@ -1,0 +1,117 @@
+"""The go/no-go recommendation. Rules only — never a model's opinion.
+
+Two scoring shapes, both taken from real tenders in the golden set:
+
+* **Pass/fail minima** (the German federal fixture): any unmet mandatory requirement or live
+  exclusion ground is fatal.
+* **Weighted threshold** (the French ministry fixture): selection criteria score points on a
+  scale, and the bidder is eliminated below a published cut-off — 5 of 10 in that tender.
+
+The weights belong to the buyer and are published in the tender, so this is still a rules
+engine. It is not the numeric verdict *score* that the plan deliberately cut (ADR-0006).
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import Self
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class Decision(StrEnum):
+    """The recommendation. Advisory only — a human confirms before it is final."""
+
+    GO = "go"
+    GO_WITH_OPEN_ITEMS = "go_with_open_items"
+    NO_GO = "no_go"
+
+
+class GapSeverity(StrEnum):
+    """Whether a gap can still be closed before the deadline."""
+
+    BLOCKING = "blocking"
+    OPEN_ITEM = "open_item"
+
+
+class Gap(BaseModel):
+    """One reason the bidder does not yet qualify, in terms they can act on."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    requirement_id: str
+    severity: GapSeverity
+    summary: str = Field(description="What is missing, in the bidder's language")
+    required: str | None = Field(default=None, description="e.g. '29 FTE'")
+    actual: str | None = Field(default=None, description="e.g. '21 FTE'")
+
+
+class WeightedScore(BaseModel):
+    """A buyer's published points scale, when the tender uses one.
+
+    Present only for tenders that score selection; absent for pass/fail tenders. `threshold`
+    is the buyer's elimination cut-off, not ours.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    points: float = Field(ge=0)
+    points_available: float = Field(gt=0)
+    threshold: float = Field(ge=0, description="Below this the buyer eliminates the bid")
+
+    @model_validator(mode="after")
+    def _points_within_scale(self) -> Self:
+        if self.points > self.points_available:
+            raise ValueError("points cannot exceed points_available")
+        if self.threshold > self.points_available:
+            raise ValueError("threshold cannot exceed points_available")
+        return self
+
+    @property
+    def clears_threshold(self) -> bool:
+        return self.points >= self.threshold
+
+
+class Verdict(BaseModel):
+    """The scorer's output: a decision, and every reason behind it."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    decision: Decision
+    gaps: tuple[Gap, ...] = ()
+    score: WeightedScore | None = None
+
+    rationale: str = Field(description="Plain-language explanation, in the bidder's language")
+    mandatory_total: int = Field(ge=0)
+    mandatory_met: int = Field(ge=0)
+    unclear_rows: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _decision_matches_the_gaps(self) -> Self:
+        """The decision must follow from the evidence, or the rules engine has a bug.
+
+        `readmodel/` is a projection and may disagree with a checkpoint, but a verdict that
+        contradicts its own gap list is never legitimate.
+        """
+        if self.mandatory_met > self.mandatory_total:
+            raise ValueError("mandatory_met cannot exceed mandatory_total")
+
+        blocking = [g for g in self.gaps if g.severity is GapSeverity.BLOCKING]
+        if blocking and self.decision is not Decision.NO_GO:
+            raise ValueError(
+                f"decision is '{self.decision}' but {len(blocking)} blocking gap(s) are "
+                "listed; a blocking gap means no_go"
+            )
+        if self.decision is Decision.NO_GO and not blocking:
+            raise ValueError("decision is 'no_go' but no blocking gap explains why")
+        if self.decision is Decision.GO and (self.gaps or self.unclear_rows):
+            raise ValueError(
+                "decision is 'go' but open items or unclear rows remain; "
+                "use 'go_with_open_items'"
+            )
+        if self.score is not None and not self.score.clears_threshold and blocking == []:
+            raise ValueError(
+                "the weighted score is below the buyer's threshold but no blocking gap "
+                "records it"
+            )
+        return self
