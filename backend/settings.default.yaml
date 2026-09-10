@@ -1,0 +1,40 @@
+# Default runtime settings. Overridden by the `app_settings` row in Postgres (S0.3.2)
+# and by environment variables. Never hard-code a model slug elsewhere.
+#
+# Every slug below was confirmed with a live one-token call on 2026-09-10. Presence in
+# OpenRouter's /models list does not imply usability on this account -- see ADR-0005.
+
+models:
+  extract: openai/gpt-5.6-terra        # extraction and translation
+  cheap: openai/gpt-5.6-luna           # classification, chat, injection guard
+  embed: openai/text-embedding-3-small # 1536 dims, fits pgvector's index cap (ADR-0004)
+  judge: anthropic/claude-haiku-4.5    # eval judge; different vendor from the models under test
+
+# Slugs offered in the developer panel's model picker (S4.6.2). This list is the
+# verified set, not OpenRouter's catalogue.
+available_models:
+  - openai/gpt-5.6-terra
+  - openai/gpt-5.6-luna
+  - anthropic/claude-haiku-4.5
+  - google/gemini-2.5-flash
+  - google/gemini-2.5-flash-lite
+
+temperature: 0.0
+max_tokens: 4096
+
+ingestion:
+  chunk_tokens: 800
+  chunk_overlap: 100
+  section_pages: 6        # 5-8 per the plan; 6 measured in SP.1
+  embed_dimensions: 1536
+
+agent:
+  check_concurrency: 5
+  max_tool_calls_per_requirement: 4
+
+enabled_tools:
+  - company_rag_search
+  - tender_rag_search
+  - search_ted
+  - ecertis_evidence_lookup
+  - currency_convert

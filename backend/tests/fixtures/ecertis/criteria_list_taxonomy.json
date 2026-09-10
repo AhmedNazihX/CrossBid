@@ -1,0 +1,48 @@
+{
+  "criterion": [
+    {
+      "Id": {
+        "value": "534355a7-6874-4a66-8929-e2520404cfd0"
+      },
+      "CriteriaTypeID": {
+        "value": "4655"
+      },
+      "CriteriaTypeName": {
+        "value": "Exclusion Ground / Grounds related to the payment of taxes or social security contributions"
+      },
+      "Name": {
+        "value": "Payment of taxes",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+        "languageID": "en"
+      },
+      "VersionID": {
+        "value": "3"
+      }
+    },
+    {
+      "Id": {
+        "value": "77f6324d-e141-4dc8-bfe5-2e86751a7620"
+      },
+      "CriteriaTypeID": {
+        "value": "4654"
+      },
+      "CriteriaTypeName": {
+        "value": "Exclusion Ground / Criminal convictions"
+      },
+      "Name": {
+        "value": "Corruption",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": "The economic operator itself or any person who is a member of its administrative, management or supervisory body or powers of representation, decision or control therein has been the subject of a conviction by final judgement for corruption, by a conviction rendered at the most five years ago or in which an exclusion period set out directly in the conviction continues to be applicable. Corruption, as defined in the relevant legislation.",
+        "languageID": "en"
+      },
+      "VersionID": {
+        "value": "5"
+      }
+    }
+  ]
+}

@@ -1,0 +1,869 @@
+{
+  "Id": {
+    "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+  },
+  "TypeCode": {
+    "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+  },
+  "Name": {
+    "value": "Payment of taxes",
+    "languageID": "en"
+  },
+  "Description": {
+    "value": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+    "languageID": "en"
+  },
+  "DomainID": {
+    "value": "eproc"
+  },
+  "VersionID": {
+    "value": "3"
+  },
+  "LegislationReference": [
+    {
+      "Title": {
+        "value": "Public Procurement Directive 2014/24/EU",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": "Directive 2014/24/EU of the European Parliament and of the Council of 26 February 2014 on public procurement and repealing Directive 2004/18/EC",
+        "languageID": "en"
+      },
+      "JurisdictionLevelCode": {
+        "value": "eu"
+      },
+      "Article": {
+        "value": "Article 57(2) / Article 57; Paragraph 2",
+        "languageID": "en"
+      },
+      "URI": {
+        "value": "http://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.L_.2014.094.01.0065.01.ENG"
+      }
+    },
+    {
+      "Title": {
+        "value": "Defence Directive 2009/81/EC",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": "Directive 2009/81/EC of the European Parliament and of the Council of 13 July 2009 on the coordination of procedures for the award of certain works contracts, supply contracts and service contracts by contracting authorities or entities in the fields of defence and security, and amending Directives 2004/17/EC and 2004/18/EC",
+        "languageID": "en"
+      },
+      "JurisdictionLevelCode": {
+        "value": "eu"
+      },
+      "Article": {
+        "value": "Article 39; Paragraph 2; Point g",
+        "languageID": "en"
+      },
+      "URI": {
+        "value": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32009L0081"
+      }
+    },
+    {
+      "Title": {
+        "value": "Utilities Procurement Directive 2014/25/EU",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": "Directive 2014/25/EU of the European Parliament and of the Council of 26 February 2014 of 26 February 2014 on procurement by entities operating in the water, energy, transport and postal services sectors and repealing Directive 2004/17/EC",
+        "languageID": "en"
+      },
+      "JurisdictionLevelCode": {
+        "value": "eu"
+      },
+      "Article": {
+        "value": "Article 80; Paragraph 1",
+        "languageID": "en"
+      },
+      "URI": {
+        "value": "https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX%3A32014L0025"
+      }
+    },
+    {
+      "Title": {
+        "value": "Concession Procurement Directive 2014/23/EU",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": " Directive 2014/23/EU of the European Parliament and of the Council of 26 February 2014 on the award of concession contracts",
+        "languageID": "en"
+      },
+      "JurisdictionLevelCode": {
+        "value": "eu"
+      },
+      "Article": {
+        "value": "Article 38; Paragraph 5 / Article 38; Paragraph 5",
+        "languageID": "en"
+      },
+      "URI": {
+        "value": "https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX%3A32014L0023"
+      }
+    }
+  ],
+  "SubCriterion": [
+    {
+      "Id": {
+        "value": "a9e2613e-0891-4ae8-8fe4-db45eee58997"
+      },
+      "TypeCode": {
+        "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+      },
+      "Name": {
+        "value": "Payment of taxes",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+        "languageID": "en"
+      },
+      "DomainID": {
+        "value": "eproc"
+      },
+      "VersionID": {
+        "value": "3"
+      },
+      "LegislationReference": [
+        {
+          "Title": {
+            "value": "GWB",
+            "languageID": "en"
+          },
+          "Description": {
+            "value": "Act Against Restraints of Competition",
+            "languageID": "en"
+          },
+          "JurisdictionLevelCode": {
+            "value": "de"
+          },
+          "Article": {
+            "value": "§ 123 Abs. 4 GWB",
+            "languageID": "en"
+          },
+          "URI": {
+            "value": "http://www.gesetze-im-internet.de/englisch_gwb/index.html"
+          }
+        },
+        {
+          "Title": {
+            "value": "–",
+            "languageID": "en"
+          },
+          "Description": {
+            "value": "–",
+            "languageID": "en"
+          },
+          "JurisdictionLevelCode": {
+            "value": "de"
+          },
+          "Article": {
+            "value": "–",
+            "languageID": "en"
+          },
+          "URI": {}
+        },
+        {
+          "Title": {
+            "value": "EStG",
+            "languageID": "en"
+          },
+          "Description": {
+            "value": "Einkommensteuergesetz",
+            "languageID": "en"
+          },
+          "JurisdictionLevelCode": {
+            "value": "de"
+          },
+          "Article": {
+            "value": "§ 48 b Absatz 1 Satz 1",
+            "languageID": "en"
+          },
+          "URI": {
+            "value": "http://www.gesetze-im-internet.de/estg/index.html"
+          }
+        }
+      ],
+      "RequirementGroup": [
+        {
+          "Id": {
+            "value": "3b49fbd0-b790-41a8-a122-638234918d3c"
+          },
+          "TypeOfEvidence": [
+            {
+              "Id": {
+                "value": "08900ccb-9a3c-4a2d-ba4c-25197539db6c"
+              },
+              "TypeCode": {
+                "value": "Certificate"
+              },
+              "Name": {
+                "value": "Freistellungsbescheinigung",
+                "languageID": "en"
+              },
+              "Description": {
+                "languageID": "en"
+              },
+              "VersionID": {
+                "value": "1"
+              },
+              "FeeAmount": {},
+              "EvidenceIntendedUse": {
+                "description": {
+                  "value": "All areas"
+                }
+              },
+              "EvidenceIssuerParty": [
+                {
+                  "WebsiteURI": {},
+                  "PartyName": [
+                    {
+                      "Name": {
+                        "value": "competent tax office\n",
+                        "languageID": "en"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "AddresseeDescription": {
+                "value": "For all entities"
+              },
+              "JurisdictionLevelCode": [
+                {
+                  "value": "de"
+                }
+              ],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": {
+                    "ExternalReference": {
+                      "URI": {
+                        "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17007?lang=en"
+                      }
+                    }
+                  },
+                  "ValidityPeriod": {
+                    "description": [
+                      {
+                        "value": "1 Years",
+                        "languageID": "en"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": {
+            "value": "19d3cd9e-877f-42c3-ac80-8e5163703d95"
+          },
+          "TypeOfEvidence": [
+            {
+              "Id": {
+                "value": "932553f9-ab4c-49ba-a8c1-3115d5aa9917"
+              },
+              "TypeCode": {
+                "value": "Certificate"
+              },
+              "Name": {
+                "value": "Certificate on the payment of taxes",
+                "languageID": "en"
+              },
+              "Description": {
+                "value": "As stated in § 48b EStG. In the federal state of Saxony no certificates are issued by the competent tax office, therefore self-declarations are the only evidence possible.",
+                "languageID": "en"
+              },
+              "VersionID": {
+                "value": "2"
+              },
+              "FeeAmount": {},
+              "EvidenceIntendedUse": {
+                "description": {
+                  "value": "All areas"
+                }
+              },
+              "EvidenceIssuerParty": [
+                {
+                  "WebsiteURI": {},
+                  "PartyName": [
+                    {
+                      "Name": {
+                        "value": "competent tax office\n",
+                        "languageID": "en"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "AddresseeDescription": {
+                "value": "For all entities"
+              },
+              "JurisdictionLevelCode": [
+                {
+                  "value": "de"
+                }
+              ],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": {
+                    "ExternalReference": {
+                      "URI": {
+                        "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20028?lang=en"
+                      }
+                    }
+                  },
+                  "ValidityPeriod": {
+                    "description": [
+                      {
+                        "value": "1 Years",
+                        "languageID": "en"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": {
+            "value": "de5d060b-5a34-44a8-b222-7b67fffa78ed"
+          },
+          "TypeOfEvidence": [
+            {
+              "Id": {
+                "value": "9b8c89ca-ae34-4f9d-bfd7-f90e90664b32"
+              },
+              "TypeCode": {
+                "value": "Self-declaration"
+              },
+              "Name": {
+                "value": "Self-declaration on the non-existence of compulsory and optional exclusion grounds",
+                "languageID": "en"
+              },
+              "Description": {
+                "value": "In cases of doubt the contracting authority may demand an excerpt of the judicial register and/or of the register for trade and industrial offences.",
+                "languageID": "en"
+              },
+              "VersionID": {
+                "value": "3"
+              },
+              "FeeAmount": {},
+              "EvidenceIntendedUse": {
+                "description": {
+                  "value": "All areas"
+                }
+              },
+              "AddresseeDescription": {
+                "value": "For all entities"
+              },
+              "JurisdictionLevelCode": [
+                {
+                  "value": "de"
+                }
+              ],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": {
+                    "ExternalReference": {
+                      "URI": {
+                        "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/19910?lang=en"
+                      }
+                    }
+                  },
+                  "ValidityPeriod": {
+                    "description": [
+                      {
+                        "value": "Only for the specified tender ",
+                        "languageID": "en"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": {
+            "value": "e5533a56-d9c6-4235-8bea-bdbb08cbe097"
+          },
+          "TypeOfEvidence": [
+            {
+              "Id": {
+                "value": "be72adb0-2a8e-4faf-bd60-afd69dafb4b3"
+              },
+              "TypeCode": {
+                "value": "Certificate"
+              },
+              "Name": {
+                "value": "Official list of approved economic operators (works)",
+                "languageID": "en"
+              },
+              "Description": {
+                "value": "Die folgende Leitlinie beschreibt die Regelungen für eine Präqualifizierung im Hinblick auf Bauleistungen: https://www.zert-bau.de/fileadmin/user_upload/leitlinie_mit_Anlagen.pdf",
+                "languageID": "en"
+              },
+              "VersionID": {
+                "value": "2"
+              },
+              "FeeAmount": {
+                "value": 390.0,
+                "currencyID": "€"
+              },
+              "EvidenceIntendedUse": {
+                "description": {
+                  "value": "All areas"
+                }
+              },
+              "EvidenceIssuerParty": [
+                {
+                  "WebsiteURI": {
+                    "value": "http://www.pq-verein.de"
+                  },
+                  "PartyName": [
+                    {
+                      "Name": {
+                        "value": "Verein für die Präqualifikation von Bauunternehmen e.V.",
+                        "languageID": "en"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "AddresseeDescription": {
+                "value": "For all entities"
+              },
+              "JurisdictionLevelCode": [
+                {
+                  "value": "de"
+                }
+              ],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": {
+                    "ExternalReference": {
+                      "URI": {
+                        "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20980?lang=en"
+                      }
+                    }
+                  },
+                  "ValidityPeriod": {
+                    "description": [
+                      {
+                        "value": "Not limited",
+                        "languageID": "en"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": {
+            "value": "2dd9e478-1545-4b6e-91f2-d60bcd480520"
+          },
+          "TypeOfEvidence": [
+            {
+              "Id": {
+                "value": "095c30f1-f629-4cea-b6da-668ef3efc29a"
+              },
+              "TypeCode": {
+                "value": "Certificate"
+              },
+              "Name": {
+                "value": "Official list of approved economic operators Berlin",
+                "languageID": "en"
+              },
+              "Description": {
+                "value": "Registration into the official list of approved economic operators in Berlin, which takes place after a prequalification process, is based on the following evidence: https://ssl.stadtentwicklung.berlin.de/ULVAuskunft/formulare2018.shtml",
+                "languageID": "en"
+              },
+              "VersionID": {
+                "value": "1"
+              },
+              "FeeAmount": {
+                "value": 179.0,
+                "currencyID": "€"
+              },
+              "EvidenceIntendedUse": {
+                "description": {
+                  "value": "All areas"
+                }
+              },
+              "EvidenceIssuerParty": [
+                {
+                  "WebsiteURI": {
+                    "value": "https://ssl.stadtentwicklung.berlin.de/ULVAuskunft/index.shtml"
+                  },
+                  "PartyName": [
+                    {
+                      "Name": {
+                        "value": "Senate department for urban development and housing Berlin\n",
+                        "languageID": "en"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "AddresseeDescription": {
+                "value": "For all entities"
+              },
+              "JurisdictionLevelCode": [
+                {
+                  "value": "de"
+                }
+              ],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": {
+                    "ExternalReference": {
+                      "URI": {
+                        "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20024?lang=en"
+                      }
+                    }
+                  },
+                  "ValidityPeriod": {
+                    "description": [
+                      {
+                        "languageID": "en"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": {
+            "value": "8695ba94-bade-48e8-89dd-8c60695a8876"
+          },
+          "TypeOfEvidence": [
+            {
+              "Id": {
+                "value": "64520c62-ea9c-4b81-b035-89c2cf924284"
+              },
+              "TypeCode": {
+                "value": "Certificate"
+              },
+              "Name": {
+                "value": "Official list of approved economic operators (goods and services)",
+                "languageID": "en"
+              },
+              "Description": {
+                "value": "Registration into the official list of approved economic operators (goods and services), which takes place after a prequalification process, is based on the following evidence: https://www.amtliches-verzeichnis.ihk.de/Eignungsnachweise.aspx",
+                "languageID": "en"
+              },
+              "VersionID": {
+                "value": "1"
+              },
+              "FeeAmount": {
+                "value": 215.0,
+                "currencyID": "€"
+              },
+              "EvidenceIntendedUse": {
+                "description": {
+                  "value": "All areas"
+                }
+              },
+              "EvidenceIssuerParty": [
+                {
+                  "WebsiteURI": {},
+                  "PartyName": [
+                    {
+                      "Name": {
+                        "value": "Chambers of Commerce and Industry\n",
+                        "languageID": "en"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "AddresseeDescription": {
+                "value": "For all entities"
+              },
+              "JurisdictionLevelCode": [
+                {
+                  "value": "de"
+                }
+              ],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": {
+                    "ExternalReference": {
+                      "URI": {
+                        "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20023?lang=en"
+                      }
+                    }
+                  },
+                  "ValidityPeriod": {
+                    "description": [
+                      {
+                        "value": "1 Years",
+                        "languageID": "en"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": {
+            "value": "f598b87c-ee69-47d0-9c22-bfe548b656d6"
+          },
+          "TypeOfEvidence": [
+            {
+              "Id": {
+                "value": "11799fed-d3a3-4fba-b8cd-8d259ad9ad12"
+              },
+              "TypeCode": {
+                "value": "Certificate"
+              },
+              "Name": {
+                "value": "Extract from judicial records",
+                "languageID": "en"
+              },
+              "Description": {
+                "value": "The fee for a certificate is 13,00 EUR; the fee for a European certificate is 17,00 EUR. The certificate always relates to convictions of natural persons.",
+                "languageID": "en"
+              },
+              "VersionID": {
+                "value": "1"
+              },
+              "FeeAmount": {
+                "value": 17.0,
+                "currencyID": "€"
+              },
+              "EvidenceIntendedUse": {
+                "description": {
+                  "value": "All areas"
+                }
+              },
+              "EvidenceIssuerParty": [
+                {
+                  "WebsiteURI": {
+                    "value": "https://www.bundesjustizamt.de"
+                  },
+                  "PartyName": [
+                    {
+                      "Name": {
+                        "value": "Federal Office of Justice\n",
+                        "languageID": "en"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "AddresseeDescription": {
+                "value": "For all entities"
+              },
+              "JurisdictionLevelCode": [
+                {
+                  "value": "de"
+                }
+              ],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": {
+                    "ExternalReference": {
+                      "URI": {
+                        "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20025?lang=en"
+                      }
+                    }
+                  },
+                  "ValidityPeriod": {
+                    "description": [
+                      {
+                        "languageID": "en"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "ParentCriterion": {
+        "Id": {
+          "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+        },
+        "TypeCode": {
+          "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+        },
+        "Name": {
+          "value": "Payment of taxes",
+          "languageID": "en"
+        },
+        "Description": {
+          "value": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+          "languageID": "en"
+        },
+        "DomainID": {
+          "value": "eproc"
+        },
+        "VersionID": {
+          "value": "3"
+        }
+      }
+    },
+    {
+      "Id": {
+        "value": "c1c43491-2d13-4153-b5ce-d2544f1965a9"
+      },
+      "TypeCode": {
+        "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+      },
+      "Name": {
+        "value": "Bescheinigung in Steuersachen",
+        "languageID": "en"
+      },
+      "Description": {
+        "languageID": "en"
+      },
+      "DomainID": {
+        "value": "eproc"
+      },
+      "VersionID": {
+        "value": "1"
+      },
+      "LegislationReference": [
+        {
+          "Title": {
+            "value": "–",
+            "languageID": "en"
+          },
+          "Description": {
+            "value": "–",
+            "languageID": "en"
+          },
+          "JurisdictionLevelCode": {
+            "value": "de"
+          },
+          "Article": {
+            "value": "–",
+            "languageID": "en"
+          },
+          "URI": {}
+        }
+      ],
+      "ParentCriterion": {
+        "Id": {
+          "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+        },
+        "TypeCode": {
+          "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+        },
+        "Name": {
+          "value": "Payment of taxes",
+          "languageID": "en"
+        },
+        "Description": {
+          "value": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+          "languageID": "en"
+        },
+        "DomainID": {
+          "value": "eproc"
+        },
+        "VersionID": {
+          "value": "3"
+        }
+      }
+    },
+    {
+      "Id": {
+        "value": "bae372a7-1d15-4120-8d58-eedd1d512b5c"
+      },
+      "TypeCode": {
+        "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+      },
+      "Name": {
+        "value": "Payment of taxes",
+        "languageID": "en"
+      },
+      "Description": {
+        "value": "\"(4) Public contracting authorities shall at any point in the procurement procedure exclude an undertaking from participating in the procurement procedure if 1. the undertaking has not fulfilled its obligations relating to the payment of taxes, charges or social security contributions and this has been established by a judicial or administrative decision having final and binding effect or 2. the public contracting authorities can prove the breach of an obligation under no. 1 in another suitable manner.\"",
+        "languageID": "en"
+      },
+      "DomainID": {
+        "value": "eproc"
+      },
+      "VersionID": {
+        "value": "1"
+      },
+      "LegislationReference": [
+        {
+          "Title": {
+            "value": "GWB",
+            "languageID": "en"
+          },
+          "Description": {
+            "value": "Act Against Restraints of Competition",
+            "languageID": "en"
+          },
+          "JurisdictionLevelCode": {
+            "value": "de"
+          },
+          "Article": {
+            "value": "§ 123 Abs. 4 GWB",
+            "languageID": "en"
+          },
+          "URI": {
+            "value": "http://www.gesetze-im-internet.de/englisch_gwb/index.html"
+          }
+        }
+      ],
+      "ParentCriterion": {
+        "Id": {
+          "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+        },
+        "TypeCode": {
+          "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+        },
+        "Name": {
+          "value": "Payment of taxes",
+          "languageID": "en"
+        },
+        "Description": {
+          "value": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+          "languageID": "en"
+        },
+        "DomainID": {
+          "value": "eproc"
+        },
+        "VersionID": {
+          "value": "3"
+        }
+      }
+    }
+  ],
+  "ParentCriterion": {
+    "Id": {
+      "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+    },
+    "TypeCode": {
+      "value": "Exclusion Ground: Grounds related to the payment of taxes or social security contributions"
+    },
+    "Name": {
+      "value": "Payment of taxes",
+      "languageID": "en"
+    },
+    "Description": {
+      "value": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+      "languageID": "en"
+    },
+    "DomainID": {
+      "value": "eproc"
+    },
+    "VersionID": {
+      "value": "3"
+    }
+  }
+}

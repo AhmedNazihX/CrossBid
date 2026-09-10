@@ -362,3 +362,191 @@ criterion is met as written. Judge cost across 3 golden tenders is on the order 
   to them are wider than the app's defaults. The provider-selection UI should not assume the
   app's model list applies to a company running on its own key.
 - If the policy is ever relaxed, ADR-0004's bge-m3 finding and this entry both reopen.
+
+---
+
+## ADR-0006 — FR and EN fixtures; S6.2's "15 criteria in the notice" is met by the pack
+
+**Date:** 2026-09-10 · **Stories:** S6.1 (FR), S6.2 · **Status:** accepted
+
+### Context
+
+S6.1 needed a French CPV-72 pack and S6.2 an English notice stating "at least 15 selection or
+exclusion criteria, so the golden set is not trivial".
+
+**FR — TED `618320-2026`**, Ministère de l'éducation nationale, "Prestations de conseil en
+architecture d'entreprise et d'expertise technique", CPV 72000000, `official-language` FRA,
+deadline 2026-10-09. Committed: the French notice PDF, the *Règlement de consultation* (20 pages,
+55 820 characters) and the buyer's `DUME_acheteur.xml`. 25 PDF pages, 0 text-free pages, 776 KB.
+Both documents came from plain `GET` links on the public PLACE consultation page — no login, no
+form. The full 14.7 MB DCE sits behind a POST form which does offer a genuinely anonymous route
+("Je souhaite télécharger anonymement"); it was left for a human, with the URL in `SOURCES.md`.
+
+**EN — TED `606362-2026`**, EASA, "Digital Communications Services", CPV 72400000, deadline
+2026-10-12. The EU Funding & Tenders Portal served the whole 4.6 MB pack to a bare `curl` — no
+cookie, no form. All 9 files committed unmodified. 138 PDF pages, 0 text-free pages.
+
+### The deviation
+
+**The EASA notice itself states zero criteria** — both criteria fields say "Sources: Procurement
+Document". The 20 criteria (14 exclusion + 6 selection) are in `Tender_Specifications_V1.pdf`
+§3.1–3.2 and `Annex_2_Declaration_on_Honour`, and the derivation is tabulated in `SOURCES.md`.
+
+This is not a bad fixture choice; it is how the market works. Across **600** English CPV-72
+`cn-standard` notices published since 2026-06-01, the maximum criteria count carried *in the
+notice* was **13**, only 4 notices exceeded 8, and 496 carried none. The only notices clearing 15
+in the notice body are Norwegian, where buyers set `Sources: Notice` — e.g. `610825-2026`
+(Ålesund kommune) prints 21 named Article 57 exclusion grounds plus 10 selection criteria.
+
+### Options considered
+
+1. **Accept the pack-level count.** The EASA pack states 20 criteria; the fixture is rich and
+   its documents are the most openly accessible of any platform surveyed.
+2. **Promote the Norwegian notice**, which satisfies the criterion literally. But Norway is EEA,
+   not EU, and `CLAUDE.md` scopes the course build to the EU — and a notice-only fixture is
+   exactly the soft target ADR-0001 rejected for Germany.
+
+### Choice
+
+Option 1, and **S6.2's acceptance criterion is amended**: the 15-criteria bar is met by the
+committed pack, not necessarily by the notice PDF. The intent behind the criterion — "so the
+golden set is not trivial" — is satisfied at 20 criteria. Requiring them in the notice body
+would force either an EEA fixture or a weaker one. `610825-2026` is recorded in the EN
+`SOURCES.md` as a reserve if a notice-only English fixture is ever wanted.
+
+### Consequences
+
+- Three fixtures now exist: DE 191 pages, EN 138 pages, FR 25 pages, **all with zero text-free
+  pages**, so OCR stays out of scope across the whole golden set.
+- **The FR fixture changes what the matrix has to model.** Germany used pass/fail minima; this
+  French buyer scores selection on a 10-point scale with numeric bands (turnover > €1.95M → 3/3,
+  7–12 staff → 2/3, ≥ 4 references → 2/2, quality certification → 2/2) and **eliminates below
+  5/10**. The rules-based scorer in S3.4.1 must handle a weighted threshold, not only "unmet
+  mandatory ⇒ no_go". Against the demo GmbH this tender scores 6/10, a **go** — so the golden set
+  now yields a no-go (DE) and a go (FR) without any tuning.
+- The FR notice states the wedge in the buyer's own words: *"Le candidat non établi en France
+  produit les attestations et certificats équivalents dans son pays d'origine"*, then names
+  URSSAF, fiscal, SIREN and D.8254-2 evidence a German bidder does not have. This is the
+  cross-border equivalence problem, verbatim, in a real tender.
+- **The DUME is a structured shortcut and should be treated as one.** `DUME_acheteur.xml`
+  declares 30 `ccv:Criterion` elements carrying canonical ESPD criterion UUIDs, in French. Where
+  a tender publishes a DUME, criterion identification needs no LLM inference — read the ids.
+  Worth a follow-up story; not in the current plan.
+- TED API facts corrected in `CLAUDE.md`: `SORT BY ... ASC` is HTTP 400, pagination caps at 600
+  results, and `selection-criterion-description-lot` is populated on only 14–17% of notices.
+  That last figure is the strongest evidence yet for the upload-the-pack design.
+
+---
+
+## ADR-0007 — The criterion enum is keyed on eCertis EU-level UUIDs, never national ones
+
+**Date:** 2026-09-10 · **Stories:** S1.1.1, S1.1.3 · **Status:** accepted
+
+### Context
+
+The extractor assigns each requirement a nullable `ecertis_criterion_id`, and the matrix uses it
+to look up which national document proves that criterion. The plan's note said
+`criteria?nationalEntity=de` "lists the national criteria for a country", which reads like an
+invitation to key the enum on a national list.
+
+Implementing the cache showed that would silently destroy the cross-border wedge:
+
+- `GET criteria` returns **56** EU-level ESPD criteria.
+- `criteria?nationalEntity=de` returns **the same 56 criteria under different, country-scoped
+  UUIDs**. So does `nationalEntity=fr`. The DE and FR id sets are disjoint from each other **and**
+  from the bare EU set. `nationalEntity=eu` returns 58 rows.
+- Verified in the committed cache: national `sub_criteria[].id` values have **zero** overlap with
+  the EU criterion ids.
+
+The national listing and the national subtree share one id space, but the listing is a **lossy
+view** of it — which is the second reason not to build from it:
+
+- `criteria?nationalEntity=de` returns **one** sub-criterion per EU criterion: 56 rows, the
+  primary one. 55 of those 56 ids appear verbatim as `sub_criteria[].id`, each under the same EU
+  criterion (0 mispairings). The one absentee is "Direct or indirect involvement in the
+  preparation of this procurement procedure", whose `countryFilter=de` detail call returns a
+  stable empty 200.
+- `criteria/{eu_uuid}?countryFilter=de` returns the **full** national subtree: **104**
+  sub-criteria for the same 56 criteria.
+
+So building the cache from the national listing would have under-reported German evidence by
+roughly half while looking perfectly plausible. "Payment of taxes" has three German
+sub-criteria; only one of them is in the listing, and the detail-only pair includes
+`Bescheinigung in Steuersachen`.
+
+A criterion id chosen from the German list therefore means nothing when looking up French
+evidence — which is precisely the operation this product exists to perform.
+
+### Choice
+
+**The EU-level UUID from the bare `GET criteria` call is the only cross-border identifier**, and
+it is what `criteria.json` and the generated `EcertisCriterionId` Literal use. Both
+`evidence_de.json` and `evidence_fr.json` are keyed by EU id, with national ids retained one
+level down as `sub_criteria[].id`. Verified: both files' key sets equal the EU id set exactly.
+
+Two consequences of the API forced further decisions:
+
+**Empty 200 means "no national entry".** eCertis answers HTTP 200 with a zero-byte body for a
+criterion a country has no entry for — 17 of 56 for FR, 1 of 56 for DE. Genuine transient
+emptiness also occurs and is indistinguishable at the wire level. Policy: retry 3× with 2s/4s
+backoff; treat a persistent empty as "no evidence"; and **refuse to overwrite a cached criterion
+that previously had evidence and now has none** (`--allow-shrink` to override). A silent
+regression in a committed cache would be invisible until a demo.
+
+**The taxonomy has to be stitched in.** `GET criteria` omits `CriteriaTypeName`, sending only a
+meaningless `CriteriaTypeID`, so the bare list cannot tell an exclusion ground from a selection
+criterion. Labels come from one extra `criteria?nationalEntity=eu` call; they are byte-identical
+across countries, so this is an EU-level taxonomy the bare endpoint simply forgets. Result: 8
+labels covering all 56 criteria — 18 technical/professional, 15 insolvency and misconduct,
+8 economic/financial, 6 criminal convictions, 4 suitability, 2 taxes, 2 quality/environmental,
+1 other.
+
+### Consequences
+
+- Cached: 56 criteria; DE 104 sub-criteria / 218 evidences; FR 68 / 94. ~500 KB total, committed.
+- **Idempotence is content-addressed**, which the "a second run changes nothing" criterion
+  requires: `source_date` is carried over verbatim while a SHA-256 over the canonical body
+  (excluding `source_date` and the hash itself) is unchanged. No `fetched_at` anywhere. Every
+  list has a total sort order; whitespace is collapsed because eCertis returns values like
+  `"competent tax office\n"`. Verified byte-identical across three runs.
+- The loader recomputes that hash on read, so a hand-edited cache file is **refused** rather than
+  silently trusted.
+- Run time is filesystem-only. Verified by replacing `socket.socket`, `create_connection` and
+  `getaddrinfo` with raisers: all three files still load and resolve evidence.
+- **The wedge, demonstrated on real data.** EU criterion "Payment of taxes" →
+  DE `Certificate on the payment of taxes`, `Freistellungsbescheinigung`; FR
+  `Tax attestation (IR) - Cerfa n°3666`, `Tax attestation (IS)`. Same criterion, different paper.
+- FR has no national entry for 17 of 56 criteria, so S1.1.2's `not_found` path is the common case
+  for France, not an edge case. The UI must present it as "no French equivalent recorded", not as
+  an error.
+- The undocumented `?lang=de` parameter returns German (marked `(Automatische Übersetzung)`) and
+  is the cheap route to S1.1.2's "in German and English" requirement. Not cached — it doubles the
+  fetch — but worth knowing before building that story.
+
+### Bugs the test suite exposed (S1.1.1 hardening)
+
+Writing the 131-test suite surfaced three defects in code that had already passed lint, types
+and a live rebuild. Recorded because each is a class of bug this codebase will meet again.
+
+1. **Order-dependent "take the first value".** Three helpers took whichever value eCertis
+   happened to send first. Latent today, since every such list holds one value — but a live
+   idempotence hazard the moment one holds two, and idempotence is S1.1.1's acceptance criterion.
+   Now smallest-non-empty.
+2. **Silent data loss when merging duplicated evidence.** An evidence id referenced from two
+   `RequirementGroup`s kept only the first occurrence. **53 evidences in the committed cache
+   (49 DE, 4 FR) are referenced from more than one group.** All 53 pairs happen to be
+   byte-identical today, so the output was correct *by luck*; eCertis promises no such thing, and
+   a stub arriving first would have erased issuer, jurisdiction and URL. Now merged field by
+   field. Found by a hand-built fixture, not by real data — the real data hid it.
+3. **A memoised loader keyed on un-normalised input.** `load_evidence("DE")` and
+   `load_evidence("de")` were separate cache entries, parsing and holding the 324 KB German file
+   twice. Normalisation has to happen *before* the memoised call, not inside it.
+
+Behaviour preservation was proven, not assumed: all 94 recorded live responses re-normalised
+with **0 differences**, **0 order-dependent results across 282 shuffle checks**, and a full live
+rebuild produced byte-identical files (all four checksums unchanged).
+
+The lesson worth carrying: real API data is a weak test of merge and ordering logic, because it
+is accidentally well-behaved. The bugs appeared only under hand-built adversarial fixtures and
+shuffled input. Later stories that merge or deduplicate — the extraction dedupe pass in S3.2.1
+above all — should be tested the same way.

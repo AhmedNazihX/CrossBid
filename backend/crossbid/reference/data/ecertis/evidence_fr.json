@@ -1,0 +1,3185 @@
+{
+  "content_sha256": "da36e975a90294efcde14f0bb4055a88ba7e86fc9b652d7a78c84be388aadee6",
+  "country": "fr",
+  "criteria": [
+    {
+      "criterion_id": "005eb9ed-1347-4ca3-bb29-9bc0db64e1ab",
+      "criterion_name": "Participation in a criminal organisation",
+      "sub_criteria": [
+        {
+          "description": "Participation in a criminal organisation, as defined in Article 2 of Council Framework Decision 2008/841/JHA of 24 October 2008 on the fight against organised crime",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "026dbc42-b25f-4546-b7e6-27aadfc909ad"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "33119d8f-babf-4d3e-8fcb-de22517a9d3c"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "abed9a8c-1b32-4432-810c-2f919a31b186"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "4be1a85c-f865-48c3-9ecc-01a977288214"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "ef6d23c5-03ad-4cf8-8869-ece68b20b729",
+          "legislation": [
+            {
+              "article": "Art. 450-1",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Participation in a criminal organisation"
+        }
+      ]
+    },
+    {
+      "criterion_id": "07301031-2270-41af-8e7e-66fe0c777107",
+      "criterion_name": "Educational and professional qualifications",
+      "sub_criteria": [
+        {
+          "description": "The following educational and professional qualifications are held by the service provider or the contractor itself, and/or (depending on the requirements set out in the relevant notice or the procurement documents by its managerial staff.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "In the case of public works contracts, public service contracts or public supply contracts also involving installation work or services, the indication of the educational and professional qualifications of the candidate or of the staff of the institution, and in particular those responsible for the provision of services or the conduct of work of the same nature as that of the public contract",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17890?lang=en",
+              "groups": [
+                "d23fa9ee-ac0e-4b58-a551-f83c72823125"
+              ],
+              "id": "d5e6bba6-3291-45e4-bacf-97a0fb2c31fd",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Indication of the educational and professional qualifications of the candidate or of the management of the undertaking, and in particular those responsible for the provision of services or the conduct of work of the same nature as that of the public procurement",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "9d1b72c1-d88f-4c59-a0e9-3656ac1bec29",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 4°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "Educational and professional qualifications"
+        }
+      ]
+    },
+    {
+      "criterion_id": "074f6031-55f9-4e99-b9a4-c4363e8bc315",
+      "criterion_name": "Specific yearly turnover",
+      "sub_criteria": [
+        {
+          "description": "Its specific yearly turnover in the business area covered by the contract for the number of financial years required in the relevant notice, the procurement documents or the ESPD is as follows:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Minimum annual turnover",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17883?lang=en",
+              "groups": [
+                "6d03203f-c7c9-4dc0-9a98-24c37d6e9987"
+              ],
+              "id": "768a9833-8fa4-46e4-b3ec-53af81daa061",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Minimum annual turnover",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "4040c78a-1eef-4f7d-963f-ac86114a7fa3",
+          "legislation": [
+            {
+              "article": "R. 2142-6",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Specific yearly turnover"
+        }
+      ]
+    },
+    {
+      "criterion_id": "166536e2-77f7-455c-b018-70582474e4f6",
+      "criterion_name": "Business activities are suspended",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "1f49b3f0-d50f-43f6-8b30-4bafab108b9b",
+      "criterion_name": "Average annual manpower",
+      "sub_criteria": [
+        {
+          "description": "The economic operator’s average annual manpower for the last three years were as follows:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Statement indicating the candidate's average annual manpower and the number of managerial staff over the last three years",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17889?lang=en",
+              "groups": [
+                "90fb8306-9f05-4e16-8296-27896dd374fb"
+              ],
+              "id": "0bdfb7e1-82ef-43a8-942e-6ba5588375c1",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Statement indicating the candidate's average annual manpower and the number of managerial staff over the last three years",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "0e17e7a0-9005-43bc-9c6a-c571de66ce9e",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 3°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "Average annual manpower"
+        }
+      ]
+    },
+    {
+      "criterion_id": "297d2323-3ede-424e-94bc-a91561e6f320",
+      "criterion_name": "Fraud",
+      "sub_criteria": [
+        {
+          "description": "Fraud within the meaning of Article 1 of the Convention on the protection of the European Communities' financial interests (OJ C 316, 27.11.1995)",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "8f785a0a-e69f-4d60-b97f-f8cd65900c84"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "417d2448-9b20-4f6c-ac47-9f96b891d4d9"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "8c154f00-77bf-4112-bcd1-66254a954af3"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "19268fc9-0fac-4d86-9ccc-0109324dcd41"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "2ed78d51-f396-4fe8-870b-4a4b4ace07e1",
+          "legislation": [
+            {
+              "article": "Art. 313-1 and 313-3 / Art. 314-1 / Art. 441-1 to 441-7 and 441-9",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            },
+            {
+              "article": "Art. 1741 to 1743, 1746 and 1747",
+              "description": "Tax Code",
+              "jurisdiction": "fr",
+              "title": "Tax Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006069577"
+            }
+          ],
+          "name": "Fraud"
+        },
+        {
+          "description": "Final conviction for forgery",
+          "evidences": [],
+          "id": "83ba2b8a-7145-4f85-8384-97073d154005",
+          "legislation": [
+            {
+              "article": "Art. 441-1 to 441-7 and 441-9",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Forgery"
+        },
+        {
+          "description": "Final conviction for breach of trust",
+          "evidences": [],
+          "id": "9b8f8049-0861-45e9-89b7-d7b4772b02eb",
+          "legislation": [
+            {
+              "article": "Art. 314-1",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Breach of trust"
+        },
+        {
+          "description": "Final conviction for fraudulent subtraction at payment and establishment of tax",
+          "evidences": [],
+          "id": "c3350e01-f9e9-470b-aea5-7a5935f0af96",
+          "legislation": [
+            {
+              "article": "Art. 1741 to 1743, 1746 and 1747",
+              "description": "Tax Code",
+              "jurisdiction": "fr",
+              "title": "Tax Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006069577"
+            }
+          ],
+          "name": "Fraudulent subtraction at payment and establishment of tax"
+        }
+      ]
+    },
+    {
+      "criterion_id": "3293e92b-7f3e-42f1-bee6-a7641bb04251",
+      "criterion_name": "Early termination, damages or other comparable sanctions",
+      "sub_criteria": [
+        {
+          "description": "Has the economic operator experienced that a prior public contract, a prior contract with a contracting entity or a prior concession contract was terminated early, or that damages or other comparable sanctions were imposed in connection with that prior contract?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Proof by any means within a reasonable period of time that the professionalism and reliability of the economic operator can no longer be called into question and, where appropriate, that its participation in the procurement procedure is not likely to Affecting equal treatment",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17873?lang=en",
+              "groups": [
+                "95fe97e3-0b5a-49bb-bf29-aed040c0da16"
+              ],
+              "id": "cbfbef8e-cc4d-4be2-940f-8e1f818e78a6",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Any means of proof",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            }
+          ],
+          "id": "28eb1e8a-d5eb-494a-8997-b0d529720882",
+          "legislation": [
+            {
+              "article": "L. 2141-7",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Early termination, damages or other comparable sanctions"
+        }
+      ]
+    },
+    {
+      "criterion_id": "396f288a-e267-4c20-851a-ed4f7498f137",
+      "criterion_name": "Insolvency",
+      "sub_criteria": [
+        {
+          "description": "Is the economic operator the subject of insolvency or winding-up? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "All judgments handed down for a person subject to personal bankruptcy proceedings, a management ban or the equivalent in a foreign country or for a legal person subject to liquidation or receivership proceedings during the time provided for in Procurement or equivalent for a foreign country",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17874?lang=en",
+              "groups": [
+                "58a35178-6030-4e67-8f6e-f00834b2bbcf",
+                "5f55c166-8ba1-4c7f-95f6-af123607e3d3",
+                "61e5713e-0d2b-45ce-a9ec-60a3c497d11e"
+              ],
+              "id": "3b4b6e4f-2242-44ed-8334-d28ad67b21bb",
+              "intended_use": "All areas",
+              "issuers": [
+                "Ministry of Justice"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Copies of judgments in case of insolvency or bankruptcy - Cerfa n°11808*04",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a craftsman in the Crafts Directory",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17877?lang=en",
+              "groups": [
+                "61e5713e-0d2b-45ce-a9ec-60a3c497d11e"
+              ],
+              "id": "c4546d6c-6025-46fb-8a2e-e0f187180531",
+              "intended_use": "All areas",
+              "issuers": [
+                "Chambers of Metier and Crafts (CMA)"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract D1",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a legal entity in the Register of Commerce and Companies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17875?lang=en",
+              "groups": [
+                "58a35178-6030-4e67-8f6e-f00834b2bbcf"
+              ],
+              "id": "4d21db2a-070c-4817-bf06-47592f609642",
+              "intended_use": "All areas",
+              "issuers": [
+                "Registry of the Commercial Court"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract K",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a legal entity in the Register of Commerce and Companies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17921?lang=en",
+              "groups": [
+                "5f55c166-8ba1-4c7f-95f6-af123607e3d3"
+              ],
+              "id": "5ac6c537-fb58-4c31-923c-132eb041e2d7",
+              "intended_use": "All areas",
+              "issuers": [
+                "Registry of the Commercial Court"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract K-bis",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "d1e02b80-f6e1-4fa6-8044-b650c0bcf1d6",
+          "legislation": [
+            {
+              "article": "Art. 653-1",
+              "description": "Trade Code",
+              "jurisdiction": "fr",
+              "title": "Trade Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000005634379"
+            }
+          ],
+          "name": "Insolvency"
+        }
+      ]
+    },
+    {
+      "criterion_id": "3a18a175-1863-4b1d-baef-588ce61960ca",
+      "criterion_name": "For supply contracts: performance of deliveries of the specified type",
+      "sub_criteria": [
+        {
+          "description": "For public supply contracts only: During the reference period, the economic operator has delivered the following principal deliveries of the type specified. Contracting authorities may require up to three years and allow experience dating from more than three years.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Appropriate references from previously completed public procurements for sufficient experience",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21320?lang=en",
+              "groups": [
+                "6984ffb3-bf0a-4f2b-bfea-586e371e8b28"
+              ],
+              "id": "7f7d89d8-a182-445a-8e66-6b68830d0d5c",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Appropriate references from previously completed public procurement for sufficient experience",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "List of major deliveries or services provided during the last three years or, for defense or security procurement, over the past five years",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17888?lang=en",
+              "groups": [
+                "de941d2e-e7d8-4541-91c0-ed982f36d28e"
+              ],
+              "id": "a957e364-6507-4d12-b199-5d63fdeca6b7",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "List of major deliveries or services provided over the last three years",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "b55af728-4444-4b6b-92e0-267692ceafcb",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 2°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            },
+            {
+              "article": "R. 2142-14",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "For supply contracts: performance of deliveries of the specified type"
+        },
+        {
+          "description": "Depending on the needs of the contracting authority: appropriate references from previously completed public procurements for sufficient experience",
+          "evidences": [],
+          "id": "edd6995e-b4c9-4ebd-8f7f-979b36f49c52",
+          "legislation": [
+            {
+              "article": "R. 2142-14",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Specifics conditions for supply contracts: appropriate references from public contracts executed"
+        }
+      ]
+    },
+    {
+      "criterion_id": "3aaca389-4a7b-406b-a4b9-080845d127e7",
+      "criterion_name": "Technicians or technical bodies for quality control",
+      "sub_criteria": [
+        {
+          "description": "Depending on the needs of the contracting authority",
+          "evidences": [],
+          "id": "6e75a990-5593-4f46-923e-293089870b7f",
+          "legislation": [
+            {
+              "article": "Annexe 9, article 3, 5°",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Specifics conditions for technicians or technical bodies for quality control"
+        },
+        {
+          "description": "It can call upon the following technicians or technical bodies, especially those responsible for quality control. For technicians or technical bodies not belonging directly to the economic operator's undertaking but on whose capacities the economic operator relies as set out under Part II, Section C, separate ESPD forms must be filled in.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Conditions imposed on human and technical resources",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17905?lang=en",
+              "groups": [
+                "cc202633-75e8-42cf-ac2c-908c0b868f67"
+              ],
+              "id": "46a575fc-884a-41b4-9d28-9f74b222a4fc",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Conditions imposed on human and technical resources",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "The indication of technicians or technical bodies, whether or not they are integrated with the candidate, in particular those responsible for quality control and, in the case of works public procurement, to which the candidate may call for the execution of the work",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17891?lang=en",
+              "groups": [
+                "7c960eea-f1b8-4462-aeb3-c23a41a04579"
+              ],
+              "id": "2c43ba3a-660f-42a0-b69a-8bf344189072",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Indication of technicians or technical bodies",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "99f0bef4-e7f9-47ca-8b50-a67c03970b36",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 5°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            },
+            {
+              "article": "Annexe 9, article 3, 5°",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Technicians or technical bodies for quality control"
+        }
+      ]
+    },
+    {
+      "criterion_id": "47112079-6fec-47a3-988f-e561668c3aef",
+      "criterion_name": "Money laundering or terrorist financing",
+      "sub_criteria": [
+        {
+          "description": "Has the economic operator itself or any person who is a member of its administrative, management or supervisory body or has powers of representation, decision or control therein been the subject of a conviction by final judgement for money laundering or terrorist financing, by a conviction rendered at the most five years ago or in which an exclusion period set out directly in the conviction continues to be applicable? As defined in Article 1 of Directive 2005/60/EC of the European Parliament and of the Council of 26 October 2005 on the prevention of the use of the financial system for the purpose of money laundering and terrorist financing (OJ L 309, 25.11.2005, p. 15).",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "0bc3dfdd-f032-4605-b918-ff72d0e9cd98"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "be3bc067-f922-477c-9023-c97a64c60cf5"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "fd8821d2-7d90-4b94-a607-62a67a4def6b"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "70e05d81-9195-487c-9e6c-fbad5c296a0a"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "0de4b90c-633b-4eed-9e0d-779bc434b315",
+          "legislation": [
+            {
+              "article": "Art. 222-34 to 223-40 / Art. 324-1, 324-5 and 325-6",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Money laundering or terrorist financing"
+        },
+        {
+          "description": "Final conviction for drug trafficking",
+          "evidences": [],
+          "id": "236b739b-83af-4505-9c34-c2f2c7bf03dc",
+          "legislation": [
+            {
+              "article": "Art. 222-34 to 223-40",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Drug trafficking"
+        }
+      ]
+    },
+    {
+      "criterion_id": "499efc97-2ac1-4af2-9e84-323c2ca67747",
+      "criterion_name": "General yearly turnover",
+      "sub_criteria": [
+        {
+          "description": "Its general yearly turnover for the number of financial years required in the relevant notice, the procurement documents or the ESPD is as follows:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Overall turnover for the last three financial years",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17879?lang=en",
+              "groups": [
+                "845ac7ba-d46f-4341-8799-e31a01b50f90"
+              ],
+              "id": "954af275-720f-49fa-8b23-f7336433c511",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Overall turnover for the last three financial years",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Turnover in the field of activity covered by the public procurement contract for a maximum of the last three financial years available",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17880?lang=en",
+              "groups": [
+                "72bd3ba2-2294-45ee-b5d8-418467e8391d"
+              ],
+              "id": "da158a56-565b-4c91-82a2-9471dbc7679e",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Turnover in the field of activity covered by the public procurement contract for a maximum of the last three financial years available",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "7f295359-9703-4efc-a615-4832f3dcb539",
+          "legislation": [
+            {
+              "article": "Art. 2",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "General yearly turnover"
+        }
+      ]
+    },
+    {
+      "criterion_id": "4bf996d9-439c-40c6-9ab9-980a48cb55a1",
+      "criterion_name": "Technical facilities and measures for ensuring quality",
+      "sub_criteria": [
+        {
+          "description": "It uses the following technical facilities and measures for ensuring quality and its study and research facilities are as follows:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Description of the technical equipment and measures used by the candidate to ensure the quality and means of study and research of his company",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17897?lang=en",
+              "groups": [
+                "adfc7aee-ef60-443b-bdf0-7727a7e5d43d"
+              ],
+              "id": "8750ea2c-5a8b-4004-8ddb-4a9080b00f79",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Description of the technical equipment and measures used by the candidate to ensure the quality and means of study and research of his company",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "5d05d5d6-ac86-4a11-8e28-c65c0fe32deb",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 7°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "Technical facilities and measures for ensuring quality"
+        }
+      ]
+    },
+    {
+      "criterion_id": "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3",
+      "criterion_name": "Guilty of grave professional misconduct",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "56d13e3d-76e8-4f23-8af6-13e60a2ee356",
+      "criterion_name": "Agreements with other economic operators aimed at distorting competition",
+      "sub_criteria": [
+        {
+          "description": "Has the economic operator entered into agreements with other economic operators aimed at distorting competition?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Proof by any means within a reasonable period of time that the professionalism and reliability of the economic operator can no longer be called into question and, where appropriate, that its participation in the procurement procedure is not likely to Affecting equal treatment",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17873?lang=en",
+              "groups": [
+                "4b4b170c-e26f-4961-a4d8-6ea2f38ae355"
+              ],
+              "id": "cbfbef8e-cc4d-4be2-940f-8e1f818e78a6",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Any means of proof",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            }
+          ],
+          "id": "263a7b16-afaf-4a3a-a130-7e97525cefdb",
+          "legislation": [
+            {
+              "article": "L. 2141-9",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Agreements with other economic operators aimed at distorting competition"
+        }
+      ]
+    },
+    {
+      "criterion_id": "5e506c16-26ab-4e32-bb78-b27f87dc0565",
+      "criterion_name": "For service contracts: performance of services of the specified type",
+      "sub_criteria": [
+        {
+          "description": "Depending on the needs of the contracting authority: appropriate references from previously completed public procurements for sufficient experience",
+          "evidences": [],
+          "id": "4201da4d-1a60-4f4d-bf4b-1a6174e5a034",
+          "legislation": [
+            {
+              "article": "R. 2142-14",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Specifics conditions for service contracts: appropriate references from public contracts executed"
+        },
+        {
+          "description": "For public service contracts only: During the reference period, the economic operator has provided the following main services of the type specified. Contracting authorities may require up to three years and allow experience dating from more than three years.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Appropriate references from previously completed public procurements for sufficient experience",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21320?lang=en",
+              "groups": [
+                "cc13edd5-fed4-4ab2-9078-b0ec6c02565a"
+              ],
+              "id": "7f7d89d8-a182-445a-8e66-6b68830d0d5c",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Appropriate references from previously completed public procurement for sufficient experience",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "List of major deliveries or services provided during the last three years or, for defense or security procurement, over the past five years",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17888?lang=en",
+              "groups": [
+                "4da23d2f-0078-445e-87ac-4f7163c122f4"
+              ],
+              "id": "a957e364-6507-4d12-b199-5d63fdeca6b7",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "List of major deliveries or services provided over the last three years",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "efc5763f-5fac-4680-b170-86677a5af850",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 2°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            },
+            {
+              "article": "R. 2142-14",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "For service contracts: performance of services of the specified type"
+        }
+      ]
+    },
+    {
+      "criterion_id": "612a1625-118d-4ea4-a6db-413184e7c0a8",
+      "criterion_name": "Subcontracting proportion",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "61874050-5130-4f1c-a174-720939c7b483",
+      "criterion_name": "Direct or indirect involvement in the preparation of this procurement procedure",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "6346959b-e097-4ea1-89cd-d1b4c131ea4d",
+      "criterion_name": "Number of managerial staff",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "63adb07d-db1b-4ef0-a14e-a99785cf8cf6",
+      "criterion_name": "Purely national exclusion grounds",
+      "sub_criteria": [
+        {
+          "description": "Persons who, through their direct or indirect prior participation in the preparation of the procurement procedure, have had access to information likely to distort competition in relation to the other candidates, where it can not be remedied to this situation by other means",
+          "evidences": [],
+          "id": "0ba39484-90b4-4e81-87a9-a1e6578ae76f",
+          "legislation": [
+            {
+              "article": "L. 2141-8-2°",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Optional Tendering Requirements : Early participation in the procedure and access to information"
+        },
+        {
+          "description": "Administrative decision about exclusion from administrative contracts",
+          "evidences": [],
+          "id": "54fc9793-e42d-4fbf-a652-887b8359e2f7",
+          "legislation": [
+            {
+              "article": "Art. L. 8272-4",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Exclusion from administrative contracts"
+        },
+        {
+          "description": "A company, whose head office is established abroad, may temporarily detach employees for a mission to another company located in France. Any employer established abroad must send a prior declaration of transnational detachment to the labor inspectorate before the intervention begins, on which the place of his work depends.",
+          "evidences": [],
+          "id": "700fd043-52d3-4853-98a9-1532c3e74cb2",
+          "legislation": [
+            {
+              "article": "Art. L. 1262-4-1",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Employees temporarily assigned by a company not established in France"
+        },
+        {
+          "description": "Do the purely national grounds of exclusion, which are specified in the relevant notice or in the procurement documents, apply?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Proof by any means within a reasonable period of time that the professionalism and reliability of the economic operator can no longer be called into question and, where appropriate, that its participation in the procurement procedure is not likely to Affecting equal treatment",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17873?lang=en",
+              "groups": [
+                "cd23ef15-07a3-4562-800f-3ca0c4cd18cd"
+              ],
+              "id": "cbfbef8e-cc4d-4be2-940f-8e1f818e78a6",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Any means of proof",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "512ee58c-4156-4c28-af67-346a04275999"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "020ba492-0076-4434-85fd-298510c40660"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "A company, whose head office is established abroad, may temporarily detach employees for a mission to another company located in France. Any employer established abroad must send a prior declaration of transnational detachment to the labor inspectorate before the intervention begins, on which the place of his work depends.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17872?lang=en",
+              "groups": [
+                "e63532b9-6e7c-4a82-a551-6f87cf12a4b9"
+              ],
+              "id": "0b2c8ce5-b793-47ca-8643-d210200a4797",
+              "intended_use": "All areas",
+              "issuers": [
+                "General Directorate of Labor"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Copy of the declaration of temporary assignment of employees by a foreign company",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "A company, whose head office is established abroad, may temporarily detach employees for a mission to another company located in France. Every employer established abroad must send a written document designating the representative of the company on the national territory before the start of the intervention.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17871?lang=en",
+              "groups": [
+                "e63532b9-6e7c-4a82-a551-6f87cf12a4b9"
+              ],
+              "id": "d31bd37e-412e-4aa0-a3c6-216d37fbe967",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Copy of the document designating the representative",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "59896aea-8b43-477c-9b31-f59d7c9c1944"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "bc9f631c-b56e-416a-82fe-b646e830ca80"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "b5a4ca4c-cc13-4d8c-9a61-ffc806db892b",
+          "legislation": [
+            {
+              "article": "Art. L. 8272-4 / Art. L. 1262-4-1",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            },
+            {
+              "article": "Art. 131-39",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            },
+            {
+              "article": "L. 2141-8-1° / L. 2141-8-2°",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Purely national exclusion grounds"
+        },
+        {
+          "description": "Persons who have undertaken to unduly influence the buyer's decision-making process or to obtain confidential information that may give them an undue advantage in the procurement process or have provided misleading information, likely to have a decisive influence on the decisions of exclusion, selection or award",
+          "evidences": [],
+          "id": "dd61d770-28d5-4ab2-8abd-c11a84dfedac",
+          "legislation": [
+            {
+              "article": "L. 2141-8-1°",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Optional Tendering Requirements : Influence on buyer's decision through information"
+        }
+      ]
+    },
+    {
+      "criterion_id": "68918c7a-f5bc-4a1a-a62f-ad8983600d48",
+      "criterion_name": "Arrangement with creditors",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "696a75b2-6107-428f-8b74-82affb67e184",
+      "criterion_name": "Guilty of misrepresentation, withheld information, unable to provide required documents and obtained confidential information of this procedure",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f",
+      "criterion_name": "Enrolment in a relevant professional register",
+      "sub_criteria": [
+        {
+          "description": "It is enrolled in relevant professional registers kept in the Member State of its establishment as described in Annex XI of Directive 2014/24/EU; economic operators from certain Member States may have to comply with other requirements set out in that Annex.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Acknowledgment of the filing of declaration when registration is in progress with a Center of formalities of the companies (CFE)",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17878?lang=en",
+              "groups": [
+                "2616a83b-29bf-458b-8e5d-fc770291dd97"
+              ],
+              "id": "fafd3bd5-2542-4b51-8258-64a828ade88d",
+              "intended_use": "All areas",
+              "issuers": [
+                "Business Formalities Center (CFE)"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Acknowledgment of the filing of a declaration when the registration is in progress",
+              "type_code": "Certificate",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a craftsman in the Crafts Directory",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17877?lang=en",
+              "groups": [
+                "e39c4fb4-d24f-41e4-bcb6-5340a0f4f3de"
+              ],
+              "id": "c4546d6c-6025-46fb-8a2e-e0f187180531",
+              "intended_use": "All areas",
+              "issuers": [
+                "Chambers of Metier and Crafts (CMA)"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract D1",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a legal person, regulated profession or any other type of metier in a specialized register",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/25864?lang=en",
+              "groups": [
+                "84ee0e5f-1b70-4dc3-a1d3-f91ddf2165e9"
+              ],
+              "id": "38c06b9f-93b1-494c-a14c-6a6aa80f7b59",
+              "intended_use": "All areas",
+              "issuers": [
+                "Registry of the Commercial Court"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Registration of a legal person, regulated profession or any other type of metier in a specialized register",
+              "type_code": "Certificate",
+              "validity_period": "Only for the specified tender"
+            }
+          ],
+          "id": "cb51ed28-0c03-4137-b2a2-112338cdc00d",
+          "legislation": [
+            {
+              "article": "R. 2142-5",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Enrolment in a relevant professional register"
+        }
+      ]
+    },
+    {
+      "criterion_id": "73f10e36-ed7a-412e-995c-aa76463e3776",
+      "criterion_name": "For service contracts: membership of particular organisation needed",
+      "sub_criteria": [
+        {
+          "description": "Is a particular membership of a particular organisation needed in order to be able to perform the service in question in the country of establishment of the economic operator?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Certificates or attestations issued in accordance with the recommendations of the opinion on the nature and content of technical specifications in public procurement (NOR: EINM1608199V) Proof of belonging or authorization of the economic operator to a specific organization",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17895?lang=en",
+              "groups": [
+                "c19b6d43-6b94-4155-b05c-e18e8999bdab"
+              ],
+              "id": "ba079f93-6ed8-4d09-a5db-6ba93e514462",
+              "intended_use": "All areas",
+              "issuers": [
+                "Official Organizations, Institutes or Services"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Proof of belonging or authorization of a specific organization",
+              "type_code": "Certificate",
+              "validity_period": ""
+            }
+          ],
+          "id": "1dd2e635-0d89-49a4-9761-7fe7cce89544",
+          "legislation": [
+            {
+              "article": "Art. 1",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "For service contracts: membership of particular organisation needed"
+        }
+      ]
+    },
+    {
+      "criterion_id": "7604bd40-4462-4086-8763-a50da51a869c",
+      "criterion_name": "Professional risk indemnity insurance",
+      "sub_criteria": [
+        {
+          "description": "The insured amount in its professional risk indemnity insurance is the following:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Appropriate Level of Occupational Risk Insurance",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17886?lang=en",
+              "groups": [
+                "b4288c48-3fd4-44ac-99e4-97b68ce02bb0"
+              ],
+              "id": "22a98838-c8a4-4279-861d-8536b52422d9",
+              "intended_use": "All areas",
+              "issuers": [
+                "Insurers or Bankers"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Appropriate Level of Occupational Risk Insurance",
+              "type_code": "Certificate",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Appropriate bank statement or proof of insurance of relevant occupational risks",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17885?lang=en",
+              "groups": [
+                "aeca697b-2e8c-4261-8b85-2ba5c9212fe0"
+              ],
+              "id": "6e241391-3301-4215-9ba0-e6be8ceeb79c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Insurers or Bankers"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Appropriate bank statement or proof of insurance of relevant occupational risks",
+              "type_code": "Certificate",
+              "validity_period": ""
+            }
+          ],
+          "id": "115fc41b-6372-40e7-b0d9-acc50cfdc611",
+          "legislation": [
+            {
+              "article": "Art. 2",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            },
+            {
+              "article": "R. 2142-12",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Professional risk indemnity insurance"
+        },
+        {
+          "description": "Depending on the needs of the contracting authority: the contracting authorities may require an appropriate level of occupational risk insurance",
+          "evidences": [],
+          "id": "3c642037-498b-4b21-a459-c13caccf4192",
+          "legislation": [
+            {
+              "article": "R. 2142-12",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Specifics conditions about professional risk indemnity insurance"
+        }
+      ]
+    },
+    {
+      "criterion_id": "7662b7a9-bcb8-4763-a0a7-7505d8e8470d",
+      "criterion_name": "For supply contracts: samples, descriptions or photographs with certification of authenticity",
+      "sub_criteria": [
+        {
+          "description": "For public supply contracts: The economic operator will supply the required samples, descriptions or photographs of the products to be supplied and will provide certifications of authenticity where applicable.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Samples, descriptions or photographs of supplies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/25884?lang=en",
+              "groups": [
+                "cf6c46dd-45e8-4ae7-ba98-3a8a77d31c3e"
+              ],
+              "id": "b63b35cf-6712-4ee9-8dc1-6c70dc500dc1",
+              "intended_use": "All areas",
+              "issuers": [
+                "economic operator"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Samples, descriptions or photographs of supplies",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "ec420f1a-0729-41a9-b14c-41cc64c3693d",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 10°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "For supply contracts: samples, descriptions or photographs with certification of authenticity"
+        }
+      ]
+    },
+    {
+      "criterion_id": "77f481ce-ffb6-483f-8e2b-c78db5e68292",
+      "criterion_name": "Set up of economic operator",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "7d85e333-bbab-49c0-be8d-c36d71a72f5e",
+      "criterion_name": "Payment of social security contributions",
+      "sub_criteria": [
+        {
+          "description": "Has the economic operator breached its obligations relating to the payment social security contributions, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Certificate attesting the regular payment of social contributions to the social security which provide the service of paid vacation and unemployment due to bad weather",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17867?lang=en",
+              "groups": [
+                "28411ff1-71df-4720-a737-806fd4266b8b",
+                "2a8f78ea-b996-4319-b653-12dd1c2e40ac"
+              ],
+              "id": "ff165a6e-aa16-4083-b2d8-0970ac562b3d",
+              "intended_use": "All areas",
+              "issuers": [
+                "Social organizations"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Certificate attesting the regular payment of social contributions to the social security which provide the service of paid vacation and unemployment due to bad weather",
+              "type_code": "Certificate",
+              "validity_period": "From 1 to 12 Months"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Certificate attesting to the regularity of the employer's situation with regard to the obligation to employ disabled workers issued by the Association for the Management of the Development Fund for the Occupational Integration of the Disabled",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17869?lang=en",
+              "groups": [
+                "2a8f78ea-b996-4319-b653-12dd1c2e40ac"
+              ],
+              "id": "be1c5077-3f01-4c63-977f-8e6a11448faf",
+              "intended_use": "All areas",
+              "issuers": [
+                "Ministry of Labor"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Compulsory declaration of employment of disabled workers (DOETH) - Cerfa n°11391*19",
+              "type_code": "Certificate",
+              "validity_period": "From 1 to 12 Months"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Certificate attesting to the regularity of the employer's situation with regard to the obligation to employ disabled workers issued by the Association for the Management of the Development Fund for the Occupational Integration of the Disabled",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17868?lang=en",
+              "groups": [
+                "28411ff1-71df-4720-a737-806fd4266b8b"
+              ],
+              "id": "29923b10-9c99-4ec5-957b-5c302a2d56fc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Ministry of Labor"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Compulsory declaration of employment of disabled workers (tele-DOETH)",
+              "type_code": "Online evidence",
+              "validity_period": "From 1 to 12 Months"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "This certificate must be provided to the buyer every six months. For any contract for a minimum amount of € 5 000 excluding taxes (overall amount of the service, even if it is the subject of several payments or invoices), the customer must verify, at the time of conclusion, and then every six months until the end of its execution, that its contracting party fulfills its obligations of declaration and payment of contributions in respect of the URSSAF.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17866?lang=en",
+              "groups": [
+                "28411ff1-71df-4720-a737-806fd4266b8b",
+                "2a8f78ea-b996-4319-b653-12dd1c2e40ac"
+              ],
+              "id": "b8d9fcd4-7464-491d-a66b-bb308dd45419",
+              "intended_use": "All areas",
+              "issuers": [
+                "URSSAF"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Vigilance attestation",
+              "type_code": "Online evidence",
+              "validity_period": "6 Months"
+            }
+          ],
+          "id": "fbaf8e82-e1a1-428b-ae4a-a170e771697d",
+          "legislation": [
+            {
+              "article": "L. 2141-2",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Payment of social security contributions"
+        }
+      ]
+    },
+    {
+      "criterion_id": "87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7",
+      "criterion_name": "Enrolment in a trade register",
+      "sub_criteria": [
+        {
+          "description": "It is enrolled in trade registers kept in the Member State of its establishment as described in Annex XI of Directive 2014/24/EU; economic operators from certain Member States may have to comply with other requirements set out in that Annex.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Acknowledgment of the filing of declaration when registration is in progress with a Center of formalities of the companies (CFE)",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17878?lang=en",
+              "groups": [
+                "b258adcc-3d8b-45f1-a705-5b548b3bea24"
+              ],
+              "id": "fafd3bd5-2542-4b51-8258-64a828ade88d",
+              "intended_use": "All areas",
+              "issuers": [
+                "Business Formalities Center (CFE)"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Acknowledgment of the filing of a declaration when the registration is in progress",
+              "type_code": "Certificate",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a legal entity in the Register of Commerce and Companies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17875?lang=en",
+              "groups": [
+                "fb6addc5-7d41-490c-a48c-2bf854580a80"
+              ],
+              "id": "4d21db2a-070c-4817-bf06-47592f609642",
+              "intended_use": "All areas",
+              "issuers": [
+                "Registry of the Commercial Court"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract K",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a legal entity in the Register of Commerce and Companies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17921?lang=en",
+              "groups": [
+                "b820d90e-2a39-4cb1-b66c-ef0795e857f1"
+              ],
+              "id": "5ac6c537-fb58-4c31-923c-132eb041e2d7",
+              "intended_use": "All areas",
+              "issuers": [
+                "Registry of the Commercial Court"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract K-bis",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "1b786c8a-fad5-4a8b-9f77-de2df5aec95f",
+          "legislation": [
+            {
+              "article": "R. 2142-5",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Enrolment in a trade register"
+        }
+      ]
+    },
+    {
+      "criterion_id": "8ed65e48-fd0d-444f-97bd-4f58da632999",
+      "criterion_name": "Certificates by independent bodies about environmental management systems or standards",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "8fda202a-0c37-41bb-9d7d-de3f49edbfcb",
+      "criterion_name": "Assets being administered by liquidator",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "90a2e100-44cc-45d3-9970-69d6714f1596",
+      "criterion_name": "Study and research facilities",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "9460457e-b43d-48a9-acd1-615de6ddd33e",
+      "criterion_name": "Environmental management measures",
+      "sub_criteria": [
+        {
+          "description": "The economic operator will be able to apply the following environmental management measures when performing the contract:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Indication of the environmental management measures that the applicant may apply in the performance of the public procurement",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17899?lang=en",
+              "groups": [
+                "74c25e92-d46e-4b84-adb7-8cbb788e9613"
+              ],
+              "id": "cba9c6dc-883f-44c6-b3dc-fe500e3d8b11",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Indication of the environmental management measures that the applicant may apply in the performance of the public procurement",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "06fe9b50-d140-4bab-a0bc-21fa930d3244",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 9°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "Environmental management measures"
+        }
+      ]
+    },
+    {
+      "criterion_id": "9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4",
+      "criterion_name": "For service contracts: authorisation of particular organisation needed",
+      "sub_criteria": [
+        {
+          "description": "Is a particular membership of a particular organisation needed in order to be able to perform the service in question in the country of establishment of the economic operator?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Certificates or attestations issued in accordance with the recommendations of the opinion on the nature and content of technical specifications in public procurement (NOR: EINM1608199V) Proof of belonging or authorization of the economic operator to a specific organization",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17895?lang=en",
+              "groups": [
+                "d29804d2-9a26-433c-90c6-4be0081dccf5"
+              ],
+              "id": "ba079f93-6ed8-4d09-a5db-6ba93e514462",
+              "intended_use": "All areas",
+              "issuers": [
+                "Official Organizations, Institutes or Services"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Proof of belonging or authorization of a specific organization",
+              "type_code": "Certificate",
+              "validity_period": ""
+            }
+          ],
+          "id": "22e4b838-52f0-4b5f-9c93-4f6e4e9d014b",
+          "legislation": [
+            {
+              "article": "Art. 1",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "For service contracts: authorisation of particular organisation needed"
+        }
+      ]
+    },
+    {
+      "criterion_id": "a261a395-ed17-4939-9c75-b9ff1109ca6e",
+      "criterion_name": "Breaching of obligations in the fields of social law",
+      "sub_criteria": [
+        {
+          "description": "Conviction for discrimination in professional equality between women and men",
+          "evidences": [],
+          "id": "5218c47d-699f-4d0a-85f2-2baafaf2d8ad",
+          "legislation": [
+            {
+              "article": "Art. L. 1146-1",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Discrimination in professional equality between women and men"
+        },
+        {
+          "description": "The economic operator has to its knowledge, breached its obligations in the field of social law.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "16088b69-a73d-45b2-ad80-3050b9db35ea"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "c8d7d855-7e30-49ff-86d7-aa9cd265af3e"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "879bd525-1625-4cb9-8c33-4d82a41e4426"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "7921b6ff-5b6a-41f3-933f-c82088b988b0"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "ce195021-3f58-4f7c-bc12-315d9ca995d3",
+          "legislation": [
+            {
+              "article": "Art. L. 1146-1 / Art. L. 2242-5",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            },
+            {
+              "article": "Art. 225-1",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Breaching of obligations in the fields of social law"
+        },
+        {
+          "description": "",
+          "evidences": [],
+          "id": "cf3f2e35-0ad4-4f50-a783-0df123ee32ba",
+          "legislation": [
+            {
+              "article": "Art. L. 2242-5",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Lack of implementation of the annual negotiating obligation on remuneration, working time and the sharing of value added from the previous year of the current procurement procedure"
+        }
+      ]
+    },
+    {
+      "criterion_id": "a34b70d6-c43d-4726-9a88-8e2b438424bf",
+      "criterion_name": "Breaching of obligations in the fields of labour law",
+      "sub_criteria": [
+        {
+          "description": "Conviction for employment of foreigners not authorized to work",
+          "evidences": [],
+          "id": "a114bf3b-ca81-44f8-9105-9ac66517b08d",
+          "legislation": [
+            {
+              "article": "Art. L. 8251-1",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Employement of foreigners not authorized to work"
+        },
+        {
+          "description": "The economic operator has to its knowledge, breached its obligations in the field of labour law.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "babbe6c8-0d6b-4f7b-a7f9-ad133656824b"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "1744dd79-2a85-48ac-b760-d8b19fb35ed2"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "c8c8b4ab-f4a0-4bdf-9416-9dde1dd46481"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "4de8fd1d-05e3-4d7b-832c-d639325bafa8"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "a89e7875-7cea-4aab-9730-89bf884af82b",
+          "legislation": [
+            {
+              "article": "Art. L. 8221-1 / Art. L. 8231-1 / Art. L. 8241-1 / Art. L. 8251-1",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Breaching of obligations in the fields of labour law"
+        },
+        {
+          "description": "Conviction for the loan of workforce illegaly",
+          "evidences": [],
+          "id": "b64e0912-1b57-4625-a9da-eb59e92ff54e",
+          "legislation": [
+            {
+              "article": "Art. L. 8241-1",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Loan of workforce illegaly"
+        },
+        {
+          "description": "Conviction for bargaining",
+          "evidences": [],
+          "id": "d8adb4f7-8e29-4d0d-a761-50ea701727b8",
+          "legislation": [
+            {
+              "article": "Art. L. 8231-1",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Bargaining"
+        }
+      ]
+    },
+    {
+      "criterion_id": "a7669d7d-9297-43e1-9d10-691a1660187c",
+      "criterion_name": "For supply contracts: certificates by quality control institutes",
+      "sub_criteria": [
+        {
+          "description": "Can the economic operator provide the required certificates drawn up by official quality control institutes or agencies of recognised competence attesting the conformity of products clearly identified by references to the technical specifications or standards, which are set out in the relevant notice or the procurement documents?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Certificates or attestations issued in accordance with the recommendations of the opinion on the nature and content of technical specifications in public procurement (NOR: EINM1608199V) Certificates issued by official quality control institutes or departments and empowered to attest the conformity of supplies by references to certain technical specifications",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17893?lang=en",
+              "groups": [
+                "74c89119-c03b-4af0-b890-904bb570e42f"
+              ],
+              "id": "8660f33c-762c-40c9-8bc8-1922b253212b",
+              "intended_use": "All areas",
+              "issuers": [
+                "Official Organizations, Institutes or Services"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Certificates issued by official quality control institutes or departments and empowered to attest the conformity of supplies by references to certain technical specifications",
+              "type_code": "Certificate",
+              "validity_period": ""
+            }
+          ],
+          "id": "e128f541-167b-49a6-98eb-726dc0666a23",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 11°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "For supply contracts: certificates by quality control institutes"
+        }
+      ]
+    },
+    {
+      "criterion_id": "a80ddb62-d25b-4e4e-ae22-3968460dc0a9",
+      "criterion_name": "Breaching of obligations in the fields of environmental law",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "ab0e7f2e-6418-40e2-8870-6713123e41ad",
+      "criterion_name": "Other economic or financial requirements",
+      "sub_criteria": [
+        {
+          "description": "Concerning the other economic or financial requirements, if any, that may have been specified in the relevant notice or the procurement documents, the economic operator declares that:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Balance sheet for the last 3 years",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17881?lang=en",
+              "groups": [
+                "1399139b-ad6d-40c2-b387-bc8f82db5f91"
+              ],
+              "id": "dd358f2c-fbb8-4665-ae53-90b81b8617d9",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Balance sheet for the last 3 years",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Extract from the balance sheet for the last 3 years",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17882?lang=en",
+              "groups": [
+                "5b372672-4727-4df5-a8e2-4271ead17a0d"
+              ],
+              "id": "8d32498c-bdd8-459b-aa3c-99a830a2229e",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract from the balance sheet for the last 3 years",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Information on the annual accounts",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17884?lang=en",
+              "groups": [
+                "f48e34d8-560a-4601-87e2-65b0bed7bb69"
+              ],
+              "id": "095978e9-fa8f-42f0-a6e4-c636ed8dd384",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Information on the annual accounts",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "50fa8f11-fd4d-4686-ae0b-bb1571da53c1",
+          "legislation": [
+            {
+              "article": "Art. 2",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            },
+            {
+              "article": "R. 2142-11",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Other economic or financial requirements"
+        },
+        {
+          "description": "Depending on the needs of the contracting authority",
+          "evidences": [],
+          "id": "9d8e495e-62c5-4d68-ac47-82a64c0a28fc",
+          "legislation": [
+            {
+              "article": "R. 2142-11",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Information on the annual accounts"
+        }
+      ]
+    },
+    {
+      "criterion_id": "b16cb9fc-6cb7-4585-9302-9533b415cf48",
+      "criterion_name": "Average yearly turnover",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "b1b5ac18-f393-4280-9659-1367943c1a2e",
+      "criterion_name": "Conflict of interest due to its participation in the procurement procedure",
+      "sub_criteria": [
+        {
+          "description": "Is the economic operator aware of any conflict of interest as indicated in national law, the relevant notice or the procurement documents due to its participation in the procurement procedure?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Proof by any means within a reasonable period of time that the professionalism and reliability of the economic operator can no longer be called into question and, where appropriate, that its participation in the procurement procedure is not likely to Affecting equal treatment",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17873?lang=en",
+              "groups": [
+                "922132a8-cf7f-4a91-89d6-7243d979a438"
+              ],
+              "id": "cbfbef8e-cc4d-4be2-940f-8e1f818e78a6",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Any means of proof",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            }
+          ],
+          "id": "27fc68b6-4bd7-40ad-a14f-b07255a4c2de",
+          "legislation": [
+            {
+              "article": "L. 2141-10",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Conflict of interest due to its participation in the procurement procedure"
+        }
+      ]
+    },
+    {
+      "criterion_id": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4",
+      "criterion_name": "Payment of taxes",
+      "sub_criteria": [
+        {
+          "description": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Tax certificate [Certificate by tax administration for taxes and duties (IS, IR, VAT)].",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17865?lang=en",
+              "groups": [
+                "b82d94af-13a1-4788-8f22-ec421921d0bd"
+              ],
+              "id": "30f9b6f1-21c9-4c21-8915-a5bd0d1a56f0",
+              "intended_use": "All areas",
+              "issuers": [
+                "General Directorate of Public Finance"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Tax attestation (IR) - Cerfa n°3666",
+              "type_code": "Certificate",
+              "validity_period": "1 Years"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Tax certificate [Certificate by tax administration for taxes and duties (IS, IR, VAT)].",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17864?lang=en",
+              "groups": [
+                "371ed490-3f55-406a-a3f1-5b3b5a10a180"
+              ],
+              "id": "df745374-0e8b-4f3a-9da4-0853e8b5d424",
+              "intended_use": "All areas",
+              "issuers": [
+                "General Directorate of Public Finance"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Tax attestation (IS)",
+              "type_code": "Online evidence",
+              "validity_period": "1 Years"
+            }
+          ],
+          "id": "461186bf-bdd7-4079-b297-4e43ff798630",
+          "legislation": [
+            {
+              "article": "L. 2141-2 and annexe 4",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Payment of taxes"
+        }
+      ]
+    },
+    {
+      "criterion_id": "bdf0601d-2480-4250-b870-658d0ee95be6",
+      "criterion_name": "For supply contracts: samples, descriptions or photographs without certification of authenticity",
+      "sub_criteria": [
+        {
+          "description": "For public supply contracts: The economic operator will supply the required samples, descriptions or photographs of the products to be supplied, which do not need to be accompanied by certifications of authenticity.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Samples, descriptions or photographs of supplies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/25884?lang=en",
+              "groups": [
+                "885b46a4-fffa-404d-adf9-06f1b228624f"
+              ],
+              "id": "b63b35cf-6712-4ee9-8dc1-6c70dc500dc1",
+              "intended_use": "All areas",
+              "issuers": [
+                "economic operator"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Samples, descriptions or photographs of supplies",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "c0e402f8-6f33-4448-89bf-c36959b69bf1",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 10°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "For supply contracts: samples, descriptions or photographs without certification of authenticity"
+        }
+      ]
+    },
+    {
+      "criterion_id": "c27b7c4e-c837-4529-b867-ed55ce639db5",
+      "criterion_name": "Corruption",
+      "sub_criteria": [
+        {
+          "description": "Final conviction for passive bribery and influence peddling by persons exercising a public function",
+          "evidences": [],
+          "id": "39b7173a-fdf7-4736-ac30-cb285243c3cc",
+          "legislation": [
+            {
+              "article": "Art. 432-11",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Passive bribery and influence"
+        },
+        {
+          "description": "Final conviction for corruption and trading in influence active towards the public administration of a foreign state member of the European Union",
+          "evidences": [],
+          "id": "3d994c8a-4221-4747-ac0d-4b70ce711943",
+          "legislation": [
+            {
+              "article": "Art. 435-3, 435-4, 435-9 and 435-10",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Corruption and trading in influence active towards the public administration of a foreign state member of the European Union"
+        },
+        {
+          "description": "The economic operator itself or any person who is a member of its administrative, management or supervisory body or powers of representation, decision or control therein has been the subject of a conviction by final judgement for corruption, by a conviction rendered at the most five years ago or in which an exclusion period set out directly in the conviction continues to be applicable. Corruption, as defined in the relevant legislation.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "324858b8-d311-4649-a051-fc7022606e72"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "7d17a1a4-9a22-4211-8b3d-8e39cc9c36b8"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "5f213c17-3034-47ec-83c5-bf44bbb6e999"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "87392253-d049-41b3-a135-c0b3c1a066f8"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "448e0075-308d-4e51-86eb-70566021e931",
+          "legislation": [
+            {
+              "article": "Art. 432-10 / Art. 432-11 / Art. 432-12 to 432-16 / Art. 433-1 and 433-2 / Art. 435-3, 435-4, 435-9 and 435-10 / Art. 445-1 to 445-2-1 / Art. 434-9 and 434-9-1",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Corruption"
+        },
+        {
+          "description": "Final conviction for concussion",
+          "evidences": [],
+          "id": "8272d106-a8e5-4c89-88f1-6bd067977f5e",
+          "legislation": [
+            {
+              "article": "Art. 432-10",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Concussion"
+        },
+        {
+          "description": "Final conviction for obstruction of justice",
+          "evidences": [],
+          "id": "9baabf9c-04ad-4f80-9bd2-ae4fd5e3a355",
+          "legislation": [
+            {
+              "article": "Art. 434-9 and 434-9-1",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Obstruction of justice"
+        },
+        {
+          "description": "Final conviction for Illegal Interest",
+          "evidences": [],
+          "id": "9fcf5f7f-cedb-44a8-9cf1-717d54dd9852",
+          "legislation": [
+            {
+              "article": "Art. 432-12 to 432-16",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Illegal Interest"
+        },
+        {
+          "description": "Final conviction for corruption against a person not in the public service",
+          "evidences": [],
+          "id": "ae08ca72-81b4-42fa-986f-13c58ad32bc7",
+          "legislation": [
+            {
+              "article": "Art. 445-1 to 445-2-1",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Corruption against a person not in the public service"
+        }
+      ]
+    },
+    {
+      "criterion_id": "c599c130-b29f-461e-a187-4e16c7d40db7",
+      "criterion_name": "For works contracts: technicians or technical bodies to carry out the work",
+      "sub_criteria": [
+        {
+          "description": "In the case of public works contracts, the economic operator will be able to call on the following technicians or technical bodies to carry out the work:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The indication of technicians or technical bodies, whether or not they are integrated with the candidate, in particular those responsible for quality control and, in the case of works public procurement, to which the candidate may call for the execution of the work",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17891?lang=en",
+              "groups": [
+                "0e79b133-21d4-4d9f-9b4c-b4695c200111"
+              ],
+              "id": "2c43ba3a-660f-42a0-b69a-8bf344189072",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Indication of technicians or technical bodies",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "39541143-46b6-4620-a55b-22ef4d3a6418",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 5°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "For works contracts: technicians or technical bodies to carry out the work"
+        }
+      ]
+    },
+    {
+      "criterion_id": "c8809aa1-29b6-4f27-ae2f-27e612e394db",
+      "criterion_name": "Allowance of checks",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "cc18c023-211d-484d-a32e-52f3f970285f",
+      "criterion_name": "Tools, plant or technical equipment",
+      "sub_criteria": [
+        {
+          "description": "The following tools, plant or technical equipment will be available to it for performing the contract:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Conditions imposed on human and technical resources",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17905?lang=en",
+              "groups": [
+                "c396bb23-2469-4f94-b40c-a304c4fcbcfd"
+              ],
+              "id": "46a575fc-884a-41b4-9d28-9f74b222a4fc",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Conditions imposed on human and technical resources",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Description of the tools, equipment and technical equipment available to the candidate for the purpose of the procurement",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17896?lang=en",
+              "groups": [
+                "4e2772a1-1e82-423a-9623-d7ba75fa82d7"
+              ],
+              "id": "e29d5c62-3718-41c8-99ae-4bc6b3084275",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Description of the tools, equipment and technical equipment available to the candidate for the purpose of the procurement",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "d4a53805-ed7c-4c56-b16e-63bbcaf5d216",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 6°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            },
+            {
+              "article": "Annex 9, article 3, 6°",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Tools, plant or technical equipment"
+        },
+        {
+          "description": "Depending on the needs of the contracting authority",
+          "evidences": [],
+          "id": "fdbc10b8-b883-400e-8584-941f1aeb9877",
+          "legislation": [
+            {
+              "article": "Annex 9, article 3, 6°",
+              "description": "Public Procurement Code",
+              "jurisdiction": "fr",
+              "title": "Public Procurement Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000037701019"
+            }
+          ],
+          "name": "Specifics conditions for tools, plant or technical equipment"
+        }
+      ]
+    },
+    {
+      "criterion_id": "cdd3bb3e-34a5-43d5-b668-2aab86a73822",
+      "criterion_name": "For works contracts: performance of works of the specified type",
+      "sub_criteria": [
+        {
+          "description": "Depending on the needs of the contracting authority: appropriate references from previously completed public procurements for sufficient experience",
+          "evidences": [],
+          "id": "08dc6beb-3c62-455b-9af3-7b0057e8166e",
+          "legislation": [
+            {
+              "article": "R. 2142-14",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "Specifics conditions for works contracts: appropriate references from public contracts executed"
+        },
+        {
+          "description": "For public works contracts only: During the reference period, the economic operator has performed the following works of the specified type. Contracting authorities may require up to five years and allow experience dating from more than five years.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Appropriate references from previously completed public procurements for sufficient experience",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21320?lang=en",
+              "groups": [
+                "3e017171-a353-4e07-894a-94f41e08b5fd"
+              ],
+              "id": "7f7d89d8-a182-445a-8e66-6b68830d0d5c",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Appropriate references from previously completed public procurement for sufficient experience",
+              "type_code": "Self-declaration",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "List of works carried out during the last five years, accompanied by certificates of performance for the most important works",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17887?lang=en",
+              "groups": [
+                "dc1961c9-3446-4d32-8a77-ca2acb1729c6"
+              ],
+              "id": "81319264-08fb-40ae-a18d-752e442e163d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "List of previous executed contracts",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "b1193ac1-56c9-4d72-aa98-bc1e78be63ed",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 1°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            },
+            {
+              "article": "R. 2142-14",
+              "description": "Labor Code",
+              "jurisdiction": "fr",
+              "title": "Labor Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006072050"
+            }
+          ],
+          "name": "For works contracts: performance of works of the specified type"
+        }
+      ]
+    },
+    {
+      "criterion_id": "d3732c09-7d62-4edc-a172-241da6636e7c",
+      "criterion_name": "Bankruptcy",
+      "sub_criteria": [
+        {
+          "description": "Is the economic operator bankrupt? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "All judgments handed down for a person subject to personal bankruptcy proceedings, a management ban or the equivalent in a foreign country or for a legal person subject to liquidation or receivership proceedings during the time provided for in Procurement or equivalent for a foreign country",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17874?lang=en",
+              "groups": [
+                "0de1bcfe-b287-48b3-a059-cd8a4012a150",
+                "19e86887-d88c-415d-bb16-b4be9686a129",
+                "8d17e5f6-dad1-419f-aa1f-fa6572895e66"
+              ],
+              "id": "3b4b6e4f-2242-44ed-8334-d28ad67b21bb",
+              "intended_use": "All areas",
+              "issuers": [
+                "Ministry of Justice"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Copies of judgments in case of insolvency or bankruptcy - Cerfa n°11808*04",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a craftsman in the Crafts Directory",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17877?lang=en",
+              "groups": [
+                "0de1bcfe-b287-48b3-a059-cd8a4012a150"
+              ],
+              "id": "c4546d6c-6025-46fb-8a2e-e0f187180531",
+              "intended_use": "All areas",
+              "issuers": [
+                "Chambers of Metier and Crafts (CMA)"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract D1",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a legal entity in the Register of Commerce and Companies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17875?lang=en",
+              "groups": [
+                "19e86887-d88c-415d-bb16-b4be9686a129"
+              ],
+              "id": "4d21db2a-070c-4817-bf06-47592f609642",
+              "intended_use": "All areas",
+              "issuers": [
+                "Registry of the Commercial Court"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract K",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Registration of a legal entity in the Register of Commerce and Companies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17921?lang=en",
+              "groups": [
+                "8d17e5f6-dad1-419f-aa1f-fa6572895e66"
+              ],
+              "id": "5ac6c537-fb58-4c31-923c-132eb041e2d7",
+              "intended_use": "All areas",
+              "issuers": [
+                "Registry of the Commercial Court"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Extract K-bis",
+              "type_code": "Certificate",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "45f3e56a-74ee-4a61-b05d-1fb7b4057a08",
+          "legislation": [
+            {
+              "article": "Art. L. 640-1 / Art. L. 631-1",
+              "description": "Trade Code",
+              "jurisdiction": "fr",
+              "title": "Trade Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000005634379"
+            }
+          ],
+          "name": "Bankruptcy"
+        },
+        {
+          "description": "Legal entity subject to legal redress without authorization to continue the activity during the time stipulated by the public procurement or equivalent for a foreign country",
+          "evidences": [],
+          "id": "d96da418-8493-486a-bc86-175c45907e21",
+          "legislation": [
+            {
+              "article": "Art. L. 631-1",
+              "description": "Trade Code",
+              "jurisdiction": "fr",
+              "title": "Trade Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000005634379"
+            }
+          ],
+          "name": "Becoming bankrupt"
+        }
+      ]
+    },
+    {
+      "criterion_id": "d3dfb714-f558-4512-bbc5-e456fa2339de",
+      "criterion_name": "Specific average turnover",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "d486fb70-86b3-4e75-97f2-0d71b5697c7d",
+      "criterion_name": "Terrorist offences or offences linked to terrorist activities",
+      "sub_criteria": [
+        {
+          "description": "Terrorist offences or offences linked to terrorist activities, as defined in Articles 1 and 3 of Council Framework Decision of 13 June 2002 on combating terrorism (OJ L 164, 22.6.2002). This exclusion ground also includes inciting or aiding or abetting or attempting to commit an offence, as referred to in Article 4 of that Framework Decision",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "c8d6be73-1d75-4d61-b1f3-043ee8e51a2a"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "35ebd0c3-c7c7-4626-876c-8826272e9d56"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "2dc6f82c-5ee7-449c-9998-8f83c5e0e641"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "41f083a2-164e-4696-b490-6996be7f38ee"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "7f0fe1dc-9b2b-4a15-acaa-ffedff9fe6ea",
+          "legislation": [
+            {
+              "article": "Art. 421-1 to 421-2-4 and 421-5",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Terrorist offences or offences linked to terrorist activities"
+        }
+      ]
+    },
+    {
+      "criterion_id": "d726bac9-e153-4e75-bfca-c5385587766d",
+      "criterion_name": "Certificates by independent bodies about quality assurance standards",
+      "sub_criteria": [
+        {
+          "description": "Where the goods or services to be supplied are complex or, exceptionally, they have to fulfill a particular purpose, a check carried out by the contracting authority or, on his behalf, by a competent official body of the country in which the supplier or the service provider is established, subject to the agreement of that body; this control shall cover the supplier's production capacity or the technical capacity of the service provider and, if necessary, the means of study and research available to him and the measures he will take to check the quality",
+          "evidences": [],
+          "id": "16506938-622c-4269-8b22-69effbb6b42b",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 13°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "For service and supply contracts : exceptional control of the goods and the services"
+        },
+        {
+          "description": "Certificates of professional qualification established by independent bodies",
+          "evidences": [],
+          "id": "91f8cf97-1a8b-4e51-8b5c-e2f561ed98d8",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 12°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "Certificates of professional qualification"
+        },
+        {
+          "description": "Will the economic operator be able to produce certificates drawn up by independent bodies attesting that the economic operator complies with the required quality assurance standards, including accessibility for disabled persons?",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Certificates or attestations issued in accordance with the recommendations of the opinion on the nature and content of technical specifications in public procurement (NOR: EINM1608199V) Certificates of professional qualification established by independent bodies",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17892?lang=en",
+              "groups": [
+                "766e49a4-a671-4f26-919c-3e2066053b9e"
+              ],
+              "id": "a2395014-fde9-4c79-867a-6143545c8a40",
+              "intended_use": "All areas",
+              "issuers": [
+                "Official Organizations, Institutes or Services"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Certificates of professional qualification established by independent bodies",
+              "type_code": "Certificate",
+              "validity_period": ""
+            },
+            {
+              "addressee": "Buyer",
+              "description": "Where the goods or services to be supplied are complex or, exceptionally, they have to fulfill a particular purpose, a check carried out by the contracting authority or, on his behalf, by a competent official body of the country in which the supplier or the service provider is established, subject to the agreement of that body; this control shall cover the supplier's production capacity or the technical capacity of the service provider and, if necessary, the means of study and research available to him and the measures he will take to check the quality",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17904?lang=en",
+              "groups": [
+                "14146ecd-3be5-4c6c-90f0-63c19d152b64"
+              ],
+              "id": "7321c3e7-bdf5-4a10-abc3-e261008e85bb",
+              "intended_use": "All areas",
+              "issuers": [
+                "Buyers"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Control over the supplier's production capacity or the technical capacity of the service provider",
+              "type_code": "Certificate",
+              "validity_period": ""
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Certificates or attestations issued in accordance with the recommendations of the opinion on the nature and content of technical specifications in public procurement (NOR: EINM1608199V) Quality certificates attesting that the economic operator complies with certain quality assurance standards, including with regard to accessibility for disabled persons",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17894?lang=en",
+              "groups": [
+                "9937d9e1-a3c3-49a0-a57c-5341b1e9a520"
+              ],
+              "id": "dd8770ca-5305-493b-9f43-16451651ec86",
+              "intended_use": "All areas",
+              "issuers": [
+                "Official Organizations, Institutes or Services"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Quality certificates attesting that the economic operator complies with certain quality assurance standards, including with regard to accessibility for persons with disabilities",
+              "type_code": "Certificate",
+              "validity_period": ""
+            }
+          ],
+          "id": "a205fa3b-0719-4c8a-b09d-8f6b2cbf8bd2",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 12° / Art. 4 / Art. 3 I. 13°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "Certificates by independent bodies about quality assurance standards"
+        }
+      ]
+    },
+    {
+      "criterion_id": "d789d01a-fe03-4ccd-9898-73f9cfa080d1",
+      "criterion_name": "Child labour and other forms of trafficking in human beings",
+      "sub_criteria": [
+        {
+          "description": "Money laundering or terrorist financing, as defined in Article 2 of Directive 2011/36/EU of the European Parliament and of the Council of 5 April 2011 on preventing and combating trafficking in human beings and protecting its victims, and replacing Council Framework Decision 2002/629/JHA (OJ L 101, 15.4.2011)",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "The DC forms are a sample letter of application, and declaration (of the candidate or candidates) which can be used by candidates for public procurement (contracts or framework agreements) to apply.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17862?lang=en",
+              "groups": [
+                "e94ba112-e6fb-443c-b65b-ff850477bee5"
+              ],
+              "id": "efdb28c5-880d-4ff2-8449-b21d4b45ce06",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate Declaration Form (DC1, DC2)",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "In the case where the buyer provides a form, the latter is the model letter of application which must be used by the candidates for public procurements to submit their application.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17863?lang=en",
+              "groups": [
+                "de8aaa66-cf53-4f09-8a91-c25901ae2e39"
+              ],
+              "id": "28262c46-0feb-4390-957e-008f0ba9247d",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Candidate declaration form provided by the buyer",
+              "type_code": "Self-declaration",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Allows a company applying for a public procurement to declare its financial status, capacity and ability to participate in the procurement process. If the procedure is electronic, the DUME available to the candidates can be exported, stored and sent electronically, but this form can also be completed, printed and attached to the file if the company wants and can transmit its response in paper version (with the exception of central purchasing organizations).",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/21242?lang=en",
+              "groups": [
+                "fc2b10b2-c0f3-46fe-b3ee-5c85c9ce1e81"
+              ],
+              "id": "886362e8-622d-4bb6-bb84-afbee846ba0c",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "European Single Procurement Document (ESPD)",
+              "type_code": "Online evidence",
+              "validity_period": "Only for the specified tender"
+            },
+            {
+              "addressee": "For all entities",
+              "description": "Simplified ESPD is a way to request participation to a public procurement procedure, just filling two informations : annual turnover and staff. The condition for using this simplified ESPD is that the buyer himself, permitted to do so on his buyer's profile.",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/26324?lang=en",
+              "groups": [
+                "348f93c8-9b39-4655-b969-8b8094143f96"
+              ],
+              "id": "10530588-503c-43e1-9613-4ddcb575c8cc",
+              "intended_use": "All areas",
+              "issuers": [
+                "Directorate of Legal Affairs (MEF)",
+                "European Union"
+              ],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Simplified European Single Procurement Document (ESPD)",
+              "type_code": "Declaration on oath",
+              "validity_period": ""
+            }
+          ],
+          "id": "17e07fa0-275f-4ebc-8d11-ce2dfcb0bf21",
+          "legislation": [
+            {
+              "article": "Art. 225-4-1 and 225-4-7",
+              "description": "Penal Code",
+              "jurisdiction": "fr",
+              "title": "Penal Code",
+              "uri": "https://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070719"
+            }
+          ],
+          "name": "Child labour and other forms of trafficking in human beings"
+        }
+      ]
+    },
+    {
+      "criterion_id": "daffa2a9-9f8f-4568-8be8-7b8bf306d096",
+      "criterion_name": "Analogous situation like bankruptcy under national law",
+      "sub_criteria": []
+    },
+    {
+      "criterion_id": "dc12a151-7fdf-4733-a8f0-30f667292e66",
+      "criterion_name": "Supply chain management",
+      "sub_criteria": [
+        {
+          "description": "It will be able to apply the following supply chain management and tracking systems when performing the contract:",
+          "evidences": [
+            {
+              "addressee": "For all entities",
+              "description": "Indication of Supply Chain Management and Supply Chain Management Systems that the Applicant will be able to implement in the execution of the procurement",
+              "detail_url": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17898?lang=en",
+              "groups": [
+                "d2a8fb79-bbc6-4c39-bfc8-6989277c5155"
+              ],
+              "id": "2e3d423b-3e6d-42bb-b436-82b248f9b315",
+              "intended_use": "All areas",
+              "issuers": [],
+              "jurisdictions": [
+                "fr"
+              ],
+              "name": "Indication of Supply Chain Management and Supply Chain Management Systems that the Applicant will be able to implement in the execution of the procurement",
+              "type_code": "Self-declaration",
+              "validity_period": "Not limited"
+            }
+          ],
+          "id": "486eca2f-f492-40cb-9bfe-ee630963a2ad",
+          "legislation": [
+            {
+              "article": "Art. 3 I. 8°",
+              "description": "Order setting out the list of information and documents which may be requested of candidates for public contracts (Annexe 9)",
+              "jurisdiction": "fr",
+              "title": "CCP, Annexe 9",
+              "uri": "https://www.legifrance.gouv.fr/eli/arrete/2016/3/29/EINM1600215A/jo/texte"
+            }
+          ],
+          "name": "Supply chain management"
+        }
+      ]
+    },
+    {
+      "criterion_id": "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46",
+      "criterion_name": "Financial ratio",
+      "sub_criteria": []
+    }
+  ],
+  "ecertis_spec_version": "0.6",
+  "schema_version": 1,
+  "source": "https://ec.europa.eu/growth/tools-databases/ecertisrest/",
+  "source_date": "2026-09-10"
+}

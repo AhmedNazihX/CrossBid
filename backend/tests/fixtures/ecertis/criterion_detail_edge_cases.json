@@ -1,0 +1,109 @@
+{
+  "_comment": "Hand-built, not recorded. Every awkward shape eCertis is known to emit, in one payload. See SOURCES.md.",
+  "Id": { "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4" },
+  "TypeCode": { "value": "Exclusion Ground: Grounds related to the payment of taxes" },
+  "Name": { "value": "Payment of taxes", "languageID": "en" },
+  "Description": {},
+  "DomainID": { "value": "eproc" },
+  "VersionID": { "value": "3" },
+  "SomeFutureFieldWeHaveNotSeenYet": { "value": "must be ignored, not fatal" },
+  "SubCriterion": [
+    {
+      "Id": { "value": "ffffffff-0000-0000-0000-00000000000b" },
+      "Name": { "value": "Sorts second by id" },
+      "Description": { "value": "Has  extra   spaces\nand a newline" },
+      "LegislationReference": [
+        {
+          "Title": { "value": "ZZZ" },
+          "Description": { "value": "Sorts last by title" },
+          "JurisdictionLevelCode": { "value": "de" },
+          "Article": { "value": "§ 2" },
+          "URI": { "value": "https://example.invalid/zzz" }
+        },
+        {
+          "Title": { "value": "AAA" },
+          "Description": {},
+          "JurisdictionLevelCode": { "value": "de" },
+          "Article": { "value": "§ 1" },
+          "URI": {}
+        }
+      ],
+      "RequirementGroup": [
+        {
+          "Id": { "value": "group-2222" },
+          "TypeOfEvidence": [
+            {
+              "Id": { "value": "evidence-shared" },
+              "TypeCode": { "value": "Certificate" },
+              "Name": { "value": "Shared across two groups" },
+              "Description": { "value": "Appears in group-1111 and group-2222" },
+              "VersionID": { "value": "1" },
+              "FeeAmount": {},
+              "EvidenceIntendedUse": { "description": [{ "value": "Intended use as a list" }] },
+              "EvidenceIssuerParty": [
+                { "WebsiteURI": {}, "PartyName": [{ "Name": { "value": "Zweites  Amt\n" } }] },
+                { "WebsiteURI": {}, "PartyName": [{ "Name": { "value": "Erstes Amt" } }] }
+              ],
+              "AddresseeDescription": { "value": "For all entities" },
+              "JurisdictionLevelCode": [{ "value": "de" }, { "value": "at" }, {}],
+              "EvidenceDocumentReference": [
+                {
+                  "Attachment": { "ExternalReference": { "URI": {} } },
+                  "ValidityPeriod": { "description": [] }
+                },
+                {
+                  "Attachment": {
+                    "ExternalReference": { "URI": { "value": "https://example.invalid/e1" } }
+                  },
+                  "ValidityPeriod": { "description": { "value": "1 Years" } }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": { "value": "group-1111" },
+          "TypeOfEvidence": [
+            {
+              "Id": { "value": "evidence-shared" },
+              "TypeCode": { "value": "Certificate" },
+              "Name": { "value": "Shared across two groups" },
+              "Description": { "value": "Appears in group-1111 and group-2222" },
+              "VersionID": { "value": "1" }
+            },
+            {
+              "Id": { "value": "evidence-no-issuer" },
+              "TypeCode": { "value": "Self-declaration" },
+              "Name": { "value": "An evidence with no issuer party at all" },
+              "Description": {},
+              "VersionID": { "value": "2" },
+              "EvidenceIntendedUse": { "description": { "value": "Intended use as an object" } },
+              "AddresseeDescription": {},
+              "JurisdictionLevelCode": [],
+              "EvidenceDocumentReference": []
+            },
+            {
+              "TypeCode": { "value": "Certificate" },
+              "Name": { "value": "No Id, so it must be dropped entirely" }
+            }
+          ]
+        },
+        { "Id": { "value": "group-empty" }, "TypeOfEvidence": [] }
+      ]
+    },
+    {
+      "Id": { "value": "00000000-0000-0000-0000-00000000000a" },
+      "Name": { "value": "Sorts first by id, and files no paperwork" },
+      "Description": { "value": "A national sub-criterion with no RequirementGroup" },
+      "LegislationReference": []
+    },
+    {
+      "Name": { "value": "No Id, so it must be dropped entirely" },
+      "RequirementGroup": []
+    }
+  ],
+  "ParentCriterion": {
+    "Id": { "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4" },
+    "Name": { "value": "Payment of taxes", "languageID": "en" }
+  }
+}

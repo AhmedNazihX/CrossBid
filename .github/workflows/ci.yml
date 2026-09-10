@@ -1,0 +1,167 @@
+# Story S0.1.4 — lint, type checks, tests with coverage, and generated-file checks.
+# One job per app, plus a repo-wide job for the generated manifest, so a failure names the
+# app that broke.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Never let a real key reach CI. Startup validation only checks that these are present.
+  OPENROUTER_API_KEY: ci-placeholder-not-a-real-key
+  APP_ENCRYPTION_KEY: ci-placeholder-not-a-real-key
+  AUTH_MODE: dev
+  ENV: test
+
+jobs:
+  backend:
+    name: backend (ruff, pyright, pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      # pgvector image, not plain postgres: integration tests need the extension.
+      # Tests marked `live` hit real services and are excluded from this job.
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: crossbid
+          POSTGRES_PASSWORD: crossbid
+          POSTGRES_DB: crossbid_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U crossbid -d crossbid_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: ruff (lint)
+        run: uv run ruff check --output-format=github .
+
+      - name: ruff (format)
+        run: uv run ruff format --check .
+
+      - name: pyright
+        run: uv run pyright
+
+      - name: pytest with coverage
+        env:
+          DATABASE_URL: postgresql://crossbid:crossbid@localhost:5432/crossbid_test
+        # The gate is 80% line coverage on crossbid/ (S0.1.4). --cov-report=term-missing
+        # lists the uncovered files, which the story asks for on failure.
+        run: >-
+          uv run pytest
+          --cov=crossbid
+          --cov-report=term-missing
+          --cov-report=xml
+          --cov-fail-under=80
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: ignore
+
+  frontend:
+    name: frontend (eslint, tsc, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: eslint
+        run: npm run lint
+
+      - name: tsc --noEmit
+        run: npm run typecheck
+
+      - name: build
+        run: npm run build
+
+  generated-files:
+    name: generated files are current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # dependencies.txt is generated from both lock files and must never be hand-edited,
+      # so CI fails when it has drifted (rule in CLAUDE.md).
+      - name: dependencies.txt is current
+        run: python3 scripts/gen_dependencies.py --check
+
+      # frontend/lib/api.ts is generated from the live OpenAPI schema (S0.4.2). The check
+      # boots the API, regenerates, and fails on any diff. Skipped until the file is
+      # tracked, which happens when S0.4.1 gives the schema real models to describe.
+      - name: frontend/lib/api.ts is current
+        run: |
+          if [ ! -f frontend/lib/api.ts ]; then
+            echo "frontend/lib/api.ts is not tracked yet; it lands with S0.4.2. Skipping."
+            exit 0
+          fi
+          cd backend && uv sync --frozen && \
+            uv run uvicorn crossbid.main:app --port 8000 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/openapi.json >/dev/null && break
+            sleep 1
+          done
+          cd frontend && npm ci && npm run gen:api
+          git diff --exit-code -- frontend/lib/api.ts || {
+            echo "::error::frontend/lib/api.ts is stale. Run 'npm run gen:api' and commit."
+            exit 1
+          }

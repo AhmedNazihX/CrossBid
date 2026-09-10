@@ -18,3 +18,6 @@ htmlcov/
 # node
 node_modules/
 .next/
+
+# tooling byproduct
+.playwright-mcp/

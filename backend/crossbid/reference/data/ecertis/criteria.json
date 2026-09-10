@@ -1,0 +1,401 @@
+{
+  "content_sha256": "b7cb2bca14f71beef047c916abaa4245c05c9440d47d4e20e53eaa6b2bbe2a9d",
+  "criteria": [
+    {
+      "description": "Participation in a criminal organisation, as defined in Article 2 of Council Framework Decision 2008/841/JHA of 24 October 2008 on the fight against organised crime",
+      "id": "005eb9ed-1347-4ca3-bb29-9bc0db64e1ab",
+      "name": "Participation in a criminal organisation",
+      "type_name": "Exclusion Ground / Criminal convictions",
+      "version": "3"
+    },
+    {
+      "description": "The following educational and professional qualifications are held by the service provider or the contractor itself, and/or (depending on the requirements set out in the relevant notice or the procurement documents by its managerial staff.",
+      "id": "07301031-2270-41af-8e7e-66fe0c777107",
+      "name": "Educational and professional qualifications",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Its specific yearly turnover in the business area covered by the contract for the number of financial years required in the relevant notice, the procurement documents or the ESPD is as follows:",
+      "id": "074f6031-55f9-4e99-b9a4-c4363e8bc315",
+      "name": "Specific yearly turnover",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    },
+    {
+      "description": "Are the business activities of the economic operator suspended? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+      "id": "166536e2-77f7-455c-b018-70582474e4f6",
+      "name": "Business activities are suspended",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "3"
+    },
+    {
+      "description": "The economic operator’s average annual manpower for the last three years were as follows:",
+      "id": "1f49b3f0-d50f-43f6-8b30-4bafab108b9b",
+      "name": "Average annual manpower",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Fraud within the meaning of Article 1 of the Convention on the protection of the European Communities' financial interests (OJ C 316, 27.11.1995)",
+      "id": "297d2323-3ede-424e-94bc-a91561e6f320",
+      "name": "Fraud",
+      "type_name": "Exclusion Ground / Criminal convictions",
+      "version": "3"
+    },
+    {
+      "description": "Has the economic operator experienced that a prior public contract, a prior contract with a contracting entity or a prior concession contract was terminated early, or that damages or other comparable sanctions were imposed in connection with that prior contract?",
+      "id": "3293e92b-7f3e-42f1-bee6-a7641bb04251",
+      "name": "Early termination, damages or other comparable sanctions",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "3"
+    },
+    {
+      "description": "Is the economic operator the subject of insolvency or winding-up? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+      "id": "396f288a-e267-4c20-851a-ed4f7498f137",
+      "name": "Insolvency",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "3"
+    },
+    {
+      "description": "For public supply contracts only: During the reference period, the economic operator has delivered the following principal deliveries of the type specified. Contracting authorities may require up to three years and allow experience dating from more than three years.",
+      "id": "3a18a175-1863-4b1d-baef-588ce61960ca",
+      "name": "For supply contracts: performance of deliveries of the specified type",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "It can call upon the following technicians or technical bodies, especially those responsible for quality control. For technicians or technical bodies not belonging directly to the economic operator's undertaking but on whose capacities the economic operator relies as set out under Part II, Section C, separate ESPD forms must be filled in.",
+      "id": "3aaca389-4a7b-406b-a4b9-080845d127e7",
+      "name": "Technicians or technical bodies for quality control",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Has the economic operator itself or any person who is a member of its administrative, management or supervisory body or has powers of representation, decision or control therein been the subject of a conviction by final judgement for money laundering or terrorist financing, by a conviction rendered at the most five years ago or in which an exclusion period set out directly in the conviction continues to be applicable? As defined in Article 1 of Directive 2005/60/EC of the European Parliament and of the Council of 26 October 2005 on the prevention of the use of the financial system for the purpose of money laundering and terrorist financing (OJ L 309, 25.11.2005, p. 15).",
+      "id": "47112079-6fec-47a3-988f-e561668c3aef",
+      "name": "Money laundering or terrorist financing",
+      "type_name": "Exclusion Ground / Criminal convictions",
+      "version": "2"
+    },
+    {
+      "description": "Its general yearly turnover for the number of financial years required in the relevant notice, the procurement documents or the ESPD is as follows:",
+      "id": "499efc97-2ac1-4af2-9e84-323c2ca67747",
+      "name": "General yearly turnover",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    },
+    {
+      "description": "It uses the following technical facilities and measures for ensuring quality and its study and research facilities are as follows:",
+      "id": "4bf996d9-439c-40c6-9ab9-980a48cb55a1",
+      "name": "Technical facilities and measures for ensuring quality",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Is the economic operator guilty of grave professional misconduct? Where applicable, see definitions in national law, the relevant notice or the procurement documents",
+      "id": "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3",
+      "name": "Guilty of grave professional misconduct",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "3"
+    },
+    {
+      "description": "Has the economic operator entered into agreements with other economic operators aimed at distorting competition?",
+      "id": "56d13e3d-76e8-4f23-8af6-13e60a2ee356",
+      "name": "Agreements with other economic operators aimed at distorting competition",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "2"
+    },
+    {
+      "description": "For public service contracts only: During the reference period, the economic operator has provided the following main services of the type specified. Contracting authorities may require up to three years and allow experience dating from more than three years.",
+      "id": "5e506c16-26ab-4e32-bb78-b27f87dc0565",
+      "name": "For service contracts: performance of services of the specified type",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "3"
+    },
+    {
+      "description": "The economic operator intends possibly to subcontract the following proportion (i.e. percentage) of the contract. Please note that if the economic operator has decided to subcontract a part of the contract and relies on the subcontractor’s capacities to perform that part, then please fill in a separate ESPD for such subcontractors, see Part II, Section C above.",
+      "id": "612a1625-118d-4ea4-a6db-413184e7c0a8",
+      "name": "Subcontracting proportion",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "3"
+    },
+    {
+      "description": "Has the economic operator or an undertaking related to it advised the contracting authority or contracting entity or otherwise been involved in the preparation of the procurement procedure?",
+      "id": "61874050-5130-4f1c-a174-720939c7b483",
+      "name": "Direct or indirect involvement in the preparation of this procurement procedure",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "2"
+    },
+    {
+      "description": "The economic operator’s number of managerial staff for the last three years were as follows:",
+      "id": "6346959b-e097-4ea1-89cd-d1b4c131ea4d",
+      "name": "Number of managerial staff",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Do the purely national grounds of exclusion, which are specified in the relevant notice or in the procurement documents, apply?",
+      "id": "63adb07d-db1b-4ef0-a14e-a99785cf8cf6",
+      "name": "Purely national exclusion grounds",
+      "type_name": "Exclusion Ground / Other exclusion grounds",
+      "version": "3"
+    },
+    {
+      "description": "Is the economic operator in arrangement with creditors? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+      "id": "68918c7a-f5bc-4a1a-a62f-ad8983600d48",
+      "name": "Arrangement with creditors",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "4"
+    },
+    {
+      "description": "Can the economic operator confirm that it has not been guilty of serious misrepresentation in supplying the information required for the verification of the absence of grounds for exclusion or the fulfilment of the selection criteria, it has not withheld such information, it has been able, without delay, to submit the supporting documents required by a contracting authority or contracting entity, and it has not undertaken to unduly influence the decision making process of the contracting authority or contracting entity, to obtain confidential information that may confer upon it undue advantages in the procurement procedure or to negligently provide misleading information that may have a material influence on decisions concerning exclusion, selection or award?",
+      "id": "696a75b2-6107-428f-8b74-82affb67e184",
+      "name": "Guilty of misrepresentation, withheld information, unable to provide required documents and obtained confidential information of this procedure",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "5"
+    },
+    {
+      "description": "It is enrolled in relevant professional registers kept in the Member State of its establishment as described in Annex XI of Directive 2014/24/EU; economic operators from certain Member States may have to comply with other requirements set out in that Annex.",
+      "id": "6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f",
+      "name": "Enrolment in a relevant professional register",
+      "type_name": "Selection Criteria / Suitability test",
+      "version": "2"
+    },
+    {
+      "description": "Is a particular membership of a particular organisation needed in order to be able to perform the service in question in the country of establishment of the economic operator?",
+      "id": "73f10e36-ed7a-412e-995c-aa76463e3776",
+      "name": "For service contracts: membership of particular organisation needed",
+      "type_name": "Selection Criteria / Suitability test",
+      "version": "2"
+    },
+    {
+      "description": "The insured amount in its professional risk indemnity insurance is the following:",
+      "id": "7604bd40-4462-4086-8763-a50da51a869c",
+      "name": "Professional risk indemnity insurance",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    },
+    {
+      "description": "For public supply contracts: The economic operator will supply the required samples, descriptions or photographs of the products to be supplied and will provide certifications of authenticity where applicable.",
+      "id": "7662b7a9-bcb8-4763-a0a7-7505d8e8470d",
+      "name": "For supply contracts: samples, descriptions or photographs with certification of authenticity",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "3"
+    },
+    {
+      "description": "In case the information concerning turnover (general or specific) is not available for the entire period required, please state the date on which the economic operator was set up or started trading:",
+      "id": "77f481ce-ffb6-483f-8e2b-c78db5e68292",
+      "name": "Set up of economic operator",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    },
+    {
+      "description": "Has the economic operator breached its obligations relating to the payment social security contributions, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+      "id": "7d85e333-bbab-49c0-be8d-c36d71a72f5e",
+      "name": "Payment of social security contributions",
+      "type_name": "Exclusion Ground / Grounds related to the payment of taxes or social security contributions",
+      "version": "3"
+    },
+    {
+      "description": "It is enrolled in trade registers kept in the Member State of its establishment as described in Annex XI of Directive 2014/24/EU; economic operators from certain Member States may have to comply with other requirements set out in that Annex.",
+      "id": "87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7",
+      "name": "Enrolment in a trade register",
+      "type_name": "Selection Criteria / Suitability test",
+      "version": "1"
+    },
+    {
+      "description": "Will the economic operator be able to produce certificates drawn up by independent bodies attesting that the economic operator complies with the required environmental management systems or standards?",
+      "id": "8ed65e48-fd0d-444f-97bd-4f58da632999",
+      "name": "Certificates by independent bodies about environmental management systems or standards",
+      "type_name": "Selection Criteria / Quality assurance schemes and environmental management standards",
+      "version": "5"
+    },
+    {
+      "description": "Are the assets of the economic operator being administered by a liquidator or by the court? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+      "id": "8fda202a-0c37-41bb-9d7d-de3f49edbfcb",
+      "name": "Assets being administered by liquidator",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "3"
+    },
+    {
+      "description": "It uses the following study and research facilities are as follows:",
+      "id": "90a2e100-44cc-45d3-9970-69d6714f1596",
+      "name": "Study and research facilities",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "The economic operator will be able to apply the following environmental management measures when performing the contract:",
+      "id": "9460457e-b43d-48a9-acd1-615de6ddd33e",
+      "name": "Environmental management measures",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Is a particular membership of a particular organisation needed in order to be able to perform the service in question in the country of establishment of the economic operator?",
+      "id": "9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4",
+      "name": "For service contracts: authorisation of particular organisation needed",
+      "type_name": "Selection Criteria / Suitability test",
+      "version": "2"
+    },
+    {
+      "description": "The economic operator has to its knowledge, breached its obligations in the field of social law.",
+      "id": "a261a395-ed17-4939-9c75-b9ff1109ca6e",
+      "name": "Breaching of obligations in the fields of social law",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "6"
+    },
+    {
+      "description": "The economic operator has to its knowledge, breached its obligations in the field of labour law.",
+      "id": "a34b70d6-c43d-4726-9a88-8e2b438424bf",
+      "name": "Breaching of obligations in the fields of labour law",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "7"
+    },
+    {
+      "description": "Can the economic operator provide the required certificates drawn up by official quality control institutes or agencies of recognised competence attesting the conformity of products clearly identified by references to the technical specifications or standards, which are set out in the relevant notice or the procurement documents?",
+      "id": "a7669d7d-9297-43e1-9d10-691a1660187c",
+      "name": "For supply contracts: certificates by quality control institutes",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "The economic operator has to its knowledge, breached its obligations in the field of environmental law.",
+      "id": "a80ddb62-d25b-4e4e-ae22-3968460dc0a9",
+      "name": "Breaching of obligations in the fields of environmental law",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "9"
+    },
+    {
+      "description": "Concerning the other economic or financial requirements, if any, that may have been specified in the relevant notice or the procurement documents, the economic operator declares that:",
+      "id": "ab0e7f2e-6418-40e2-8870-6713123e41ad",
+      "name": "Other economic or financial requirements",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    },
+    {
+      "description": "Its average yearly turnover for the number of years required in the relevant notice, the procurement documents or the ESPD is as follows:",
+      "id": "b16cb9fc-6cb7-4585-9302-9533b415cf48",
+      "name": "Average yearly turnover",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    },
+    {
+      "description": "Is the economic operator aware of any conflict of interest as indicated in national law, the relevant notice or the procurement documents due to its participation in the procurement procedure?",
+      "id": "b1b5ac18-f393-4280-9659-1367943c1a2e",
+      "name": "Conflict of interest due to its participation in the procurement procedure",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "3"
+    },
+    {
+      "description": "Has the economic operator breached its obligations relating to the payment of taxes, both in the country in which it is established and in Member State of the contracting authority or contracting entity if other than the country of establishment?",
+      "id": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4",
+      "name": "Payment of taxes",
+      "type_name": "Exclusion Ground / Grounds related to the payment of taxes or social security contributions",
+      "version": "3"
+    },
+    {
+      "description": "For public supply contracts: The economic operator will supply the required samples, descriptions or photographs of the products to be supplied, which do not need to be accompanied by certifications of authenticity.",
+      "id": "bdf0601d-2480-4250-b870-658d0ee95be6",
+      "name": "For supply contracts: samples, descriptions or photographs without certification of authenticity",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "The economic operator itself or any person who is a member of its administrative, management or supervisory body or powers of representation, decision or control therein has been the subject of a conviction by final judgement for corruption, by a conviction rendered at the most five years ago or in which an exclusion period set out directly in the conviction continues to be applicable. Corruption, as defined in the relevant legislation.",
+      "id": "c27b7c4e-c837-4529-b867-ed55ce639db5",
+      "name": "Corruption",
+      "type_name": "Exclusion Ground / Criminal convictions",
+      "version": "5"
+    },
+    {
+      "description": "In the case of public works contracts, the economic operator will be able to call on the following technicians or technical bodies to carry out the work:",
+      "id": "c599c130-b29f-461e-a187-4e16c7d40db7",
+      "name": "For works contracts: technicians or technical bodies to carry out the work",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "For complex products or services to be supplied or, exceptionally, for products or services which are required for a special purpose: The economic operator will allow checks to be conducted on the production capacities or the technical capacity of the economic operator and, where necessary, on the means of study and research which are available to it and on the quality control measures? The check is to be performed by the contracting authority or, in case the latter consents to this, on its behalf by a competent official body of the country in which the supplier or service provider is established.",
+      "id": "c8809aa1-29b6-4f27-ae2f-27e612e394db",
+      "name": "Allowance of checks",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "4"
+    },
+    {
+      "description": "The following tools, plant or technical equipment will be available to it for performing the contract:",
+      "id": "cc18c023-211d-484d-a32e-52f3f970285f",
+      "name": "Tools, plant or technical equipment",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "For public works contracts only: During the reference period, the economic operator has performed the following works of the specified type. Contracting authorities may require up to five years and allow experience dating from more than five years.",
+      "id": "cdd3bb3e-34a5-43d5-b668-2aab86a73822",
+      "name": "For works contracts: performance of works of the specified type",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Is the economic operator bankrupt? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+      "id": "d3732c09-7d62-4edc-a172-241da6636e7c",
+      "name": "Bankruptcy",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "3"
+    },
+    {
+      "description": "Its specific average yearly turnover in the business area covered by the contract for the number of years required in the relevant notice, the procurement documents or the ESPD is as follows:",
+      "id": "d3dfb714-f558-4512-bbc5-e456fa2339de",
+      "name": "Specific average turnover",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    },
+    {
+      "description": "Terrorist offences or offences linked to terrorist activities, as defined in Articles 1 and 3 of Council Framework Decision of 13 June 2002 on combating terrorism (OJ L 164, 22.6.2002). This exclusion ground also includes inciting or aiding or abetting or attempting to commit an offence, as referred to in Article 4 of that Framework Decision",
+      "id": "d486fb70-86b3-4e75-97f2-0d71b5697c7d",
+      "name": "Terrorist offences or offences linked to terrorist activities",
+      "type_name": "Exclusion Ground / Criminal convictions",
+      "version": "3"
+    },
+    {
+      "description": "Will the economic operator be able to produce certificates drawn up by independent bodies attesting that the economic operator complies with the required quality assurance standards, including accessibility for disabled persons?",
+      "id": "d726bac9-e153-4e75-bfca-c5385587766d",
+      "name": "Certificates by independent bodies about quality assurance standards",
+      "type_name": "Selection Criteria / Quality assurance schemes and environmental management standards",
+      "version": "2"
+    },
+    {
+      "description": "Money laundering or terrorist financing, as defined in Article 2 of Directive 2011/36/EU of the European Parliament and of the Council of 5 April 2011 on preventing and combating trafficking in human beings and protecting its victims, and replacing Council Framework Decision 2002/629/JHA (OJ L 101, 15.4.2011)",
+      "id": "d789d01a-fe03-4ccd-9898-73f9cfa080d1",
+      "name": "Child labour and other forms of trafficking in human beings",
+      "type_name": "Exclusion Ground / Criminal convictions",
+      "version": "3"
+    },
+    {
+      "description": "Is the economic operator in in any analogous situation like bankruptcy arising from a similar procedure under national laws and regulations? This information needs not be given if exclusion of economic operators in this case has been made mandatory under the applicable national law without any possibility of derogation where the economic operator is nevertheless able to perform the contract.",
+      "id": "daffa2a9-9f8f-4568-8be8-7b8bf306d096",
+      "name": "Analogous situation like bankruptcy under national law",
+      "type_name": "Exclusion Ground / Grounds related to insolvency, conflicts of interests or professional misconduct",
+      "version": "4"
+    },
+    {
+      "description": "It will be able to apply the following supply chain management and tracking systems when performing the contract:",
+      "id": "dc12a151-7fdf-4733-a8f0-30f667292e66",
+      "name": "Supply chain management",
+      "type_name": "Selection Criteria / Technical and professional ability",
+      "version": "2"
+    },
+    {
+      "description": "Concerning the financial ratios specified in the relevant notice, the procurement documents or the ESPD, the economic operator declares that the actual values for the required ratios are as follows:",
+      "id": "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46",
+      "name": "Financial ratio",
+      "type_name": "Selection Criteria / Economic and financial standing",
+      "version": "2"
+    }
+  ],
+  "ecertis_spec_version": "0.6",
+  "schema_version": 1,
+  "source": "https://ec.europa.eu/growth/tools-databases/ecertisrest/",
+  "source_date": "2026-09-10"
+}

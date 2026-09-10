@@ -4,12 +4,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## State of the repo
 
-Pre-code. The repository holds two documents and nothing else:
+**Increment 1 of 7, in progress.** Increment 0 (the SP.1 extraction spike) is complete — see
+`docs/decisions.md` ADR-0003 for the recall result and its caveats.
+
+Both apps are scaffolded and independently runnable. `backend/` holds the FastAPI app factory
+with a `/health` route and the disposable SP.1 spike; `frontend/` holds a Next.js 15 scaffold
+with a placeholder page. Route folders, graph nodes, models, migrations and routers arrive with
+their stories — do not create them speculatively.
+
+### Commands
+
+Run from the repository root; `make help` lists everything.
+
+| Command | What it does |
+|---|---|
+| `make install` | `uv sync --extra dev` in `backend/`, `npm install` in `frontend/` |
+| `make dev` | db + api + web in Docker (needs `.env`; copy from `infra/.env.example`) |
+| `make dev-api` / `make dev-web` | One app on the host with reload |
+| `make lint` | ruff, ruff format, pyright, eslint, `tsc --noEmit`, and `deps-check` |
+| `make test` | `pytest`, excluding tests marked `live` |
+| `make test-live` | Only tests that hit real services or an LLM (costs money) |
+| `make deps` / `make deps-check` | Regenerate / verify `dependencies.txt` |
+| `make migrate` | Not built yet — lands with S0.2.1 |
+| `make eval` | Not built yet — lands with S7.1 |
+
+Backend-only equivalents, from `backend/`: `uv run ruff check .`, `uv run pyright`,
+`uv run pytest`, `uv run uvicorn crossbid.main:app --reload`. Frontend-only, from `frontend/`:
+`npm run lint`, `npm run typecheck`, `npm run build`, `npm run gen:api`.
+
+Enable the pre-commit hook once per clone: `git config core.hooksPath .githooks`. It blocks
+staged `.env` files and key-shaped strings, and runs ruff, prettier and `deps-check` on the
+paths they apply to.
+
+### Layout
+
+`backend/` (FastAPI, `uv`, Python 3.12, own pyproject and Dockerfile), `frontend/` (Next.js 15,
+own package.json and Dockerfile), `infra/` (Docker Compose, `.env.example`), `docs/`, plus a
+root `Makefile` and `scripts/gen_dependencies.py`, which writes the generated
+`dependencies.txt` from `backend/uv.lock` and `frontend/package-lock.json`. The two apps share
+nothing but the OpenAPI contract, which generates `frontend/lib/api.ts` (generated, never
+hand-edited; CI fails when it is stale). Full tree and layering rules are in
+`docs/project-plan.md` → Repository layout.
+
+Model slugs, chunking and agent defaults live in `backend/settings.default.yaml` — the only
+place a slug is written down.
+
+### Source documents
 
 - `135.md` — the course brief (Sprint capstone: build an AI agent with LangGraph/LangChain, OpenAI API, Streamlit or Next.js). Graded on problem definition, understanding of agent concepts, technical implementation, and reflection. Bonus requires at least 2 medium and 1 hard optional task.
-- `project.md` — the project spec for **Crossbid**, a cross-border EU tender go/no-go qualification agent for SMEs. Sections 3 and 4 describe the intended LangGraph graph and tech stack; section 5 maps the brief's optional tasks; section 9 logs decisions.
-
-There are no build, lint, or test commands yet. When the code lands, add them here. Intended layout: `backend/` (FastAPI, `uv`, own pyproject and Dockerfile), `frontend/` (Next.js, own package.json and Dockerfile), `infra/` (Docker Compose), `docs/`, plus a root `Makefile` (`dev`, `test`, `lint`, `deps`, `deps-check`, `migrate`, `eval`) and `scripts/gen_dependencies.py`, which writes the generated `dependencies.txt` from `backend/uv.lock` and `frontend/package-lock.json`. The two apps share nothing but the OpenAPI contract, which generates `frontend/lib/api.ts`. Full tree and layering rules are in `docs/project-plan.md` → Repository layout.
+- `project.md` — the original project spec. Superseded by `docs/project-plan.md` for scope and delivery; trimmed to match at S7.6.
 
 ## Settled product decisions (do not reopen without new facts)
 
@@ -23,8 +66,24 @@ There are no build, lint, or test commands yet. When the code lands, add them he
 
 These were checked against live endpoints; rely on them rather than re-deriving.
 
-- **eCertis REST**: base `https://ec.europa.eu/growth/tools-databases/ecertisrest/`, GET only, no key. `criteria?nationalEntity=de` lists national criteria; `criteria/{uuid}?countryFilter=xx` returns the evidences for a criterion per country. The model is criterion-centric (the ~56 ESPD exclusion grounds and selection criteria), not certificate-centric: "equivalence" means the same EU criterion with different national evidence. It does not map arbitrary standards like ISO 27001. Spec is v0.6 (2023); cache responses as JSON in the repo.
+- **eCertis REST**: base `https://ec.europa.eu/growth/tools-databases/ecertisrest/`, GET only, no key. Spec v0.6 (2023). The model is criterion-centric (the 56 ESPD exclusion grounds and selection criteria), not certificate-centric: "equivalence" means the same EU criterion with different national evidence. Confirmed 2026-09-10: it does **not** map arbitrary standards — zero occurrences of ISO 27001 / 9001 / 14001 across the complete DE+FR payloads. Cached as JSON in the repo (`backend/crossbid/reference/data/ecertis/`, ~500 KB), so run time never touches the network.
+
+  Corrections from implementing S1.1.1 (ADR-0007) — the earlier notes were wrong in ways that matter:
+  - **Never key anything on a national criterion id.** `criteria?nationalEntity=de` returns the same 56 criteria under *country-scoped* UUIDs, and the DE and FR sets are disjoint from each other and from the bare `criteria` set. The only cross-border identifier is the **EU-level UUID from the bare `GET criteria` call** — that is what `criteria.json` and the `EcertisCriterionId` Literal use. National ids live inside `evidence_*.json` as `sub_criteria[].id`, a separate id space with **zero** overlap with the EU ids.
+  - `criteria/{uuid}?countryFilter=xx` **only works with an EU-level uuid**. Given a national uuid, `countryFilter` is silently ignored and you get that country's payload back regardless of what you asked for.
+  - The model is **three levels deep, not two**: criterion → national `sub_criteria` → `RequirementGroup` (these are *alternatives*, "any one of these papers") → `TypeOfEvidence`. The group layer carries real meaning and is preserved in the cache.
+  - **HTTP 200 with an empty body is a valid answer meaning "this country has no national entry"** — 17 of 56 criteria for FR, 1 of 56 for DE. Transient emptiness also happens and is indistinguishable at the wire level, so the client retries 3× with backoff and refuses to overwrite a cached criterion that previously had evidence and now has none.
+  - `GET criteria` omits `CriteriaTypeName`, sending only a meaningless `CriteriaTypeID`, so the bare list cannot distinguish an exclusion ground from a selection criterion. The taxonomy is stitched in from one extra `criteria?nationalEntity=eu` call (labels are byte-identical across countries). `nationalEntity=eu` returns 58 rows, not 56.
+  - Undocumented `?lang=de` returns German, marked `(Automatische Übersetzung)`. `languageID`, `language`, `languageFilter` and `Accept-Language` are all ignored. This is the cheap route to S1.1.2's bilingual requirement; not cached.
 - **TED Search API v3**: `POST https://api.ted.europa.eu/v3/notices/search`, no key. Expert query syntax; `IN (...)` does not accept `OR` inside the parentheses. Useful returnable fields: `document-url-lot`, `official-language`, `submission-language`, `selection-criterion-description-lot`, `deadline-receipt-tender-date-lot`, `links` (notice XML/PDF/HTML in all 24 languages). `document-url-lot` points to national platform HTML pages (TenderNed, Vergabemarktplatz, eb2b, ezamowienia), so procurement documents cannot be fetched automatically under the no-scraping rule; the user uploads them.
+
+  Corrections and additions from ~1 000 live queries on 2026-09-10 (DE, FR, EN samples):
+  - `SORT BY publication-date ASC` returns **HTTP 400**. Only `DESC` works.
+  - Pagination caps at **600 results** — `limit=100, page=7` is HTTP 400 even when `totalNoticeCount` is higher. Narrow the query rather than paging past it.
+  - `selection-criterion-description-lot` is **much sparser than assumed**: populated on 14% of French and 17% of English CPV-72 notices; 496 of 600 English notices had none. Notices routinely answer "Sources: Procurement Document" for both criteria fields. This is the strongest evidence for the upload-the-pack design — the notice usually does not carry the requirements.
+  - `links` also exposes `links.pdfs.<official-language>` and `links.htmlDirect.<LANG>` alongside `links.pdf.<LANG>`.
+  - **No German or French CPV-72 notice sampled hosts its documents on TED.** The EU Funding & Tenders Portal (EU institutions and agencies, notices in English) is the only platform found that serves procurement documents as plain unauthenticated `GET` URLs, including a download-all zip. Its JSON APIs are not usable — `api.sedia-backoffice-production.eu/.../{uuid}-CN` is 403 and `api.tech.ec.europa.eu/search-api` does not index tender records.
+- **ESPD / DUME XML is the bridge to eCertis, confirmed on real data.** A French buyer's `DUME_acheteur.xml` (committed in the FR fixture) declares 30 `ccv:Criterion` elements carrying the canonical ESPD criterion UUIDs — e.g. `499efc97-2ac1-4af2-9e84-323c2ca67747` "Chiffre d'affaires annuel général", `1f49b3f0-d50f-43f6-8b30-4bafab108b9b` "Effectifs moyens annuels". These are the same ids eCertis is keyed on, so where a tender publishes a DUME the criterion mapping needs no LLM inference at all. Treat a published DUME as a high-confidence structured input, not as prose to extract.
 - **LLM provider is OpenRouter only** (the user holds no OpenAI or Anthropic key). Verified 2026-09-10 against `https://openrouter.ai/api/v1/models`: `openai/gpt-5.6-terra` ($2/$12 per 1M) and `openai/gpt-5.6-luna` ($0.20/$1.20) support `structured_outputs`, `response_format`, and `tools`; For the eval judge and the multi-model demo, **`anthropic/claude-sonnet-5` is NOT available on this account** (HTTP 404). Re-probed with live calls 2026-09-10 — the account's data policy filters most providers. The non-OpenAI models that actually answer are `anthropic/claude-haiku-4.5` ($1/$5, the eval judge), `google/gemini-2.5-flash` ($0.30/$2.50) and `google/gemini-2.5-flash-lite` ($0.10/$0.40). Also 404: `claude-opus-5`, `claude-sonnet-4.5`, `gemini-2.5-pro`, `deepseek-chat-v3.1`, `llama-4-maverick`, `qwen3-235b`, `mistral-medium-3.1`, `nova-pro-v1`, `command-a`. **Presence in `/models` does not mean usable — always probe with a live call** (ADR-0005). OpenRouter's `/api/v1/embeddings`, probed 2026-09-10, serves exactly three usable embeddings on this account: **`openai/text-embedding-3-small` (1536 dims, ~$0.027/1M) — the default**, `openai/text-embedding-3-large` (3072 dims, $0.13/1M) as the quality switch, and `qwen/qwen3-embedding-8b` (4096 dims, ~$0.057/1M) as the non-OpenAI multilingual option. 3-small is the default because 1536 dims is under pgvector's 2000-dim index cap (ADR-0004). `baai/bge-m3`, `google/gemini-embedding-001` and `openai/text-embedding-ada-002` return **HTTP 404** on this account's data policy; Cohere, Voyage, Mistral, Jina and Nomic embeddings do not exist on OpenRouter at all. There is no `/models` listing for embeddings — probe the endpoint. `gpt-4o` is legacy. Use `ChatOpenAI(base_url="https://openrouter.ai/api/v1")` with `extra_body={"usage": {"include": true}}` for per-response cost. Keep slugs in `backend/settings.default.yaml`; never hard-code a model name. Users may store their own OpenAI/Anthropic/OpenRouter key (bring your own key): encrypted with Fernet, scoped by company, last-4 hint only, verified on save, never logged; embeddings always use the app's OpenRouter route.
 - **Supabase + LangGraph Postgres checkpointer/Store**: the transaction pooler does not support prepared statements. Use the direct connection locally and the session pooler in deployment.
 - **Docling** supports `do_ocr=False`; OCR engines are Tesseract, EasyOCR, RapidOCR, ocrmac. **Frankfurter** (`api.frankfurter.dev`) serves ECB reference rates without a key.
