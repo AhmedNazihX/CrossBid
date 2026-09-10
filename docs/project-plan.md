@@ -541,6 +541,22 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 
 ---
 
+## Delivery Milestones
+
+<!-- Business outcomes, not engineering tasks. Status: pending | in-progress | complete. `/plan` updates Status and Plan. -->
+
+| # | Milestone | Outcome | Status | Plan |
+|---|---|---|---|---|
+| 1 | Runs locally with sign-in | `docker compose up` starts API, web, and Postgres; a magic-link login reaches `GET /companies/me`; an empty graph run leaves a checkpoint that survives a restart (E0) | pending | — |
+| 2 | Company remembered | Demo GmbH profile and document pack seeded; a French query for information-security certification returns the German ISO 27001 page; adversarial fixture flagged (E1, E2, S6.3) | pending | — |
+| 3 | First matrix at the interrupt | DE fixture bid stops at `awaiting_review` with ≥ 90% of golden mandatory requirements found, every `met` row cited (E3) | pending | — |
+| 4 | Review round-trip in the browser | Reviewer confirms or overrides in the workspace; dashboard shows the final verdict; "ask the tender" answers with page citations (E4, S3.5) | pending | — |
+| 5 | Provider choice and cost visible | Bid runs on a user's own key with the provider labelled in `/dev/costs`, and falls back with a warning when the key is removed (E5) | pending | — |
+| 6 | Evidence for the grader | `evaluations/REPORT.md` on three tenders, ADR per decision, user guide with three walkthroughs, Playwright smoke test green (E7) | pending | — |
+| 7 | Live EU instance (optional) | Vercel + Railway/Fly EU + Supabase EU pass the smoke test (E8) | pending | — |
+
+---
+
 ## Parallelism map
 
 ```
