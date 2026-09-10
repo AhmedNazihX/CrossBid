@@ -661,3 +661,129 @@ at startup instead of doing nothing.
 - One test was rewritten rather than deleted: it had pinned the missing `system_prompt` as
   expected behaviour. Once the gap was fixed, the test asserts the prompt loads and states the
   untrusted-data rule.
+
+---
+
+## ADR-0009 — Schema, migrations, the data-block guard, and the generated API client
+
+**Date:** 2026-09-10 · **Stories:** S0.2.1, S0.2.3, S2.3.2, S0.4.2 · **Status:** accepted
+
+### Tenant isolation stays application-level, on evidence rather than preference
+
+The `supabase-postgres-best-practices` guidance rates RLS **CRITICAL** for multi-tenant data,
+and its "incorrect" example is precisely this project's settled decision. That deserved a check
+rather than a citation, so the connection was inspected:
+
+```
+current_user = postgres   superuser = false   BYPASSRLS = true
+```
+
+**RLS policies would be silently inert on this connection.** Making them real needs a dedicated
+non-`BYPASSRLS` role, its grants, and a different DSN — genuine scope for a project already
+over its time estimate. So application-level `company_id` filtering stands, but the schema is
+built to make RLS *additive* later rather than a rewrite: `company_id NOT NULL` on all ten
+tenant-scoped tables, every composite index leading with it, and a test asserting both.
+
+The honest cost: a bug in one query's `WHERE` clause leaks another company's data with no second
+line of defence. That is the trade, stated plainly.
+
+### Primary keys: UUIDs where they appear in URLs, `bigint identity` elsewhere
+
+The guidance prefers `bigint identity` and warns that random UUIDv4 fragments indexes. Both
+points are correct and neither decides this case: `pg_uuidv7` is not available on this project
+and the server is PG 17 (no built-in `uuidv7()`), so time-ordered UUIDs are off the table.
+
+Ids appear in URLs (`/bids/{id}`), and with no RLS backstop an enumerable `/bids/1` lets one
+company probe for another's bids. At this corpus size index fragmentation is measurable in
+neither time nor space, so the ranking is clear: UUIDs for URL-addressed tables, `bigint
+identity` for append-only internals never addressed by id (`company_chunks`, `tender_chunks`,
+`llm_usage`, `feedback`).
+
+### Enum columns are `text` + check constraint, and a test guards the parity
+
+Postgres enum types are awkward to alter in migrations, so enum columns are `text` with a check
+constraint. That buys migration ease at the cost of a silent-drift risk: adding a value to a
+Pydantic `StrEnum` and forgetting the migration type-checks cleanly, tests green, and then
+raises `IntegrityError` the first time a node writes the new value.
+
+So `tests/unit/test_migrations.py` asserts, per constraint, that its value list equals the
+enum's — **and guards the guard**: any new `in (...)` constraint without a parity entry fails
+the suite. Writing that test immediately found a real gap — `documents.kind` had a database
+constraint and **no Pydantic contract at all**. `DocumentKind` now exists.
+
+Two invariants are enforced in *both* layers, because a direct SQL write bypasses Pydantic: a
+`met` row must cite something, and an override must record a reason.
+
+### Migrations are immutable once applied
+
+`scripts/migrate.py` records a SHA-256 per applied file and **refuses to run if an applied file
+has changed**. The database reflects what the file said when it ran; re-running an edited file
+cannot reconcile the two, so failing loudly is the only honest option — add a new numbered file.
+It also refuses a badly-named file rather than skipping it (a silent skip diverges the schema,
+the worst failure mode), and takes an advisory lock so a developer and a deploy hook cannot
+interleave.
+
+Verified against the live Frankfurt database: first run applied, second reported "up to date".
+
+### The data-block guard uses a per-call unguessable tag
+
+S2.3.2's delimiters carry a one-time `secrets.token_hex(8)` tag minted **after** the document is
+read. The reasoning is elimination, and it is worth recording because each rejected option is
+tempting:
+
+- **Escaping the content is not available.** The product promises a verbatim quote and a page
+  the reviewer opens. Rewriting content would let the model quote text that is not in the file.
+- **Rejecting documents containing the delimiter is not available.** `<document>`, `-----BEGIN`
+  and XML fragments occur legitimately — the FR fixture ships a DUME XML.
+- **A fixed delimiter is published in our own source**, so a PDF author can close the block early.
+
+What remains is unguessability. The tag is counted in the finished text and a wrong count throws
+the candidate away and mints another (8 attempts, then it fails shut) — so the postcondition and
+the collision check are the same line and cannot disagree.
+
+Two design points that matter more than the delimiter shape:
+
+1. **The operative instruction sits after the block as well as before it.** A block can be
+   thousands of tokens, and an instruction given only up front competes with everything the
+   document said since — which is the attack.
+2. **Content is inviolable; metadata is normalised.** An uploaded filename is as
+   attacker-controlled as the body, so labels are `json.dumps`-quoted (which is what keeps the
+   header on one line whatever the filename holds), invisible Unicode is stripped from labels
+   but preserved verbatim in content, and a missing page renders `pages="unknown"` rather than
+   omitting the attribute — an absent attribute reads as "any page".
+
+The system prompt was hardened to match: it now states the tag convention, and that **the block's
+`DOCUMENT` header is the only authority for a name and page** — a document's own claim about
+which file or page it is is content, never a citation.
+
+**Residual, stated plainly:** this story delivers the wrapper. Nothing yet *enforces* that every
+prompt uses it, because there are no prompt builders to enforce it on. When `extract_reqs`
+lands (S3.2.1), its tests must assert that document text reaches a prompt only via
+`wrap_as_data`.
+
+### The CI staleness check was a no-op
+
+S0.4.2's second criterion is "given a stale generated file, then CI fails". It would not have
+held: the step ran `git diff --exit-code -- frontend/lib/api.ts` with `cwd = frontend/`, and git
+pathspecs are relative to cwd, so it resolved to `frontend/frontend/lib/api.ts` — matching
+nothing and exiting 0 however stale the file was. Verified by tampering with the tracked file:
+as written `exit=0`, corrected `exit=1`.
+
+Two further defects in the same step: a now-dead skip guard, and `uv sync && uvicorn &`
+backgrounding the *whole chain*, so a cold cache raced the wait loop and the loop had no failure
+exit — the job would have died inside `openapi-typescript` with a misleading message.
+
+Worth knowing for later: `openapi-typescript` emits components in schema order, which FastAPI
+derives from route registration order, so **reordering routers produces a real `api.ts` diff with
+no model change**. A correct diff that will look like flakiness.
+
+### Consequences
+
+- 414 tests, 100% line and branch coverage, all offline; 13 tables live in Frankfurt with
+  pgvector 0.8.2, HNSW indexes on both chunk tables, and zero foreign keys missing an index.
+- `max_connections = 60` on this project, shared with `PostgresSaver` and `PostgresStore`. The
+  psycopg pool must be sized deliberately in S0.2.2, not left at a default and discovered under
+  the `check_reqs` fan-out.
+- HNSW is approximate and pgvector applies the `company_id` filter *after* the ANN scan, so a
+  small tenant inside a large corpus can lose recall. At this size the planner often prefers an
+  exact sequential scan anyway; partial per-company indexes are the lever if it grows.

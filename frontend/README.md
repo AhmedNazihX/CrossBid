@@ -49,9 +49,34 @@ npm run gen:api
 > (S0.1.4 / S0.4.2). The backend's Pydantic models are the single schema source;
 > this file is the only thing the two apps share.
 
-The backend currently exposes only `GET /health`, so the generated file is
-near-empty until the router stubs land (S0.4.1). It is therefore not committed
-yet — the first meaningful generation happens with S0.4.2.
+The backend currently exposes only `GET /health`, so the file describes exactly
+that one operation and the `Health` model. It grows with every router story; the
+pipeline itself is done and the file is committed, which is what CI diffs
+against. Generation is deterministic — two consecutive runs against the same
+schema produce a byte-identical file.
+
+### Calling the API
+
+`lib/api-client.ts` is the hand-written counterpart: a thin `fetch` wrapper whose
+method, path, query, body and response types all come from `lib/api.ts`, so a
+route or field the backend does not expose does not compile here either.
+
+```ts
+import { apiRequest, ApiError } from '@/lib/api-client'
+
+const health = await apiRequest('get', '/health') // { status: string; service: string }
+const bid = await apiRequest('get', '/bids/{id}', { token, path: { id } }) // once that route exists
+```
+
+It attaches `Authorization: Bearer <token>`, never sends cookies, and turns any
+non-2xx answer — or a transport failure, as `status === 0` — into an `ApiError`
+carrying `status`, `method`, `url` and the parsed `{ detail }` payload. The base
+URL comes from `NEXT_PUBLIC_API_URL` (inlined at build time), defaulting to
+`http://localhost:8000`.
+
+It stops there on purpose: the Supabase session, React hooks, the 2-second
+`GET /bids/{id}` poll and multipart upload belong to their own stories (S4.1,
+E4), so callers pass the token in explicitly for now.
 
 ## Layout
 
@@ -60,12 +85,13 @@ Repository layout). Today only these exist:
 
 ```
 app/           App Router: root layout, placeholder page, global stylesheet
-lib/           utils.ts (shadcn `cn` re-export)
+lib/           api.ts (generated), api-client.ts (typed fetch wrapper),
+               utils.ts (shadcn `cn` re-export)
 public/        static assets
 ```
 
-Planned: `components/` (`matrix/`, `pdf/`, `verdict/`, `ui/` for shadcn) and
-`lib/api.ts` (generated), `lib/supabase.ts`, and the bid-polling hook.
+Planned: `components/` (`matrix/`, `pdf/`, `verdict/`, `ui/` for shadcn),
+`lib/supabase.ts`, and the bid-polling hook.
 
 Route groups planned for later increments: `(auth)/login`, `(app)/dashboard`,
 `(app)/company`, `(app)/settings`, `(app)/bids/new`, `(app)/bids/[id]`, and

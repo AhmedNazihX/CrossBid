@@ -148,23 +148,37 @@ jobs:
       - name: dependencies.txt is current
         run: python3 scripts/gen_dependencies.py --check
 
-      # frontend/lib/api.ts is generated from the live OpenAPI schema (S0.4.2). The check
-      # boots the API, regenerates, and fails on any diff. Skipped until the file is
-      # tracked, which happens when S0.4.1 gives the schema real models to describe.
-      - name: frontend/lib/api.ts is current
+      # frontend/lib/api.ts is generated from the live OpenAPI schema (S0.4.2): boot the
+      # API, regenerate, and fail on any diff.
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Start the API
+        working-directory: backend
+        # Only uvicorn is backgrounded. Backgrounding `uv sync && uvicorn` as one chain would
+        # race the install against the wait loop below, and a cold uv cache easily outlasts it.
         run: |
-          if [ ! -f frontend/lib/api.ts ]; then
-            echo "frontend/lib/api.ts is not tracked yet; it lands with S0.4.2. Skipping."
-            exit 0
-          fi
-          cd backend && uv sync --frozen && \
-            uv run uvicorn crossbid.main:app --port 8000 &
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:8000/openapi.json >/dev/null && break
+          uv run uvicorn crossbid.main:app --port 8000 &
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:8000/openapi.json >/dev/null && exit 0
             sleep 1
           done
-          cd frontend && npm ci && npm run gen:api
-          git diff --exit-code -- frontend/lib/api.ts || {
-            echo "::error::frontend/lib/api.ts is stale. Run 'npm run gen:api' and commit."
+          echo "::error::the API never became ready on port 8000"
+          exit 1
+
+      - name: frontend/lib/api.ts is current
+        working-directory: frontend
+        # The pathspec is relative to the working directory, so it must NOT be prefixed with
+        # `frontend/` here — `frontend/frontend/lib/api.ts` matches nothing and `git diff`
+        # then exits 0 however stale the file is, silently voiding this whole check.
+        run: |
+          npm run gen:api
+          git diff --exit-code -- lib/api.ts || {
+            echo "::error::frontend/lib/api.ts is stale. Run 'npm run gen:api' and commit it."
             exit 1
           }

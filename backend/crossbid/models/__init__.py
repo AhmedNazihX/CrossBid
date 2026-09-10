@@ -47,7 +47,7 @@ from crossbid.models.requirement import (
     ThresholdUnit,
 )
 from crossbid.models.review import ChatRole, ChatTurn, Citation, ReviewSubmission, RowEdit
-from crossbid.models.tender import BidStatus, BidSummary, TedNotice
+from crossbid.models.tender import BidStatus, BidSummary, DocumentKind, TedNotice
 from crossbid.models.verdict import Decision, Gap, GapSeverity, Verdict, WeightedScore
 
 __all__ = [
@@ -62,6 +62,7 @@ __all__ = [
     "Citation",
     "CompanyProfile",
     "Decision",
+    "DocumentKind",
     "EcertisCriterionId",
     "EcertisEvidence",
     "Evidence",

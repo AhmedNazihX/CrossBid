@@ -28,6 +28,19 @@ class BidStatus(StrEnum):
     FAILED = "failed"
 
 
+class DocumentKind(StrEnum):
+    """What a stored PDF is.
+
+    A company's evidence pack outlives any single bid; a tender's documents belong to one bid
+    and are deleted with it. The notice is kept apart from the procurement documents because
+    it comes from TED's documented API while the rest is uploaded by the bidder.
+    """
+
+    COMPANY_EVIDENCE = "company_evidence"
+    TENDER_DOCUMENT = "tender_document"
+    TENDER_NOTICE = "tender_notice"
+
+
 class TedNotice(BaseModel):
     """A published notice, as returned by TED's Search API v3.
 
