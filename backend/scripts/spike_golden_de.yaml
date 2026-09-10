@@ -1,0 +1,252 @@
+# SP.1 — hand-picked mandatory requirements for the DE fixture (TED 614251-2026).
+#
+# Method: derived by reading the three requirement-bearing documents of the pack
+# (Besondere Bewerbungsbedingungen §2 "Verzeichnis der einzureichenden Dokumente",
+# Kriterienkatalog Eignung, Eigenerklärung Ausschlussgründe) and transcribing each
+# distinct mandatory obligation with its source document, page, and a verbatim German
+# quote. No LLM was used to build this list — it is the reference the spike is scored
+# against, so it is hand-written on purpose. Verified against the PDFs on 2026-09-10.
+#
+# Scope: the base case of a single bidder submitting alone. Obligations that only bind
+# a Bietergemeinschaft, an Eignungsleihe, or a subcontractor are deliberately excluded;
+# they are listed under `conditional_not_scored` so a later run can add them.
+#
+# `kind: mandatory` throughout — SP.1 measures mandatory-requirement recall only.
+
+meta:
+  ted_publication_number: "614251-2026"
+  fixture_dir: tests/fixtures/tenders/de
+  source_language: de
+  labelled_by: hand
+  labelled_on: 2026-09-10
+  story: SP.1
+
+requirements:
+  # ---- Documents that must accompany the offer (Besondere Bewerbungsbedingungen, p.3) ----
+  - id: DOC-01
+    category: formal
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Mit dem Angebot sind folgende Dokumente einzureichen: Angebotsformular"
+    summary: The completed Angebotsformular must be submitted with the offer.
+
+  - id: DOC-02
+    category: formal
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Nachweise und Erklärungen zu den Eignungskriterien, s. Kriterienkatalog Eignung"
+    summary: Evidence and declarations for the selection criteria must be submitted.
+
+  - id: DOC-03
+    category: exclusion_ground
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Eigenerklärung Ausschlussgründe"
+    summary: Self-declaration on the absence of exclusion grounds must be submitted.
+    ecertis_hint: absence of grounds for exclusion (Art. 57 Dir. 2014/24/EU)
+
+  - id: DOC-04
+    category: exclusion_ground
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Eigenerklärung Sanktionen Russland"
+    summary: >-
+      Self-declaration under Art. 5k of Regulation (EU) 833/2014 (Russia sanctions)
+      must be submitted.
+
+  - id: DOC-05
+    category: formal
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Anlage Unternehmensdaten"
+    summary: The company-data annex must be completed and submitted.
+
+  - id: DOC-06
+    category: other
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Erklärung zur sozialen Nachhaltigkeit von IT"
+    summary: Declaration on the social sustainability of IT must be submitted.
+
+  - id: DOC-07
+    category: other
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Verpflichtungserklärung Scientology"
+    summary: The Scientology non-affiliation undertaking must be signed and submitted.
+
+  - id: DOC-08
+    category: other
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Verpflichtung VS-NfD und VS-NfD-Merkblatt im Anhang"
+    summary: >-
+      The VS-NfD (classified-for-official-use-only) undertaking must be signed,
+      together with the embedded VS-NfD leaflet.
+
+  - id: DOC-09
+    category: other
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Eigenerklärung Verpflichtungsgesetz"
+    summary: Self-declaration under the Verpflichtungsgesetz must be submitted.
+
+  - id: DOC-10
+    category: formal
+    kind: mandatory
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: "Nachweise und Erklärungen zur Leistung, s. Kriterienkatalog Leistung"
+    summary: Evidence and declarations on the performance criteria must be submitted.
+
+  # ---- Economic and financial standing (Kriterienkatalog Eignung, §2, p.1) ----
+  - id: FIN-01
+    category: economic_financial
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: "Der Umsatz muss mindestens 3.000.000,00 EUR pro Jahr betragen."
+    summary: >-
+      Annual turnover in the contract's field of activity (IT consulting) must be at
+      least EUR 3,000,000 per year.
+    threshold: {value: 3000000, currency: EUR, period: per_year}
+
+  - id: FIN-02
+    category: economic_financial
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: >-
+      ist der Umsatz im Tätigkeitsbereich des Auftrags (IT-Beratungsleistungen) für die
+      letzten drei Geschäftsjahre [...] anzugeben. Übersenden Sie hierzu bitte mit
+      Angebotsabgabe eine Eigenerklärung in Form einer selbsterstellten Liste.
+    summary: >-
+      Turnover for the last three fiscal years must be declared as a self-drafted list
+      submitted with the offer.
+
+  # ---- Technical and professional ability (Kriterienkatalog Eignung, §3, p.2-3) ----
+  - id: TECH-01
+    category: technical_professional
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 2
+    quote: >-
+      reichen Sie bitte mit Angebotsabgabe eine Liste mit mindestens drei geeigneten
+      Referenzen in Bezug zur gegenständlichen Leistung ein
+    summary: At least three suitable references related to the service must be submitted.
+    threshold: {value: 3, unit: references, comparator: min}
+
+  - id: TECH-02
+    category: technical_professional
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 2
+    quote: "Für die Referenzen ist die Vorlage „Vordruck_Referenzen“ zu verwenden."
+    summary: >-
+      References must use the Vordruck_Referenzen template, or a self-made list
+      containing the same particulars.
+
+  - id: TECH-03
+    category: technical_professional
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Die Referenzen dürfen nicht älter als drei Jahre sein (gerechnet vom Datum der
+      letzten Leistungserbringung im jeweiligen Referenzprojekt bis zum Tag der
+      Auftragsbekanntmachung).
+    summary: References must be no older than three years.
+    threshold: {value: 3, unit: years, comparator: max_age}
+
+  - id: TECH-04
+    category: technical_professional
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Der Umfang der erbrachten Leistungen umfasst mindestens 25 abgerechnete
+      Personentage auf Seiten des Leistungserbringers
+    summary: Each reference must cover at least 25 invoiced person-days.
+    threshold: {value: 25, unit: person_days, comparator: min}
+
+  - id: TECH-05
+    category: technical_professional
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: "Die Referenzaufträge müssen grundsätzlich abgeschlossen sein."
+    summary: >-
+      Reference contracts must in principle be completed; a partially completed one may
+      be named with an explanation.
+
+  - id: TECH-06
+    category: technical_professional
+    kind: mandatory
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Die durchschnittliche Anzahl an Fachkräften im einschlägigen Geschäftsbereich pro
+      Geschäftsjahr muss mindestens 29 VZÄ betragen.
+    summary: >-
+      Average number of skilled staff in the relevant business area must be at least
+      29 full-time equivalents per fiscal year.
+    threshold: {value: 29, unit: fte, comparator: min}
+
+  # ---- Exclusion grounds (Eigenerklärung Ausschlussgründe) ----
+  - id: EXCL-01
+    category: exclusion_ground
+    kind: mandatory
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 1
+    quote: >-
+      Erklärung entsprechend § 123 GWB, bezogen auf rechtskräftige Verurteilungen oder
+      rechtskräftige Festsetzungen einer Geldbuße nach § 30 OWiG in den letzten 5 Jahren
+    summary: >-
+      The bidder must declare that no mandatory exclusion ground under §123 GWB applies
+      (final convictions or fines in the last five years).
+    ecertis_hint: mandatory grounds — criminal convictions (Art. 57(1) Dir. 2014/24/EU)
+
+  - id: EXCL-02
+    category: exclusion_ground
+    kind: mandatory
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Fakultativer Ausschlussgrund nach § 124 Abs. 1 Nr. 2 GWB [...] Mein/Unser
+      Unternehmen ist zahlungsunfähig.
+    summary: >-
+      The bidder must declare insolvency, liquidation, or cessation of business under
+      §124(1)(2) GWB.
+    ecertis_hint: bankruptcy or insolvency (Art. 57(4)(b) Dir. 2014/24/EU)
+
+  - id: EXCL-03
+    category: exclusion_ground
+    kind: mandatory
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 3
+    quote: >-
+      Haben Sie bei der Ausführung öffentlicher Aufträge gegen geltende umwelt-, sozial-
+      oder arbeitsrechtliche Verpflichtungen verstoßen?
+    summary: >-
+      The bidder must declare any breach of environmental, social, or labour-law
+      obligations in performing public contracts.
+    ecertis_hint: breach of environmental/social/labour obligations (Art. 57(4)(a))
+
+# Obligations that bind only a consortium, an Eignungsleihe, or a subcontractor.
+# Out of scope for the SP.1 recall figure; kept so a later run can score them.
+conditional_not_scored:
+  - Bewerber-Bietergemeinschaftserklärung (Bietergemeinschaft only)
+  - Per-member Eigenerklärung Ausschlussgründe / Sanktionen Russland / Unternehmensdaten
+    / Verpflichtungsgesetz / Scientology / VS-NfD (Bietergemeinschaft only)
+  - Verpflichtungserklärung Eignungsleihe Unteraufträge (Eignungsleihe / subcontracting)
+  - Anlage Unteraufträge (subcontracting only)
+  - Summed turnover and staff thresholds across Los 1 and Los 2 (multi-lot bids only)

@@ -1,0 +1,211 @@
+{
+  "ted_publication_number": "614251-2026",
+  "documents": 28,
+  "pages": 191,
+  "sections": 47,
+  "extracted": 746,
+  "mandatory": 645,
+  "after_dedupe": 579,
+  "golden": 21,
+  "hits": 21,
+  "recall": 1.0,
+  "match_threshold": 0.62,
+  "models": {
+    "extract": "openai/gpt-5.6-terra",
+    "cheap": "openai/gpt-5.6-luna",
+    "embed": "openai/text-embedding-3-large"
+  },
+  "cost_usd": 1.3163,
+  "elapsed_s": 1038.0,
+  "per_requirement": [
+    {
+      "id": "DOC-01",
+      "found": true,
+      "similarity": 0.9002,
+      "matched_quote": "Mit dem Angebot sind folgende Dokumente einzureichen: Angebotsformular",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-02",
+      "found": true,
+      "similarity": 0.7779,
+      "matched_quote": "Mit dem Angebot sind folgende Dokumente einzureichen: Nachweise und Erklärungen zur Leistung, s. Kriterienkatalog Leistung",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-03",
+      "found": true,
+      "similarity": 0.8165,
+      "matched_quote": "Eigenerklärung Ausschlussgründe (siehe oben)",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-04",
+      "found": true,
+      "similarity": 0.755,
+      "matched_quote": "„Eigenerklärung Sanktionen Russland“ (vom Bewerber/Bieter/jedem anderen Unternehmen im Rahmen der Eignungsleihe oder der Unterauftragsvergabe und jedem Bewerber- oder Bietergemeinschaftsmitglied auszufüllen und einzureichen)",
+      "matched_section": "Eigenerklaerung_Sanktionen_Russland_VV2.pdf p.1-3"
+    },
+    {
+      "id": "DOC-05",
+      "found": true,
+      "similarity": 0.7449,
+      "matched_quote": "Die Anlage „Unternehmensdaten“ ist vollständig auszufüllen und Ihrem Angebot beizufügen.",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-06",
+      "found": true,
+      "similarity": 0.7836,
+      "matched_quote": "Mit dem Angebot sind folgende Dokumente einzureichen: Erklärung zur sozialen Nachhaltigkeit von IT",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-07",
+      "found": true,
+      "similarity": 0.7447,
+      "matched_quote": "Verpflichtungserklärung Scientology für jedes Mitglied der Bietergemeinschaft",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-08",
+      "found": true,
+      "similarity": 0.7773,
+      "matched_quote": "Verpflichtung VS-NfD und VS-NfD-Merkblatt im Anhang",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-09",
+      "found": true,
+      "similarity": 0.7573,
+      "matched_quote": "Mit dem Angebot sind folgende Dokumente einzureichen: Eigenerklärung Verpflichtungsgesetz",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "DOC-10",
+      "found": true,
+      "similarity": 0.8735,
+      "matched_quote": "Mit dem Angebot sind folgende Dokumente einzureichen: Nachweise und Erklärungen zur Leistung, s. Kriterienkatalog Leistung",
+      "matched_section": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf p.1-6"
+    },
+    {
+      "id": "FIN-01",
+      "found": true,
+      "similarity": 0.8438,
+      "matched_quote": "Der Umsatz muss mindestens 3.000.000,00 EUR pro Jahr betragen.",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "FIN-02",
+      "found": true,
+      "similarity": 0.812,
+      "matched_quote": "Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit ist der Umsatz im Tätigkeitsbereich des Auftrags (IT-Beratungsleistungen) für die letzten drei Geschäftsjahre ... anzugeben.",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "TECH-01",
+      "found": true,
+      "similarity": 0.9096,
+      "matched_quote": "Zum Nachweis der technischen und beruflichen Leistungsfähigkeit reichen Sie bitte mit Angebotsabgabe eine Liste mit mindestens drei geeigneten Referenzen in Bezug zur gegenständlichen Leistung ein.",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "TECH-02",
+      "found": true,
+      "similarity": 0.9096,
+      "matched_quote": "Für die Referenzen ist die Vorlage „Vordruck_Referenzen“ zu verwenden.",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "TECH-03",
+      "found": true,
+      "similarity": 0.9721,
+      "matched_quote": "Die Referenzen dürfen nicht älter als drei Jahre sein (gerechnet vom Datum der letzten Leistungserbringung im jeweiligen Referenzprojekt bis zum Tag der Auftragsbekanntmachung).",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "TECH-04",
+      "found": true,
+      "similarity": 0.9748,
+      "matched_quote": "Der Umfang der erbrachten Leistungen umfasst mindestens 25 abgerechnete Personentage auf Seiten des Leistungserbringers.",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "TECH-05",
+      "found": true,
+      "similarity": 0.9181,
+      "matched_quote": "Die Referenzaufträge müssen grundsätzlich abgeschlossen sein.",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "TECH-06",
+      "found": true,
+      "similarity": 0.943,
+      "matched_quote": "Die durchschnittliche Anzahl an Fachkräften im einschlägigen Geschäftsbereich pro Geschäftsjahr muss mindestens 29 VZÄ betragen.",
+      "matched_section": "Kriterienkatalog_Eignung_VV2_V1.pdf p.1-3"
+    },
+    {
+      "id": "EXCL-01",
+      "found": true,
+      "similarity": 0.7335,
+      "matched_quote": "Ich erkläre, dass ich/wir den § 123 GWB (Anhang 1) zur Kenntnis genommen haben und Ausschlussgründe nach § 123 GWB für mich/uns vorliegen. nicht vorliegen.",
+      "matched_section": "Eigenerklaerung_Ausschlussgruende_VV2.pdf p.1-6"
+    },
+    {
+      "id": "EXCL-02",
+      "found": true,
+      "similarity": 0.77,
+      "matched_quote": "Sind einer oder mehrere der nachfolgenden fakultativen Ausschlussgründe nach § 124 Abs. 1 Nr. 2 GWB bei Ihnen gegeben? Bitte ankreuzen.",
+      "matched_section": "Eigenerklaerung_Ausschlussgruende_VV2.pdf p.1-6"
+    },
+    {
+      "id": "EXCL-03",
+      "found": true,
+      "similarity": 0.6916,
+      "matched_quote": "1) Mit welchen Maßnahmen werden Sie bei sich und den weiteren Beteiligten gewährleisten, dass bei Auftragsausführung keine Arbeiten unter Verletzung der jeweiligen ILO-Norm durchgeführt werden?",
+      "matched_section": "Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf p.7-12"
+    }
+  ],
+  "checks": [
+    {
+      "id": "DOC-01",
+      "status": "unclear",
+      "rationale": "The provided company facts do not establish that the bidder submitted the tender form with its bid."
+    },
+    {
+      "id": "DOC-02",
+      "status": "unclear",
+      "rationale": "Die Angaben nennen zwar eine Präqualifikation und eine Referenz, belegen aber nicht, dass die im Kriterienkatalog Leistung geforderten Nachweise und Erklärungen mit dem Angebot eingereicht wurden."
+    },
+    {
+      "id": "DOC-03",
+      "status": "unclear",
+      "rationale": "The facts state prequalification and no final convictions or fines, but do not directly establish that an entity whose capacities are relied on submitted the required self-declaration concerning exclusion grounds."
+    },
+    {
+      "id": "DOC-04",
+      "status": "unclear",
+      "rationale": "Die Unternehmensfakten bestätigen weder, dass die Russland-Sanktions-Selbsterklärung vom Unternehmen eingereicht wurde, noch Angaben zu etwaigen relied-on/subcontracted companies oder Konsortialmitgliedern."
+    },
+    {
+      "id": "DOC-05",
+      "status": "unclear",
+      "rationale": "The provided facts do not establish that the bidder completed the company data annex in full and attached it to its bid."
+    },
+    {
+      "id": "DOC-06",
+      "status": "unclear",
+      "rationale": "The company facts do not state that the declaration on social sustainability in IT was submitted."
+    },
+    {
+      "id": "DOC-07",
+      "status": "unclear",
+      "rationale": "The provided facts do not state that each consortium member submitted the Scientology commitment declaration."
+    },
+    {
+      "id": "DOC-08",
+      "status": "unclear",
+      "rationale": "The company facts state that it lacks a security clearance and has not performed VS-NfD contracts, but do not establish whether an entity whose capacities are relied on submitted the VS-NfD commitment and attached information sheet."
+    }
+  ]
+}
