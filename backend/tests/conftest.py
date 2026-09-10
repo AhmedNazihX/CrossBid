@@ -19,16 +19,56 @@ from fastapi.testclient import TestClient
 
 from crossbid.main import create_app
 from crossbid.reference import ecertis_client
+from crossbid.settings import Settings, load_settings
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 ECERTIS_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "ecertis"
 ECERTIS_GENERATOR_PATH = BACKEND_DIR / "scripts" / "build_ecertis_cache.py"
 
 
+# Distinctive so that a leak into a repr, a dump or an exception is unmistakable.
+FAKE_OPENROUTER_KEY = "sk-or-v1-LEAKED-OPENROUTER-KEY"
+FAKE_ENCRYPTION_KEY = "LEAKED-FERNET-ENCRYPTION-KEY="
+
+STARTUP_ENV_VARS = (
+    "OPENROUTER_API_KEY",
+    "APP_ENCRYPTION_KEY",
+    "DATABASE_URL",
+    "AUTH_MODE",
+    "ENV",
+    "LANGSMITH_API_KEY",
+    "VERIFY_MODEL_SLUGS",
+)
+
+
 @pytest.fixture
-def client() -> Iterator[TestClient]:
-    """A client against a freshly built app, so no test inherits another's state."""
-    with TestClient(create_app()) as test_client:
+def anyio_backend() -> str:
+    """Run `@pytest.mark.anyio` tests on asyncio only; trio is not installed."""
+    return "asyncio"
+
+
+@pytest.fixture
+def offline_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
+    """Settings the API starts with and that touch nothing outside the process.
+
+    No `DATABASE_URL`, so `create_app` opens no pool -- CI's backend job exports one for
+    the live tests, and a `TestClient` picking it up would make every route test hit
+    Postgres. No dotenv layer, so a developer's real `.env` is never read.
+    """
+    for name in STARTUP_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("OPENROUTER_API_KEY", FAKE_OPENROUTER_KEY)
+    monkeypatch.setenv("APP_ENCRYPTION_KEY", FAKE_ENCRYPTION_KEY)
+    return load_settings(env_file=None)
+
+
+@pytest.fixture
+def client(offline_settings: Settings) -> Iterator[TestClient]:
+    """A client against a freshly built app, so no test inherits another's state.
+
+    Entering the `with` runs the lifespan, so a route test also proves startup works.
+    """
+    with TestClient(create_app(offline_settings)) as test_client:
         yield test_client
 
 

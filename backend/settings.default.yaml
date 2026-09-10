@@ -51,7 +51,8 @@ ingestion:
   embed_dimensions: 1536
 
 agent:
-  check_concurrency: 5
+  extract_concurrency: 5   # sections of extract_reqs in flight at once (S3.2.1)
+  check_concurrency: 5     # per-requirement ReAct agents in flight at once (F3.3)
   max_tool_calls_per_requirement: 4
 
 enabled_tools:

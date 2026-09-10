@@ -787,3 +787,194 @@ no model change**. A correct diff that will look like flakiness.
 - HNSW is approximate and pgvector applies the `company_id` filter *after* the ANN scan, so a
   small tenant inside a large corpus can lose recall. At this size the planner often prefers an
   exact sequential scan anyway; partial per-company indexes are the lever if it grows.
+
+## ADR-0010 — One pool, sized by hand; the checkpointer and Store share it
+
+**Date:** 2026-09-10 · **Stories:** S0.2.2 · **Status:** accepted
+
+### The connection budget is a measured number, not a default
+
+`show max_connections` on the Supabase project is **60**; `superuser_reserved_connections` is
+**3**; and `pg_stat_activity` held **12** sessions with nothing of ours connected — Supabase's
+own pooler, auth, storage and realtime services. That leaves about 45 for everything we start:
+the API, the migration runner, a developer's `psql`, and a second API process when Compose and
+`make dev-api` run side by side.
+
+`crossbid/db.py` therefore pins those three figures as named constants, derives the headroom
+(45) and a ceiling of half of it (22, "two processes must coexist"), defaults to a pool of
+**10**, and refuses a larger `max_size` with an error that shows the arithmetic. The numbers are
+also asserted by a test, so a change to the project is a change someone makes knowingly rather
+than a surprise under the `check_reqs` fan-out — where the failure would read
+`FATAL: too many clients`, which says nothing about pooling.
+
+### What the library actually does with a pool decides who can use the budget
+
+Read in langgraph-checkpoint-postgres 3.1.2 rather than assumed, because the two clients
+behave differently in a way the documentation does not mention:
+
+- **`AsyncPostgresSaver._cursor` holds one `asyncio.Lock` per saver around every operation,
+  pool or not.** The checkpointer never uses more than one connection at a time; concurrent
+  graph branches queue on the lock, not on the pool. Pool size does nothing for checkpoint
+  throughput.
+- **`AsyncPostgresStore._cursor` skips that lock when handed a pool** (its comment: "each
+  `_cursor()` call checks out its own connection"), so the Store can take up to `max_size`.
+- Both create their own tables on `.setup()` and are idempotent. `store_vectors` is only created
+  when an `index` config is passed; none is, because pgvector search lives in our own
+  `company_chunks` / `tender_chunks` under the schema `0001_init.sql` controls.
+- `from_conn_string` opens with `prepare_threshold=0`; the pool does the same, so a query behaves
+  identically whether the checkpointer or the read model issued it — and it is precisely why the
+  transaction pooler is refused (ADR-0008's guard, now also run inside `Database.connect` for
+  scripts that never pass through settings).
+
+So one pool serves all three consumers (checkpointer, Store, read model), and the budget is one
+number. The alternative — a pool per consumer — would have hidden the total.
+
+### `.setup()` runs under an advisory lock, on a different key from the migration runner
+
+Two API processes starting together would both run LangGraph's version bookkeeping. The setup is
+wrapped in `pg_advisory_lock` on the borrowed connection (session-scoped, so lock and unlock must
+use the *same* connection — the code does). The key is deliberately **not** `scripts/migrate.py`'s:
+they guard different resources, and sharing one would make an API start wait on an unrelated
+migration. A shared constant was also unavailable without breaking the script's rule of not
+importing the package.
+
+### The API starts without a database, but not with a broken one
+
+`DATABASE_URL` unset means: start, warn once, serve `/health` and `/openapi.json`, and answer
+**503 naming the variable** from any route that needs the pool. CI's generated-files job depends
+on this — it boots the API with no Postgres to regenerate `frontend/lib/api.ts`. `DATABASE_URL`
+set but unreachable means: **refuse to start**. Running on without checkpoints would lose every
+paused bid, which is the exact failure the story exists to prevent.
+
+### Verified, not inferred
+
+The restart criterion was run against the Frankfurt project, not a fake: a one-node graph was
+invoked under a `bid:{id}` thread and a Store item written; the `Database` was closed; a fresh
+one was opened; `aget_state` returned the saved values and `aget` the item. The test is marked
+`live` and resolves its DSN through `load_settings()` — the same path the API uses — so
+`make test-live` needs no shell wiring.
+
+Library behaviour learned on the way, all added to `CLAUDE.md`: psycopg_pool 3.3 deprecates
+opening an async pool in the constructor (`open=False`, then `await pool.open()`); pgvector's
+psycopg adapter returns a `Vector` object that is **not iterable** (`.to_list()`); and the
+`anyio` pytest plugin is already in the tree, so async tests use `@pytest.mark.anyio` with a
+shared `anyio_backend = "asyncio"` fixture rather than a new `pytest-asyncio` dependency.
+
+### Consequences
+
+- `crossbid.db.Database` is the one door to Postgres; `main.get_database` is the FastAPI
+  dependency routers take. `Database.connection()` is the signature `ingestion.embeddings`'
+  `ConnectionSource` Protocol names, so the two were written to meet in the middle.
+- The `vector` type is registered per pooled connection in the pool's `configure` hook, so no
+  consumer has to remember to do it.
+- The migration runner does **not** apply LangGraph's tables and the app does **not** apply ours:
+  `make migrate` then `make dev` is the order, and the README must say so.
+
+## ADR-0011 — Embeddings, Storage, the extraction node, and the shell: four stories in parallel
+
+**Date:** 2026-09-11 · **Stories:** S2.2.1, S2.2.2, S3.2.1, S4.1.2 · **Status:** accepted
+
+Four stories with disjoint file ownership were built concurrently by four agents while S0.2.2
+was built in the main session; this entry records what each settled and what the review found.
+The parallel split worked because each brief named every file the agent owned and forbade the
+rest — the one collision was a six-line `tests/integration/__init__.py` both sides created.
+
+### S3.2.1 — the wrapper is now enforced, not just available
+
+ADR-0009 closed with a residual: nothing enforced that document text reached a prompt only via
+`wrap_as_data`. The extraction node's test fake **records the exact prompt the model was handed**,
+and four tests act on those bytes — deleting everything between the tagged markers and asserting
+no page's text survives outside them; that a forged `-----DOCUMENT` header planted in a page is
+quoted with a tag that is not the wrapper's; that the operative ask follows the postamble; and
+that the re-ask names pages, never the model's own text. That residual is closed.
+
+Other choices, each argued in the module docstring: sections run under `asyncio.gather` plus a
+`Semaphore` and **not** LangGraph's `Send`, because extraction is a fixed number of structured
+calls with no decision about what to do next — `Send` fan-out is reserved for the genuinely
+agentic `check_reqs`. `gather` orders by argument, which is what keeps dedupe independent of
+completion order. A row is re-asked **exactly once** (cost bounded at 2× a section, never 3×);
+the wire schema keeps `ecertis_criterion_id`, `page` and quote length loose so one bad row cannot
+reject twenty good ones, and `Requirement` is what says no. Only `bid_eligibility` rows leave the
+node (ADR-0003's 579 → 238). `translation` is filled in the same call rather than a second pass
+over 238 rows.
+
+The review round found one material defect before commit: **the fan-out had no failure isolation
+for anything but the model call** — a prompt that would not render, or a defect in the row reader,
+propagated out of `gather` and discarded every other section's finished rows, contradicting the
+story. A catch-all now reports a `SECTION_FAILED` problem per section and the test that claimed to
+cover this was rewritten to actually raise.
+
+Two library facts that would otherwise have cost recall, both in `CLAUDE.md`: LangGraph matches a
+node's `config` annotation **as a string**, so `RunnableConfig | None` under
+`from __future__ import annotations` is silently never injected; and `pymupdf4llm` renders
+emphasis as markdown, which SP.1's `page.get_text()` did not, so a strict verbatim check would
+reject honest quotes containing a bold word.
+
+The extraction fan-out now has its own settings key, `agent.extract_concurrency`: the agent had
+borrowed `check_concurrency`, and the two fan-outs have different call shapes.
+
+**Not closed:** the ≥ 0.9 recall criterion is measured by S3.2.3 against S6.4's labels, neither
+of which exists. The SP.1 figure stands in, as the story says.
+
+### S2.2.1 — a missing tenant scope is a type error, not a code-review catch
+
+Four layers make an unscoped search structurally impossible: no generic `search(table, where)`
+exists; each statement is a module constant with `company_id = %(company_id)s` written into its
+text (tender searches add `bid_id`); those constants are `Final[LiteralString]`, which psycopg's
+`execute` requires and pyright enforces, so a query assembled at run time **cannot be passed at
+all**; and every scope argument is keyword-only with no default, asserted by `inspect.signature`.
+This is the second line of defence ADR-0009 said did not exist, moved into the type system.
+
+Verified rather than assumed: the migration's `vector_cosine_ops` commits every search to `<=>`,
+and a test reads the SQL file to keep the two together; pgvector's adapter dumps `Vector` and
+`ndarray` only, so a plain list would be sent as an array and rejected; the client authenticates
+per request rather than baking the header into the injected `AsyncClient` — a real bug the tests
+caught. Order is restored from the provider's `index` field, tested with a transport that answers
+last-index-first. Every returned vector is checked against `embed_dimensions` with ADR-0004's
+reasoning in the error.
+
+The cross-lingual criterion was run live: a French query for information-security certification
+ranked the German ISO 27001 passage first among four German passages sharing no token with it —
+ranking computed in Python with the same cosine formula, so a failure would indict the model,
+not pgvector. The demo pack (S6.3) does not exist, so the passages are hand-typed; the test
+says so and names the switch-over.
+
+### S2.2.2 — the key layout is the tenancy
+
+Storage's own policies are not used for isolation; the object key `{company_id}/{document_id}/
+{filename}` is, defined once. Ids are validated (identifier-shaped or it is a bug); the filename
+is rewritten by allowlist — basename only, `[A-Za-z0-9._-]`, 120 chars, `"document"` if nothing
+survives. `signed_url` refuses any key it could not itself have built for that company and answers
+**not found, never forbidden**: a permission error confirms the document exists, which is the leak.
+A test asserts every key we build is a key we will sign, so the strictness cannot lock a bidder out.
+
+Two honest limits recorded by the agent and kept here: the ten-minute cap is enforced on what we
+*ask* Supabase for, not proven on what it honours (a `live` test can do that later); and bucket
+privacy is an operational precondition — a bucket created public in the dashboard fails no test.
+Also confirmed: the client never parses the key, so `sb_secret_…` and legacy JWT keys both work.
+
+### S4.1.2 — stock shadcn only, so the design gate holds
+
+Header, navigation, footer with the advisory notice, skip link, mobile sheet, and empty states that
+name the next step. Every visual is a stock primitive (`Button`, `Card`, `Sheet`); one
+`NAV_ITEMS` list feeds both navigations so they cannot drift; nothing exists under
+`components/matrix`, `components/pdf` or `components/verdict`, and the dashboard renders only the
+first-run empty state — the bid list is S4.4.1, which is gated. No dependency changed. Verified in
+a production build with Playwright: one `h1` per page, exactly one `aria-current`, no horizontal
+overflow at 320 px, zero console output.
+
+### A startup regression caught before it shipped
+
+Because the API now connects at startup (ADR-0010), `infra/.env.example`'s `DATABASE_URL=…@localhost
+:5432` default — correct for host runs — would have made `cp .env.example .env && make dev` fail:
+inside the `api` container, `localhost` is the container. The default is now blank (Compose supplies
+its own `db` DSN), the three ways to run are spelled out in the file, and the README quick start
+gains the `make migrate` step, which the API does not do for itself.
+
+### Consequences
+
+- 710 tests, 100% line and branch coverage, all offline; 6 `live` tests, of which the restart,
+  embeddings and vector-registration ones were run against the real services.
+- Increment 1 has three stories left: S2.2.3 (upload-to-ready flow, now unblocked), S3.1.1 (the
+  graph and `/bids`, now unblocked), and S4.0.1 — the design canvas the user must confirm before
+  S4.5.1 and every matrix component. S4.2.2 waits on S2.2.3.

@@ -70,6 +70,15 @@ SESSION_POOLER_PORT: Final = 5432
 TRUTHY: Final = frozenset({"true", "1"})
 VALUE_ERROR_PREFIX: Final = "Value error, "
 
+MAX_SIGNED_URL_TTL_SECONDS: Final = 600
+"""Ten minutes, and both the cap and the default of `SIGNED_URL_TTL_SECONDS`.
+
+S2.2.2's acceptance criterion is "the signed URL expires within 10 minutes", so a longer
+value is a configuration that breaks the story: it is refused here, at startup, rather
+than granted to a caller at request time. `ingestion/storage.py` reads the number from
+this one place, so the guard and the URL it protects cannot drift apart.
+"""
+
 
 class SettingsError(RuntimeError):
     """Startup refused. The message names the variable or file to fix, never its value."""
@@ -141,8 +150,15 @@ class IngestionSettings(_Frozen):
 
 
 class AgentSettings(_Frozen):
-    """Limits on the agentic part of the graph, the per-requirement ReAct loop (F3.3)."""
+    """Concurrency limits on the two fan-outs, each bounding calls to OpenRouter.
 
+    `extract_concurrency` is the deterministic one -- sections of `extract_reqs` (S3.2.1), a
+    fixed number of structured calls. `check_concurrency` is the agentic one -- per-requirement
+    ReAct loops in `check_reqs` (F3.3), each up to `max_tool_calls_per_requirement` calls.
+    Separate keys because the call shapes differ, so tuning one must not move the other.
+    """
+
+    extract_concurrency: int = Field(gt=0)
     check_concurrency: int = Field(gt=0)
     max_tool_calls_per_requirement: int = Field(gt=0)
 
@@ -164,9 +180,9 @@ class RuntimeSettings(_Frozen):
 
 
 class EnvSettings(BaseSettings):
-    """Secrets and deployment wiring. Fields for auth, Supabase and CORS arrive with the
-    stories that read them (S0.2.1, S0.3.1); unknown variables are ignored, not rejected,
-    because one `.env` serves both apps."""
+    """Secrets and deployment wiring. Fields for auth and CORS arrive with the stories that
+    read them (S0.3.1); unknown variables are ignored, not rejected, because one `.env`
+    serves both apps."""
 
     model_config = SettingsConfigDict(
         frozen=True,
@@ -183,6 +199,21 @@ class EnvSettings(BaseSettings):
     """Unset means the Compose Postgres. Holds a password, hence `SecretStr`."""
     auth_mode: AuthMode = AuthMode.DEV
     environment: Environment = Field(default=Environment.DEVELOPMENT, validation_alias="ENV")
+    supabase_url: str | None = None
+    """The hosted project's API URL. Unset in tests and offline work: Storage is not
+    mocked locally, so anything needing it takes a fake bucket instead (project-plan,
+    Environments). `ingestion/storage.py` is the one place that refuses the absence."""
+    supabase_service_role_key: SecretStr | None = Field(
+        default=None, validation_alias="SUPABASE_SERVICE_KEY"
+    )
+    """The service-role key, which bypasses Storage's own policies and so is server-side
+    only -- the browser gets the anon key, which the backend never reads. Named for what
+    the key *is*; the alias is the variable name `infra/.env.example` and Compose already
+    pass, and `populate_by_name` accepts `SUPABASE_SERVICE_ROLE_KEY` as well."""
+    supabase_storage_bucket: str = "company-documents"
+    """Private bucket holding every uploaded PDF under its `company_id` prefix (S2.2.2)."""
+    signed_url_ttl_seconds: int = MAX_SIGNED_URL_TTL_SECONDS
+    """How long a document's signed URL stays valid. The default is the cap."""
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "crossbid"
     verify_model_slugs: bool = False
@@ -195,6 +226,18 @@ class EnvSettings(BaseSettings):
         """`mode="after"`, so the value pydantic reports on failure is already masked."""
         if not value.get_secret_value().strip():
             raise ValueError("is set but blank")
+        return value
+
+    @field_validator("signed_url_ttl_seconds", mode="after")
+    @classmethod
+    def _cap_signed_url_ttl(cls, value: int) -> int:
+        """S2.2.2 promises a document URL that expires within ten minutes, so an expiry
+        that breaks the promise is refused while starting up rather than handed out."""
+        if not 0 < value <= MAX_SIGNED_URL_TTL_SECONDS:
+            raise ValueError(
+                f"must be between 1 and {MAX_SIGNED_URL_TTL_SECONDS} seconds: a document's "
+                "signed URL has to expire within ten minutes (S2.2.2)"
+            )
         return value
 
 

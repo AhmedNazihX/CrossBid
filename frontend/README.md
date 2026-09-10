@@ -15,9 +15,13 @@ from `backend/` (`uv run uvicorn crossbid.main:app --reload`, port 8000). The we
 app talks to it over HTTP only; it never reaches the database, the LLM provider,
 or any secret.
 
-Today the app is a scaffold: one placeholder landing page. The interface —
-login, dashboard, company profile, AI provider settings, the bid workspace, and
-the developer console — arrives with stories S4.1–S4.6 in later increments.
+Today the app is the authenticated shell (S4.1.2) plus a public landing page.
+Navigation reaches Dashboard, Company, Settings and New bid; each of those
+screens shows an empty state that explains the next step. The screens themselves
+— sign-in, the company profile and upload table, TED search, the bid workspace,
+chat, and the developer console — arrive with stories S4.1.1–S4.6.4. There is no
+authentication yet: `(app)` renders for anyone, and the redirect for a signed-out
+visitor lands with S4.1.1.
 
 ## Tasks
 
@@ -84,19 +88,41 @@ Folders appear as the stories that need them land (see `docs/project-plan.md` �
 Repository layout). Today only these exist:
 
 ```
-app/           App Router: root layout, placeholder page, global stylesheet
+app/
+  layout.tsx           root layout, fonts, metadata
+  page.tsx             public landing page
+  globals.css          Tailwind v4 + shadcn theme tokens
+  (app)/               authenticated shell — header, nav, advisory-only footer
+    layout.tsx
+    dashboard/         first-run empty state (the bid list is S4.4.1)
+    company/           placeholder (form S4.2.1, upload table S4.2.2)
+    settings/          placeholder (language and tone S4.2.1, BYOK S4.6.4)
+    bids/new/          placeholder (TED search to start is S4.3.1)
+components/
+  layout/              app header, main nav, mobile nav, footer, page header,
+                       skip link, and NAV_ITEMS — the one nav definition
+  common/              EmptyState
+  ui/                  shadcn/ui primitives (button, card, sheet)
 lib/           api.ts (generated), api-client.ts (typed fetch wrapper),
                utils.ts (shadcn `cn` re-export)
 public/        static assets
 ```
 
-Planned: `components/` (`matrix/`, `pdf/`, `verdict/`, `ui/` for shadcn),
-`lib/supabase.ts`, and the bid-polling hook.
+The `(app)` route group adds no URL segment: `app/(app)/dashboard/page.tsx`
+serves `/dashboard`.
 
-Route groups planned for later increments: `(auth)/login`, `(app)/dashboard`,
-`(app)/company`, `(app)/settings`, `(app)/bids/new`, `(app)/bids/[id]`, and
-`dev/` gated by `is_developer`. None of them exist yet — creating them ahead of
-their stories would be speculative.
+Planned: `components/matrix/`, `components/pdf/`, `components/verdict/`,
+`app/(auth)/login/`, `app/(app)/bids/[id]/`, `app/dev/` gated by
+`is_developer`, `lib/supabase.ts`, and the bid-polling hook. None of them exist
+yet — creating them ahead of their stories would be speculative, and the three
+`components/` folders are additionally gated on the S4.0.1 design confirmation.
+
+### Adding a section to the navigation
+
+`components/layout/nav-items.ts` holds `NAV_ITEMS`. Both the desktop bar and the
+mobile sheet iterate it, so a new section is one entry there plus the route
+folder — the two can never drift. `isSectionActive` decides which entry gets
+`aria-current="page"` and the tinted background.
 
 ## Adding shadcn/ui components
 
@@ -107,7 +133,15 @@ icons, CSS variables). Add a component when a story needs it:
 npx shadcn@latest add button
 ```
 
-Nothing beyond the init has been added, so `components/ui/` does not exist yet.
+`components/ui/` currently holds `button`, `card` and `sheet` — the shell's
+primitives. They are ordinary source files (that is the point of
+shadcn/ui) and are formatted to this repo's Prettier config, so re-adding one
+with `--overwrite` produces a formatting diff until you run `npm run format`.
+
+Note the S4.0.1 design gate in `docs/project-plan.md`: nothing under
+`components/matrix/`, `components/pdf/` or `components/verdict/` may be coded
+before the user confirms the design canvas. The shell, login and upload screens
+are exempt because they are stock shadcn/ui.
 
 ## Configuration
 

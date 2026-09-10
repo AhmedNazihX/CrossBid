@@ -35,14 +35,18 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     environment:
-      # Compose-internal DSN. Overridden by DATABASE_URL in .env when pointing at Supabase;
-      # use the direct connection locally and the session pooler in deployment, never the
-      # transaction pooler (it has no prepared statements, which breaks the checkpointer).
+      # Compose-internal DSN, used when DATABASE_URL in .env is blank. Set it to the Supabase
+      # DSN to point the stack at the hosted project (direct connection locally, session
+      # pooler in deployment, never the transaction pooler). Do NOT set it to the host's
+      # `localhost:5432` value: inside this container that is the container itself, and the
+      # API refuses to start on an unreachable database (S0.2.2).
       DATABASE_URL: ${DATABASE_URL:-postgresql://crossbid:crossbid@db:5432/crossbid}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?set OPENROUTER_API_KEY in .env}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in .env}
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-company-documents}
+      SIGNED_URL_TTL_SECONDS: ${SIGNED_URL_TTL_SECONDS:-600}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       DEVELOPER_EMAILS: ${DEVELOPER_EMAILS:-}
       AUTH_MODE: ${AUTH_MODE:-dev}

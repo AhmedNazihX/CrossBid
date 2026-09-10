@@ -30,7 +30,13 @@ Requirements: [Docker](https://docs.docker.com/get-docker/),
 cp infra/.env.example .env      # then set OPENROUTER_API_KEY and APP_ENCRYPTION_KEY
 make install                    # uv sync in backend/, npm install in frontend/
 make dev                        # db + api + web in Docker
+DATABASE_URL=postgresql://crossbid:crossbid@localhost:5432/crossbid make migrate
 ```
+
+`make migrate` applies the schema in `backend/migrations/` from the host, so it needs the
+Compose database's published port; the API creates LangGraph's own tables itself at startup.
+To run against the hosted Supabase project instead, set `DATABASE_URL` in `.env` to its direct
+connection string and run `make migrate` once with no prefix.
 
 - Web app — http://localhost:3000
 - API docs — http://localhost:8000/docs
@@ -54,11 +60,10 @@ Run `make help` for the full list.
 | `make test-live` | Only the tests that hit real services or an LLM (costs money) |
 | `make lint` | ruff, pyright, eslint, `tsc --noEmit`, and the dependency-manifest check |
 | `make deps` | Regenerate `dependencies.txt` from both lock files |
-| `make migrate` | Apply database migrations *(lands with S0.2.1)* |
+| `make migrate` | Apply `backend/migrations/*.sql` to `DATABASE_URL`; idempotent, refuses edited applied files |
 | `make eval` | Write `evaluations/REPORT.md` *(lands with S7.1)* |
 
-`make migrate` and `make eval` are wired and documented, and report which story delivers them
-until it lands.
+`make eval` is wired and documented, and reports which story delivers it until it lands.
 
 ## Layout
 

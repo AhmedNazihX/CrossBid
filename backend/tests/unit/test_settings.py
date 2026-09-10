@@ -18,15 +18,18 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from langsmith import utils as langsmith_utils
 from pydantic import ValidationError
 
 from crossbid import settings as settings_module
 from crossbid.settings import (
+    MAX_SIGNED_URL_TTL_SECONDS,
     TRACING_FLAG_ENV_VARS,
     AppSettingsRow,
     AuthMode,
     Environment,
+    EnvSettings,
     ModelRole,
     Settings,
     SettingsError,
@@ -44,6 +47,8 @@ FAKE_OPENROUTER_KEY = "sk-or-v1-LEAKED-OPENROUTER-KEY"
 FAKE_ENCRYPTION_KEY = "LEAKED-FERNET-ENCRYPTION-KEY="
 FAKE_DSN_PASSWORD = "LEAKED-DATABASE-PASSWORD"
 
+FAKE_SERVICE_KEY = "sb_secret_LEAKED-SERVICE-ROLE-KEY"
+
 MANAGED_ENV_VARS = (
     "OPENROUTER_API_KEY",
     "APP_ENCRYPTION_KEY",
@@ -53,6 +58,11 @@ MANAGED_ENV_VARS = (
     "LANGSMITH_API_KEY",
     "LANGSMITH_PROJECT",
     "VERIFY_MODEL_SLUGS",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_STORAGE_BUCKET",
+    "SIGNED_URL_TTL_SECONDS",
 )
 
 
@@ -94,6 +104,7 @@ def test_yaml_defaults_load(valid_env: None) -> None:
     assert settings.runtime.ingestion.chunk_overlap == 100
     assert settings.runtime.ingestion.section_pages == 6
     assert settings.runtime.ingestion.embed_dimensions == 1536
+    assert settings.runtime.agent.extract_concurrency == 5
     assert settings.runtime.agent.check_concurrency == 5
     assert settings.runtime.agent.max_tool_calls_per_requirement == 4
     assert "company_rag_search" in settings.runtime.enabled_tools
@@ -282,6 +293,7 @@ def test_secrets_never_appear_in_a_repr_a_str_or_a_dump(
     """security.md: a key must not reach a log line, an exception, or a settings dump."""
     # Arrange
     monkeypatch.setenv("LANGSMITH_API_KEY", "lsv2-LEAKED-LANGSMITH-KEY")
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", FAKE_SERVICE_KEY)
     monkeypatch.setenv(
         "DATABASE_URL", f"postgresql://postgres:{FAKE_DSN_PASSWORD}@localhost:5432/crossbid"
     )
@@ -300,6 +312,7 @@ def test_secrets_never_appear_in_a_repr_a_str_or_a_dump(
         assert FAKE_OPENROUTER_KEY not in rendering
         assert FAKE_ENCRYPTION_KEY not in rendering
         assert FAKE_DSN_PASSWORD not in rendering
+        assert FAKE_SERVICE_KEY not in rendering
         assert "LEAKED-LANGSMITH-KEY" not in rendering
 
     # The values are still reachable deliberately, which is the only way to use them.
@@ -359,6 +372,118 @@ def test_the_environment_wins_over_the_env_file(
 
     # Assert
     assert settings.env.openrouter_api_key.get_secret_value() == FAKE_OPENROUTER_KEY
+
+
+# --------------------------------------------- S2.2.2 Storage wiring and the URL cap
+
+
+def test_the_storage_wiring_defaults(valid_env: None) -> None:
+    """Nothing about Storage is required to start: it is not mocked locally, so the
+    offline stories and `make test` run with none of it set (project-plan, Environments)."""
+    # Act
+    env = load().env
+
+    # Assert
+    assert env.supabase_url is None
+    assert env.supabase_service_role_key is None
+    assert env.supabase_storage_bucket == "company-documents"
+    assert env.signed_url_ttl_seconds == MAX_SIGNED_URL_TTL_SECONDS
+
+
+def test_the_service_role_key_is_read_from_the_documented_variable(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`SUPABASE_SERVICE_KEY` is the name `infra/.env.example` and Compose already pass."""
+    # Arrange
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", FAKE_SERVICE_KEY)
+
+    # Act
+    key = load().env.supabase_service_role_key
+
+    # Assert
+    assert key is not None
+    assert key.get_secret_value() == FAKE_SERVICE_KEY
+
+
+def test_the_service_role_key_is_also_read_from_the_field_name(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`populate_by_name` accepts the fuller name too, so neither spelling silently
+    leaves the backend without a key."""
+    # Arrange
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", FAKE_SERVICE_KEY)
+
+    # Act
+    key = load().env.supabase_service_role_key
+
+    # Assert
+    assert key is not None
+    assert key.get_secret_value() == FAKE_SERVICE_KEY
+
+
+@pytest.mark.parametrize("ttl", ["1", "60", "600"])
+def test_a_signed_url_ttl_within_ten_minutes_is_accepted(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch, ttl: str
+) -> None:
+    # Arrange
+    monkeypatch.setenv("SIGNED_URL_TTL_SECONDS", ttl)
+
+    # Act / Assert
+    assert load().env.signed_url_ttl_seconds == int(ttl)
+
+
+@pytest.mark.parametrize(
+    "ttl",
+    [
+        pytest.param("0", id="zero"),
+        pytest.param("-1", id="negative"),
+        pytest.param("601", id="one-second-over-ten-minutes"),
+        pytest.param("86400", id="a-day"),
+    ],
+)
+def test_a_signed_url_ttl_outside_the_cap_is_refused_at_startup(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch, ttl: str
+) -> None:
+    """S2.2.2 caps a document URL at ten minutes, so a configuration that breaks the
+    story fails while starting rather than handing out a long-lived URL at request time."""
+    # Arrange
+    monkeypatch.setenv("SIGNED_URL_TTL_SECONDS", ttl)
+
+    # Act / Assert
+    with pytest.raises(SettingsError, match="SIGNED_URL_TTL_SECONDS") as caught:
+        load()
+    assert "ten minutes" in str(caught.value)
+
+
+def test_a_signed_url_ttl_that_is_not_a_number_names_the_variable(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Arrange
+    monkeypatch.setenv("SIGNED_URL_TTL_SECONDS", "ten minutes")
+
+    # Act / Assert
+    with pytest.raises(SettingsError, match="SIGNED_URL_TTL_SECONDS"):
+        load()
+
+
+# ------------------------------------------------- the two layers stay disjoint (S0.3.2)
+
+
+def test_no_environment_variable_is_also_a_key_of_the_defaults_file() -> None:
+    """The invariant the module docstring promises: secrets and deployment wiring live
+    only in the environment, behaviour only in the YAML, so "which wins" never has to be
+    guessed. A field added to both layers at once would make that a lie."""
+    # Arrange
+    defaults = yaml.safe_load(settings_module.DEFAULTS_FILE.read_text(encoding="utf-8"))
+    env_names: set[str] = set()
+    for name, field in EnvSettings.model_fields.items():
+        env_names.add(name)
+        if isinstance(field.validation_alias, str):
+            env_names.add(field.validation_alias.lower())
+
+    # Assert -- and the guard is not vacuous: the newest fields are in the set
+    assert {"supabase_storage_bucket", "signed_url_ttl_seconds", "env"} <= env_names
+    assert env_names.isdisjoint(set(defaults))
 
 
 # ------------------------------------------------------- S0.3.1 guard: dev auth mode
