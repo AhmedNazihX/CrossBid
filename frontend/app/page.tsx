@@ -11,19 +11,19 @@ export default function Home() {
       </div>
 
       <p className="text-muted-foreground text-sm leading-relaxed">
-        This is the scaffold only. The interface — login, dashboard, company
-        profile, AI provider settings, and the bid workspace — arrives in later
-        increments. Crossbid is advisory: it never submits a bid, and every
-        matrix cell carries a citation or is marked unclear.
+        This is the scaffold only. The interface — login, dashboard, company profile, AI
+        provider settings, and the bid workspace — arrives in later increments. Crossbid is
+        advisory: it never submits a bid, and every matrix cell carries a citation or is marked
+        unclear.
       </p>
 
       <p className="text-muted-foreground text-sm">
-        The API runs as a separate process. See{" "}
+        The API runs as a separate process. See{' '}
         <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs">
           frontend/README.md
-        </code>{" "}
+        </code>{' '}
         to start it.
       </p>
     </main>
-  );
+  )
 }

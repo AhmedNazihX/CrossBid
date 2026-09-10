@@ -59,11 +59,12 @@ lint-backend: ## ruff + pyright
 lint-frontend: ## eslint + tsc
 	@test -d $(FRONTEND)/node_modules || { echo "frontend deps missing. Run: make install"; exit 1; }
 	cd $(FRONTEND) && npm run lint
-	cd $(FRONTEND) && npx tsc --noEmit
+	cd $(FRONTEND) && npm run format:check
+	cd $(FRONTEND) && npm run typecheck
 
 format: ## Apply formatting to both apps
 	cd $(BACKEND) && uv run ruff format . && uv run ruff check --fix .
-	cd $(FRONTEND) && npx prettier --write .
+	cd $(FRONTEND) && npm run format
 
 test: ## Run tests, excluding those marked `live`
 	cd $(BACKEND) && uv run pytest

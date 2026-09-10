@@ -21,15 +21,15 @@ the developer console — arrives with stories S4.1–S4.6 in later increments.
 
 ## Tasks
 
-| Command | What it does |
-|---|---|
-| `npm install` | Install dependencies from `package-lock.json` |
-| `npm run dev` | Dev server on :3000 |
-| `npm run build` | Production build (`output: "standalone"`) |
-| `npm start` | Serve the production build |
-| `npm run lint` | ESLint (`next/core-web-vitals`, `next/typescript`) |
-| `npm run typecheck` | `tsc --noEmit` — the check repo CI runs |
-| `npm run gen:api` | Regenerate `lib/api.ts` from the backend's OpenAPI schema |
+| Command             | What it does                                              |
+| ------------------- | --------------------------------------------------------- |
+| `npm install`       | Install dependencies from `package-lock.json`             |
+| `npm run dev`       | Dev server on :3000                                       |
+| `npm run build`     | Production build (`output: "standalone"`)                 |
+| `npm start`         | Serve the production build                                |
+| `npm run lint`      | ESLint (`next/core-web-vitals`, `next/typescript`)        |
+| `npm run typecheck` | `tsc --noEmit` — the check repo CI runs                   |
+| `npm run gen:api`   | Regenerate `lib/api.ts` from the backend's OpenAPI schema |
 
 From the repository root, `make dev`, `make lint` and `make deps` cover both apps.
 

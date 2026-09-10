@@ -1,0 +1,6 @@
+.next/
+node_modules/
+public/
+package-lock.json
+# Generated from the backend's OpenAPI schema; never hand-edited or reformatted.
+lib/api.ts

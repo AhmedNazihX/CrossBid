@@ -8,7 +8,7 @@
 #          transitive = pulled in by a direct dependency
 #          dev = build, lint, test, or type-check tooling only
 #
-# 838 packages: 99 backend, 739 frontend
+# 839 packages: 99 backend, 740 frontend
 
 
 ## backend (99)
@@ -113,7 +113,7 @@ xxhash                                              4.0.1           transitive
 yarl                                                1.24.5          transitive
 zstandard                                           0.25.0          transitive
 
-## frontend (739)
+## frontend (740)
 
 @alloc/quick-lru                                    5.3.0           dev
 @babel/code-frame                                   7.29.7          transitive
@@ -722,6 +722,7 @@ postcss-selector-parser                             7.1.6           transitive
 powershell-utils                                    0.1.0           transitive
 powershell-utils                                    0.2.1           transitive
 prelude-ls                                          1.2.1           dev
+prettier                                            3.9.6           dev
 pretty-ms                                           9.3.1           transitive
 prompts                                             2.4.2           transitive
 prop-types                                          15.8.1          dev
