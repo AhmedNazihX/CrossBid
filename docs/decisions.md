@@ -1314,11 +1314,21 @@ which ADR-0014's rule otherwise requires; recorded here as the deviation.
 What the file actually contains decided every parameter, measured frame by frame through a
 canvas rather than assumed:
 
-- The clip **does not end on the logo** — it fades back to an empty frame, 5.98 % ink at
-  7.80 s and **0.00 % at 7.90**. Playback is a window, `1.2 s → 4.6 s`: the opening carries a
-  single dot (652 non-white pixels at both 0.8 s and 1.2 s), the mark is drawn and flat from
-  4.0 s (122 885 → 123 632 → 123 970), and the tagline that follows is the `<h1>` word for
-  word — which is also why the crop stops above it.
+- The clip **does not end on the logo** — it dissolves the mark and then the frame. Playback
+  is a window, `1.2 s → 7.56 s`. The start skips dead time (one dot, 166 mark pixels, from
+  0.5 s to 1.25 s). The hold is the last frame on which the mark is still solid, and the
+  honest signal there is not the pixel *count* — which drifts up to the very end — but their
+  mean darkness: 23 flat from 7.40 s through **7.56 s**, then 25 at 7.58, 30 at 7.62, 56 at
+  7.68, 114 at 7.74, and gone by 7.84. The dissolve begins at 7.58.
+- The user re-cut the clip so the rings clear before the mark fades (2026-09-12), and the hold
+  sits after that: counting faint pixels *outside* the mark's bounding box, which separates
+  rings from glyph anti-aliasing, gives 4 040 at 5.00 s, 1 807 at 6.75 and **129 at 7.00**,
+  flat thereafter. The held frame is the mark alone, not a mark inside a halo.
+- **`PLAYBACK_RATE = 1.3` is a WCAG constraint, not a style choice.** That window is 6.36 s of
+  source, over 2.2.2's five-second threshold, which would oblige a visible pause control on
+  the hero. At 1.3x it is 4.89 s of wall clock, so the whole reveal plays and nothing is owed.
+  Slowing the rate, starting earlier or holding later re-crosses five seconds and silently
+  reintroduces the requirement.
 - **3.4 s of motion is under WCAG 2.2.2's five-second line**, so no pause control is required
   and the hero stays clean. Widening the window past five seconds reintroduces the requirement.
 - The hold is watched with `requestAnimationFrame`, not `timeupdate`: at ~4 ticks a second the

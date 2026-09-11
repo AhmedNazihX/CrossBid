@@ -19,16 +19,18 @@ import Image from 'next/image'
  * middle. Cropped to the mark and dropped straight onto the canvas it reads as part of the
  * page, which is what "seamless" costs: no border, no card, no radius, no backdrop.
  *
- * **It stops on the finished mark, not on the file's last frame.** The reveal fades back to
- * an empty frame over its last fifth of a second — 5.98 % ink at 7.80 s, **0.00 % at
- * 7.90** — so running to 8.00 s would leave a blank strip on the page, the state it rests
- * in for far longer than it plays.
+ * **It stops the instant before the mark starts fading.** The clip ends by dissolving the
+ * mark and then the frame, so running it out would leave a blank strip on the page — the
+ * state it rests in for far longer than it plays. `REVEAL_HOLD_SECONDS` is measured, not
+ * guessed.
  *
- * **There is no pause control, and none is required.** WCAG 2.2.2 governs motion that plays
- * automatically for *more than five seconds*. The window below runs 3.4 s, so the
- * obligation does not arise and the hero stays clean. That is why the window is where it
- * is: widening it past five seconds silently reintroduces the requirement for a visible
- * pause control, so it cannot be widened without adding one back.
+ * **There is no pause control, and none is required — but only just.** WCAG 2.2.2 governs
+ * motion that plays automatically for *more than five seconds*. The window is 6.36 s of
+ * source, which would cross that line; `PLAYBACK_RATE` is what keeps it on the right side,
+ * at 4.89 s of wall clock. That is a real constraint and not a preference: slowing the rate,
+ * starting earlier or holding later re-crosses five seconds and silently reintroduces the
+ * requirement for a visible pause control. Changing any of the three means checking the
+ * product again.
  */
 const REVEAL_SRC = '/logo-reveal.mp4'
 const LOCKUP_SRC = '/logo-lockup.svg'
@@ -36,18 +38,34 @@ const LOCKUP_SRC = '/logo-lockup.svg'
 /**
  * The played window, in seconds of source time.
  *
- * Measured on the shipped encode, counting non-white pixels across the full 1920 x 1080
- * frame: 652 at 0.8 s and still 652 at 1.2 s — a single dot, dead time nobody should wait
- * through; 47 232 by 2.4 s as the mark builds; 122 885 at 3.8 s once the wordmark is in;
- * 123 632 at 4.0 s and 123 970 at 4.6 s, which is to say flat. The tagline below the mark
- * arrives later still, and repeats the `<h1>` word for word — one more reason the crop
- * ends above it.
+ * Measured on the shipped encode by sampling every frame through a canvas and separating
+ * the mark (pixels under 200) from the clip's faint concentric rings (200–246).
  *
- * So: skip the blank opening, hold once the mark is drawn. 3.4 s of motion, under the
- * five-second line of WCAG 2.2.2.
+ * **The start** skips dead time: the frame carries 166 mark pixels — one dot — from 0.5 s
+ * to 1.25 s, and nothing anyone would wait for.
+ *
+ * **The hold** is the last frame on which the mark is still solid. The honest signal is not
+ * the pixel *count*, which drifts upward to the very end, but their mean darkness: 23 flat
+ * from 7.40 s through 7.56 s, then 25 at 7.58, 30 at 7.62, 56 at 7.68, 114 at 7.74, 190 at
+ * 7.82, and gone by 7.84. So the dissolve begins at 7.58 and 7.56 is the last clean frame.
+ *
+ * The rings are long gone by then — they fade out well ahead of the mark, which is what
+ * makes the held frame the mark alone on the canvas rather than the mark inside a halo.
+ * Counting only faint pixels *outside* the mark's own bounding box separates them from the
+ * anti-aliasing along the glyph edges: 4 040 at 5.00 s, 3 707 at 6.50, 1 807 at 6.75, then
+ * **129 at 7.00** and flat after, while the glyph-edge count barely moves. So the rings
+ * clear between 6.75 s and 7.00 s, half a second before the mark begins to dissolve.
  */
 const REVEAL_START_SECONDS = 1.2
-const REVEAL_HOLD_SECONDS = 4.6
+const REVEAL_HOLD_SECONDS = 7.56
+
+/**
+ * Played slightly fast, for one reason: 6.36 s of source at 1.0x is over WCAG 2.2.2's
+ * five-second threshold and would oblige a visible pause control on the hero. At 1.3x the
+ * same 6.36 s takes 4.89 s of wall clock, so nothing is cut from the reveal and nothing is
+ * owed. The lift is small enough to read as pace rather than as a fast-forward.
+ */
+const PLAYBACK_RATE = 1.3
 
 /**
  * The slice of the frame that is kept, as fractions of its width and height.
@@ -174,6 +192,7 @@ export function BrandReveal() {
     video.addEventListener('playing', onPlaying)
 
     const start = () => {
+      video.playbackRate = PLAYBACK_RATE
       video.currentTime = REVEAL_START_SECONDS
       // A refusal needs no handling beyond not throwing: `playing` does not fire, so
       // nothing above runs and the static lockup is what stays on screen.
