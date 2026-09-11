@@ -7,112 +7,266 @@
 <body>
 <x-dc>
 <helmet>
-  <title>Verdict panel</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
-    body { margin: 0; background: oklch(1 0 0); color: oklch(0.145 0 0); font-family: Geist, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    * { box-sizing: border-box; }
-    a { color: oklch(0.145 0 0); text-decoration: none; } a:hover { color: oklch(0.556 0 0); }
-    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .muted { color: oklch(0.556 0 0); }
-    .pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
-    .dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex: none; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 10px; border: 1px solid transparent; font-size: 14px; font-weight: 500; white-space: nowrap; background: oklch(0.205 0 0); color: oklch(0.985 0 0); }
-    .btn.lg { height: 36px; }
-    .btn.outline { background: oklch(1 0 0); color: oklch(0.145 0 0); border-color: oklch(0.922 0 0); }
-    .btn.ghost { background: transparent; color: oklch(0.145 0 0); }
-    .btn.destructive { background: oklch(0.965 0.03 27); color: oklch(0.577 0.245 27.325); }
-    .card { background: oklch(1 0 0); border: 1px solid oklch(0.922 0 0); border-radius: 10px; }
-    .label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; color: oklch(0.556 0 0); }
-    .th { font-size: 12px; font-weight: 500; color: oklch(0.556 0 0); text-align: left; padding: 8px 12px; border-bottom: 1px solid oklch(0.922 0 0); white-space: nowrap; }
-    .td { padding: 12px; border-bottom: 1px solid oklch(0.922 0 0); vertical-align: top; }
-    table { border-collapse: collapse; width: 100%; }
-    .quote { font-style: normal; color: oklch(0.145 0 0); border-left: 2px solid oklch(0.922 0 0); padding-left: 10px; }
-    input, textarea, select { font: inherit; }
+  <title>Review verdict</title>
+  <style>:root{
+
+--cb-white:#ffffff;
+--cb-canvas:#fafaf9;
+--cb-stone-50:#f5f5f4;
+--cb-stone-100:#eeedeb;
+--cb-stone-200:#e7e5e4;
+--cb-stone-300:#d6d3d1;
+--cb-stone-400:#a8a29e;
+--cb-stone-500:#78716c;
+--cb-stone-600:#57534e;
+--cb-stone-700:#44403c;
+--cb-stone-800:#292524;
+--cb-ink:#111111;
+--cb-blue-50:#f5f5f4;
+--cb-blue-100:#e7e5e4;
+--cb-blue-200:#d6d3d1;
+--cb-blue-300:#a8a29e;
+--cb-blue-500:#111111;
+--cb-blue-600:#292524;
+--cb-blue-700:#44403c;
+--cb-blue-900:#000000;
+--cb-green-50:#eafaf0;
+--cb-green-100:#d3f4df;
+--cb-green-500:#1f9d55;
+--cb-green-700:#166b3b;
+--cb-amber-50:#fdf7e5;
+--cb-amber-100:#fbeec2;
+--cb-amber-500:#d9a400;
+--cb-amber-700:#8a6600;
+--cb-orange-50:#fff3ea;
+--cb-orange-100:#ffe1cc;
+--cb-orange-500:#f97316;
+--cb-orange-600:#ea6209;
+--cb-orange-700:#c24d05;
+--cb-red-50:#fdeeee;
+--cb-red-100:#fbd9d9;
+--cb-red-500:#d93636;
+--cb-red-700:#9c2323;
+
+--surface-canvas:var(--cb-canvas);
+--surface-card:var(--cb-white);
+--surface-sunken:var(--cb-stone-50);
+--surface-hover:var(--cb-stone-100);
+--surface-inverse:var(--cb-ink);
+--surface-brand:var(--cb-blue-500);
+--surface-brand-soft:var(--cb-blue-50);
+--surface-accent:var(--cb-orange-500);
+--surface-accent-soft:var(--cb-orange-50);
+
+--text-primary:var(--cb-ink);
+--text-secondary:var(--cb-stone-600);
+--text-muted:var(--cb-stone-500);
+--text-placeholder:var(--cb-stone-400);
+--text-inverse:var(--cb-white);
+--text-brand:var(--cb-blue-500);
+--text-accent:var(--cb-orange-600);
+--text-link:var(--cb-ink);
+
+--border-default:var(--cb-stone-200);
+--border-strong:var(--cb-stone-300);
+--border-subtle:var(--cb-stone-100);
+--border-brand:var(--cb-blue-500);
+--border-focus:var(--cb-blue-500);
+
+--status-success:var(--cb-green-500);
+--status-success-bg:var(--cb-green-50);
+--status-success-text:var(--cb-green-700);
+--status-warning:var(--cb-amber-500);
+--status-warning-bg:var(--cb-amber-50);
+--status-warning-text:var(--cb-amber-700);
+--status-danger:var(--cb-red-500);
+--status-danger-bg:var(--cb-red-50);
+--status-danger-text:var(--cb-red-700);
+--status-info:#2f6fdb;
+--status-info-bg:#eef3fc;
+--status-info-text:#1f4fa8;
+--status-neutral:var(--cb-stone-400);
+--status-neutral-bg:var(--cb-stone-100);
+--status-neutral-text:var(--cb-stone-600);
+
+--verdict-go:var(--cb-green-500);
+--verdict-go-bg:var(--cb-green-50);
+--verdict-go-text:var(--cb-green-700);
+--verdict-nogo:var(--cb-red-500);
+--verdict-nogo-bg:var(--cb-red-50);
+--verdict-nogo-text:var(--cb-red-700);
+--verdict-conditional:var(--cb-amber-500);
+--verdict-conditional-bg:var(--cb-amber-50);
+--verdict-conditional-text:var(--cb-amber-700);
+--verdict-insufficient:var(--cb-stone-400);
+--verdict-insufficient-bg:var(--cb-stone-100);
+--verdict-insufficient-text:var(--cb-stone-600);
+
+--chart-1:var(--status-info);
+--chart-2:var(--cb-green-500);
+--chart-3:var(--cb-amber-500);
+--chart-4:var(--cb-red-500);
+--chart-grid:var(--cb-stone-200);
+}
+:root{
+--font-sans:"Geist","Helvetica Neue",Arial,sans-serif;
+--font-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+--text-xs:11px;
+--text-sm:12px;
+--text-base:14px;
+--text-md:15px;
+--text-lg:17px;
+--text-xl:20px;
+--text-2xl:24px;
+--text-3xl:32px;
+--text-4xl:44px;
+--text-5xl:60px;
+
+--leading-tight:1.1;
+--leading-snug:1.25;
+--leading-normal:1.5;
+--leading-relaxed:1.6;
+
+--weight-regular:400;
+--weight-medium:500;
+--weight-semibold:600;
+--weight-bold:700;
+
+--tracking-tight:-0.025em;
+--tracking-tighter:-0.035em;
+--tracking-wide:0.06em;
+
+--type-display:var(--weight-semibold) var(--text-5xl)/var(--leading-tight) var(--font-sans);
+--type-h1:var(--weight-semibold) var(--text-4xl)/var(--leading-tight) var(--font-sans);
+--type-h2:var(--weight-semibold) var(--text-3xl)/var(--leading-snug) var(--font-sans);
+--type-h3:var(--weight-semibold) var(--text-2xl)/var(--leading-snug) var(--font-sans);
+--type-h4:var(--weight-semibold) var(--text-lg)/var(--leading-snug) var(--font-sans);
+--type-body-lg:var(--weight-regular) var(--text-lg)/var(--leading-relaxed) var(--font-sans);
+--type-body:var(--weight-regular) var(--text-base)/var(--leading-normal) var(--font-sans);
+--type-body-sm:var(--weight-regular) var(--text-sm)/var(--leading-normal) var(--font-sans);
+--type-label:var(--weight-medium) var(--text-base)/1 var(--font-sans);
+--type-eyebrow:var(--weight-medium) var(--text-sm)/1 var(--font-sans);
+--type-mono:var(--weight-regular) var(--text-sm)/var(--leading-normal) var(--font-mono);
+}
+:root{
+--space-0:0px;
+--space-1:4px;
+--space-2:8px;
+--space-3:12px;
+--space-4:16px;
+--space-5:20px;
+--space-6:24px;
+--space-8:32px;
+--space-10:40px;
+--space-12:48px;
+--space-16:64px;
+--space-20:80px;
+--space-24:96px;
+
+--sidebar-width:260px;
+--content-max:1200px;
+--marketing-max:1160px;
+--page-pad:32px;
+--card-pad:24px;
+
+--control-sm:32px;
+--control-md:40px;
+--control-lg:48px;
+
+--radius-xs:4px;
+--radius-sm:6px;
+--radius-md:8px;
+--radius-lg:12px;
+--radius-xl:16px;
+--radius-2xl:24px;
+--radius-pill:999px;
+}
+:root{
+
+--shadow-xs:0 1px 2px rgba(17,17,17,0.04);
+--shadow-sm:0 1px 3px rgba(17,17,17,0.06),0 1px 2px rgba(17,17,17,0.04);
+--shadow-md:0 4px 12px rgba(17,17,17,0.08),0 1px 3px rgba(17,17,17,0.05);
+--shadow-lg:0 12px 32px rgba(17,17,17,0.12),0 2px 6px rgba(17,17,17,0.06);
+--shadow-focus:0 0 0 3px rgba(17,17,17,0.2);
+--shadow-active-nav:0 1px 2px rgba(17,17,17,0.06);
+
+--ease-standard:cubic-bezier(0.2,0,0,1);
+--ease-out:cubic-bezier(0,0,0.2,1);
+--duration-fast:120ms;
+--duration-base:180ms;
+--duration-slow:280ms;
+
+--overlay-scrim:rgba(17,17,17,0.4);
+--protect-gradient:linear-gradient(180deg,rgba(250,250,249,0) 0%,rgba(250,250,249,1) 100%);
+--blur-glass:blur(12px);
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+html{font-family:var(--font-sans);color:var(--text-primary);background:var(--surface-canvas);-webkit-font-smoothing:antialiased}
+body{margin:0;font:var(--type-body)}
+a{color:var(--text-link);text-decoration:none} a:hover{color:var(--cb-stone-600);text-decoration:underline}
+*,*::before,*::after{box-sizing:border-box}
+.mono{font:var(--type-mono)}
 </style>
 </helmet>
 
-<div style="width: 640px; min-height: 900px; padding: 24px; background: oklch(0.97 0 0); display: flex; flex-direction: column;">
-  <section class="card" style="display: flex; flex-direction: column; overflow: hidden;">
-    <div style="padding: 20px 24px; border-bottom: 1px solid oklch(0.922 0 0); display: flex; flex-direction: column; gap: 12px;">
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <span class="label">The agent's verdict · for you to confirm</span>
-        <span class="muted" style="font-size: 12px;">Checked 11 Sep 2026, 14:32</span>
-      </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <span style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; background: oklch(0.965 0.03 27); color: oklch(0.577 0.245 27.325); font-size: 16px; font-weight: 600;"><span class="dot"></span>No-go</span>
-        <span style="font-size: 14px;"><strong>24</strong><span class="muted"> / 31 mandatory met</span> · <span style="color: oklch(0.577 0.245 27.325);">3 blocking</span> · <span style="color: oklch(0.55 0.14 70);">4 open items</span></span>
-      </div>
-      <p style="margin: 0; font-size: 14px;">Der Mindestumsatz von 2 Mio. € wird mit 1,45 Mio. € nicht erreicht. Das ist eine Mindestanforderung an die Eignung, die der Auftraggeber nicht ermessensabhängig prüft; ohne einen Nachweis über einen höheren Umsatz oder eine Bietergemeinschaft ist das Angebot nicht zulässig.</p>
-      <p class="muted" style="margin: 0; font-size: 13px;">Rules, not a guess: one unmet mandatory requirement is a no-go. All three not-met rows are listed below; the four unclear rows are open items in the matrix.</p>
+<div style="width: 1440px; height: 900px; display: flex; background: var(--surface-canvas); overflow: hidden;">
+  
+  <aside style="width: var(--sidebar-width); flex: none; padding: 28px 20px; display: flex; flex-direction: column; height: 900px;">
+    <div style="display: flex; align-items: center; padding: 4px 8px;"><img src="logo-lockup.svg" alt="CrossBid" style="height: 30px; display: block;"></div>
+    <div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; padding: 0 10px; margin: 24px 0 10px;">Workflow</div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Dashboard</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Tenders</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Compliance</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Certificates</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: var(--surface-card); border: 1px solid var(--border-default); box-shadow: var(--shadow-active-nav);"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-accent); color: #fff; flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Verdicts</span></a>
     </div>
-
-    <div style="padding: 8px 24px 12px; display: flex; flex-direction: column;">
-      <span class="label" style="padding: 8px 0;">What stands in the way</span>
-      
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.577 0.245 27.325); background: oklch(0.965 0.03 27);"><span class="dot"></span>Blocking</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 9</a></div>
-          <span style="font-weight: 500;">Durchschnittlicher Jahresumsatz von mindestens 2 000 000 € HT</span>
-          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 13px;">
-              <div><span class="label">Required</span><div>€ 2 000 000 average, last 3 years</div></div>
-              <div><span class="label">Found in your documents</span><div>€ 1 450 000 (Jahresabschluss 2025, p. 3)</div></div>
-            </div>
-        </div>
-      
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.577 0.245 27.325); background: oklch(0.965 0.03 27);"><span class="dot"></span>Blocking</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 4</a></div>
-          <span style="font-weight: 500;">Angebot ausschließlich über die Plattform PLACE bis 9. Okt. 2026, 16:00 Uhr einreichen</span>
-          
-        </div>
-      
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.577 0.245 27.325); background: oklch(0.965 0.03 27);"><span class="dot"></span>Blocking</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 5</a></div>
-          <span style="font-weight: 500;">Qualifizierte elektronische Signatur durch eine vertretungsberechtigte Person</span>
-          
-        </div>
-      
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Open item</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 9</a></div>
-          <span style="font-weight: 500;">Berufshaftpflichtversicherung mit nachgewiesener Deckungssumme</span>
-          
-        </div>
-      
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Open item</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 12</a></div>
-          <span style="font-weight: 500;">Drei Referenzen vergleichbarer Leistungen aus den letzten drei Jahren</span>
-          
-        </div>
-      <a href="#" class="muted" style="padding: 10px 0; font-size: 13px; border-top: 1px solid oklch(0.922 0 0);">2 more open items in the matrix →</a>
+    <div style="height: 1px; background: var(--border-default); margin: 24px 0 0;"></div>
+    <div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; padding: 0 10px; margin: 24px 0 10px;">Platform</div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M9.9 2.1 12 8l5.9 2.1L12 12.2 9.9 18 7.8 12.2 2 10.1 7.8 8z"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Agent runs</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Company profile</span><span style="color: var(--text-muted); display: inline-flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M21 4H3M21 12H3M21 20H3"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Settings</span></a>
     </div>
-
-    <div style="padding: 20px 24px; border-top: 1px solid oklch(0.922 0 0); background: oklch(0.97 0 0); display: flex; flex-direction: column; gap: 14px;">
-      <span style="font-weight: 600;">Your decision</span>
-      <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid oklch(0.922 0 0); border-radius: 10px; background: oklch(1 0 0);">
-        <span style="width: 18px; height: 18px; border-radius: 999px; border: 1px solid oklch(0.556 0 0); flex: none; margin-top: 2px;"></span>
-        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Confirm the verdict — No-go</span><span class="muted" style="font-size: 13px;">Record the agent's verdict as your own.</span></span>
-      </label>
-      <label style="display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; border: 1px solid oklch(0.205 0 0); border-radius: 10px; background: oklch(1 0 0);">
-        <span style="display: flex; gap: 12px; align-items: flex-start;">
-          <span style="width: 18px; height: 18px; border-radius: 999px; border: 6px solid oklch(0.205 0 0); background: oklch(1 0 0); flex: none; margin-top: 2px;"></span>
-          <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Override with a different decision</span><span class="muted" style="font-size: 13px;">Your decision is recorded next to the agent's; both stay visible.</span></span>
-        </span>
-        <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; padding-left: 30px;">
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <span class="label">New decision</span>
-            <span style="display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border: 1px solid oklch(0.922 0 0); border-radius: 10px;">Go, with open items <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span>
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <span class="label">Reason <span style="color: oklch(0.577 0.245 27.325);">*</span></span>
-            <div style="min-height: 84px; padding: 8px 12px; border: 1px solid oklch(0.922 0 0); border-radius: 10px; font-size: 13px; line-height: 1.5;">Wir bieten als Bietergemeinschaft mit der Muster Consulting GmbH an; der gemeinsame Umsatz 2023–2025 liegt bei 3,1 Mio. €. Nachweis folgt mit dem Konsortialvertrag.</div>
-          </div>
-        </div>
-      </label>
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px;">
-        <span class="muted" style="font-size: 12px; max-width: 340px;">Submitted once. 2 rows you changed and 1 document you attached are submitted with it.</span>
-        <a class="btn lg" href="#">Submit review</a>
-      </div>
+    <div style="flex: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px;">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--cb-stone-200); display: inline-flex; align-items: center; justify-content: center; font: 600 12px/1 var(--font-sans); color: var(--text-secondary);">LH</span>
+      <div><div style="font: 500 14px/1.2 var(--font-sans);">Lena Hartmann</div><div style="font: 400 12px/1.2 var(--font-sans); color: var(--text-muted);">Beispiel IT Services GmbH</div></div>
     </div>
-  </section>
+  </aside>
+  <main style="flex: 1; min-width: 0; padding: 28px 28px 28px 0;">
+    <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 14px; height: 844px; padding: 32px; box-shadow: var(--shadow-xs); overflow: auto; display: flex; flex-direction: column; ">
+      
+  <div style="display: flex; align-items: center; gap: 8px; font: 400 13px/1 var(--font-sans); color: var(--text-muted); margin-bottom: 12px;"><a href="#" style="color: var(--text-muted);">Tenders</a><span>/</span><a href="#" class="mono" style="color: var(--text-muted);">618320-2026</a><span>/</span><span>Verdict</span></div>
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;"><h1 style="font: 600 30px/1.1 var(--font-sans); letter-spacing: -0.03em; margin: 0; flex: 1;">Review verdict</h1><span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-warning-bg); color: var(--status-warning-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-warning); flex: none;"></span>Awaiting your confirmation</span></div>
+  <div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start;">
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: 24px; "><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;"><span style="display: inline-flex; width: 20px; height: 20px; color: var(--text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M9.9 2.1 12 8l5.9 2.1L12 12.2 9.9 18 7.8 12.2 2 10.1 7.8 8z"></path></svg></span><div style="font: var(--type-h4); letter-spacing: var(--tracking-tight); flex: 1;">CrossBid recommends</div><div style="display: flex; gap: 8px; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">run 3 · 11 Sep 14:32</span></div></div>
+    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;"><span style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--verdict-nogo-bg); color: var(--verdict-nogo-text); font: 600 16px/1 var(--font-sans); white-space: nowrap;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--verdict-nogo);"></span>No-go</span><span style="font: 400 14px/1.4 var(--font-sans); color: var(--text-secondary);">24 of 31 requirements supported. 3 cannot be met from your profile as it stands.</span></div>
+    <p style="font: 400 15px/1.6 var(--font-sans); margin: 0;">Der Mindestumsatz von 2 Mio. € wird mit 1,45 Mio. € nicht erreicht (<a href="#" class="mono" style="font-size: 13px;">REQ-009 · RC p. 9 §5.1</a>). Das ist eine Mindestanforderung an die Eignung, die der Auftraggeber nicht ermessensabhängig prüft: ohne einen Nachweis über einen höheren Umsatz oder eine Bietergemeinschaft ist das Angebot nicht zulässig. Zwei formale Regeln sind ebenfalls nicht erfüllt — Einreichung ausschließlich über PLACE (<a href="#" class="mono" style="font-size: 13px;">REQ-025 · RC p. 4 §2.3</a>) und eine qualifizierte elektronische Signatur (<a href="#" class="mono" style="font-size: 13px;">REQ-026 · RC p. 5 §2.4</a>); beide sind lösbar, ändern das Urteil aber erst, wenn der Umsatz nachgewiesen ist.</p>
+    <div style="margin-top: 16px; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--surface-sunken); font: 400 13px/1.5 var(--font-sans); color: var(--text-secondary); display: flex; gap: 10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4M12 16h.01"></path></svg><span>Advisory only. CrossBid never submits and never asserts compliance without a source. This verdict does not move forward until you confirm it.</span></div></div>
+      <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: 24px; "><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;"><span style="display: inline-flex; width: 20px; height: 20px; color: var(--text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></span><div style="font: var(--type-h4); letter-spacing: var(--tracking-tight); flex: 1;">What would change the verdict</div><div style="display: flex; gap: 8px; align-items: center;"></div></div><div style="display: flex; flex-direction: column; gap: 12px;"><div style="display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 14px; align-items: center; font: 400 14px/1.4 var(--font-sans);"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-009</span><span>Nachweis eines Umsatzes ≥ 2 Mio. € — z. B. als Bietergemeinschaft mit Konsortialvertrag.</span><span style="color: var(--status-success-text); font-weight: 500; font-size: 13px;">→ Conditional if added</span></div><div style="display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 14px; align-items: center; font: 400 14px/1.4 var(--font-sans);"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-025</span><span>Angebot über die Plattform PLACE einreichen (Registrierung vorab).</span><span style="color: var(--text-muted); font-weight: 500; font-size: 13px;">Formal — resolvable</span></div><div style="display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 14px; align-items: center; font: 400 14px/1.4 var(--font-sans);"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-026</span><span>Qualifizierte elektronische Signatur einer vertretungsberechtigten Person.</span><span style="color: var(--text-muted); font-weight: 500; font-size: 13px;">Formal — resolvable</span></div><div style="display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 14px; align-items: center; font: 400 14px/1.4 var(--font-sans);"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-011</span><span>Deckungssumme der Berufshaftpflicht nachtragen.</span><span style="color: var(--text-muted); font-weight: 500; font-size: 13px;">Strengthens position</span></div></div></div>
+    </div>
+    <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: 24px; "><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;"><span style="display: inline-flex; width: 20px; height: 20px; color: var(--text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span><div style="font: var(--type-h4); letter-spacing: var(--tracking-tight); flex: 1;">Your decision</div><div style="display: flex; gap: 8px; align-items: center;"></div></div>
+    <div role="radiogroup" style="display: flex; flex-direction: column; gap: 12px;">
+      <label style="display: flex; gap: 10px; align-items: flex-start; font: var(--type-body);"><span style="width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%; border: 1px solid var(--border-strong); background: #fff;"></span><span><span style="display: block; font-weight: 500; line-height: 20px;">Go</span><span style="display: block; font: var(--type-body-sm); color: var(--text-muted);">Proceed to the bid. Only when every unsupported row is resolved.</span></span></label>
+      <label style="display: flex; gap: 10px; align-items: flex-start; font: var(--type-body);"><span style="width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%; border: 5px solid var(--cb-blue-500); background: #fff;"></span><span><span style="display: block; font-weight: 500; line-height: 20px;">Conditional</span><span style="display: block; font: var(--type-body-sm); color: var(--text-muted);">Proceed while evidence for REQ-009 is collected. Recorded as your override.</span></span></label>
+      <label style="display: flex; gap: 10px; align-items: flex-start; font: var(--type-body);"><span style="width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%; border: 1px solid var(--border-strong); background: #fff;"></span><span><span style="display: block; font-weight: 500; line-height: 20px;">No-go</span><span style="display: block; font: var(--type-body-sm); color: var(--text-muted);">Confirm the agent's verdict. Archive this tender; reasons are kept for reporting.</span></span></label>
+      <label style="display: flex; gap: 10px; align-items: flex-start; font: var(--type-body);"><span style="width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%; border: 1px solid var(--border-strong); background: #fff;"></span><span><span style="display: block; font-weight: 500; line-height: 20px;">Insufficient evidence</span><span style="display: block; font: var(--type-body-sm); color: var(--text-muted);">Hold — request documents from your team before deciding.</span></span></label>
+    </div>
+    <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 6px;">
+      <span style="font: var(--weight-medium) 13px/1 var(--font-sans);">Reason for overriding <span style="color: var(--status-danger-text);">*</span></span>
+      <div style="min-height: 84px; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-xs); font: 400 14px/1.5 var(--font-sans);">Wir bieten als Bietergemeinschaft mit der Muster Consulting GmbH an; der gemeinsame Umsatz 2023–2025 liegt bei 3,1 Mio. €. Der Konsortialvertrag folgt vor Abgabe.</div>
+      <span style="font: var(--type-body-sm); color: var(--text-muted);">Required when your decision differs from the agent's. Both stay visible on the tender.</span>
+    </div>
+    <div style="height: 1px; background: var(--border-default); margin: 18px 0;"></div>
+    <label style="display: flex; gap: 10px; align-items: flex-start; font: var(--type-body);"><span style="width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: var(--radius-xs); background: var(--cb-blue-500); display: inline-flex; align-items: center; justify-content: center; color: #fff;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg></span><span><span style="display: block; font-weight: 500; line-height: 20px;">I have reviewed the compliance matrix</span><span style="display: block; font: var(--type-body-sm); color: var(--text-muted);">Required. Verdicts are never confirmed automatically.</span></span></label>
+    <div style="display: flex; gap: 8px; margin-top: 18px;"><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-md); padding: 0 16px; border-radius: var(--radius-md); background: var(--surface-brand); color: var(--text-inverse); border: 1px solid transparent; font: var(--weight-medium) 14px/1 var(--font-sans); white-space: nowrap; flex: 1;">Confirm verdict</a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-md); padding: 0 16px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 14px/1 var(--font-sans); white-space: nowrap; ">Back to matrix</a></div></div>
+  </div>
+    </div>
+  </main>
 </div>
 </x-dc>
 </body>

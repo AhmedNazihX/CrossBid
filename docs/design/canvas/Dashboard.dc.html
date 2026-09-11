@@ -8,144 +8,279 @@
 <x-dc>
 <helmet>
   <title>Dashboard</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
-    body { margin: 0; background: oklch(1 0 0); color: oklch(0.145 0 0); font-family: Geist, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    * { box-sizing: border-box; }
-    a { color: oklch(0.145 0 0); text-decoration: none; } a:hover { color: oklch(0.556 0 0); }
-    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .muted { color: oklch(0.556 0 0); }
-    .pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
-    .dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex: none; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 10px; border: 1px solid transparent; font-size: 14px; font-weight: 500; white-space: nowrap; background: oklch(0.205 0 0); color: oklch(0.985 0 0); }
-    .btn.lg { height: 36px; }
-    .btn.outline { background: oklch(1 0 0); color: oklch(0.145 0 0); border-color: oklch(0.922 0 0); }
-    .btn.ghost { background: transparent; color: oklch(0.145 0 0); }
-    .btn.destructive { background: oklch(0.965 0.03 27); color: oklch(0.577 0.245 27.325); }
-    .card { background: oklch(1 0 0); border: 1px solid oklch(0.922 0 0); border-radius: 10px; }
-    .label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; color: oklch(0.556 0 0); }
-    .th { font-size: 12px; font-weight: 500; color: oklch(0.556 0 0); text-align: left; padding: 8px 12px; border-bottom: 1px solid oklch(0.922 0 0); white-space: nowrap; }
-    .td { padding: 12px; border-bottom: 1px solid oklch(0.922 0 0); vertical-align: top; }
-    table { border-collapse: collapse; width: 100%; }
-    .quote { font-style: normal; color: oklch(0.145 0 0); border-left: 2px solid oklch(0.922 0 0); padding-left: 10px; }
-    input, textarea, select { font: inherit; }
+  <style>:root{
+
+--cb-white:#ffffff;
+--cb-canvas:#fafaf9;
+--cb-stone-50:#f5f5f4;
+--cb-stone-100:#eeedeb;
+--cb-stone-200:#e7e5e4;
+--cb-stone-300:#d6d3d1;
+--cb-stone-400:#a8a29e;
+--cb-stone-500:#78716c;
+--cb-stone-600:#57534e;
+--cb-stone-700:#44403c;
+--cb-stone-800:#292524;
+--cb-ink:#111111;
+--cb-blue-50:#f5f5f4;
+--cb-blue-100:#e7e5e4;
+--cb-blue-200:#d6d3d1;
+--cb-blue-300:#a8a29e;
+--cb-blue-500:#111111;
+--cb-blue-600:#292524;
+--cb-blue-700:#44403c;
+--cb-blue-900:#000000;
+--cb-green-50:#eafaf0;
+--cb-green-100:#d3f4df;
+--cb-green-500:#1f9d55;
+--cb-green-700:#166b3b;
+--cb-amber-50:#fdf7e5;
+--cb-amber-100:#fbeec2;
+--cb-amber-500:#d9a400;
+--cb-amber-700:#8a6600;
+--cb-orange-50:#fff3ea;
+--cb-orange-100:#ffe1cc;
+--cb-orange-500:#f97316;
+--cb-orange-600:#ea6209;
+--cb-orange-700:#c24d05;
+--cb-red-50:#fdeeee;
+--cb-red-100:#fbd9d9;
+--cb-red-500:#d93636;
+--cb-red-700:#9c2323;
+
+--surface-canvas:var(--cb-canvas);
+--surface-card:var(--cb-white);
+--surface-sunken:var(--cb-stone-50);
+--surface-hover:var(--cb-stone-100);
+--surface-inverse:var(--cb-ink);
+--surface-brand:var(--cb-blue-500);
+--surface-brand-soft:var(--cb-blue-50);
+--surface-accent:var(--cb-orange-500);
+--surface-accent-soft:var(--cb-orange-50);
+
+--text-primary:var(--cb-ink);
+--text-secondary:var(--cb-stone-600);
+--text-muted:var(--cb-stone-500);
+--text-placeholder:var(--cb-stone-400);
+--text-inverse:var(--cb-white);
+--text-brand:var(--cb-blue-500);
+--text-accent:var(--cb-orange-600);
+--text-link:var(--cb-ink);
+
+--border-default:var(--cb-stone-200);
+--border-strong:var(--cb-stone-300);
+--border-subtle:var(--cb-stone-100);
+--border-brand:var(--cb-blue-500);
+--border-focus:var(--cb-blue-500);
+
+--status-success:var(--cb-green-500);
+--status-success-bg:var(--cb-green-50);
+--status-success-text:var(--cb-green-700);
+--status-warning:var(--cb-amber-500);
+--status-warning-bg:var(--cb-amber-50);
+--status-warning-text:var(--cb-amber-700);
+--status-danger:var(--cb-red-500);
+--status-danger-bg:var(--cb-red-50);
+--status-danger-text:var(--cb-red-700);
+--status-info:#2f6fdb;
+--status-info-bg:#eef3fc;
+--status-info-text:#1f4fa8;
+--status-neutral:var(--cb-stone-400);
+--status-neutral-bg:var(--cb-stone-100);
+--status-neutral-text:var(--cb-stone-600);
+
+--verdict-go:var(--cb-green-500);
+--verdict-go-bg:var(--cb-green-50);
+--verdict-go-text:var(--cb-green-700);
+--verdict-nogo:var(--cb-red-500);
+--verdict-nogo-bg:var(--cb-red-50);
+--verdict-nogo-text:var(--cb-red-700);
+--verdict-conditional:var(--cb-amber-500);
+--verdict-conditional-bg:var(--cb-amber-50);
+--verdict-conditional-text:var(--cb-amber-700);
+--verdict-insufficient:var(--cb-stone-400);
+--verdict-insufficient-bg:var(--cb-stone-100);
+--verdict-insufficient-text:var(--cb-stone-600);
+
+--chart-1:var(--status-info);
+--chart-2:var(--cb-green-500);
+--chart-3:var(--cb-amber-500);
+--chart-4:var(--cb-red-500);
+--chart-grid:var(--cb-stone-200);
+}
+:root{
+--font-sans:"Geist","Helvetica Neue",Arial,sans-serif;
+--font-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+--text-xs:11px;
+--text-sm:12px;
+--text-base:14px;
+--text-md:15px;
+--text-lg:17px;
+--text-xl:20px;
+--text-2xl:24px;
+--text-3xl:32px;
+--text-4xl:44px;
+--text-5xl:60px;
+
+--leading-tight:1.1;
+--leading-snug:1.25;
+--leading-normal:1.5;
+--leading-relaxed:1.6;
+
+--weight-regular:400;
+--weight-medium:500;
+--weight-semibold:600;
+--weight-bold:700;
+
+--tracking-tight:-0.025em;
+--tracking-tighter:-0.035em;
+--tracking-wide:0.06em;
+
+--type-display:var(--weight-semibold) var(--text-5xl)/var(--leading-tight) var(--font-sans);
+--type-h1:var(--weight-semibold) var(--text-4xl)/var(--leading-tight) var(--font-sans);
+--type-h2:var(--weight-semibold) var(--text-3xl)/var(--leading-snug) var(--font-sans);
+--type-h3:var(--weight-semibold) var(--text-2xl)/var(--leading-snug) var(--font-sans);
+--type-h4:var(--weight-semibold) var(--text-lg)/var(--leading-snug) var(--font-sans);
+--type-body-lg:var(--weight-regular) var(--text-lg)/var(--leading-relaxed) var(--font-sans);
+--type-body:var(--weight-regular) var(--text-base)/var(--leading-normal) var(--font-sans);
+--type-body-sm:var(--weight-regular) var(--text-sm)/var(--leading-normal) var(--font-sans);
+--type-label:var(--weight-medium) var(--text-base)/1 var(--font-sans);
+--type-eyebrow:var(--weight-medium) var(--text-sm)/1 var(--font-sans);
+--type-mono:var(--weight-regular) var(--text-sm)/var(--leading-normal) var(--font-mono);
+}
+:root{
+--space-0:0px;
+--space-1:4px;
+--space-2:8px;
+--space-3:12px;
+--space-4:16px;
+--space-5:20px;
+--space-6:24px;
+--space-8:32px;
+--space-10:40px;
+--space-12:48px;
+--space-16:64px;
+--space-20:80px;
+--space-24:96px;
+
+--sidebar-width:260px;
+--content-max:1200px;
+--marketing-max:1160px;
+--page-pad:32px;
+--card-pad:24px;
+
+--control-sm:32px;
+--control-md:40px;
+--control-lg:48px;
+
+--radius-xs:4px;
+--radius-sm:6px;
+--radius-md:8px;
+--radius-lg:12px;
+--radius-xl:16px;
+--radius-2xl:24px;
+--radius-pill:999px;
+}
+:root{
+
+--shadow-xs:0 1px 2px rgba(17,17,17,0.04);
+--shadow-sm:0 1px 3px rgba(17,17,17,0.06),0 1px 2px rgba(17,17,17,0.04);
+--shadow-md:0 4px 12px rgba(17,17,17,0.08),0 1px 3px rgba(17,17,17,0.05);
+--shadow-lg:0 12px 32px rgba(17,17,17,0.12),0 2px 6px rgba(17,17,17,0.06);
+--shadow-focus:0 0 0 3px rgba(17,17,17,0.2);
+--shadow-active-nav:0 1px 2px rgba(17,17,17,0.06);
+
+--ease-standard:cubic-bezier(0.2,0,0,1);
+--ease-out:cubic-bezier(0,0,0.2,1);
+--duration-fast:120ms;
+--duration-base:180ms;
+--duration-slow:280ms;
+
+--overlay-scrim:rgba(17,17,17,0.4);
+--protect-gradient:linear-gradient(180deg,rgba(250,250,249,0) 0%,rgba(250,250,249,1) 100%);
+--blur-glass:blur(12px);
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+html{font-family:var(--font-sans);color:var(--text-primary);background:var(--surface-canvas);-webkit-font-smoothing:antialiased}
+body{margin:0;font:var(--type-body)}
+a{color:var(--text-link);text-decoration:none} a:hover{color:var(--cb-stone-600);text-decoration:underline}
+*,*::before,*::after{box-sizing:border-box}
+.mono{font:var(--type-mono)}
 </style>
 </helmet>
 
-<div style="min-height: 900px; display: flex; flex-direction: column; background: oklch(1 0 0);">
+<div style="width: 1440px; height: 900px; display: flex; background: var(--surface-canvas); overflow: hidden;">
   
-<header style="position: sticky; top: 0; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(1 0 0); z-index: 10;">
-  <div style="margin: 0 auto; max-width: 1024px; height: 56px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-    <a href="#" style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">Crossbid</a>
-    <nav style="display: flex; align-items: center; gap: 8px;">
-      <a class="btn ghost" href="#" style="background: oklch(0.97 0 0);">Dashboard</a>
-      <a class="btn ghost" href="#" style="background: transparent;">Company</a>
-      <a class="btn ghost" href="#" style="background: transparent;">Settings</a>
-      <a class="btn" href="#">New bid</a>
-      <span class="muted" style="margin-left: 8px; font-size: 13px;">demo@it-services.example</span>
-    </nav>
-  </div>
-</header>
-  <main style="margin: 0 auto; width: 100%; max-width: 1024px; padding: 32px 16px; display: flex; flex-direction: column; gap: 24px;">
-    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
-      <div style="display: flex; flex-direction: column; gap: 4px;">
-        <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;">Dashboard</h1>
-        <p class="muted" style="margin: 0;">Every bid you have checked, and what needs you today.</p>
-      </div>
-      <a class="btn lg" href="#">New bid</a>
+  <aside style="width: var(--sidebar-width); flex: none; padding: 28px 20px; display: flex; flex-direction: column; height: 900px;">
+    <div style="display: flex; align-items: center; padding: 4px 8px;"><img src="logo-lockup.svg" alt="CrossBid" style="height: 30px; display: block;"></div>
+    <div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; padding: 0 10px; margin: 24px 0 10px;">Workflow</div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: var(--surface-card); border: 1px solid var(--border-default); box-shadow: var(--shadow-active-nav);"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Dashboard</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Tenders</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Compliance</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Certificates</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-accent); color: #fff; flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Verdicts</span></a>
     </div>
-
-    <section class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);">
-      <div style="display: flex; align-items: center; gap: 12px; color: oklch(0.55 0.14 70);">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
-        <div style="display: flex; flex-direction: column; gap: 2px; color: oklch(0.145 0 0);">
-          <span style="font-weight: 500;">1 bid is waiting for your review</span>
-          <span class="muted" style="font-size: 13px;">The agent stopped before the verdict. Nothing is final until you confirm or override it.</span>
-        </div>
-      </div>
-      <a class="btn" href="#">Review now</a>
-    </section>
-
-    <section class="card" style="overflow: hidden;">
-      <table>
-        <thead>
-          <tr>
-            <th class="th">Tender</th><th class="th">Buyer</th><th class="th">Deadline</th><th class="th">Status</th><th class="th">Verdict</th><th class="th">Open items</th><th class="th"></th>
-          </tr>
-        </thead>
-        <tbody>
-          
-      <tr>
-        <td class="td" style="max-width: 420px;">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <a href="#" style="font-weight: 500;">Prestations de conseil en architecture d'entreprise et d'expertise technique</a>
-            <span class="muted mono" style="font-size: 12px;">618320-2026 · FR → explained in DE</span>
-          </div>
-        </td>
-        <td class="td">Ministère de l'éducation nationale, FR</td>
-        <td class="td" style="white-space: nowrap;">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span>9 Oct 2026, 16:00</span><span class="muted" style="font-size: 12px;">28 days left</span>
-          </div>
-        </td>
-        <td class="td"><span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Awaiting your review</span></td>
-        <td class="td"><span class="muted">—</span></td>
-        <td class="td"><span>4 unclear · 3 not met</span></td>
-        <td class="td" style="text-align: right;"><a class="btn" href="#">Review</a></td>
-      </tr>
-          
-      <tr>
-        <td class="td" style="max-width: 420px;">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <a href="#" style="font-weight: 500;">Beratungs- und Unterstützungsleistungen für IPv6-Migrationen — Los 2</a>
-            <span class="muted mono" style="font-size: 12px;">614251-2026 · DE</span>
-          </div>
-        </td>
-        <td class="td">Beschaffungsamt des BMI, DE</td>
-        <td class="td" style="white-space: nowrap;">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span>6 Oct 2026</span><span class="muted" style="font-size: 12px;">25 days left</span>
-          </div>
-        </td>
-        <td class="td">
-          <div style="display: flex; flex-direction: column; gap: 6px; min-width: 180px;">
-            <span class="pill" style="color: oklch(0.55 0.14 250); background: oklch(0.965 0.03 250);"><span class="dot"></span>Checking requirements</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="flex: 1; height: 4px; border-radius: 999px; background: oklch(0.97 0 0); overflow: hidden;"><div style="width: 66%; height: 100%; background: oklch(0.55 0.14 250);"></div></div>
-              <span class="muted mono" style="font-size: 12px;">41 / 62</span>
-            </div>
-          </div></td>
-        <td class="td"><span class="muted">—</span></td>
-        <td class="td"><span class="muted">—</span></td>
-        <td class="td" style="text-align: right;"><a class="btn outline" href="#">Open</a></td>
-      </tr>
-          
-      <tr>
-        <td class="td" style="max-width: 420px;">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <a href="#" style="font-weight: 500;">Digital Communications Services</a>
-            <span class="muted mono" style="font-size: 12px;">606362-2026 · EN → explained in DE</span>
-          </div>
-        </td>
-        <td class="td">EASA, Cologne (EU agency)</td>
-        <td class="td" style="white-space: nowrap;">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span>12 Oct 2026, 10:00</span><span class="muted" style="font-size: 12px;">31 days left</span>
-          </div>
-        </td>
-        <td class="td"><span class="pill" style="color: oklch(0.556 0 0); background: oklch(0.97 0 0);"><span class="dot"></span>Complete</span></td>
-        <td class="td"><span class="pill" style="color: oklch(0.55 0.14 150); background: oklch(0.965 0.03 150);"><span class="dot"></span>Go, with open items</span></td>
-        <td class="td"><span>2 documents to attach</span></td>
-        <td class="td" style="text-align: right;"><a class="btn outline" href="#">Open</a></td>
-      </tr>
-        </tbody>
-      </table>
-    </section>
-  </main>
+    <div style="height: 1px; background: var(--border-default); margin: 24px 0 0;"></div>
+    <div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; padding: 0 10px; margin: 24px 0 10px;">Platform</div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M9.9 2.1 12 8l5.9 2.1L12 12.2 9.9 18 7.8 12.2 2 10.1 7.8 8z"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Agent runs</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Company profile</span><span style="color: var(--text-muted); display: inline-flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M21 4H3M21 12H3M21 20H3"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Settings</span></a>
+    </div>
+    <div style="flex: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px;">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--cb-stone-200); display: inline-flex; align-items: center; justify-content: center; font: 600 12px/1 var(--font-sans); color: var(--text-secondary);">LH</span>
+      <div><div style="font: 500 14px/1.2 var(--font-sans);">Lena Hartmann</div><div style="font: 400 12px/1.2 var(--font-sans); color: var(--text-muted);">Beispiel IT Services GmbH</div></div>
+    </div>
+  </aside>
+  <main style="flex: 1; min-width: 0; padding: 28px 28px 28px 0;">
+    <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 14px; height: 844px; padding: 32px; box-shadow: var(--shadow-xs); overflow: auto; display: flex; flex-direction: column; ">
+      
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;"><h1 style="font: 600 30px/1.1 var(--font-sans); letter-spacing: -0.03em; margin: 0; flex: 1;">Good afternoon, Lena</h1><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-md); padding: 0 16px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 14px/1 var(--font-sans); white-space: nowrap; "><span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg></span>Customize</a></div>
   
-<footer style="margin-top: auto; border-top: 1px solid oklch(0.922 0 0);">
-  <div class="muted" style="margin: 0 auto; max-width: 1024px; padding: 24px 16px; font-size: 12px;">Advisory only. Crossbid never submits a bid, and a person confirms or overrides every verdict.</div>
-</footer>
+  <div style="border: 1px solid var(--border-default); border-radius: 14px; padding: 18px 22px 16px; box-shadow: var(--shadow-xs);">
+    <div style="display: flex; align-items: center; gap: 12px; color: var(--text-muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="flex: 1; font: 400 17px/1 var(--font-sans); color: var(--text-placeholder);">Ask about any tender, @ to add a document</span></div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;"><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; "><span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Upload tender</a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; "><span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg></span>Bidder language: DE</a><span style="flex: 1;"></span><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; ">Thorough<span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span></a></div>
+  </div>
+  <div style="display: flex; justify-content: center; gap: 28px; margin: 28px 0 4px;"><a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><span style="width: 60px; height: 60px; border-radius: 14px; background: var(--surface-accent); color: #fff; display: inline-flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg></span><span style="font: 400 14px/1 var(--font-sans); color: var(--text-secondary);">Analyse tender</span></a><a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><span style="width: 60px; height: 60px; border-radius: 14px; background: var(--cb-blue-100); color: var(--cb-blue-500); display: inline-flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m17 8-5-5-5 5"></path><path d="M12 3v12"></path></svg></span><span style="font: 400 14px/1 var(--font-sans); color: var(--text-secondary);">Upload documents</span></a><a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><span style="width: 60px; height: 60px; border-radius: 14px; background: var(--cb-blue-100); color: var(--cb-blue-500); display: inline-flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg></span><span style="font: 400 14px/1 var(--font-sans); color: var(--text-secondary);">Map certificates</span></a><a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><span style="width: 60px; height: 60px; border-radius: 14px; background: var(--cb-blue-100); color: var(--cb-blue-500); display: inline-flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></span><span style="font: 400 14px/1 var(--font-sans); color: var(--text-secondary);">Check evidence</span></a><a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><span style="width: 60px; height: 60px; border-radius: 14px; background: var(--surface-accent); color: #fff; display: inline-flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span><span style="font: 400 14px/1 var(--font-sans); color: var(--text-secondary);">Review verdict</span></a><a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><span style="width: 60px; height: 60px; border-radius: 14px; background: var(--cb-blue-100); color: var(--cb-blue-500); display: inline-flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg></span><span style="font: 400 14px/1 var(--font-sans); color: var(--text-secondary);">Company profile</span></a></div>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin: 28px 0 14px;"><div style="font: 600 18px/1.2 var(--font-sans); letter-spacing: -0.02em;">Key metrics</div><a href="#" style="font: 500 14px/1 var(--font-sans); color: var(--text-secondary); display: inline-flex; gap: 6px; align-items: center;">View reports <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+    <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Open tenders</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">3</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--status-success-text); font-weight: 500;">↑ 1</span><span style="color: var(--text-muted);">This week</span></div></div><div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Requirements checked</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">113</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--status-success-text); font-weight: 500;">↑ 31</span><span style="color: var(--text-muted);">Last 7 days</span></div></div><div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Verdicts awaiting review</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">1</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--text-muted); font-weight: 500;">▲ 1</span><span style="color: var(--text-muted);">Current</span></div></div><div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Go rate</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">50%</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--status-success-text); font-weight: 500;">↑ 8.3%</span><span style="color: var(--text-muted);">YTD</span></div></div>
+  </div>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin: 28px 0 14px;"><div style="font: 600 18px/1.2 var(--font-sans); letter-spacing: -0.02em;">Next 30 days</div><a href="#" style="font: 500 14px/1 var(--font-sans); color: var(--text-secondary); display: inline-flex; gap: 6px; align-items: center;">View all tenders <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></div>
+  <div style="border: 1px solid var(--border-default); border-radius: 12px; overflow: hidden;">
+    <div style="display: grid; grid-template-columns: minmax(0, 2.2fr) 140px 130px minmax(0, 1.5fr) 90px 190px; padding: 0 20px; height: 46px; align-items: center; font: 500 13px/1 var(--font-sans); color: var(--text-secondary); border-bottom: 1px solid var(--border-default);"><span>Tender</span><span>Due</span><span>Phase</span><span>Buyer</span><span>Value</span><span>Verdict</span></div>
+    
+      <div style="display: grid; grid-template-columns: minmax(0, 2.2fr) 140px 130px minmax(0, 1.5fr) 90px 190px; padding: 0 20px; height: 60px; align-items: center; border-bottom: 1px solid var(--border-default); font: 400 14px/1.2 var(--font-sans);">
+        <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-right: 16px;"><a href="#" style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Prestations de conseil en architecture d'entreprise et d'expertise technique</a><span class="mono" style="color: var(--text-muted);">618320-2026 · FR → DE</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>9 Oct · 28 days</span>
+        <span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-sm); background: var(--status-warning-bg); color: var(--status-warning-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-warning); flex: none;"></span>Review</span></span>
+        <span style="color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 16px;">Ministère de l'éducation nationale</span>
+        <span style="color: var(--text-secondary);">€3.9M</span>
+        <span style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;"><span style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: var(--radius-md); background: var(--verdict-conditional-bg); color: var(--verdict-conditional-text); font: 600 12px/1 var(--font-sans); white-space: nowrap;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--verdict-conditional);"></span>Conditional</span><span style="font-size: 12px; color: var(--text-muted);">31 requirements · 3 unsupported</span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 2.2fr) 140px 130px minmax(0, 1.5fr) 90px 190px; padding: 0 20px; height: 60px; align-items: center; border-bottom: 1px solid var(--border-default); font: 400 14px/1.2 var(--font-sans);">
+        <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-right: 16px;"><a href="#" style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Beratungs- und Unterstützungsleistungen für IPv6-Migrationen — Los 2</a><span class="mono" style="color: var(--text-muted);">614251-2026 · DE</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>6 Oct · 25 days</span>
+        <span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-sm); background: var(--status-info-bg); color: var(--status-info-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-info); flex: none;"></span>Analysis</span></span>
+        <span style="color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 16px;">Beschaffungsamt des BMI</span>
+        <span style="color: var(--text-secondary);">—</span>
+        <span style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;"><span style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: var(--radius-md); background: var(--verdict-insufficient-bg); color: var(--verdict-insufficient-text); font: 600 12px/1 var(--font-sans); white-space: nowrap;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--verdict-insufficient);"></span>Insufficient evidence</span><span style="font-size: 12px; color: var(--text-muted);">Checking 41 of 62</span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 2.2fr) 140px 130px minmax(0, 1.5fr) 90px 190px; padding: 0 20px; height: 60px; align-items: center;  font: 400 14px/1.2 var(--font-sans);">
+        <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-right: 16px;"><a href="#" style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Digital Communications Services</a><span class="mono" style="color: var(--text-muted);">606362-2026 · EN → DE</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>12 Oct · 31 days</span>
+        <span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-sm); background: var(--status-success-bg); color: var(--status-success-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-success); flex: none;"></span>Confirmed</span></span>
+        <span style="color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 16px;">EASA, Cologne</span>
+        <span style="color: var(--text-secondary);">€8.0M</span>
+        <span style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;"><span style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: var(--radius-md); background: var(--verdict-go-bg); color: var(--verdict-go-text); font: 600 12px/1 var(--font-sans); white-space: nowrap;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--verdict-go);"></span>Go</span><span style="font-size: 12px; color: var(--text-muted);">20 requirements · all supported</span></span>
+      </div>
+  </div>
+    </div>
+  </main>
 </div>
 </x-dc>
 </body>

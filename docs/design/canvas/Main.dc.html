@@ -7,240 +7,318 @@
 <body>
 <x-dc>
 <helmet>
-  <title>Bid workspace</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
-    body { margin: 0; background: oklch(1 0 0); color: oklch(0.145 0 0); font-family: Geist, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    * { box-sizing: border-box; }
-    a { color: oklch(0.145 0 0); text-decoration: none; } a:hover { color: oklch(0.556 0 0); }
-    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .muted { color: oklch(0.556 0 0); }
-    .pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
-    .dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex: none; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 10px; border: 1px solid transparent; font-size: 14px; font-weight: 500; white-space: nowrap; background: oklch(0.205 0 0); color: oklch(0.985 0 0); }
-    .btn.lg { height: 36px; }
-    .btn.outline { background: oklch(1 0 0); color: oklch(0.145 0 0); border-color: oklch(0.922 0 0); }
-    .btn.ghost { background: transparent; color: oklch(0.145 0 0); }
-    .btn.destructive { background: oklch(0.965 0.03 27); color: oklch(0.577 0.245 27.325); }
-    .card { background: oklch(1 0 0); border: 1px solid oklch(0.922 0 0); border-radius: 10px; }
-    .label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; color: oklch(0.556 0 0); }
-    .th { font-size: 12px; font-weight: 500; color: oklch(0.556 0 0); text-align: left; padding: 8px 12px; border-bottom: 1px solid oklch(0.922 0 0); white-space: nowrap; }
-    .td { padding: 12px; border-bottom: 1px solid oklch(0.922 0 0); vertical-align: top; }
-    table { border-collapse: collapse; width: 100%; }
-    .quote { font-style: normal; color: oklch(0.145 0 0); border-left: 2px solid oklch(0.922 0 0); padding-left: 10px; }
-    input, textarea, select { font: inherit; }
+  <title>Compliance matrix</title>
+  <style>:root{
+
+--cb-white:#ffffff;
+--cb-canvas:#fafaf9;
+--cb-stone-50:#f5f5f4;
+--cb-stone-100:#eeedeb;
+--cb-stone-200:#e7e5e4;
+--cb-stone-300:#d6d3d1;
+--cb-stone-400:#a8a29e;
+--cb-stone-500:#78716c;
+--cb-stone-600:#57534e;
+--cb-stone-700:#44403c;
+--cb-stone-800:#292524;
+--cb-ink:#111111;
+--cb-blue-50:#f5f5f4;
+--cb-blue-100:#e7e5e4;
+--cb-blue-200:#d6d3d1;
+--cb-blue-300:#a8a29e;
+--cb-blue-500:#111111;
+--cb-blue-600:#292524;
+--cb-blue-700:#44403c;
+--cb-blue-900:#000000;
+--cb-green-50:#eafaf0;
+--cb-green-100:#d3f4df;
+--cb-green-500:#1f9d55;
+--cb-green-700:#166b3b;
+--cb-amber-50:#fdf7e5;
+--cb-amber-100:#fbeec2;
+--cb-amber-500:#d9a400;
+--cb-amber-700:#8a6600;
+--cb-orange-50:#fff3ea;
+--cb-orange-100:#ffe1cc;
+--cb-orange-500:#f97316;
+--cb-orange-600:#ea6209;
+--cb-orange-700:#c24d05;
+--cb-red-50:#fdeeee;
+--cb-red-100:#fbd9d9;
+--cb-red-500:#d93636;
+--cb-red-700:#9c2323;
+
+--surface-canvas:var(--cb-canvas);
+--surface-card:var(--cb-white);
+--surface-sunken:var(--cb-stone-50);
+--surface-hover:var(--cb-stone-100);
+--surface-inverse:var(--cb-ink);
+--surface-brand:var(--cb-blue-500);
+--surface-brand-soft:var(--cb-blue-50);
+--surface-accent:var(--cb-orange-500);
+--surface-accent-soft:var(--cb-orange-50);
+
+--text-primary:var(--cb-ink);
+--text-secondary:var(--cb-stone-600);
+--text-muted:var(--cb-stone-500);
+--text-placeholder:var(--cb-stone-400);
+--text-inverse:var(--cb-white);
+--text-brand:var(--cb-blue-500);
+--text-accent:var(--cb-orange-600);
+--text-link:var(--cb-ink);
+
+--border-default:var(--cb-stone-200);
+--border-strong:var(--cb-stone-300);
+--border-subtle:var(--cb-stone-100);
+--border-brand:var(--cb-blue-500);
+--border-focus:var(--cb-blue-500);
+
+--status-success:var(--cb-green-500);
+--status-success-bg:var(--cb-green-50);
+--status-success-text:var(--cb-green-700);
+--status-warning:var(--cb-amber-500);
+--status-warning-bg:var(--cb-amber-50);
+--status-warning-text:var(--cb-amber-700);
+--status-danger:var(--cb-red-500);
+--status-danger-bg:var(--cb-red-50);
+--status-danger-text:var(--cb-red-700);
+--status-info:#2f6fdb;
+--status-info-bg:#eef3fc;
+--status-info-text:#1f4fa8;
+--status-neutral:var(--cb-stone-400);
+--status-neutral-bg:var(--cb-stone-100);
+--status-neutral-text:var(--cb-stone-600);
+
+--verdict-go:var(--cb-green-500);
+--verdict-go-bg:var(--cb-green-50);
+--verdict-go-text:var(--cb-green-700);
+--verdict-nogo:var(--cb-red-500);
+--verdict-nogo-bg:var(--cb-red-50);
+--verdict-nogo-text:var(--cb-red-700);
+--verdict-conditional:var(--cb-amber-500);
+--verdict-conditional-bg:var(--cb-amber-50);
+--verdict-conditional-text:var(--cb-amber-700);
+--verdict-insufficient:var(--cb-stone-400);
+--verdict-insufficient-bg:var(--cb-stone-100);
+--verdict-insufficient-text:var(--cb-stone-600);
+
+--chart-1:var(--status-info);
+--chart-2:var(--cb-green-500);
+--chart-3:var(--cb-amber-500);
+--chart-4:var(--cb-red-500);
+--chart-grid:var(--cb-stone-200);
+}
+:root{
+--font-sans:"Geist","Helvetica Neue",Arial,sans-serif;
+--font-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+--text-xs:11px;
+--text-sm:12px;
+--text-base:14px;
+--text-md:15px;
+--text-lg:17px;
+--text-xl:20px;
+--text-2xl:24px;
+--text-3xl:32px;
+--text-4xl:44px;
+--text-5xl:60px;
+
+--leading-tight:1.1;
+--leading-snug:1.25;
+--leading-normal:1.5;
+--leading-relaxed:1.6;
+
+--weight-regular:400;
+--weight-medium:500;
+--weight-semibold:600;
+--weight-bold:700;
+
+--tracking-tight:-0.025em;
+--tracking-tighter:-0.035em;
+--tracking-wide:0.06em;
+
+--type-display:var(--weight-semibold) var(--text-5xl)/var(--leading-tight) var(--font-sans);
+--type-h1:var(--weight-semibold) var(--text-4xl)/var(--leading-tight) var(--font-sans);
+--type-h2:var(--weight-semibold) var(--text-3xl)/var(--leading-snug) var(--font-sans);
+--type-h3:var(--weight-semibold) var(--text-2xl)/var(--leading-snug) var(--font-sans);
+--type-h4:var(--weight-semibold) var(--text-lg)/var(--leading-snug) var(--font-sans);
+--type-body-lg:var(--weight-regular) var(--text-lg)/var(--leading-relaxed) var(--font-sans);
+--type-body:var(--weight-regular) var(--text-base)/var(--leading-normal) var(--font-sans);
+--type-body-sm:var(--weight-regular) var(--text-sm)/var(--leading-normal) var(--font-sans);
+--type-label:var(--weight-medium) var(--text-base)/1 var(--font-sans);
+--type-eyebrow:var(--weight-medium) var(--text-sm)/1 var(--font-sans);
+--type-mono:var(--weight-regular) var(--text-sm)/var(--leading-normal) var(--font-mono);
+}
+:root{
+--space-0:0px;
+--space-1:4px;
+--space-2:8px;
+--space-3:12px;
+--space-4:16px;
+--space-5:20px;
+--space-6:24px;
+--space-8:32px;
+--space-10:40px;
+--space-12:48px;
+--space-16:64px;
+--space-20:80px;
+--space-24:96px;
+
+--sidebar-width:260px;
+--content-max:1200px;
+--marketing-max:1160px;
+--page-pad:32px;
+--card-pad:24px;
+
+--control-sm:32px;
+--control-md:40px;
+--control-lg:48px;
+
+--radius-xs:4px;
+--radius-sm:6px;
+--radius-md:8px;
+--radius-lg:12px;
+--radius-xl:16px;
+--radius-2xl:24px;
+--radius-pill:999px;
+}
+:root{
+
+--shadow-xs:0 1px 2px rgba(17,17,17,0.04);
+--shadow-sm:0 1px 3px rgba(17,17,17,0.06),0 1px 2px rgba(17,17,17,0.04);
+--shadow-md:0 4px 12px rgba(17,17,17,0.08),0 1px 3px rgba(17,17,17,0.05);
+--shadow-lg:0 12px 32px rgba(17,17,17,0.12),0 2px 6px rgba(17,17,17,0.06);
+--shadow-focus:0 0 0 3px rgba(17,17,17,0.2);
+--shadow-active-nav:0 1px 2px rgba(17,17,17,0.06);
+
+--ease-standard:cubic-bezier(0.2,0,0,1);
+--ease-out:cubic-bezier(0,0,0.2,1);
+--duration-fast:120ms;
+--duration-base:180ms;
+--duration-slow:280ms;
+
+--overlay-scrim:rgba(17,17,17,0.4);
+--protect-gradient:linear-gradient(180deg,rgba(250,250,249,0) 0%,rgba(250,250,249,1) 100%);
+--blur-glass:blur(12px);
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+html{font-family:var(--font-sans);color:var(--text-primary);background:var(--surface-canvas);-webkit-font-smoothing:antialiased}
+body{margin:0;font:var(--type-body)}
+a{color:var(--text-link);text-decoration:none} a:hover{color:var(--cb-stone-600);text-decoration:underline}
+*,*::before,*::after{box-sizing:border-box}
+.mono{font:var(--type-mono)}
 </style>
 </helmet>
 
-<div style="height: 900px; display: flex; flex-direction: column; background: oklch(1 0 0); overflow: hidden;">
+<div style="width: 1440px; height: 900px; display: flex; background: var(--surface-canvas); overflow: hidden;">
   
-<header style="position: sticky; top: 0; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(1 0 0); z-index: 10;">
-  <div style="margin: 0 auto; max-width: 1408px; height: 56px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-    <a href="#" style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">Crossbid</a>
-    <nav style="display: flex; align-items: center; gap: 8px;">
-      <a class="btn ghost" href="#" style="background: transparent;">Dashboard</a>
-      <a class="btn ghost" href="#" style="background: transparent;">Company</a>
-      <a class="btn ghost" href="#" style="background: transparent;">Settings</a>
-      <a class="btn" href="#">New bid</a>
-      <span class="muted" style="margin-left: 8px; font-size: 13px;">demo@it-services.example</span>
-    </nav>
+  <aside style="width: var(--sidebar-width); flex: none; padding: 28px 20px; display: flex; flex-direction: column; height: 900px;">
+    <div style="display: flex; align-items: center; padding: 4px 8px;"><img src="logo-lockup.svg" alt="CrossBid" style="height: 30px; display: block;"></div>
+    <div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; padding: 0 10px; margin: 24px 0 10px;">Workflow</div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Dashboard</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Tenders</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: var(--surface-card); border: 1px solid var(--border-default); box-shadow: var(--shadow-active-nav);"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Compliance</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Certificates</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-accent); color: #fff; flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Verdicts</span></a>
+    </div>
+    <div style="height: 1px; background: var(--border-default); margin: 24px 0 0;"></div>
+    <div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; padding: 0 10px; margin: 24px 0 10px;">Platform</div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M9.9 2.1 12 8l5.9 2.1L12 12.2 9.9 18 7.8 12.2 2 10.1 7.8 8z"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Agent runs</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Company profile</span><span style="color: var(--text-muted); display: inline-flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 10px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; box-shadow: none;"><span style="width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--cb-blue-100); color: var(--cb-blue-500); flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M21 4H3M21 12H3M21 20H3"></path></svg></span><span style="font: var(--weight-medium) 15px/1 var(--font-sans); color: var(--text-primary); flex: 1;">Settings</span></a>
+    </div>
+    <div style="flex: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px;">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--cb-stone-200); display: inline-flex; align-items: center; justify-content: center; font: 600 12px/1 var(--font-sans); color: var(--text-secondary);">LH</span>
+      <div><div style="font: 500 14px/1.2 var(--font-sans);">Lena Hartmann</div><div style="font: 400 12px/1.2 var(--font-sans); color: var(--text-muted);">Beispiel IT Services GmbH</div></div>
+    </div>
+  </aside>
+  <main style="flex: 1; min-width: 0; padding: 28px 28px 28px 0;">
+    <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 14px; height: 844px; padding: 32px; box-shadow: var(--shadow-xs); overflow: auto; display: flex; flex-direction: column; ">
+      
+  <div style="display: flex; align-items: center; gap: 8px; font: 400 13px/1 var(--font-sans); color: var(--text-muted); margin-bottom: 12px;"><a href="#" style="color: var(--text-muted);">Tenders</a><span>/</span><span class="mono">618320-2026</span></div>
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;"><h1 style="font: 600 30px/1.1 var(--font-sans); letter-spacing: -0.03em; margin: 0; flex: 1;">Prestations de conseil en architecture d'entreprise et d'expertise technique</h1><span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-warning-bg); color: var(--status-warning-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-warning); flex: none;"></span>Awaiting your confirmation</span><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-md); padding: 0 16px; border-radius: var(--radius-md); background: var(--surface-brand); color: var(--text-inverse); border: 1px solid transparent; font: var(--weight-medium) 14px/1 var(--font-sans); white-space: nowrap; "><span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span>Review verdict</a></div>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px;"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--weight-medium) 12px/1.2 var(--font-sans);">Ministère de l'éducation nationale</span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--weight-medium) 12px/1.2 var(--font-sans);">France → Germany</span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--weight-medium) 12px/1.2 var(--font-sans);">25 pages · FR</span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--weight-medium) 12px/1.2 var(--font-sans);">Due 9 Oct 2026 · 28 days</span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">618320-2026</span></div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 28px;">
+    <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Requirements extracted</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">31</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--text-muted);">all cited</span></div></div><div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Supported</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">24</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--status-success-text); font-weight: 500;">77%</span><span style="color: var(--text-muted);">of requirements</span></div></div><div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Partially supported</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">4</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--text-muted); font-weight: 500;">▲ –</span><span style="color: var(--text-muted);">need evidence from you</span></div></div><div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-xs);"><div style="font: var(--type-body); color: var(--text-secondary);">Unsupported</div><div style="font: 600 32px/1.1 var(--font-sans); letter-spacing: var(--tracking-tight); margin-top: 8px;">3</div><div style="display: flex; gap: 8px; font: var(--type-body-sm); margin-top: 10px;"><span style="color: var(--status-danger-text); font-weight: 500;">▼ 0</span><span style="color: var(--text-muted);">since last run</span></div></div>
   </div>
-</header>
-  <div style="border-bottom: 1px solid oklch(0.922 0 0);">
-    <div style="margin: 0 auto; max-width: 1408px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <h1 style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Prestations de conseil en architecture d'entreprise et d'expertise technique</h1>
-          <span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Awaiting your review</span>
-        </div>
-        <div class="muted" style="display: flex; gap: 16px; font-size: 13px;">
-          <span class="mono">618320-2026</span><span>Ministère de l'éducation nationale · FR</span><span>Deadline 9 Oct 2026, 16:00 · 28 days</span>
-          <span style="display: inline-flex; align-items: center; gap: 6px;">Explained in
-            <span style="display: inline-flex; border: 1px solid oklch(0.922 0 0); border-radius: 999px; overflow: hidden;">
-              <a href="#" style="padding: 0 8px; font-size: 12px; background: oklch(0.205 0 0); color: oklch(0.985 0 0);">DE</a><a href="#" style="padding: 0 8px; font-size: 12px;">FR</a>
-            </span>
-          </span>
-        </div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 20px;">
-        <div style="display: flex; gap: 20px;">
-          <div style="display: flex; flex-direction: column; align-items: flex-end;"><span style="font-size: 18px; font-weight: 600;">24<span class="muted" style="font-weight: 400; font-size: 13px;"> / 31</span></span><span class="label">mandatory met</span></div>
-          <div style="display: flex; flex-direction: column; align-items: flex-end;"><span style="font-size: 18px; font-weight: 600; color: oklch(0.577 0.245 27.325);">3</span><span class="label">not met</span></div>
-          <div style="display: flex; flex-direction: column; align-items: flex-end;"><span style="font-size: 18px; font-weight: 600; color: oklch(0.55 0.14 70);">4</span><span class="label">unclear</span></div>
-        </div>
-        <a class="btn lg" href="#">Review verdict</a>
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; align-items: start;">
+    <div>
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+      <div role="tablist" style="display: flex; gap: 24px; border-bottom: 1px solid var(--border-default); flex: 1;"><a href="#" role="tab" style="padding: 10px 0; margin-bottom: -1px; font: var(--weight-medium) 14px/1 var(--font-sans); color: var(--text-primary); border-bottom: 2px solid var(--cb-blue-500);">All requirements<span style="margin-left: 6px; color: var(--text-muted); font-weight: 400;">31</span></a><a href="#" role="tab" style="padding: 10px 0; margin-bottom: -1px; font: var(--weight-medium) 14px/1 var(--font-sans); color: var(--text-muted); border-bottom: 2px solid transparent;">Needs evidence<span style="margin-left: 6px; color: var(--text-muted); font-weight: 400;">7</span></a><a href="#" role="tab" style="padding: 10px 0; margin-bottom: -1px; font: var(--weight-medium) 14px/1 var(--font-sans); color: var(--text-muted); border-bottom: 2px solid transparent;">Certificates<span style="margin-left: 6px; color: var(--text-muted); font-weight: 400;">5</span></a><a href="#" role="tab" style="padding: 10px 0; margin-bottom: -1px; font: var(--weight-medium) 14px/1 var(--font-sans); color: var(--text-muted); border-bottom: 2px solid transparent;">Formal<span style="margin-left: 6px; color: var(--text-muted); font-weight: 400;">16</span></a></div>
+      <span style="display: inline-flex; align-items: center; gap: 10px; height: var(--control-md); padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--surface-card); font: var(--weight-medium) 14px/1 var(--font-sans); box-shadow: var(--shadow-xs); min-width: 120px; justify-content: space-between; height: var(--control-sm); font-size: 13px;">Category<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></span>
+    </div>
+    <div style="border: 1px solid var(--border-default); border-radius: 12px; overflow: hidden;">
+      <div style="display: grid; grid-template-columns: 92px 92px minmax(0, 1fr) 130px 180px; gap: 16px; padding: 0 20px; height: 44px; align-items: center; font: 500 13px/1 var(--font-sans); color: var(--text-secondary); border-bottom: 1px solid var(--border-default); background: var(--surface-sunken);"><span>ID</span><span>Category</span><span>Requirement (explained in DE)</span><span>Source</span><span>Evidence</span></div>
+      <div style="border-bottom: 1px solid var(--border-default);">
+    <div style="display: grid; grid-template-columns: 92px 92px minmax(0, 1fr) 130px 180px; gap: 16px; padding: 14px 20px; align-items: center; font: 400 14px/1.4 var(--font-sans); background: transparent;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-001</span><span style="color: var(--text-secondary);">Exclusion</span>
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Keine rechtskräftige Verurteilung wegen Korruption, Betrug oder Geldwäsche in den letzten fünf Jahren.</span>
+      <a href="#" class="mono" style="display: inline-flex; gap: 5px; align-items: center; color: var(--text-link);">RC p. 6 §4.1<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-success-bg); color: var(--status-success-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-success); flex: none;"></span>Supported</span>
+    </div></div><div style="border-bottom: 1px solid var(--border-default);">
+    <div style="display: grid; grid-template-columns: 92px 92px minmax(0, 1fr) 130px 180px; gap: 16px; padding: 14px 20px; align-items: center; font: 400 14px/1.4 var(--font-sans); background: var(--surface-sunken);">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-002</span><span style="color: var(--text-secondary);">Exclusion</span>
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: normal;">Steuern und Sozialabgaben sind zum 31. Dezember des Vorjahres vollständig entrichtet.</span>
+      <a href="#" class="mono" style="display: inline-flex; gap: 5px; align-items: center; color: var(--text-link);">RC p. 7 §4.2<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-success-bg); color: var(--status-success-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-success); flex: none;"></span>Supported</span>
+    </div>
+    <div style="padding: 0 20px 18px 128px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; background: var(--surface-sunken);">
+      <div><div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Source (FR) · RC p. 7 §4.2</div><div style="font: 400 14px/1.5 var(--font-sans); color: var(--text-secondary); font-style: italic;">“Le candidat doit être à jour de ses obligations fiscales et sociales au 31 décembre de l'année précédant la consultation.”</div></div>
+      <div><div style="font: 500 12px/1 var(--font-sans); letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Evidence in your profile</div><div style="font: 400 14px/1.5 var(--font-sans);">Bescheinigung in Steuersachen (Finanzamt, 03/2026) · Unbedenklichkeitsbescheinigung (Krankenkasse)</div>
+        <div style="margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-card); font: var(--type-body-sm); color: var(--text-secondary); display: flex; gap: 8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg><span><b style="color: var(--text-primary); font-weight: 500;">eCertis · Paiement d'impôts et taxes.</b> In Germany this criterion is evidenced by a Bescheinigung in Steuersachen from the Finanzamt and an Unbedenklichkeitsbescheinigung from the Krankenkasse.</span></div>
+        <div style="margin-top: 10px; display: flex; gap: 8px;"><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; "><span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></span>Confirm</a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; ">Change status<span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span></a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: transparent; color: var(--text-primary); border: 1px solid transparent; font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; "><span style="display: inline-flex; width: 16px; height: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m17 8-5-5-5 5"></path><path d="M12 3v12"></path></svg></span>Add evidence</a></div></div>
+    </div></div><div style="border-bottom: 1px solid var(--border-default);">
+    <div style="display: grid; grid-template-columns: 92px 92px minmax(0, 1fr) 130px 180px; gap: 16px; padding: 14px 20px; align-items: center; font: 400 14px/1.4 var(--font-sans); background: transparent;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-009</span><span style="color: var(--text-secondary);">Selection</span>
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Durchschnittlicher Jahresumsatz der letzten drei Geschäftsjahre von mindestens 2 000 000 € (netto).</span>
+      <a href="#" class="mono" style="display: inline-flex; gap: 5px; align-items: center; color: var(--text-link);">RC p. 9 §5.1<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-danger-bg); color: var(--status-danger-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-danger); flex: none;"></span>Unsupported</span>
+    </div></div><div style="border-bottom: 1px solid var(--border-default);">
+    <div style="display: grid; grid-template-columns: 92px 92px minmax(0, 1fr) 130px 180px; gap: 16px; padding: 14px 20px; align-items: center; font: 400 14px/1.4 var(--font-sans); background: transparent;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-011</span><span style="color: var(--text-secondary);">Selection</span>
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Berufshaftpflichtversicherung, die die Risiken der Leistung abdeckt; die Deckungssumme ist nachzuweisen.</span>
+      <a href="#" class="mono" style="display: inline-flex; gap: 5px; align-items: center; color: var(--text-link);">RC p. 9 §5.2<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-warning-bg); color: var(--status-warning-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-warning); flex: none;"></span>Partially supported</span>
+    </div></div><div style="border-bottom: 1px solid var(--border-default);">
+    <div style="display: grid; grid-template-columns: 92px 92px minmax(0, 1fr) 130px 180px; gap: 16px; padding: 14px 20px; align-items: center; font: 400 14px/1.4 var(--font-sans); background: transparent;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-014</span><span style="color: var(--text-secondary);">Technical</span>
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Zertifizierung des Informationssicherheits-Managementsystems nach ISO/IEC 27001 oder gleichwertig.</span>
+      <a href="#" class="mono" style="display: inline-flex; gap: 5px; align-items: center; color: var(--text-link);">RC p. 11 §5.4<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-success-bg); color: var(--status-success-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-success); flex: none;"></span>Supported</span>
+    </div></div><div style="border-bottom: 1px solid var(--border-default);">
+    <div style="display: grid; grid-template-columns: 92px 92px minmax(0, 1fr) 130px 180px; gap: 16px; padding: 14px 20px; align-items: center; font: 400 14px/1.4 var(--font-sans); background: transparent;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-sunken); color: var(--text-secondary); font: var(--type-mono);">REQ-017</span><span style="color: var(--text-secondary);">Technical</span>
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Drei Referenzen vergleichbarer Leistungen aus den letzten drei Jahren mit Auftraggeber, Umfang und Zeitraum.</span>
+      <a href="#" class="mono" style="display: inline-flex; gap: 5px; align-items: center; color: var(--text-link);">RC p. 12 §5.5<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--status-warning-bg); color: var(--status-warning-text); font: var(--weight-medium) 12px/1.2 var(--font-sans); white-space: nowrap;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--status-warning); flex: none;"></span>Partially supported</span>
+    </div></div>
+      <div style="padding: 12px 20px; font: 400 13px/1 var(--font-sans); color: var(--text-muted);">Showing 6 of 31 · every line links to its page in the tender · 1 passage flagged as an instruction to the AI and kept out</div>
+    </div></div>
+    <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: 20px; "><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;"><span style="display: inline-flex; width: 20px; height: 20px; color: var(--text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg></span><div style="font: var(--type-h4); letter-spacing: var(--tracking-tight); flex: 1;">Source</div><div style="display: flex; gap: 8px; align-items: center;"><a href="#" style="display: inline-flex; gap: 6px; align-items: center; font: 500 13px/1 var(--font-sans); color: var(--text-secondary);">Open in new tab <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a></div></div>
+    <div style="display: flex; align-items: center; gap: 6px; margin: -6px 0 12px;">
+      <a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-default); box-shadow: var(--shadow-xs); font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; ">RC v1</a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: transparent; color: var(--text-primary); border: 1px solid transparent; font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; ">Notice</a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: transparent; color: var(--text-primary); border: 1px solid transparent; font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; ">DUME</a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-sm); padding: 0 12px; border-radius: var(--radius-md); background: transparent; color: var(--text-primary); border: 1px solid transparent; font: var(--weight-medium) 13px/1 var(--font-sans); white-space: nowrap; ">CCTP</a>
+      <span style="flex: 1;"></span>
+      <a href="#" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 1px solid var(--border-default);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m15 18-6-6 6-6"></path></svg></a>
+      <span class="mono" style="font-size: 12px;">p. 7 / 25</span>
+      <a href="#" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 1px solid var(--border-default);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m9 18 6-6-6-6"></path></svg></a>
+    </div>
+    <div style="background: var(--surface-sunken); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; display: flex; justify-content: center;">
+      <div style="width: 100%; background: var(--surface-card); border: 1px solid var(--border-default); padding: 28px 26px; display: flex; flex-direction: column; gap: 9px; box-shadow: var(--shadow-sm);">
+        <div class="mono" style="font-size: 10px; color: var(--text-muted);">26023-AOO · Règlement de la consultation · 7</div>
+        <div style="height: 10px; width: 55%; background: var(--cb-stone-200); border-radius: 2px;"></div>
+        <div style="height: 8px; width: 92%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 88%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 95%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 60%; background: var(--cb-stone-100); border-radius: 2px;"></div>
+        <div style="margin-top: 6px; height: 10px; width: 40%; background: var(--cb-stone-200); border-radius: 2px;"></div>
+        <div style="border: 2px solid var(--status-warning); background: var(--status-warning-bg); border-radius: 4px; padding: 8px 10px; font: 400 11px/1.45 var(--font-sans);">4.2 — Le candidat doit être à jour de ses obligations fiscales et sociales au 31 décembre de l'année précédant la consultation. Il produit à cet effet les attestations…</div>
+        <div style="height: 8px; width: 90%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 84%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 93%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 40%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 89%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 91%; background: var(--cb-stone-100); border-radius: 2px;"></div><div style="height: 8px; width: 70%; background: var(--cb-stone-100); border-radius: 2px;"></div>
       </div>
     </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; font: var(--type-body-sm); color: var(--text-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4M12 16h.01"></path></svg><span>Pages 19 and 23 have no text layer and were not read.</span></div></div>
   </div>
-
-  <main style="flex: 1; min-height: 0; margin: 0 auto; width: 100%; max-width: 1408px; padding: 16px; display: grid; grid-template-columns: 520px minmax(0, 1fr); gap: 16px;">
-    
-    <aside class="card" style="display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
-      <div style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-bottom: 1px solid oklch(0.922 0 0);">
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px; background: oklch(0.97 0 0);">RC v1</a>
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px;">Notice</a>
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px;">DUME</a>
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px;">CCTP</a>
-        <span style="margin-left: auto; display: flex; align-items: center; gap: 4px;">
-          <a class="btn ghost" href="#" style="width: 28px; height: 28px; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m15 18-6-6 6-6"></path></svg></a>
-          <span class="mono" style="font-size: 12px;">p. 7 / 25</span>
-          <a class="btn ghost" href="#" style="width: 28px; height: 28px; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m9 18 6-6-6-6"></path></svg></a>
-        </span>
-      </div>
-      <div style="flex: 1; background: oklch(0.97 0 0); padding: 20px; display: flex; justify-content: center; overflow: hidden;">
-        <div style="width: 100%; max-width: 440px; background: oklch(1 0 0); border: 1px solid oklch(0.922 0 0); padding: 40px 36px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 2px oklch(0 0 0 / 6%);">
-          <div class="mono" style="font-size: 10px; color: oklch(0.556 0 0);">26023-AOO · Règlement de la consultation · 7</div>
-          <div style="height: 10px; width: 55%; background: oklch(0.922 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 92%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 88%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 95%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 60%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="margin-top: 8px; height: 10px; width: 40%; background: oklch(0.922 0 0); border-radius: 2px;"></div>
-          <div style="border: 2px solid oklch(0.55 0.14 70); background: oklch(0.965 0.04 80); border-radius: 4px; padding: 8px 10px; font-size: 11px; line-height: 1.45;">
-            4.2 — Le candidat doit être à jour de ses obligations fiscales et sociales au 31 décembre de l'année précédant la consultation. Il produit à cet effet les attestations…
-          </div>
-          <div style="height: 8px; width: 90%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 84%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 93%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 40%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="margin-top: 8px; height: 8px; width: 89%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 91%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-          <div style="height: 8px; width: 70%; background: oklch(0.97 0 0); border-radius: 2px;"></div>
-        </div>
-      </div>
-      <div class="muted" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid oklch(0.922 0 0); font-size: 12px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg> <span>Pages 19 and 23 of this file have no text layer and were not read.</span>
-      </div>
-    </aside>
-    <section class="card" style="display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
-      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid oklch(0.922 0 0);">
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px; background: oklch(0.97 0 0);">All 31</a>
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px; color: oklch(0.577 0.245 27.325);">Not met 3</a>
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px; color: oklch(0.55 0.14 70);">Unclear 4</a>
-        <a class="btn ghost" href="#" style="height: 28px; font-size: 13px;">To attach 6</a>
-        <span class="muted" style="margin-left: auto; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg> 1 passage flagged as an instruction to the AI and kept out</span>
-      </div>
-      <div style="flex: 1; overflow: auto;">
-        
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: oklch(0.97 0 0); border-bottom: 1px solid oklch(0.922 0 0);">
-        <span style="font-weight: 600; font-size: 13px;">Exclusion grounds</span>
-        <span class="muted" style="font-size: 12px;">6 requirements · 6 met</span>
-      </div>
-        
-      <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 120px 260px; gap: 0 16px; align-items: start; padding: 12px 16px 12px 16px; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(1 0 0);">
-        <span class="muted" style="padding-top: 2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m9 18 6-6-6-6"></path></svg></span>
-        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-          <span>Keine rechtskräftige Verurteilung wegen Korruption, Betrug oder Geldwäsche in den letzten fünf Jahren.</span>
-          <a href="#" class="muted" style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">RC v1 · p. 6 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
-        </div>
-        <div><span class="pill" style="color: oklch(0.55 0.14 150); background: oklch(0.965 0.03 150);"><span class="dot"></span>Met</span></div>
-        <div><span class="muted" style="font-size: 13px;">Self-declared in the ESPD — no certificate is asked for at this stage</span></div>
-        
-      </div>
-      <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 120px 260px; gap: 0 16px; align-items: start; padding: 12px 16px 12px 16px; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(0.97 0 0);">
-        <span class="muted" style="padding-top: 2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span>
-        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-          <span>Steuern und Sozialabgaben sind zum 31. Dezember des Vorjahres vollständig entrichtet.</span>
-          <a href="#" class="muted" style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">RC v1 · p. 7 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
-        </div>
-        <div><span class="pill" style="color: oklch(0.55 0.14 150); background: oklch(0.965 0.03 150);"><span class="dot"></span>Met</span></div>
-        <div><div style="display: flex; align-items: flex-start; gap: 6px; font-size: 13px;">
-              <span class="muted"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg></span>
-              <span><a href="#" style="text-decoration: underline;">Bescheinigung_in_Steuersachen_Finanzamt_2026.pdf · p. 1</a> <span class="muted">“…bestehen keine Steuerrückstände. Gültig bis 31.03.2027.”</span></span>
-            </div></div>
-        
-        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px 44px;">
-          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <span class="label">Source · français · RC v1 p. 7</span>
-              <p class="quote" style="margin: 0; font-size: 13px;">Le candidat doit être à jour de ses obligations fiscales et sociales au 31 décembre de l'année précédant la consultation.</p>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <span class="label">Why the agent says “Met”</span>
-              <p class="muted" style="margin: 0; font-size: 13px;">The Bescheinigung in Steuersachen is dated within the last 12 months and states no arrears; a matching Krankenkasse certificate is attached. Both are what eCertis names as the German evidence for this French criterion.</p>
-            </div>
-          </div>
-          
-          <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; background: oklch(0.97 0 0);">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <span class="label">eCertis · Paiement d'impôts et taxes</span>
-              <a href="#" class="muted" style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px;">Open on eCertis <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
-            </div>
-            <span style="font-size: 13px;">In Germany this is proven by a Bescheinigung in Steuersachen from the Finanzamt, and for social security by an Unbedenklichkeitsbescheinigung from the Krankenkasse.</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <a class="btn outline" href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg> Confirm</a>
-            <a class="btn outline" href="#">Change status <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></a>
-            <a class="btn outline" href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m21.4 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> Attach a document</a>
-            <span class="muted" style="margin-left: auto; font-size: 12px;">Edits stay on this screen until you submit the review.</span>
-          </div>
-        </div>
-      </div>
-        
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: oklch(0.97 0 0); border-bottom: 1px solid oklch(0.922 0 0);">
-        <span style="font-weight: 600; font-size: 13px;">Economic and financial standing</span>
-        <span class="muted" style="font-size: 12px;">4 requirements · 1 met · 1 not met · 2 unclear</span>
-      </div>
-        
-      <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 120px 260px; gap: 0 16px; align-items: start; padding: 12px 16px 12px 16px; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(1 0 0);">
-        <span class="muted" style="padding-top: 2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m9 18 6-6-6-6"></path></svg></span>
-        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-          <span>Durchschnittlicher Jahresumsatz der letzten drei Geschäftsjahre von mindestens 2 000 000 € (netto).</span>
-          <a href="#" class="muted" style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">RC v1 · p. 9 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
-        </div>
-        <div><span class="pill" style="color: oklch(0.577 0.245 27.325); background: oklch(0.965 0.03 27);"><span class="dot"></span>Not met</span></div>
-        <div><div style="display: flex; align-items: flex-start; gap: 6px; font-size: 13px;">
-              <span class="muted"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg></span>
-              <span><a href="#" style="text-decoration: underline;">Jahresabschluss_2025.pdf · p. 3</a> <span class="muted">“Umsatzerlöse 2025: 1.450.000 €”</span></span>
-            </div></div>
-        
-      </div>
-      <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 120px 260px; gap: 0 16px; align-items: start; padding: 12px 16px 12px 16px; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(1 0 0);">
-        <span class="muted" style="padding-top: 2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m9 18 6-6-6-6"></path></svg></span>
-        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-          <span>Berufshaftpflichtversicherung, die die Risiken der Leistung abdeckt; die Deckungssumme ist nachzuweisen.</span>
-          <a href="#" class="muted" style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">RC v1 · p. 9 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
-        </div>
-        <div><span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Unclear</span></div>
-        <div><span class="muted" style="font-size: 13px;">No evidence found in your documents</span></div>
-        
-      </div>
-        
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: oklch(0.97 0 0); border-bottom: 1px solid oklch(0.922 0 0);">
-        <span style="font-weight: 600; font-size: 13px;">Technical and professional ability</span>
-        <span class="muted" style="font-size: 12px;">5 requirements · 3 met · 2 unclear</span>
-      </div>
-        
-      <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 120px 260px; gap: 0 16px; align-items: start; padding: 12px 16px 12px 16px; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(1 0 0);">
-        <span class="muted" style="padding-top: 2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m9 18 6-6-6-6"></path></svg></span>
-        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-          <span>Zertifizierung des Informationssicherheits-Managementsystems nach ISO/IEC 27001 oder gleichwertig.</span>
-          <a href="#" class="muted" style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">RC v1 · p. 11 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
-        </div>
-        <div><span class="pill" style="color: oklch(0.55 0.14 150); background: oklch(0.965 0.03 150);"><span class="dot"></span>Met</span></div>
-        <div><div style="display: flex; align-items: flex-start; gap: 6px; font-size: 13px;">
-              <span class="muted"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg></span>
-              <span><a href="#" style="text-decoration: underline;">ISO_27001_Zertifikat.pdf · p. 1</a> <span class="muted">“…erfüllt die Anforderungen der ISO/IEC 27001:2022. Gültig bis 14.03.2027.”</span></span>
-            </div></div>
-        
-      </div>
-      <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 120px 260px; gap: 0 16px; align-items: start; padding: 12px 16px 12px 16px; border-bottom: 1px solid oklch(0.922 0 0); background: oklch(1 0 0);">
-        <span class="muted" style="padding-top: 2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m9 18 6-6-6-6"></path></svg></span>
-        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-          <span>Drei Referenzen vergleichbarer Leistungen aus den letzten drei Jahren mit Angabe von Auftraggeber, Umfang und Zeitraum.</span>
-          <a href="#" class="muted" style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">RC v1 · p. 12 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
-        </div>
-        <div><span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Unclear</span></div>
-        <div><span class="muted" style="font-size: 13px;">No evidence found in your documents</span></div>
-        
-      </div>
-        
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: oklch(0.97 0 0); border-bottom: 1px solid oklch(0.922 0 0);">
-        <span style="font-weight: 600; font-size: 13px;">Formal and submission rules</span>
-        <span class="muted" style="font-size: 12px;">16 requirements · 14 met · 2 not met</span>
-      </div>
-      </div>
-    </section>
+    </div>
   </main>
 </div>
 </x-dc>

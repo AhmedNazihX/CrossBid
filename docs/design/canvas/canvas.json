@@ -1,14 +1,14 @@
 {
   "artboards": [
     { "file": "Dashboard.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Dashboard" },
-    { "file": "NewBid.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "New bid — step 2 of 3" },
-    { "file": "Main.dc.html", "x": 0, "y": 1080, "w": 1440, "h": 900, "title": "Bid workspace — desktop" },
-    { "file": "WorkspacePhone.dc.html", "x": 1560, "y": 1080, "w": 390, "h": 844, "title": "Bid workspace — phone" },
-    { "file": "Verdict.dc.html", "x": 2070, "y": 1080, "w": 640, "h": 900, "title": "Verdict — confirm or override" }
+    { "file": "NewBid.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "Analyse tender — upload the pack" },
+    { "file": "Main.dc.html", "x": 0, "y": 1080, "w": 1440, "h": 900, "title": "Compliance matrix — with the source page open" },
+    { "file": "Verdict.dc.html", "x": 1560, "y": 1080, "w": 1440, "h": 900, "title": "Review verdict — override with a reason" },
+    { "file": "WorkspacePhone.dc.html", "x": 3120, "y": 1080, "w": 390, "h": 844, "title": "Compliance matrix — phone" }
   ],
   "annotations": [
-    { "id": "brief", "x": 0, "y": -260, "w": 640, "text": "S4.0.1 first draft — static mockups, not a prototype.\n\nMatches the shipped shell: Geist, the shadcn neutral tokens from app/globals.css, 10 px radius, 56 px header, 32 px controls. UI language English; requirements explained in the bidder's language (German here). Content is the real FR fixture (TED 618320-2026); the company documents and figures are sample data.\n\nThree things the app has no answer for yet, proposed here — tell me what to change:\n1. Status colours: met green · not met red (= the theme's destructive) · unclear amber · running blue, all one lightness/chroma.\n2. Workspace split: PDF left (520 px), matrix right, one row expanded at a time.\n3. Phone: the PDF moves behind a Document tab; the verdict button stays pinned." },
-    { "id": "gate", "x": 700, "y": -260, "w": 420, "text": "The gate (docs/project-plan.md S4.0.1): nothing under components/matrix, components/pdf or components/verdict is coded until you confirm this canvas. Accepted changes are recorded in an ADR, and later UI stories cite the artboard they implement." }
+    { "id": "brief", "x": 0, "y": -300, "w": 720, "text": "S4.0.1, draft 2 — built on the CrossBid design system (project b81312f6): its shell, tokens, Geist, NavItem / Button / Badge / Tag / MetricCard / VerdictChip / Tabs / Radio / Card anatomy, and the SVG logo lockup. Static mockups. UI in English; requirements explained in German; source quotes in French (the real TED 618320-2026 fixture). Company documents and figures are sample data.\n\nTwo places where the system's vocabulary and the plan's contracts differ — your call:\n1. Verdicts. The system says Go / Conditional / No-go / Insufficient evidence. The backend's Decision enum says go / go_with_open_items / no_go. Conditional ≈ go_with_open_items; Insufficient evidence has no value yet (it is the agent refusing a verdict). Adopt the system's four and add the fourth to the enum?\n2. Row evidence. The system says Supported / Partially supported / Unsupported. The backend's RowStatus says met / unclear / unmet / not_applicable. Mapped one-to-one here; not_applicable would show as a Tag.\n\nThe source page (S4.5.1's PDF-beside-the-matrix) opens as a 400 px panel to the right of the matrix rather than a permanent split — that is the one screen the system did not have." },
+    { "id": "gate", "x": 780, "y": -300, "w": 440, "text": "The gate (docs/project-plan.md S4.0.1): nothing under components/matrix, components/pdf or components/verdict is coded until you confirm this canvas. Accepted changes are recorded in an ADR, and later UI stories cite the artboard they implement." }
   ],
   "launch": { "view": "canvas" }
 }
