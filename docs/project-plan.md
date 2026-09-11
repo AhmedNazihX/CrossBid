@@ -396,9 +396,11 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
   - Notes: sections of 5–8 pages, structured output per section, dedupe by quote similarity and page proximity.
 - **S3.2.2** (S) *As a bidder, I want the buyer's structured notice data used directly, so that the deadline, languages, and stated criteria are never mis-read.* `needs S1.2.1`
   - Given a TED notice, then its criteria descriptions, submission language, and deadline become requirements tagged `source: notice` before LLM extraction, and the deadline is stored on the bid.
-- **S3.2.3** (S) *As a maintainer, I want a recall script that scores extraction against the golden labels, so that E3's done-when is checked while the graph is built, not weeks later in S7.1.* `needs S3.2.1, S6.4`
+- **S3.2.3** (S→M) *As a maintainer, I want a recall script that scores extraction against the golden labels, so that E3's done-when is checked while the graph is built, not weeks later in S7.1.* `needs S3.2.1, S6.4`
   - Given a golden YAML and an extraction result, when the script runs, then it prints recall on mandatory requirements per tender and exits non-zero below the threshold in settings.
   - Given S7.1, then the DeepEval suite reuses this matcher instead of reimplementing it.
+  - **Given S6.4's labels are LLM drafts, then this script also carries their human verification** *(user decision, 2026-09-12: "fold it")*. `test_golden_labels.py` already proves every label's quote is verbatim on its cited page, so the machine-checkable half is done; what a person must still judge is whether a row is really a requirement, whether its `kind`/`stage` are right, and **what is missing** — the one failure a verbatim check cannot see. The script therefore reports, per tender: extracted rows with no golden match (candidate missing labels), golden rows the extractor never found (the recall misses), and disagreements on `kind`/`stage`/`criterion`. The reviewer adjudicates that list rather than reading 257 labels, and flipping a file's header to `labelled_by: llm_assisted_human_verified` with a `verified_by`/`verified_on` is what closes S6.4 — and with it S3.2.1 and Milestone 1.
+  - Notes: this is why S3.2.3 must filter the DE file on `stage: bid_eligibility` before scoring (13 of 143 scored rows are `contract_performance` on purpose, ADR-0015).
 
 **F3.3 Per-requirement checking** — the agentic core.
 
