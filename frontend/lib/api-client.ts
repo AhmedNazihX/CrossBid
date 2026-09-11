@@ -11,10 +11,15 @@
  * `Authorization: Bearer <jwt>`, cookies are never sent, and a non-2xx answer becomes an
  * `ApiError` rather than a silently-undefined payload.
  *
+ * Until magic-link sign-in lands (S4.1.1) there is no JWT. The S0.3.1 dev bridge stands in:
+ * when `NEXT_PUBLIC_DEV_COMPANY_ID` is set at build time, every call also carries
+ * `X-Dev-Company: <uuid>`, which the API believes only under `AUTH_MODE=dev`. That header is
+ * attached here and nowhere else, so removing the bridge is a one-line change; when the
+ * variable is unset nothing is sent and the API's own 401 `detail` reaches the screen.
+ *
  * Deliberately not here — each belongs to a later story:
  * - where the token comes from (Supabase session) -> S4.1; callers pass `token`
- * - React hooks, the 2 s `GET /bids/{id}` poll, caching, retries -> E4
- * - multipart upload for `POST /documents` -> the story that adds that route
+ * - React hooks and caching -> E4 (the 2 s poll lives in `./use-polling.ts`, S4.2.2)
  */
 import type { paths } from './api'
 
@@ -23,6 +28,18 @@ const DEFAULT_API_BASE_URL = 'http://localhost:8000'
 
 /** `ApiError.status` when the request never reached the API (DNS, CORS, offline, abort). */
 export const TRANSPORT_ERROR_STATUS = 0
+
+/** The S0.3.1 dev-bridge header; must match `crossbid.auth.DEV_COMPANY_HEADER`. */
+export const DEV_COMPANY_HEADER = 'X-Dev-Company'
+
+/**
+ * Company id sent as `X-Dev-Company` on every request, or `undefined` to send nothing.
+ *
+ * Read once at module load: `NEXT_PUBLIC_*` is inlined at build time, so the value cannot
+ * change while the app runs. Whitespace-only counts as unset, because Compose passes the
+ * variable through as an empty string when `.env` leaves it blank.
+ */
+export const DEV_COMPANY_ID = readOptionalEnv(process.env.NEXT_PUBLIC_DEV_COMPANY_ID)
 
 /**
  * Base URL of the API, without a trailing slash.
@@ -38,7 +55,7 @@ export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_BASE
 /** HTTP methods the client supports. `options`, `head` and `trace` are not used. */
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
 
-/** Path templates in the schema that define `M`. `PathFor<'post'>` is `never` today. */
+/** Path templates in the schema that define `M`, e.g. `PathFor<'post'>` is `'/documents' | '/bids'`. */
 export type PathFor<M extends HttpMethod> = {
   [P in keyof paths]: paths[P] extends { [K in M]: object } ? P : never
 }[keyof paths]
@@ -73,9 +90,23 @@ export type PathParams<P extends keyof paths, M extends HttpMethod> =
 export type QueryParams<P extends keyof paths, M extends HttpMethod> =
   ParametersOf<ApiOperation<P, M>> extends { query: infer Values } ? Values : never
 
+type DeclaredRequestBody<P extends keyof paths, M extends HttpMethod> = NonNullable<
+  ApiOperation<P, M> extends { requestBody?: infer Body } ? Body : never
+>
+
+type MultipartOf<T> = T extends { content: { 'multipart/form-data': infer F } } ? F : never
+
 /** JSON request body the operation accepts; `never` when it accepts none. */
 export type RequestBody<P extends keyof paths, M extends HttpMethod> = JsonOf<
-  NonNullable<ApiOperation<P, M> extends { requestBody?: infer Body } ? Body : never>
+  DeclaredRequestBody<P, M>
+>
+
+/**
+ * The multipart form the operation accepts (its field names and types); `never` when the
+ * operation is not a file upload. Only `POST /documents` declares one today.
+ */
+export type MultipartBody<P extends keyof paths, M extends HttpMethod> = MultipartOf<
+  DeclaredRequestBody<P, M>
 >
 
 export interface RequestOptions<P extends keyof paths, M extends HttpMethod> {
@@ -87,6 +118,12 @@ export interface RequestOptions<P extends keyof paths, M extends HttpMethod> {
   query?: QueryParams<P, M>
   /** JSON request body. Sets `Content-Type` when present. */
   body?: RequestBody<P, M>
+  /**
+   * Multipart body for file uploads. Only accepted on operations that declare
+   * `multipart/form-data`; `Content-Type` is left to the browser, which must add the
+   * boundary itself. Mutually exclusive with `body`.
+   */
+  formData?: [MultipartBody<P, M>] extends [never] ? never : FormData
   signal?: AbortSignal
   /** Extra headers, merged last so a caller can override the defaults. */
   headers?: Readonly<Record<string, string>>
@@ -112,6 +149,8 @@ export class ApiError extends Error {
   readonly method: string
   readonly url: string
   readonly body: unknown
+  /** FastAPI's `detail`, written for the bidder to read; `undefined` when the API sent none. */
+  readonly detail: string | undefined
 
   constructor(init: ApiErrorInit) {
     super(buildErrorMessage(init), init.cause === undefined ? undefined : { cause: init.cause })
@@ -121,7 +160,31 @@ export class ApiError extends Error {
     this.method = init.method
     this.url = init.url
     this.body = init.body
+    this.detail = extractDetail(init.body)
   }
+}
+
+/**
+ * One sentence a bidder can act on, for any failure a call can throw.
+ *
+ * The API's `detail` is preferred verbatim — the backend writes it for the screen. A
+ * transport failure has no `detail`, so it names the base URL: on a developer's machine
+ * the usual cause is that the API is not running.
+ */
+export function describeApiError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.detail !== undefined) {
+      return error.detail
+    }
+    if (error.status === TRANSPORT_ERROR_STATUS) {
+      return `The API at ${API_BASE_URL} could not be reached. Check that it is running.`
+    }
+    return `The API answered ${error.status} ${error.statusText}.`
+  }
+  if (error instanceof Error && error.message.length > 0) {
+    return error.message
+  }
+  return 'Something went wrong. Try again.'
 }
 
 /**
@@ -137,12 +200,15 @@ export async function apiRequest<M extends HttpMethod, P extends PathFor<M>>(
 ): Promise<ResponseBody<P, M>> {
   const url = buildUrl(pathTemplate, options.path, options.query)
   const upperMethod = method.toUpperCase()
-  const hasBody = options.body !== undefined
+  const hasJsonBody = options.body !== undefined
+  if (hasJsonBody && options.formData !== undefined) {
+    throw new TypeError(`"${pathTemplate}" was given both a JSON body and a multipart body`)
+  }
 
   const response = await sendRequest(url, {
     method: upperMethod,
-    headers: buildHeaders(options, hasBody),
-    body: hasBody ? JSON.stringify(options.body) : undefined,
+    headers: buildHeaders(options, hasJsonBody),
+    body: hasJsonBody ? JSON.stringify(options.body) : options.formData,
     signal: options.signal,
     // Bearer tokens only: no cookie is ever sent, so a locked-down CORS policy on the
     // API needs no credentialed-origin exception.
@@ -211,14 +277,20 @@ async function readBody(response: Response, method: string, url: string): Promis
 
 function buildHeaders(
   options: { token?: string; headers?: Readonly<Record<string, string>> },
-  hasBody: boolean
+  hasJsonBody: boolean
 ): Record<string, string> {
   return {
     Accept: 'application/json',
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
     ...(options.token === undefined ? {} : { Authorization: `Bearer ${options.token}` }),
+    ...(DEV_COMPANY_ID === undefined ? {} : { [DEV_COMPANY_HEADER]: DEV_COMPANY_ID }),
     ...options.headers,
   }
+}
+
+function readOptionalEnv(value: string | undefined): string | undefined {
+  const trimmed = value?.trim() ?? ''
+  return trimmed.length === 0 ? undefined : trimmed
 }
 
 function buildUrl(pathTemplate: string, pathParams: unknown, query: unknown): string {

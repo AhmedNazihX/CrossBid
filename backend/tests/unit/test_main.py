@@ -172,3 +172,42 @@ def test_the_bids_routes_are_registered(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
     assert "/bids" in paths
     assert "/bids/{bid_id}" in paths
+
+
+def test_cors_allows_the_web_origin_and_the_dev_company_header(client: TestClient) -> None:
+    """A browser preflight from the web app must pass, custom header included; the shell at
+    :3000 could otherwise not call :8000 at all."""
+    response = client.options(
+        "/documents",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "x-dev-company,content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+    assert "x-dev-company" in response.headers["access-control-allow-headers"].lower()
+    assert response.headers["access-control-allow-credentials"] == "true"
+
+
+def test_cors_refuses_another_origin(client: TestClient) -> None:
+    response = client.options(
+        "/documents",
+        headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
+    )
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_the_web_origin_comes_from_settings(offline_settings: Settings) -> None:
+    env = offline_settings.env.model_copy(update={"web_origin": "https://app.crossbid.example"})
+    with TestClient(create_app(Settings(env=env, runtime=offline_settings.runtime))) as client:
+        response = client.options(
+            "/health",
+            headers={
+                "Origin": "https://app.crossbid.example",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    assert response.headers["access-control-allow-origin"] == "https://app.crossbid.example"

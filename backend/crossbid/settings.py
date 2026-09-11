@@ -220,6 +220,9 @@ class EnvSettings(BaseSettings):
     """How long a document's signed URL stays valid. The default is the cap."""
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "crossbid"
+    web_origin: str = "http://localhost:3000"
+    """The one browser origin allowed by CORS: the web app. Custom headers such as
+    `X-Dev-Company` need an explicit allow-list, so the middleware is built from settings."""
     verify_model_slugs: bool = False
     """Opt-in live check of every configured chat slug at startup (ADR-0005). Off by
     default: CI has no real key and unit tests must not open a socket."""

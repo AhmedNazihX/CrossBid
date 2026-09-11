@@ -38,6 +38,7 @@ STARTUP_ENV_VARS = (
     "ENV",
     "LANGSMITH_API_KEY",
     "VERIFY_MODEL_SLUGS",
+    "WEB_ORIGIN",
 )
 
 

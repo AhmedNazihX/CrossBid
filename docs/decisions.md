@@ -1058,11 +1058,23 @@ https://claude.ai/code/artifact/2c3a373f-69f0-4d80-896a-53715377862f. **Nothing 
 `components/matrix`, `components/pdf` or `components/verdict` exists**; that stays true until the
 user confirms.
 
+### The upload table, and the CORS gap it exposed
+
+S4.2.2 (stock shadcn, exempt from the gate) added `frontend/lib/use-polling.ts` — a reusable hook
+S4.5.1 will drive `GET /bids/{id}` with — and the documents table under `/company`, verified in a
+production build at 320 px with 44 px targets and a stub API. Its agent noticed what nobody had
+tested: the API had **no CORS middleware**, so a browser at `:3000` could not call `:8000` at all.
+`main.py` now allows exactly one origin (`WEB_ORIGIN`, already in Compose and `.env.example`) plus
+the `X-Dev-Company` header, and refuses any other origin — asserted by a preflight test. Until
+sign-in lands the web app names the tenant through `NEXT_PUBLIC_DEV_COMPANY_ID`, a build-time
+variable declared in the Dockerfile and forwarded by Compose.
+
 ### Consequences
 
-- 957 tests, 100% line and branch coverage, all offline; 7 `live` tests, of which the bid-run one
+- 960 tests, 100% line and branch coverage, all offline; 7 `live` tests, of which the bid-run one
   is unrun. `frontend/lib/api.ts` regenerated for `/documents` and `/bids`.
-- Increment 1's backend is complete. Remaining: the user's decision on the canvas (S4.0.1), then
-  S4.2.2 (upload table) and S4.5.1 (workspace polling + requirement list).
+- Increment 1's backend is complete and the upload table is in. Remaining: the user's decision
+  on the canvas (S4.0.1), then S4.5.1 (workspace polling + requirement list), and a `companies`
+  row for the demo tenant, which nothing creates yet.
 - Open: `MAX_UPLOAD_BYTES` (50 MB) is a router constant that should become
   `ingestion.max_upload_bytes`; the plan's status wording should be aligned to `BidStatus`.

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-import { EmptyState } from '@/components/common/empty-state'
+import { DocumentsPanel } from '@/components/documents/documents-panel'
 import { PageHeader } from '@/components/layout/page-header'
 
 export const metadata: Metadata = {
@@ -8,26 +8,21 @@ export const metadata: Metadata = {
 }
 
 /**
- * Placeholder. The profile form is S4.2.1 and the document upload table is
- * S4.2.2; this story only guarantees that navigation reaches the route and that
- * what the reader finds there tells them what happens next.
+ * The company screen: the document upload table (S4.2.2). The profile form — country,
+ * legal form, turnover, certificates, explanation language — is S4.2.1 and mounts above
+ * the documents when it lands.
+ *
+ * A server component on purpose: the panel below is the client boundary, so the header and
+ * metadata render without JavaScript.
  */
 export default function CompanyPage() {
   return (
     <>
       <PageHeader
         title="Company"
-        description="Your company's facts and documents. Every check is answered from these."
+        description="Your company's documents. Every check is answered from these, and every claim cites a page in them."
       />
-      <EmptyState
-        title="Company details are not editable yet"
-        description="This screen is still being built. It will hold your country, legal form, turnover and certificates, plus the documents that prove them — certificates, insurance, references, accounts. Crossbid answers each tender requirement from these facts, so nothing is claimed that you cannot evidence."
-        steps={[
-          'Nothing to do here today.',
-          'Gather the certificates and accounts you normally attach to a bid, so they are ready to upload.',
-        ]}
-        secondaryAction={{ href: '/dashboard', label: 'Back to dashboard' }}
-      />
+      <DocumentsPanel />
     </>
   )
 }

@@ -15,13 +15,16 @@ from `backend/` (`uv run uvicorn crossbid.main:app --reload`, port 8000). The we
 app talks to it over HTTP only; it never reaches the database, the LLM provider,
 or any secret.
 
-Today the app is the authenticated shell (S4.1.2) plus a public landing page.
-Navigation reaches Dashboard, Company, Settings and New bid; each of those
-screens shows an empty state that explains the next step. The screens themselves
-— sign-in, the company profile and upload table, TED search, the bid workspace,
-chat, and the developer console — arrive with stories S4.1.1–S4.6.4. There is no
-authentication yet: `(app)` renders for anyone, and the redirect for a signed-out
-visitor lands with S4.1.1.
+Today the app is the authenticated shell (S4.1.2), a public landing page, and
+the Company screen's document upload table (S4.2.2): upload a PDF by type and
+watch its row move through `uploaded → parsed → embedded → ready`, or `failed`
+with the reason and the count of pages that could not be read. Navigation
+reaches Dashboard, Company, Settings and New bid; the other screens show an
+empty state that explains the next step. Sign-in, the company profile form, TED
+search, the bid workspace, chat, and the developer console arrive with stories
+S4.1.1–S4.6.4. There is no authentication yet: `(app)` renders for anyone, and
+the redirect for a signed-out visitor lands with S4.1.1. Until then the S0.3.1
+dev bridge names the company — see Configuration.
 
 ## Tasks
 
@@ -74,13 +77,37 @@ const bid = await apiRequest('get', '/bids/{id}', { token, path: { id } }) // on
 
 It attaches `Authorization: Bearer <token>`, never sends cookies, and turns any
 non-2xx answer — or a transport failure, as `status === 0` — into an `ApiError`
-carrying `status`, `method`, `url` and the parsed `{ detail }` payload. The base
-URL comes from `NEXT_PUBLIC_API_URL` (inlined at build time), defaulting to
+carrying `status`, `method`, `url`, the parsed `{ detail }` payload and `detail`
+itself as a string. `describeApiError(error)` turns any thrown value into the one
+sentence to show the bidder — the API's `detail` verbatim when there is one. The
+base URL comes from `NEXT_PUBLIC_API_URL` (inlined at build time), defaulting to
 `http://localhost:8000`.
 
-It stops there on purpose: the Supabase session, React hooks, the 2-second
-`GET /bids/{id}` poll and multipart upload belong to their own stories (S4.1,
-E4), so callers pass the token in explicitly for now.
+File uploads pass `formData` instead of `body`; the option only type-checks on
+operations whose schema declares `multipart/form-data` (today `POST /documents`).
+
+**Dev bridge (S0.3.1).** While there is no sign-in, `buildHeaders` adds
+`X-Dev-Company: <uuid>` to every request when `NEXT_PUBLIC_DEV_COMPANY_ID` was
+set at build time — the one place the header is written. Unset, nothing is sent
+and the API's 401 `detail` is shown as-is.
+
+Feature-level helpers sit beside it: `lib/documents.ts` (typed `/documents`
+calls, the PDF / 50 MB / non-empty client-side check that mirrors the router) and
+`lib/use-polling.ts`, the reusable hook:
+
+```ts
+const { value, error, isPolling } = usePolling({
+  initialValue: document, // the 202 body
+  fetchLatest: (signal) => getDocument(document.id, signal),
+  isSettled: isDocumentSettled, // stops on `ready` | `failed`
+  intervalMs: 2_000, // default
+})
+```
+
+It chains timeouts rather than `setInterval`, so a slow answer never overlaps the
+next request; it keeps polling through transport errors and 5xx but stops for good
+on 401/403/404. S4.5.1 reuses it for `GET /bids/{id}`. The Supabase session and
+caching still belong to S4.1 and E4, so callers pass the token in explicitly.
 
 ## Layout
 
@@ -95,16 +122,21 @@ app/
   (app)/               authenticated shell — header, nav, advisory-only footer
     layout.tsx
     dashboard/         first-run empty state (the bid list is S4.4.1)
-    company/           placeholder (form S4.2.1, upload table S4.2.2)
+    company/           document upload form + table (S4.2.2); profile form is S4.2.1
     settings/          placeholder (language and tone S4.2.1, BYOK S4.6.4)
     bids/new/          placeholder (TED search to start is S4.3.1)
 components/
   layout/              app header, main nav, mobile nav, footer, page header,
                        skip link, and NAV_ITEMS — the one nav definition
   common/              EmptyState
-  ui/                  shadcn/ui primitives (button, card, sheet)
-lib/           api.ts (generated), api-client.ts (typed fetch wrapper),
-               utils.ts (shadcn `cn` re-export)
+  documents/           DocumentsPanel (loads the list, owns the live region),
+                       UploadForm, DocumentsTable, DocumentRow (polls itself),
+                       document-labels (kind/status words, badge variant)
+  ui/                  shadcn/ui primitives (alert, badge, button, card, input,
+                       label, native-select, sheet, table)
+lib/           api.ts (generated), api-client.ts (typed fetch wrapper, dev header),
+               documents.ts (typed /documents calls + upload validation),
+               use-polling.ts (the 2 s poll hook), utils.ts (shadcn `cn` re-export)
 public/        static assets
 ```
 
@@ -113,9 +145,9 @@ serves `/dashboard`.
 
 Planned: `components/matrix/`, `components/pdf/`, `components/verdict/`,
 `app/(auth)/login/`, `app/(app)/bids/[id]/`, `app/dev/` gated by
-`is_developer`, `lib/supabase.ts`, and the bid-polling hook. None of them exist
-yet — creating them ahead of their stories would be speculative, and the three
-`components/` folders are additionally gated on the S4.0.1 design confirmation.
+`is_developer`, and `lib/supabase.ts`. None of them exist yet — creating them
+ahead of their stories would be speculative, and the three `components/` folders
+are additionally gated on the S4.0.1 design confirmation.
 
 ### Adding a section to the navigation
 
@@ -134,9 +166,12 @@ npx shadcn@latest add button
 ```
 
 `components/ui/` currently holds `button`, `card` and `sheet` — the shell's
-primitives. They are ordinary source files (that is the point of
-shadcn/ui) and are formatted to this repo's Prettier config, so re-adding one
+primitives — plus `table`, `badge`, `input`, `label`, `native-select` and
+`alert` for the upload screen. They are ordinary source files (that is the point
+of shadcn/ui) and are formatted to this repo's Prettier config, so re-adding one
 with `--overwrite` produces a formatting diff until you run `npm run format`.
+The repo's own CLI (`./node_modules/.bin/shadcn add …`) adds no npm dependency
+for these; `package-lock.json` stays byte-identical.
 
 Note the S4.0.1 design gate in `docs/project-plan.md`: nothing under
 `components/matrix/`, `components/pdf/` or `components/verdict/` may be coded
@@ -145,10 +180,17 @@ are exempt because they are stock shadcn/ui.
 
 ## Configuration
 
-No environment variables are needed for the scaffold. Once S4.1 lands the app
-will read the Supabase URL, the Supabase anon key, and the API base URL from
-`NEXT_PUBLIC_*` variables; copy `infra/.env.example` and keep secrets out of
-anything `NEXT_PUBLIC_`-prefixed — the browser sees those.
+Two optional build-time variables, both inlined by Next.js and visible to the
+browser, so neither may ever hold a secret:
+
+| Variable                     | Purpose                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_API_URL`        | API base URL; defaults to `http://localhost:8000`                                                                                                                        |
+| `NEXT_PUBLIC_DEV_COMPANY_ID` | The company UUID sent as `X-Dev-Company` on every request while sign-in is not built (S0.3.1). The API accepts it only under `AUTH_MODE=dev`. Unset → no header, API 401 |
+
+Copy `infra/.env.example`; `make dev` passes both through Compose as build
+arguments, so changing either means rebuilding the `web` image. Once S4.1 lands
+the app also reads the Supabase URL and anon key from `NEXT_PUBLIC_*` variables.
 
 ## Docker
 

@@ -11,8 +11,9 @@ Startup order, in `lifespan`:
    unreachable database, by contrast, is a startup failure -- silently running without
    checkpoints would lose every paused bid.
 
-CORS, rate limiting and the routers arrive with the stories that need them (S0.3.1, S2.3.3,
-S3.1.1); see docs/project-plan.md.
+CORS allows exactly one origin -- the web app (`WEB_ORIGIN`) -- and the custom `X-Dev-Company`
+header the dev auth bridge reads; a browser at `:3000` could otherwise not reach `:8000` at all.
+Rate limiting arrives with S2.3.3.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from contextlib import asynccontextmanager
 from typing import Final
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from crossbid.agent.runner import BidRunner, resume_unfinished_runs
@@ -90,6 +92,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         description="Cross-border EU tender go/no-go qualification agent.",
         lifespan=lifespan,
+    )
+    # Imported here, not at module level: `auth` depends on this module's dependencies.
+    from crossbid.auth import DEV_COMPANY_HEADER
+
+    # Middleware is fixed at construction, so the origin is read from the settings passed
+    # in (or the process settings when none were), not from the lifespan's resolved copy.
+    origin = (settings if settings is not None else get_settings()).env.web_origin
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[origin],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", DEV_COMPANY_HEADER],
+        allow_credentials=True,
     )
 
     @app.get("/health", response_model=Health, tags=["meta"])

@@ -70,6 +70,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL:-}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_DEV_COMPANY_ID: ${NEXT_PUBLIC_DEV_COMPANY_ID:-}
     environment:
       NODE_ENV: production
     ports:
