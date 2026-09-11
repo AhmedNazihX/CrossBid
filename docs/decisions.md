@@ -1176,8 +1176,10 @@ cites when it implements the screen:
   shadcn files they replaced were removed; the sidebar shell replaced the top bar. `GET
   /documents/{id}/url` signs a file for the viewer; a citation click remounts the iframe on
   `#page=N`. Left honest rather than faked: buyer/deadline tags, evidence statuses and the
-  eCertis card (Increment 2), the verdict panel (Increment 3). Open housekeeping for the user:
-  four now-unused npm packages (`class-variance-authority`, `lucide-react`, `shadcn`,
-  `tw-animate-css`), `components.json`, and the scaffold's stale `public/*.svg` — removal touches
-  the lockfile and `dependencies.txt`, so it waits for a decision. Placeholder routes
+  eCertis card (Increment 2), the verdict panel (Increment 3). The shadcn leftovers were removed the same evening with the
+  user's approval — `class-variance-authority`, `lucide-react`, `shadcn`, `tw-animate-css`,
+  `components.json` and the scaffold's `public/*.svg` — and `dependencies.txt` regenerated; the
+  plan's tech-stack line now names the design system, with Radix kept for behaviour. The
+  landing artboard is implemented under `components/landing/` (public `/`), placeholders and
+  anchor-only links kept honest until real destinations exist. Placeholder routes
   `/certificates`, `/verdicts`, `/runs` exist only because the confirmed sidebar links to them.
