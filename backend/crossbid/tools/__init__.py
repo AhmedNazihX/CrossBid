@@ -11,8 +11,10 @@ tenant predicate every retrieval statement needs (ADR-0009), and a tool that rea
 database is built with one, never handed a global. That is what keeps "the agent searched
 the wrong tenant's documents" out of the space of possible bugs.
 
-The registry that reads `MANIFEST`, honours `runtime.enabled_tools` and binds the result to
-the model is S1.4.1; it lands once the tools it registers exist.
+`registry.py` (S1.4.1) is the only module that imports all of them: it discovers this
+package, builds exactly the tools `runtime.enabled_tools` names, and hands the list to the
+consumer that binds it to a model (`check_reqs`, F3.3). A tool is registered by existing --
+there is no list to add it to -- so the three names above are the whole contract.
 """
 
 from crossbid.tools.manifest import ToolContext, ToolManifest

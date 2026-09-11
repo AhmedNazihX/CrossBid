@@ -174,10 +174,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dev/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Developer settings
+         * @description What the agent may reach and how it is configured. Outside production only.
+         */
+        get: operations["read_dev_settings_dev_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AgentSettings
+         * @description Concurrency limits on the two fan-outs, each bounding calls to OpenRouter.
+         *
+         *     `extract_concurrency` is the deterministic one -- sections of `extract_reqs` (S3.2.1), a
+         *     fixed number of structured calls. `check_concurrency` is the agentic one -- per-requirement
+         *     ReAct loops in `check_reqs` (F3.3), each up to `max_tool_calls_per_requirement` calls.
+         *     Separate keys because the call shapes differ, so tuning one must not move the other.
+         */
+        AgentSettings: {
+            /** Extract Concurrency */
+            extract_concurrency: number;
+            /** Check Concurrency */
+            check_concurrency: number;
+            /** Max Tool Calls Per Requirement */
+            max_tool_calls_per_requirement: number;
+            /** Run Budget Seconds */
+            run_budget_seconds: number;
+            /** Run Budget Usd */
+            run_budget_usd: number;
+        };
         /**
          * BidDocumentResponse
          * @description One document of the bid, as the workspace lists it beside the matrix.
@@ -541,6 +582,40 @@ export interface components {
          */
         Decision: "go" | "conditional" | "no_go" | "insufficient_evidence";
         /**
+         * DevSettingsResponse
+         * @description The developer panel's read model. Runtime settings only — never the environment.
+         */
+        DevSettingsResponse: {
+            /** @description The OpenRouter slug in use for each role */
+            models: components["schemas"]["ModelSlugs"];
+            /**
+             * Available Models
+             * @description Slugs the picker may offer: the verified set, not OpenRouter's catalogue
+             */
+            available_models: string[];
+            /** Temperature */
+            temperature: number;
+            /** Max Tokens */
+            max_tokens: number;
+            /**
+             * System Prompt Set
+             * @description Whether a system prompt is configured. The text itself is never returned: it is the prompt-injection defence's standing instructions.
+             */
+            system_prompt_set: boolean;
+            /** @description Concurrency limits, the per-requirement tool budget and the run budgets */
+            agent: components["schemas"]["AgentSettings"];
+            /**
+             * Tools
+             * @description Every tool that exists, enabled or not, sorted by name
+             */
+            tools: components["schemas"]["ToolDescriptor"][];
+            /**
+             * Unbuilt Tools
+             * @description Names enabled in settings that no module provides yet — a story that has not landed. Listed rather than dropped, so 'off' and 'not built' stay distinct.
+             */
+            unbuilt_tools: string[];
+        };
+        /**
          * DocumentKind
          * @description What a stored PDF is.
          *
@@ -703,6 +778,20 @@ export interface components {
          */
         LegalForm: "gmbh" | "ug" | "ag" | "sarl" | "sas" | "sa" | "bv" | "sp_zoo" | "sole_trader" | "other";
         /**
+         * ModelSlugs
+         * @description Role -> OpenRouter slug. Every slug was confirmed with a live call (ADR-0004/0005).
+         */
+        ModelSlugs: {
+            /** Extract */
+            extract: string;
+            /** Cheap */
+            cheap: string;
+            /** Embed */
+            embed: string;
+            /** Judge */
+            judge: string;
+        };
+        /**
          * Requirement
          * @description One obligation, with the evidence trail back to the page it was read from.
          */
@@ -840,6 +929,37 @@ export interface components {
          * @enum {string}
          */
         Tone: "plain" | "formal" | "brief";
+        /**
+         * ToolDescriptor
+         * @description One tool as the panel shows it: its manifest, plus whether this process will bind it.
+         */
+        ToolDescriptor: {
+            /**
+             * Name
+             * @description The name the model calls the tool by
+             */
+            name: string;
+            /**
+             * Description
+             * @description The text the model decides on; written for it
+             */
+            description: string;
+            /**
+             * External
+             * @description True when a call leaves the process. Cached reference data is false.
+             */
+            external: boolean;
+            /**
+             * Default Enabled
+             * @description Whether the tool ships enabled in settings.default.yaml
+             */
+            default_enabled: boolean;
+            /**
+             * Enabled
+             * @description Whether this process will bind it, after any app_settings override
+             */
+            enabled: boolean;
+        };
         /**
          * TurnoverYear
          * @description One fiscal year's turnover in the contract's field of activity.
@@ -1150,6 +1270,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_dev_settings_dev_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevSettingsResponse"];
                 };
             };
         };

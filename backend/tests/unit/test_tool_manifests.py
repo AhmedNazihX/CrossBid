@@ -17,19 +17,20 @@ The two directions are not symmetric, deliberately:
 * A **module whose flag disagrees with the file** is never fine, in either direction: an
   enabled tool declaring itself off understates what the agent can reach, and a disabled one
   declaring itself on is the panel telling an operator something the runtime will not do.
+
+The sweep is `registry.tool_entries()`, not a walk of its own (S1.4.1). The registry already
+has to discover every tool in order to build the enabled ones, and a second discovery here
+could drift from it -- this file would then prove something true of a set of modules nobody
+binds. Importing the registry's makes the relation exact: what is asserted below is asserted
+about precisely the modules the agent can reach.
 """
 
 from __future__ import annotations
 
-import importlib
-import pkgutil
-from types import ModuleType
-
 import pytest
 
-import crossbid.tools
 from crossbid.settings import Settings
-from crossbid.tools import ToolManifest
+from crossbid.tools.registry import ToolEntry, tool_entries
 
 PENDING_TOOLS = frozenset({"search_ted", "currency_convert"})
 """Listed in `enabled_tools` with no module yet; Increment 4 (S4 TED, currency)."""
@@ -38,21 +39,13 @@ BUILT_TOOLS = frozenset({"company_rag_search", "tender_rag_search", "ecertis_evi
 """What discovery must find at minimum, so a sweep that finds nothing cannot pass silently."""
 
 
-def _tool_modules() -> list[ModuleType]:
-    """Every `crossbid.tools` submodule that exports a `MANIFEST`.
+TOOL_ENTRIES = tool_entries()
+"""The registry's own discovery: every `crossbid.tools` module exporting a `MANIFEST`.
 
-    Import-by-walk rather than a hand-kept list: the point of this file is to cover tools
-    nobody remembered to list. `manifest.py` and `rag.py` are shared machinery and export
-    none, so they drop out without being named.
-    """
-    modules = [
-        importlib.import_module(f"{crossbid.tools.__name__}.{info.name}")
-        for info in pkgutil.iter_modules(crossbid.tools.__path__)
-    ]
-    return [module for module in modules if hasattr(module, "MANIFEST")]
-
-
-TOOL_MODULES = _tool_modules()
+Import-by-walk rather than a hand-kept list, because the point of this file is to cover
+tools nobody remembered to list. `manifest.py`, `rag.py` and `registry.py` are shared
+machinery and export no manifest, so they drop out without being named.
+"""
 
 
 @pytest.fixture
@@ -60,18 +53,17 @@ def enabled_tools(offline_settings: Settings) -> tuple[str, ...]:
     return offline_settings.runtime.enabled_tools
 
 
-@pytest.mark.parametrize("module", TOOL_MODULES, ids=lambda module: module.__name__)
+@pytest.mark.parametrize("entry", TOOL_ENTRIES, ids=lambda entry: entry.module.__name__)
 def test_default_enabled_says_exactly_what_the_settings_file_says(
-    module: ModuleType, enabled_tools: tuple[str, ...]
+    entry: ToolEntry, enabled_tools: tuple[str, ...]
 ) -> None:
     """The flag is a claim about `enabled_tools`, so it is compared with `enabled_tools`."""
     # Arrange
-    manifest = module.MANIFEST
-    assert isinstance(manifest, ToolManifest)
+    manifest = entry.manifest
 
     # Assert
     assert manifest.default_enabled == (manifest.name in enabled_tools), (
-        f"{module.__name__} declares default_enabled={manifest.default_enabled} but "
+        f"{entry.module.__name__} declares default_enabled={manifest.default_enabled} but "
         f"settings.default.yaml {'lists' if manifest.name in enabled_tools else 'omits'} "
         f"{manifest.name!r}"
     )
@@ -80,11 +72,11 @@ def test_default_enabled_says_exactly_what_the_settings_file_says(
 def test_the_sweep_covers_every_tool_that_exists() -> None:
     """Guards the guard: a discovery that silently found nothing would pass every test above."""
     # Act
-    found = {module.MANIFEST.name for module in TOOL_MODULES}
+    found = {entry.manifest.name for entry in TOOL_ENTRIES}
 
     # Assert
     assert found >= BUILT_TOOLS, f"discovery missed {sorted(BUILT_TOOLS - found)}"
-    assert len(found) == len(TOOL_MODULES), "two modules export the same tool name"
+    assert len(found) == len(TOOL_ENTRIES), "two modules export the same tool name"
 
 
 def test_every_configured_name_is_either_built_or_a_named_pending_story(
@@ -92,7 +84,7 @@ def test_every_configured_name_is_either_built_or_a_named_pending_story(
 ) -> None:
     """`enabled_tools` may run ahead of the code, but only on purpose — a typo is not ahead."""
     # Act
-    unbuilt = set(enabled_tools) - {module.MANIFEST.name for module in TOOL_MODULES}
+    unbuilt = set(enabled_tools) - {entry.manifest.name for entry in TOOL_ENTRIES}
 
     # Assert
     assert unbuilt == set(PENDING_TOOLS) & set(enabled_tools), (

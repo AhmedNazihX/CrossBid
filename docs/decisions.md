@@ -1362,3 +1362,61 @@ canvas rather than assumed:
   1.72 MB). The served copy is that file byte for byte — identical `sha256`, one source of
   truth — and every constant above was re-measured against it: the ground is still
   `(250,250,250)` and the mark still runs x 18.80–81.15 %, y 36.67–63.15 %.
+
+---
+
+## ADR-0016 — The tool registry: what the agent may reach, and who may look
+
+**Date:** 2026-09-12 · **Stories:** S1.4.1 · **Status:** accepted
+
+### Decisions
+
+**Tools are discovered, not listed.** `tools/registry.py` walks `crossbid.tools` for modules
+exporting a `ToolManifest`. `build_enabled_tools(context, settings)` builds exactly the names in
+`runtime.enabled_tools` — **sorted by tool name, not by the YAML's line order**. Reordering the
+settings file must change *which* tools are bound, never the order the model is shown them;
+otherwise one bid's prompt differs from the next's for no reason anybody recorded.
+
+**A configured name with no module is skipped with one log line, not an error.** Two of the five
+names in `settings.default.yaml` (`search_ted`, `currency_convert`) are Increment 4 stories. At
+run time a typo and a not-yet-landed story are the *same observation* — a name nothing provides
+— so nothing in the registry could tell them apart, and refusing would kill a run because the
+YAML names next month's tool. The typo is caught instead at test time, by the manifest sweep
+that asserts every configured name is either built or one of the declared pending stories.
+
+**A tool that cannot be built propagates.** The build is eager. The tools the registry would
+otherwise drop silently are exactly the ones `check_reqs` cannot work without: a run that
+searched no tender would answer "no evidence found" for every requirement, which is a wrong
+answer indistinguishable from a right one. All three build failures (`bid_id` absent, `db`
+absent, malformed UUID) are caller bugs, not operator configuration.
+
+**`GET /dev/settings` reports behaviour, never environment.** The exclusion is a rule rather
+than per-field judgement: everything in `EnvSettings` is out, reusing the split `settings.py`
+already draws — secrets and deployment wiring in the environment, behaviour in `RuntimeSettings`.
+`ModelSlugs` and `AgentSettings` are reused verbatim, so a field added to either is behaviour by
+construction and cannot become an accidental leak. **`system_prompt` is excluded too**: it is
+S2.3.2's standing injection defence, and publishing its wording on an unauthenticated route
+hands anyone who can get a PDF into the pipeline the exact text to write around.
+`system_prompt_set: true` is reported instead, and a test asserts the payload carries neither a
+secret nor the prompt.
+
+**The gate is `ENV != production`, and the refusal is a 404.** S4.6.2's criterion is a
+developer-role check, but no role mechanism exists — auth is still the `X-Dev-Company` dev
+bridge, and "developer role via an env-var email list" is an open question in the plan. Rather
+than invent one, the route refuses in production the way `seed_dev_company.py` and
+`_refuse_dev_auth_in_production` do. The refusal is 404 with Starlette's own body, byte-identical
+to an unknown path, because a 403 confirms the route exists. No tenant header is required: the
+answer holds no tenant data, `X-Dev-Company` is self-asserted and so authorises nothing, and
+demanding it would turn the 404 into a 401 that gives the route away. S4.6.2 tightens this to a
+real role check with the environment gate staying underneath.
+
+### Consequences
+
+- The first criterion ("only enabled tools are bound when the graph builds") is tested on the
+  **list**, not on a bound model: `model.bind_tools(...)` would test langchain, not us.
+  `graph.py` is untouched — `check_reqs` does not exist yet, and a dead `tools=` seam would be
+  speculative. `build_enabled_tools` is the single seam S3.3.1 plugs into.
+- The registry does not pass the RAG tools' `embedder=`, so each built tool constructs its own
+  `EmbeddingsClient`. `rag.py` wants one client per run; that needs either a widened
+  `ToolContext` or a registry parameter, and S3.3.1 is the story that knows which.
+- 2346 tests, 100% coverage.
