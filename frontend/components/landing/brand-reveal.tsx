@@ -8,18 +8,27 @@ import Image from 'next/image'
  * instruction after the canvas was confirmed (ADR-0014), so it cites no artboard; the ADR
  * records the deviation.
  *
- * The source is `docs/design/canvas/CrossBid Logo Reveal.mp4` — 1920 × 1080, H.264, 8.0 s,
- * **no audio track**, which is what makes an autoplaying `muted` video unobjectionable:
- * there is no sound to suppress and none to restore. Everything else here follows from
- * measuring the file frame by frame through a canvas rather than guessing at it.
+ * The source is `docs/design/canvas/CrossBid Logo Reveal.mp4` — 1920 × 1080, H.264, **14.8 s**,
+ * **no audio track** (re-verified on this encode: 0 audio bytes decoded against 72 MB of
+ * video), which is what makes an autoplaying `muted` video unobjectionable: there is no
+ * sound to suppress and none to restore. Everything else here follows from measuring the
+ * file frame by frame through a canvas rather than guessing at it.
+ *
+ * **The clip is a palindrome, and only its first half is played.** The re-cut reveals the
+ * mark over 0–10.8 s and then *reverses itself* back to an empty frame by 14.5 s — the
+ * plateaus mirror exactly (47 005 mark px at 2.5–3.25 s against 47 008 at 11.75–12.5 s; the
+ * single 622 px dot at 0.75–1.25 s against 624 px at 13.75–14.0 s). That tail is built for
+ * seamless looping, and it is deliberately **not** played: see `REVEAL_HOLD_SECONDS` for the
+ * arithmetic, but the short version is that no window containing the reverse fits inside
+ * WCAG 2.2.2's five seconds, and running it would rest the hero on an empty band.
  *
  * **It is a band, not a box — and it is masked, not clipped.** The mark occupies only
- * x 18.80–81.15 % and y 36.67–63.15 % of the frame; the rest is ground at `#FAFAFA`, within
+ * x 18.12–81.87 % and y 36.39–63.52 % of the frame; the rest is ground at `#FAFAFA`, within
  * one value of `--surface-canvas`. Rendered whole and framed it read as a large empty card
  * with the mark lost in the middle, so the band is sized to the mark.
  *
  * But the clip's concentric rings run the **full height of the source frame** (measured
- * 0.000–0.998 from 1.5 s to 6.5 s, i.e. the source already clips them at its own edges), so
+ * 0.000–1.000 from 1.5 s to 4.0 s, i.e. the source already clips them at its own edges), so
  * a hard crop sliced them with a straight edge mid-animation. Opening the band to fit them
  * would make it 537 px tall instead of 216 and drop the mark to ~595 px, under the
  * headline's 678 px. Instead the video overflows the band and a radial mask fades it out:
@@ -27,15 +36,15 @@ import Image from 'next/image'
  * size of the mark, and nothing below it moves. The hero section's own `overflow-hidden`
  * contains the horizontal spill, so no viewport gains a scrollbar.
  *
- * **It stops the instant before the mark starts fading.** The clip ends by dissolving the
- * mark and then the frame, so running it out would leave a blank strip on the page — the
- * state it rests in for far longer than it plays. `REVEAL_HOLD_SECONDS` is measured, not
+ * **It stops on the first frame at which the mark is solid and the rings are gone.** Running
+ * the clip out would reverse the reveal and leave a blank strip on the page — the state it
+ * would rest in for far longer than it played. `REVEAL_HOLD_SECONDS` is measured, not
  * guessed.
  *
  * **There is no pause control, and none is required — but only just.** WCAG 2.2.2 governs
- * motion that plays automatically for *more than five seconds*. The window is 6.36 s of
+ * motion that plays automatically for *more than five seconds*. The window is 5.56 s of
  * source, which would cross that line; `PLAYBACK_RATE` is what keeps it on the right side,
- * at 4.89 s of wall clock. That is a real constraint and not a preference: slowing the rate,
+ * at 4.28 s of wall clock. That is a real constraint and not a preference: slowing the rate,
  * starting earlier or holding later re-crosses five seconds and silently reintroduces the
  * requirement for a visible pause control. Changing any of the three means checking the
  * product again.
@@ -46,46 +55,60 @@ const LOCKUP_SRC = '/logo-lockup.svg'
 /**
  * The played window, in seconds of source time.
  *
- * Measured on the shipped encode by sampling every frame through a canvas and separating
- * the mark (pixels under 200) from the clip's faint concentric rings (200–246).
+ * Measured on the shipped encode by sampling frames through a canvas at full 1920 × 1080,
+ * separating the mark (grayscale under 200) from the clip's faint rings (200–248).
  *
- * **The start** skips dead time: the frame carries 166 mark pixels — one dot — from 0.5 s
- * to 1.25 s, and nothing anyone would wait for.
+ * The 14.8 s clip is a full cycle: a dot, the mark drawing in, a long hold while two passes
+ * of rings come and go, then the whole thing **disassembling** back to a dot and looping.
+ * Only the forward half is wanted.
  *
- * **The hold** is the last frame on which the mark is still solid. The honest signal is not
- * the pixel *count*, which drifts upward to the very end, but their mean darkness: 23 flat
- * from 7.40 s through 7.56 s, then 25 at 7.58, 30 at 7.62, 56 at 7.68, 114 at 7.74, 190 at
- * 7.82, and gone by 7.84. So the dissolve begins at 7.58 and 7.56 is the last clean frame.
+ * **The start** skips dead time: one unchanging dot from 0.5 s through 1.26 s, with real
+ * motion from 1.28 s.
  *
- * The rings are long gone by then — they fade out well ahead of the mark, which is what
- * makes the held frame the mark alone on the canvas rather than the mark inside a halo.
- * Counting only faint pixels *outside* the mark's own bounding box separates them from the
- * anti-aliasing along the glyph edges: 4 040 at 5.00 s, 3 707 at 6.50, 1 807 at 6.75, then
- * **129 at 7.00** and flat after, while the glyph-edge count barely moves. So the rings
- * clear between 6.75 s and 7.00 s, half a second before the mark begins to dissolve.
+ * **The hold is the end of the reveal, not a trough in its middle.** An earlier pass held at
+ * 6.82 s — the floor of the *first* ring pass — because it fits five seconds at a gentler
+ * rate. It was wrong twice over: a *second* ring pass climbs away straight after it (peaking
+ * near 7.75 s), so the page rested mid-animation with rings still to come; and the user's
+ * instruction is explicit that it stops at the end.
+ *
+ * So the hold is the last frame on which the mark is still solid. The signal is not the
+ * pixel *count*, which is flat either side of the dissolve's first frames (≈123 580 at both
+ * 10.70 s and 10.82 s), but their mean darkness: 20.2 at 10.64, 20.5 at 10.68–10.70, then
+ * 21.2 at 10.72, 21.8 at 10.74, 23.2 at 10.78, 24.9 at 10.82, 27.2 at 10.84 and 34.3 by
+ * 10.92. **10.70 s is the last frame of the plateau**, and the rings have long since settled.
  */
-const REVEAL_START_SECONDS = 1.2
-const REVEAL_HOLD_SECONDS = 7.56
+const REVEAL_START_SECONDS = 1.26
+const REVEAL_HOLD_SECONDS = 10.7
 
 /**
- * Played slightly fast, for one reason: 6.36 s of source at 1.0x is over WCAG 2.2.2's
- * five-second threshold and would oblige a visible pause control on the hero. At 1.3x the
- * same 6.36 s takes 4.89 s of wall clock, so nothing is cut from the reveal and nothing is
- * owed. The lift is small enough to read as pace rather than as a fast-forward.
+ * Played fast, for one reason: **WCAG 2.2.2**.
+ *
+ * The window is 9.44 s of source. Anything over five seconds of automatic motion obliges a
+ * visible pause control on the hero, and the measured options are 1.3× → 7.26 s,
+ * 1.6× → 5.90 s, 1.9× → 4.97 s (too close to the line to defend) and 2.0× → **4.72 s**.
+ * Only the last leaves real margin, so the whole reveal plays and no control is owed.
+ *
+ * It is less brisk than the number sounds: the mark draws in over about 1.4 s of wall clock
+ * and the remaining ~3.3 s is rings settling behind a mark that no longer changes — the part
+ * where speed costs nothing. If it ever reads as rushed the fix is a slower rate **plus** a
+ * pause control; the two travel together, and neither is compliant without the other.
  */
-const PLAYBACK_RATE = 1.3
+const PLAYBACK_RATE = 2.0
 
 /**
  * The slice of the frame that is kept, as fractions of its width and height.
  *
- * Measured on the held frame: the mark's own ink runs x 18.80 %–81.15 % and y 36.67 %–
- * 63.15 %, so it is 62.34 % of the frame wide and 26.48 % tall — the rest is ground and a
+ * Measured on the held frame: the mark's own ink runs x 18.12 %–81.87 % and y 36.39 %–
+ * 63.52 %, so it is 63.75 % of the frame wide and 27.13 % tall — the rest is ground and a
  * few very faint concentric rings. Cropping both axes rather than only the vertical is what
  * lets the mark render large without the band swallowing the fold: inside this window the
- * mark fills 89 % of the width, against 62 % of the raw frame.
+ * mark fills 91 % of the width, against 64 % of the raw frame.
  *
- * The bounds keep roughly 3 % of air on every side so it does not read as trimmed, and the
- * lower one stays clear of the tagline — which is the `<h1>` word for word.
+ * The bounds keep about 3.1 % of air on each side and 2.4 % above and below, so it does not
+ * read as trimmed, and the lower one stays clear of the tagline — which is the `<h1>` word
+ * for word. The window is unchanged from the first encode: the re-cut moved the held frame
+ * but not the mark's geometry (the reveal's own last clean frame, 10.76 s, measures
+ * 18.85–81.15 % × 36.67–63.24 %, within a few tenths of a percent of the original).
  */
 const CROP_LEFT = 0.15
 const CROP_RIGHT = 0.85

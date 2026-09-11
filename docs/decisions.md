@@ -1320,8 +1320,24 @@ canvas rather than assumed:
   honest signal there is not the pixel *count* — which drifts up to the very end — but their
   mean darkness: 23 flat from 7.40 s through **7.56 s**, then 25 at 7.58, 30 at 7.62, 56 at
   7.68, 114 at 7.74, and gone by 7.84. The dissolve begins at 7.58.
-- The user re-cut the clip so the rings clear before the mark fades (2026-09-12), and the hold
-  sits after that: counting faint pixels *outside* the mark's bounding box, which separates
+- **The clip was re-cut again to 14.8 s (2026-09-12), and the hold moved to its end.** The new
+  file is a full cycle: a dot, the mark drawing in by 4.0 s, a long hold while *two* passes of
+  rings come and go, then the whole thing disassembling back to a dot and looping. An
+  intermediate pass had held at 6.82 s — the floor of the **first** ring pass — because it fit
+  five seconds at a gentler rate. That was wrong twice: a second ring pass climbs away
+  immediately after it (peaking near 7.75 s), so the page rested mid-animation with rings still
+  to come, and the user's instruction is explicit that it stops at the end. The hold is now
+  **10.70 s**, the last frame of the mark's solid plateau — mean darkness 20.2 at 10.64 and
+  20.5 at 10.68–10.70, then 21.2, 21.8, 23.2, 24.9, 27.2 and 34.3 by 10.92, while the pixel
+  count stays flat either side (≈123 580 at both 10.70 and 10.82), which is why darkness and
+  not count is the signal. **`PLAYBACK_RATE` rose to 2.0×**: the window is 9.44 s of source,
+  and 1.3× → 7.26 s, 1.6× → 5.90 s and 1.9× → 4.97 s are all at or over WCAG 2.2.2's line,
+  where only 2.0× → 4.72 s leaves margin. The mark still draws in over ~1.4 s; the remaining
+  ~3.3 s is rings settling behind a mark that no longer changes, where speed costs nothing.
+  If it ever reads as rushed the fix is a slower rate **plus** a pause control — the two travel
+  together, and neither is compliant alone.
+- An earlier re-cut (2026-09-11) had the rings clearing before the mark faded, and the hold
+  sat after that: counting faint pixels *outside* the mark's bounding box, which separates
   rings from glyph anti-aliasing, gives 4 040 at 5.00 s, 1 807 at 6.75 and **129 at 7.00**,
   flat thereafter. The held frame is the mark alone, not a mark inside a halo.
 - **`PLAYBACK_RATE = 1.3` is a WCAG constraint, not a style choice.** That window is 6.36 s of
