@@ -234,7 +234,7 @@ def doc(title, body):
 # ------------------------------------------------------------------------------- content
 
 TENDERS = [
-    ("Prestations de conseil en architecture d'entreprise et d'expertise technique", "618320-2026", "9 Oct · 28 days", "Review", "warning", "Ministère de l'éducation nationale", "FR → DE", "€3.9M", "conditional", "31 requirements · 3 unsupported"),
+    ("Prestations de conseil en architecture d'entreprise et d'expertise technique", "618320-2026", "9 Oct · 28 days", "Review", "warning", "Ministère de l'éducation nationale", "FR → DE", "€3.9M", "nogo", "recommended · awaiting your confirmation"),
     ("Beratungs- und Unterstützungsleistungen für IPv6-Migrationen — Los 2", "614251-2026", "6 Oct · 25 days", "Analysis", "info", "Beschaffungsamt des BMI", "DE", "—", "insufficient", "Checking 41 of 62"),
     ("Digital Communications Services", "606362-2026", "12 Oct · 31 days", "Confirmed", "success", "EASA, Cologne", "EN → DE", "€8.0M", "go", "20 requirements · all supported"),
 ]
@@ -261,7 +261,7 @@ def dashboard():
     <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">{button("Upload tender", "secondary", "sm", ic="plus")}{button("Bidder language: DE", "secondary", "sm", ic="lang")}<span style="flex: 1;"></span>{button("Thorough", "secondary", "sm", icon_right="chev")}</div>
   </div>"""
     quick = ""
-    for label, ic, solid in [("Analyse tender", "file", True), ("Upload documents", "upload", False), ("Map certificates", "layers", False), ("Check evidence", "fileCheck", False), ("Review verdict", "shield", True), ("Company profile", "db", False)]:
+    for label, ic, solid in [("Analyse tender", "file", True), ("Upload documents", "upload", False), ("Map certificates", "layers", False), ("Check evidence", "fileCheck", False), ("Review verdict", "shield", False), ("Company profile", "db", False)]:
         bg = "var(--surface-accent)" if solid else "var(--cb-blue-100)"
         fg = "#fff" if solid else "var(--cb-blue-500)"
         quick += (f'<a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">'
@@ -392,7 +392,7 @@ def source_panel():
       </div>
     </div>
     <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; font: var(--type-body-sm); color: var(--text-muted);">{icon(I["alert"], 14)}<span>Pages 19 and 23 have no text layer and were not read.</span></div>"""
-    return card("Source", body, ic="file", actions=f'<a href="#" style="display: inline-flex; gap: 6px; align-items: center; font: 500 13px/1 var(--font-sans); color: var(--text-secondary);">Open in new tab {icon(I["ext"], 14)}</a>', padding=20)
+    return card("Source", body, ic="file", actions=f'<a href="#" style="display: inline-flex; gap: 6px; align-items: center; font: 500 13px/1 var(--font-sans); color: var(--text-secondary);">Open source page {icon(I["ext"], 14)}</a>', padding=20)
 
 
 def matrix():
@@ -499,7 +499,7 @@ def phone():
     <h1 style="margin: 0; font: 600 18px/1.3 var(--font-sans); letter-spacing: -0.02em;">Prestations de conseil en architecture d'entreprise et d'expertise technique</h1>
     <div style="font: var(--type-body-sm); color: var(--text-secondary);">Ministère de l'éducation nationale · Due 9 Oct, 28 days</div>
     <div role="tablist" style="display: flex; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-card); overflow: hidden;">{seg("Matrix", True)}{seg("Source", False)}{seg("Verdict", False)}</div>
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span style="font-size: 13px;"><b>24</b><span style="color: var(--text-muted);"> / 31 supported</span> · <span style="color: var(--status-danger-text);">3 unsupported</span> · <span style="color: var(--status-warning-text);">4 partial</span></span><a href="#" style="font-size: 13px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 4px;">Filter {icon(I["chev"], 14)}</a></div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span style="font-size: 13px;"><b>24</b><span style="color: var(--text-muted);"> / 31 supported</span> · <span style="color: var(--status-danger-text);">3 unsupported</span> · <span style="color: var(--status-warning-text);">4 partial</span></span><a href="#" style="font-size: 13px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px; margin-right: -8px;">Filter {icon(I["chev"], 14)}</a></div>
   </div>
   <div style="flex: 1; overflow: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;">{cards}</div>
   <div style="border-top: 1px solid var(--border-default); padding: 12px 16px 24px; background: var(--surface-card);">{button("Review verdict", "primary", "lg", ic="shield", extra="width: 100%; height: 48px;")}</div>
