@@ -1,0 +1,869 @@
+{
+    "Id": {
+        "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+    },
+    "TypeCode": {
+        "value": "Ausschlussgrund\n (Automatische Übersetzung): Gründe im Zusammenhang mit der Zahlung von Steuern oder Sozialversicherungsbeiträgen\n (Automatische Übersetzung)"
+    },
+    "Name": {
+        "value": "Entrichtung von Steuern\n (Automatische Übersetzung)",
+        "languageID": "de"
+    },
+    "Description": {
+        "value": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen?\n (Automatische Übersetzung)",
+        "languageID": "de"
+    },
+    "DomainID": {
+        "value": "eproc"
+    },
+    "VersionID": {
+        "value": "3"
+    },
+    "LegislationReference": [
+        {
+            "Title": {
+                "value": "Richtlinie 2014/24/EU über die öffentliche Auftragsvergabe\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Richtlinie 2014/24/EU des Europäischen Parlaments und des Rates vom 26. Februar 2014 über die öffentliche Auftragsvergabe und zur Aufhebung der Richtlinie 2004/18/EG.\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "JurisdictionLevelCode": {
+                "value": "eu"
+            },
+            "Article": {
+                "value": "Artikel 57 Absatz 2\n (Automatische Übersetzung) / Artikel 57; Absatz 2 (Automatische Übersetzung)",
+                "languageID": "en"
+            },
+            "URI": {
+                "value": "http://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.L_.2014.094.01.0065.01.ENG"
+            }
+        },
+        {
+            "Title": {
+                "value": "Verteidigungsrichtlinie 2009/81/EG (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Richtlinie 2009/81/EG des Europäischen Parlaments und des Rates vom 13. Juli 2009 über die Koordinierung der Verfahren zur Vergabe bestimmter Bau-, Liefer- und Dienstleistungsaufträge in den Bereichen Verteidigung und Sicherheit und zur Änderung der Richtlinien 2004/17/EG und 2004/18/EG (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "JurisdictionLevelCode": {
+                "value": "eu"
+            },
+            "Article": {
+                "value": "Artikel 39; Absatz 2; Buchstabe g (Automatische Übersetzung)",
+                "languageID": "en"
+            },
+            "URI": {
+                "value": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32009L0081"
+            }
+        },
+        {
+            "Title": {
+                "value": "Richtlinie 2014/25/EU über die Vergabe öffentlicher Aufträge an Versorgungsunternehmen (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Richtlinie 2014/25/EU des Europäischen Parlaments und des Rates vom 26. Februar 2014 über die Vergabe von Aufträgen durch Auftraggeber im Bereich der Wasser-, Energie- und Verkehrsversorgung sowie der Postdienste und zur Aufhebung der Richtlinie 2004/17/EG (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "JurisdictionLevelCode": {
+                "value": "eu"
+            },
+            "Article": {
+                "value": "Artikel 80; Absatz 1 (Automatische Übersetzung)",
+                "languageID": "en"
+            },
+            "URI": {
+                "value": "https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX%3A32014L0025"
+            }
+        },
+        {
+            "Title": {
+                "value": "Richtlinie 2014/23/EU über die Konzessionsvergabe\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Richtlinie 2014/23/EU des Europäischen Parlaments und des Rates vom 26. Februar 2014 über die Konzessionsvergabe\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "JurisdictionLevelCode": {
+                "value": "eu"
+            },
+            "Article": {
+                "value": "Artikel 38; Absatz 5 (Automatische Übersetzung) / Artikel 38; Absatz 5 (Automatische Übersetzung)",
+                "languageID": "en"
+            },
+            "URI": {
+                "value": "https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX%3A32014L0023"
+            }
+        }
+    ],
+    "SubCriterion": [
+        {
+            "Id": {
+                "value": "a9e2613e-0891-4ae8-8fe4-db45eee58997"
+            },
+            "TypeCode": {
+                "value": "Ausschlussgrund\n (Automatische Übersetzung): Gründe im Zusammenhang mit der Zahlung von Steuern oder Sozialversicherungsbeiträgen\n (Automatische Übersetzung)"
+            },
+            "Name": {
+                "value": "Entrichtung von Steuern\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen?\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "DomainID": {
+                "value": "eproc"
+            },
+            "VersionID": {
+                "value": "3"
+            },
+            "LegislationReference": [
+                {
+                    "Title": {
+                        "value": "http://www.gesetze-im-internet.de/gwb/",
+                        "languageID": "de"
+                    },
+                    "Description": {
+                        "value": "Gesetz gegen Wettbewerbsbeschränkungen",
+                        "languageID": "de"
+                    },
+                    "JurisdictionLevelCode": {
+                        "value": "de"
+                    },
+                    "Article": {
+                        "value": "§ 123 Abs. 4 Satz 1 GWB\n",
+                        "languageID": "en"
+                    },
+                    "URI": {
+                        "value": "http://www.gesetze-im-internet.de/englisch_gwb/index.html"
+                    }
+                },
+                {
+                    "Title": {
+                        "value": "—\n (Automatische Übersetzung)",
+                        "languageID": "de"
+                    },
+                    "Description": {
+                        "value": "—\n (Automatische Übersetzung)",
+                        "languageID": "de"
+                    },
+                    "JurisdictionLevelCode": {
+                        "value": "de"
+                    },
+                    "Article": {
+                        "value": "– (Automatische Übersetzung)",
+                        "languageID": "en"
+                    },
+                    "URI": {}
+                },
+                {
+                    "Title": {
+                        "value": "EStG:\n (Automatische Übersetzung)",
+                        "languageID": "de"
+                    },
+                    "Description": {
+                        "value": "Einkommensteuergesetz (Automatische Übersetzung)",
+                        "languageID": "de"
+                    },
+                    "JurisdictionLevelCode": {
+                        "value": "de"
+                    },
+                    "Article": {
+                        "value": "§ 48 b Absatz 1 Satz 1 (Automatische Übersetzung)",
+                        "languageID": "en"
+                    },
+                    "URI": {
+                        "value": "http://www.gesetze-im-internet.de/estg/index.html"
+                    }
+                }
+            ],
+            "RequirementGroup": [
+                {
+                    "Id": {
+                        "value": "3b49fbd0-b790-41a8-a122-638234918d3c"
+                    },
+                    "TypeOfEvidence": [
+                        {
+                            "Id": {
+                                "value": "08900ccb-9a3c-4a2d-ba4c-25197539db6c"
+                            },
+                            "TypeCode": {
+                                "value": "Zertifikat"
+                            },
+                            "Name": {
+                                "value": "Freistellungsbescheinigung (Automatische Übersetzung)",
+                                "languageID": "de"
+                            },
+                            "Description": {
+                                "languageID": "en"
+                            },
+                            "VersionID": {
+                                "value": "1"
+                            },
+                            "FeeAmount": {},
+                            "EvidenceIntendedUse": {
+                                "description": {
+                                    "value": "All areas"
+                                }
+                            },
+                            "EvidenceIssuerParty": [
+                                {
+                                    "WebsiteURI": {},
+                                    "PartyName": [
+                                        {
+                                            "Name": {
+                                                "value": "zuständiges Finanzamt \n\n",
+                                                "languageID": "de"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "AddresseeDescription": {
+                                "value": "Für alle Einrichtungen  "
+                            },
+                            "JurisdictionLevelCode": [
+                                {
+                                    "value": "de"
+                                }
+                            ],
+                            "EvidenceDocumentReference": [
+                                {
+                                    "Attachment": {
+                                        "ExternalReference": {
+                                            "URI": {
+                                                "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/17007?lang=de"
+                                            }
+                                        }
+                                    },
+                                    "ValidityPeriod": {
+                                        "description": [
+                                            {
+                                                "value": "1 Jahre",
+                                                "languageID": "de"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Id": {
+                        "value": "19d3cd9e-877f-42c3-ac80-8e5163703d95"
+                    },
+                    "TypeOfEvidence": [
+                        {
+                            "Id": {
+                                "value": "932553f9-ab4c-49ba-a8c1-3115d5aa9917"
+                            },
+                            "TypeCode": {
+                                "value": "Zertifikat"
+                            },
+                            "Name": {
+                                "value": "Bescheinigung in Steuersachen ",
+                                "languageID": "de"
+                            },
+                            "Description": {
+                                "value": "entsprechend § 48b EStG; In Sachsen werden keine Bescheinigung von den Finanzämtern ausgestellt; hier erfolgt ein Nachweis durch Eigenerklärung. \n",
+                                "languageID": "de"
+                            },
+                            "VersionID": {
+                                "value": "2"
+                            },
+                            "FeeAmount": {},
+                            "EvidenceIntendedUse": {
+                                "description": {
+                                    "value": "All areas"
+                                }
+                            },
+                            "EvidenceIssuerParty": [
+                                {
+                                    "WebsiteURI": {},
+                                    "PartyName": [
+                                        {
+                                            "Name": {
+                                                "value": "zuständiges Finanzamt \n\n",
+                                                "languageID": "de"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "AddresseeDescription": {
+                                "value": "Für alle Einrichtungen  "
+                            },
+                            "JurisdictionLevelCode": [
+                                {
+                                    "value": "de"
+                                }
+                            ],
+                            "EvidenceDocumentReference": [
+                                {
+                                    "Attachment": {
+                                        "ExternalReference": {
+                                            "URI": {
+                                                "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20028?lang=de"
+                                            }
+                                        }
+                                    },
+                                    "ValidityPeriod": {
+                                        "description": [
+                                            {
+                                                "value": "1 Jahre",
+                                                "languageID": "de"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Id": {
+                        "value": "de5d060b-5a34-44a8-b222-7b67fffa78ed"
+                    },
+                    "TypeOfEvidence": [
+                        {
+                            "Id": {
+                                "value": "9b8c89ca-ae34-4f9d-bfd7-f90e90664b32"
+                            },
+                            "TypeCode": {
+                                "value": "Eigenerklärung"
+                            },
+                            "Name": {
+                                "value": "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt",
+                                "languageID": "de"
+                            },
+                            "Description": {
+                                "value": "In Zweifelsfällen kann die Vorlage eines Auszuges aus dem Bundes- und/oder Gewerbezentralregister gefordert werden. ",
+                                "languageID": "de"
+                            },
+                            "VersionID": {
+                                "value": "3"
+                            },
+                            "FeeAmount": {},
+                            "EvidenceIntendedUse": {
+                                "description": {
+                                    "value": "All areas"
+                                }
+                            },
+                            "AddresseeDescription": {
+                                "value": "Für alle Einrichtungen  "
+                            },
+                            "JurisdictionLevelCode": [
+                                {
+                                    "value": "de"
+                                }
+                            ],
+                            "EvidenceDocumentReference": [
+                                {
+                                    "Attachment": {
+                                        "ExternalReference": {
+                                            "URI": {
+                                                "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/19910?lang=de"
+                                            }
+                                        }
+                                    },
+                                    "ValidityPeriod": {
+                                        "description": [
+                                            {
+                                                "value": "Nur für die genannte Ausschreibung  ",
+                                                "languageID": "de"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Id": {
+                        "value": "e5533a56-d9c6-4235-8bea-bdbb08cbe097"
+                    },
+                    "TypeOfEvidence": [
+                        {
+                            "Id": {
+                                "value": "be72adb0-2a8e-4faf-bd60-afd69dafb4b3"
+                            },
+                            "TypeCode": {
+                                "value": "Zertifikat"
+                            },
+                            "Name": {
+                                "value": "Präqualifikationsverzeichnis VOB",
+                                "languageID": "de"
+                            },
+                            "Description": {
+                                "value": "Folgende Leitlinie beschreibt Regelungen zur bundesweit einheitlichen Durchführung eines Präqualifikationsverfahrens bei öffentlichen Bauaufträgen: https://www.zert-bau.de/fileadmin/user_upload/leitlinie_mit_Anlagen.pdf \n",
+                                "languageID": "de"
+                            },
+                            "VersionID": {
+                                "value": "2"
+                            },
+                            "FeeAmount": {
+                                "value": 390.0,
+                                "currencyID": "€"
+                            },
+                            "EvidenceIntendedUse": {
+                                "description": {
+                                    "value": "All areas"
+                                }
+                            },
+                            "EvidenceIssuerParty": [
+                                {
+                                    "WebsiteURI": {
+                                        "value": "http://www.pq-verein.de"
+                                    },
+                                    "PartyName": [
+                                        {
+                                            "Name": {
+                                                "value": "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+                                                "languageID": "de"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "AddresseeDescription": {
+                                "value": "Für alle Einrichtungen  "
+                            },
+                            "JurisdictionLevelCode": [
+                                {
+                                    "value": "de"
+                                }
+                            ],
+                            "EvidenceDocumentReference": [
+                                {
+                                    "Attachment": {
+                                        "ExternalReference": {
+                                            "URI": {
+                                                "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20980?lang=de"
+                                            }
+                                        }
+                                    },
+                                    "ValidityPeriod": {
+                                        "description": [
+                                            {
+                                                "value": "Unbegrenzt",
+                                                "languageID": "de"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Id": {
+                        "value": "2dd9e478-1545-4b6e-91f2-d60bcd480520"
+                    },
+                    "TypeOfEvidence": [
+                        {
+                            "Id": {
+                                "value": "095c30f1-f629-4cea-b6da-668ef3efc29a"
+                            },
+                            "TypeCode": {
+                                "value": "Zertifikat"
+                            },
+                            "Name": {
+                                "value": "Berliner Unternehmer- und Lieferantenverzeichnis",
+                                "languageID": "de"
+                            },
+                            "Description": {
+                                "value": "Eintragung in das Unternehmer- und Lieferantenverzeichnis für öffentliche Aufträge des Landes Berlins nach Durchführung eines Präqualifikationsverfahrens beruht auf Vorlage folgender Nachweise:   https://ssl.stadtentwicklung.berlin.de/ULVAuskunft/formulare2018.shtml\n",
+                                "languageID": "de"
+                            },
+                            "VersionID": {
+                                "value": "1"
+                            },
+                            "FeeAmount": {
+                                "value": 179.0,
+                                "currencyID": "€"
+                            },
+                            "EvidenceIntendedUse": {
+                                "description": {
+                                    "value": "All areas"
+                                }
+                            },
+                            "EvidenceIssuerParty": [
+                                {
+                                    "WebsiteURI": {
+                                        "value": "https://ssl.stadtentwicklung.berlin.de/ULVAuskunft/index.shtml"
+                                    },
+                                    "PartyName": [
+                                        {
+                                            "Name": {
+                                                "value": "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin\n",
+                                                "languageID": "de"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "AddresseeDescription": {
+                                "value": "Für alle Einrichtungen  "
+                            },
+                            "JurisdictionLevelCode": [
+                                {
+                                    "value": "de"
+                                }
+                            ],
+                            "EvidenceDocumentReference": [
+                                {
+                                    "Attachment": {
+                                        "ExternalReference": {
+                                            "URI": {
+                                                "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20024?lang=de"
+                                            }
+                                        }
+                                    },
+                                    "ValidityPeriod": {
+                                        "description": [
+                                            {
+                                                "languageID": "de"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Id": {
+                        "value": "8695ba94-bade-48e8-89dd-8c60695a8876"
+                    },
+                    "TypeOfEvidence": [
+                        {
+                            "Id": {
+                                "value": "64520c62-ea9c-4b81-b035-89c2cf924284"
+                            },
+                            "TypeCode": {
+                                "value": "Zertifikat"
+                            },
+                            "Name": {
+                                "value": "Amtliches Verzeichnis AVPQ",
+                                "languageID": "de"
+                            },
+                            "Description": {
+                                "value": "Eintragung in das amtliche Verzeichnis nach Durchführung eines bundesweit einheitlichen Präqualifikationsverfahrens für öffentlichen Liefer- und Dienstleistungsaufträge beruht auf Volage folgender Nachweise:  https://www.amtliches-verzeichnis.ihk.de/Eignungsnachweise.aspx\n",
+                                "languageID": "de"
+                            },
+                            "VersionID": {
+                                "value": "1"
+                            },
+                            "FeeAmount": {
+                                "value": 215.0,
+                                "currencyID": "€"
+                            },
+                            "EvidenceIntendedUse": {
+                                "description": {
+                                    "value": "All areas"
+                                }
+                            },
+                            "EvidenceIssuerParty": [
+                                {
+                                    "WebsiteURI": {},
+                                    "PartyName": [
+                                        {
+                                            "Name": {
+                                                "value": "Industrie- und Handelskammern\n",
+                                                "languageID": "de"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "AddresseeDescription": {
+                                "value": "Für alle Einrichtungen  "
+                            },
+                            "JurisdictionLevelCode": [
+                                {
+                                    "value": "de"
+                                }
+                            ],
+                            "EvidenceDocumentReference": [
+                                {
+                                    "Attachment": {
+                                        "ExternalReference": {
+                                            "URI": {
+                                                "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20023?lang=de"
+                                            }
+                                        }
+                                    },
+                                    "ValidityPeriod": {
+                                        "description": [
+                                            {
+                                                "value": "1 Jahre",
+                                                "languageID": "de"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Id": {
+                        "value": "f598b87c-ee69-47d0-9c22-bfe548b656d6"
+                    },
+                    "TypeOfEvidence": [
+                        {
+                            "Id": {
+                                "value": "11799fed-d3a3-4fba-b8cd-8d259ad9ad12"
+                            },
+                            "TypeCode": {
+                                "value": "Zertifikat"
+                            },
+                            "Name": {
+                                "value": "Auszug aus dem Bundeszentralregister / Führungszeugnis ",
+                                "languageID": "de"
+                            },
+                            "Description": {
+                                "value": "\"Ein Führungszeugnis kostet 13,00 EUR. Es bezieht sich immer auf Verurteilungen von natürliche Personen. \nEin Europäisches Führungszeugnis kostet 17,00 EUR.\"\n",
+                                "languageID": "de"
+                            },
+                            "VersionID": {
+                                "value": "1"
+                            },
+                            "FeeAmount": {
+                                "value": 17.0,
+                                "currencyID": "€"
+                            },
+                            "EvidenceIntendedUse": {
+                                "description": {
+                                    "value": "All areas"
+                                }
+                            },
+                            "EvidenceIssuerParty": [
+                                {
+                                    "WebsiteURI": {
+                                        "value": "https://www.bundesjustizamt.de"
+                                    },
+                                    "PartyName": [
+                                        {
+                                            "Name": {
+                                                "value": "Bundesamt für Justiz \n",
+                                                "languageID": "de"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "AddresseeDescription": {
+                                "value": "Für alle Einrichtungen  "
+                            },
+                            "JurisdictionLevelCode": [
+                                {
+                                    "value": "de"
+                                }
+                            ],
+                            "EvidenceDocumentReference": [
+                                {
+                                    "Attachment": {
+                                        "ExternalReference": {
+                                            "URI": {
+                                                "value": "https://ec.europa.eu/tools/ecertis/#/evidence/detail/20025?lang=de"
+                                            }
+                                        }
+                                    },
+                                    "ValidityPeriod": {
+                                        "description": [
+                                            {
+                                                "languageID": "de"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "ParentCriterion": {
+                "Id": {
+                    "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+                },
+                "TypeCode": {
+                    "value": "Ausschlussgrund\n (Automatische Übersetzung): Gründe im Zusammenhang mit der Zahlung von Steuern oder Sozialversicherungsbeiträgen\n (Automatische Übersetzung)"
+                },
+                "Name": {
+                    "value": "Entrichtung von Steuern\n (Automatische Übersetzung)",
+                    "languageID": "de"
+                },
+                "Description": {
+                    "value": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen?\n (Automatische Übersetzung)",
+                    "languageID": "de"
+                },
+                "DomainID": {
+                    "value": "eproc"
+                },
+                "VersionID": {
+                    "value": "3"
+                }
+            }
+        },
+        {
+            "Id": {
+                "value": "c1c43491-2d13-4153-b5ce-d2544f1965a9"
+            },
+            "TypeCode": {
+                "value": "Ausschlussgründe: Gründe im Zusammenhang mit der Entrichtung von Steuern oder Sozialversicherungsbeiträgen"
+            },
+            "Name": {
+                "value": "Bescheinigung in Steuersachen (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "languageID": "en"
+            },
+            "DomainID": {
+                "value": "eproc"
+            },
+            "VersionID": {
+                "value": "1"
+            },
+            "LegislationReference": [
+                {
+                    "Title": {
+                        "value": "—\n (Automatische Übersetzung)",
+                        "languageID": "de"
+                    },
+                    "Description": {
+                        "value": "—\n (Automatische Übersetzung)",
+                        "languageID": "de"
+                    },
+                    "JurisdictionLevelCode": {
+                        "value": "de"
+                    },
+                    "Article": {
+                        "value": "– (Automatische Übersetzung)",
+                        "languageID": "en"
+                    },
+                    "URI": {}
+                }
+            ],
+            "ParentCriterion": {
+                "Id": {
+                    "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+                },
+                "TypeCode": {
+                    "value": "Ausschlussgrund\n (Automatische Übersetzung): Gründe im Zusammenhang mit der Zahlung von Steuern oder Sozialversicherungsbeiträgen\n (Automatische Übersetzung)"
+                },
+                "Name": {
+                    "value": "Entrichtung von Steuern\n (Automatische Übersetzung)",
+                    "languageID": "de"
+                },
+                "Description": {
+                    "value": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen?\n (Automatische Übersetzung)",
+                    "languageID": "de"
+                },
+                "DomainID": {
+                    "value": "eproc"
+                },
+                "VersionID": {
+                    "value": "3"
+                }
+            }
+        },
+        {
+            "Id": {
+                "value": "bae372a7-1d15-4120-8d58-eedd1d512b5c"
+            },
+            "TypeCode": {
+                "value": "Ausschlussgründe: Gründe im Zusammenhang mit der Entrichtung von Steuern oder Sozialversicherungsbeiträgen"
+            },
+            "Name": {
+                "value": "Verpflichtung zur Zahlung von Steuern, Abgaben, nicht ordnungsgemäß erfüllt",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "\"Der öffentliche Auftraggeber schließt ein Unternehmen von der Teilnahme an\neinem Vergabeverfahren aus, wenn\n1. das Unternehmen seinen Verpflichtungen zur Zahlung von Steuern, Abgaben\nund Beiträgen zur Sozialversicherung nicht nachgekommen ist und dies durch\neine rechtskräftige Gerichts- oder bestandskräftige Verwaltungsentscheidung\nfestgestellt wurde oder 2. die öffentlichen Auftraggeber auf sonstige geeignete Weise die Verletzung einer Verpflichtung nach Nummer 1 nachweisen können.\"\n",
+                "languageID": "de"
+            },
+            "DomainID": {
+                "value": "eproc"
+            },
+            "VersionID": {
+                "value": "1"
+            },
+            "LegislationReference": [
+                {
+                    "Title": {
+                        "value": "http://www.gesetze-im-internet.de/gwb/",
+                        "languageID": "de"
+                    },
+                    "Description": {
+                        "value": "Gesetz gegen Wettbewerbsbeschränkungen",
+                        "languageID": "de"
+                    },
+                    "JurisdictionLevelCode": {
+                        "value": "de"
+                    },
+                    "Article": {
+                        "value": "§ 123 Abs. 4 Satz 1 GWB\n",
+                        "languageID": "en"
+                    },
+                    "URI": {
+                        "value": "http://www.gesetze-im-internet.de/englisch_gwb/index.html"
+                    }
+                }
+            ],
+            "ParentCriterion": {
+                "Id": {
+                    "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+                },
+                "TypeCode": {
+                    "value": "Ausschlussgrund\n (Automatische Übersetzung): Gründe im Zusammenhang mit der Zahlung von Steuern oder Sozialversicherungsbeiträgen\n (Automatische Übersetzung)"
+                },
+                "Name": {
+                    "value": "Entrichtung von Steuern\n (Automatische Übersetzung)",
+                    "languageID": "de"
+                },
+                "Description": {
+                    "value": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen?\n (Automatische Übersetzung)",
+                    "languageID": "de"
+                },
+                "DomainID": {
+                    "value": "eproc"
+                },
+                "VersionID": {
+                    "value": "3"
+                }
+            }
+        }
+    ],
+    "ParentCriterion": {
+        "Id": {
+            "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+        },
+        "TypeCode": {
+            "value": "Ausschlussgrund\n (Automatische Übersetzung): Gründe im Zusammenhang mit der Zahlung von Steuern oder Sozialversicherungsbeiträgen\n (Automatische Übersetzung)"
+        },
+        "Name": {
+            "value": "Entrichtung von Steuern\n (Automatische Übersetzung)",
+            "languageID": "de"
+        },
+        "Description": {
+            "value": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen?\n (Automatische Übersetzung)",
+            "languageID": "de"
+        },
+        "DomainID": {
+            "value": "eproc"
+        },
+        "VersionID": {
+            "value": "3"
+        }
+    }
+}

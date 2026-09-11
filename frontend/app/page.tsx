@@ -15,6 +15,7 @@ import { TrustLine } from '@/components/landing/trust-line'
  * section by section in the artboard's order. Static marketing content: nothing here calls
  * the API. The way into the app is "Analyse a tender" (`/bids/new`) and, until sign-in
  * lands with S4.1.1, "Sign in" (`/dashboard`).
+
  */
 export default function LandingPage() {
   return (

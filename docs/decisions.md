@@ -1183,3 +1183,165 @@ cites when it implements the screen:
   landing artboard is implemented under `components/landing/` (public `/`), placeholders and
   anchor-only links kept honest until real destinations exist. Placeholder routes
   `/certificates`, `/verdicts`, `/runs` exist only because the confirmed sidebar links to them.
+
+---
+
+## ADR-0015 — Increment 2's foundations: tools, company memory, the German overlay, and the fixtures that score them
+
+**Date:** 2026-09-11 · **Stories:** S1.1.2, S2.4.1, S2.4.2, S6.3, S6.4 · **Status:** accepted
+
+### Context
+
+Increment 2 delivers the matrix in the browser. Its critical path is S1.4.1 (tool registry) →
+S3.3.1 (`check_reqs`) → S4.5.1's matrix-row criterion, and all three sit behind the tools and
+the company facts that the agent reaches for. Those, plus the two content wait-fillers, have no
+dependency on each other, so five stories were built in parallel by separate agents against one
+contract written first: `crossbid/tools/manifest.py`.
+
+### Decisions
+
+**1. A tool declares itself, and is handed its scope.** `ToolManifest` (name, description,
+`external`, `default_enabled`) is what the registry will read and `GET /dev/settings` will
+list; `external` is the field an operator actually needs, because it says the tool opens a
+socket. `ToolContext` carries `company_id`, `bid_id` and the connection source, so a tool that
+reaches Postgres **cannot be built without a tenant** — `tender_rag_search.build_tool` raises
+at build time when `bid_id` is `None` rather than quietly searching every bid.
+
+**2. Retrieval joins `documents` rather than issuing a second query.** `Evidence` needs a
+document *name* for a citation a reviewer can click, and `ChunkMatch` had only an id. Both
+search statements now join, which forced every column to be table-qualified — `documents` has
+its own `id`, `name`, `pages` **and `company_id`**. `TENANT_PREDICATE` therefore lost its
+leading `where` and the per-statement test got stricter, pinning
+`where <chunk table>.company_id = %(company_id)s`. The join repeats the tenant in its `on`
+clause: redundant while the foreign keys hold, free, and it stops a mislinked row from putting
+another tenant's file name into a citation. Cosine `distance` keeps its name and direction;
+only the tool's `score` is the similarity, converted in exactly one place.
+
+**3. The bidder's language is a UUID-keyed overlay, not a second cache.** S1.1.2 needs German.
+eCertis's undocumented `?lang=de` was probed live and **returns byte-identical UUIDs** across
+languages — EU criteria, national sub-criteria and evidences alike — and the three id spaces
+are mutually disjoint (56 + 172 + 89 = 317, zero collisions). So one flat map keyed on the UUID
+serves all three levels. `l10n_de.json` is committed beside the English cache and
+`CACHE_SCHEMA_VERSION` is deliberately **not** bumped: `criteria.json`, `evidence_de.json` and
+`evidence_fr.json` stay byte-identical, which is what protects S1.1.1's "a second build changes
+nothing" property and the enum S1.1.3 generates from them. Run time still opens no socket.
+
+Neither language is authoritative: eCertis's *English* payloads contain untranslated German
+prose, and its German payloads keep native German terms unmarked while stamping
+`(Automatische Übersetzung)` on machine translations. The overlay is an addition, never a
+replacement, and `lookup_evidence` never raises — a country with no entry answers `not_found`.
+
+**4. The company profile splits by what the database depends on.** Scalars that carry a check
+constraint or get joined (`country`, `legal_form`, `tone`, `language`, `name`) stay columns;
+the variable-length lists (turnover, certificates) and the free-text registration fields go in
+the existing `profile` jsonb. `COLUMN_FIELDS` and `JSONB_FIELDS` are asserted to partition
+`CompanyProfile` exactly, so a field added later must be placed deliberately rather than
+silently dropped on save. No migration was needed. Certificate expiry is **derived on the
+response**, never stored, so `CompanyProfile` stays frozen.
+
+`PUT`, not `PATCH`: S4.2.1 is one form that loads the whole profile and saves it whole, and a
+merge has no answer for two id-less lists. **When the row saves but the LangGraph Store write
+fails the route answers 200 with a `warning` field** (user decision, 2026-09-11): the save
+genuinely happened, a 5xx would tell the bidder their facts were lost, and `PUT` is idempotent
+so saving again repairs the memory. The failure is still logged with the company id.
+
+**5. The demo pack and the golden labels are generated, committed and checked.** S6.3's ten
+German PDFs are built by a committed script from two reviewable YAML inputs, byte-identical on
+re-run (`no_new_id=True` plus emptied metadata — PyMuPDF's fresh trailer `/ID` was the only
+non-determinism). Every page carries `MUSTERDOKUMENT — Demodaten, kein amtliches Dokument`,
+every issuer and number is invented, and three tests assert the marker page by page through the
+repo's own parser. The `Freistellungsbescheinigung` is deliberately expired so S2.4.1's flag
+has something to catch.
+
+S6.4's labels are **LLM drafts** (`labelled_by: llm_draft`, `verified_by: pending`) and the
+story stays open until a human verifies them. What makes them safe to commit unverified is
+`test_golden_labels.py`: for all 257 labelled requirements it re-opens the cited PDF and
+asserts the quote appears verbatim on the cited page, under `extract_reqs._is_verbatim` —
+imported, not reimplemented. A fabricated quote or a wrong page cannot pass CI.
+
+### Consequences
+
+- **SP.1's prototype is superseded and was partly wrong.** Run through the repo's own parser,
+  3 of its 21 quotes fail verbatim matching (one contains a `[...]` elision, two join a heading
+  to a table cell across a `<br>`). It claimed 3 requirement-bearing documents in the DE pack;
+  there are **18**.
+- **Any scorer must filter the DE golden file on `stage: bid_eligibility` first.** 13 of its 143
+  scored rows are `contract_performance`, kept in `requirements` on purpose so S3.2.3 can score
+  ADR-0003's stage filter in both directions. Unfiltered, recall reads 13 rows low.
+- **The FR fixture independently confirms ADR-0007.** All 30 `ccv:Criterion` UUIDs in the
+  buyer's published DUME are members of the generated EU-level `EcertisCriterionId` Literal, so
+  8 FR labels carry a criterion id read off the document with no inference at all. The EN
+  fixture carries **zero** ids on purpose — EASA does not use the ESPD (TS p.18 fn 12).
+- **EN exclusion-ground recall is not yet scorable.** All 14 grounds live in `.docx` annexes and
+  the parser is PDF-only, so only the umbrella Art. 138(1) row is labelled.
+- 2 251 tests, 100 % coverage, all offline. S1.4.1 and S3.3.1 can now be built against real
+  manifests.
+
+### Two conventions the review forced, worth naming
+
+**A check-constrained column is mirrored in the Pydantic field that writes it.**
+`CompanyProfile.country` was `min_length=2, max_length=2` while `companies.country` carries
+`check (country ~ '^[a-z]{2}$')`, so `{"country": "DE"}` passed the schema and died as a
+`CheckViolation` — a 500 with a traceback, from a route whose docstring promises a 422 naming
+the field. S2.4.1 is what first exposed that column to client input; before it, the only writer
+hard-coded `"de"`. The regex is now on the field, and `test_migrations.py` pulls every
+`check (col ~ '…')` out of the migrations and fails if one has no Pydantic mirror, beside the
+enum parity checks that already do this for the `in (...)` columns. `"DE"` is **rejected, not
+lower-cased**: a `PUT` that rewrote its own body would answer with something the caller never
+sent, and the pattern reaches the generated client, so the form can say so first.
+
+**`zz` is the unknown country.** `lookup_evidence` promises totality — S3.3.1 calls it without
+a try/except — but `EvidenceAnswer.country` was an unconstrained `str`, so `"deu"` produced an
+answer that then raised `ValidationError` inside the ReAct loop when converted to an
+`EcertisEvidence`. Anything that is not two ASCII letters now normalises to `zz` (ISO 3166-1
+user-assigned, CLDR "Unknown Region") and answers `not_found`. It doubles as the guard on the
+only caller-controlled string that becomes a cache filename.
+
+**`tests/conftest.py` is the only shared ground between test modules.** Two incompatible
+`FakeConnectionSource` families had grown — one in `conftest.py` modelling
+`connection.cursor()`, one in `test_documents_readmodel.py` modelling `connection.execute()` —
+and the stories written in parallel imported whichever they found, so the fake that every
+ADR-0009 tenant-scope assertion runs through was two artefacts. There is now one, and
+`test_conftest_is_the_only_shared_ground.py` walks every test file's AST and fails on any
+import of a `test_*` module.
+
+### Also in this commit — the landing page opens with the logo reveal
+
+Not a story. The user supplied `CrossBid Logo Reveal.mp4` and asked for it on the landing page,
+then for it seamless and in the hero. It is the **one UI component that cites no artboard**,
+which ADR-0014's rule otherwise requires; recorded here as the deviation.
+
+What the file actually contains decided every parameter, measured frame by frame through a
+canvas rather than assumed:
+
+- The clip **does not end on the logo** — it fades back to an empty frame, 5.98 % ink at
+  7.80 s and **0.00 % at 7.90**. Playback is a window, `1.2 s → 4.6 s`: the opening carries a
+  single dot (652 non-white pixels at both 0.8 s and 1.2 s), the mark is drawn and flat from
+  4.0 s (122 885 → 123 632 → 123 970), and the tagline that follows is the `<h1>` word for
+  word — which is also why the crop stops above it.
+- **3.4 s of motion is under WCAG 2.2.2's five-second line**, so no pause control is required
+  and the hero stays clean. Widening the window past five seconds reintroduces the requirement.
+- The hold is watched with `requestAnimationFrame`, not `timeupdate`: at ~4 ticks a second the
+  event overshot to 7.93 s, a quarter-second into the fade.
+- **Seamlessness is arithmetic, not taste.** The clip's ground is opaque `#FAFAFA`, which punched
+  a rectangle through the hero's grid. `mix-blend-mode: multiply` takes white to transparent,
+  but multiply is a product: 250 over 250 lands on 245, a measured 4-value step at the band's
+  edge. `brightness(255/250)` lifts the ground to true white first, where multiply is the
+  identity. After: inside and outside the band both read `(250,250,249)`.
+- The frame is cropped on both axes to the mark (x 15–85 %, y 34–66 %), which renders it at
+  ~748 px against the headline's 678 px — a little larger, as asked — without the band
+  swallowing the fold. The `IntersectionObserver` therefore watches the **band**, not the video:
+  the video is 312 % of the band tall and all but 22.4 % of it is clipped, below the threshold.
+- `prefers-reduced-motion: reduce` gets the static lockup and **zero network requests** for the
+  clip: the preference is resolved before the element is ever rendered, since a default of
+  `false` was measured putting one request on the wire before the effect could remove it.
+- The cross-fade and the hold loop hang off the video's `playing` **event**, not off the
+  `play()` call. Flipped at call time, a refused autoplay (iOS Low Power Mode,
+  `media.autoplay.default=5`) faded the lockup out and left an empty band on the start frame,
+  and `watchForHold` recursed at 60 fps forever waiting for a hold point that could not
+  arrive. Both paths are verified by stubbing `play()` to reject: the video stays at
+  `opacity: 0` and the lockup at `opacity: 1`.
+- The user replaced `CrossBid Logo Reveal.mp4` with a smaller encode mid-session (2.37 MB →
+  1.72 MB). The served copy is that file byte for byte — identical `sha256`, one source of
+  truth — and every constant above was re-measured against it: the ground is still
+  `(250,250,250)` and the mark still runs x 18.80–81.15 %, y 36.67–63.15 %.

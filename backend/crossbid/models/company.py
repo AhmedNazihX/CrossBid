@@ -9,8 +9,18 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
+from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field
+
+COUNTRY_PATTERN: Final = r"^[a-z]{2}$"
+"""`companies.country`'s check constraint, restated so Pydantic refuses what Postgres would.
+
+Mirrored by hand rather than derived: `migrations/0001_init.sql` is applied by a script that
+never imports this package, so the regex has to be written twice. `test_migrations.py` reads
+the constraint out of the SQL and compares the two texts, next to the enum parity checks that
+do the same job for the check-constraint columns.
+"""
 
 
 class LegalForm(StrEnum):
@@ -81,7 +91,15 @@ class CompanyProfile(BaseModel):
 
     name: str
     country: str = Field(
-        min_length=2, max_length=2, description="ISO 3166-1 alpha-2, lowercase"
+        pattern=COUNTRY_PATTERN,
+        description=(
+            "ISO 3166-1 alpha-2, lower case. The pattern is `companies.country`'s own check "
+            "constraint, so the same value the column would refuse is refused here — as a "
+            "422 naming the field rather than a CheckViolation surfacing as a 500. 'DE' is "
+            "rejected, not lower-cased: a PUT that rewrote its own body would answer with "
+            "something the caller never sent, and the pattern reaches the generated client, "
+            "so the form can say so before the request leaves the browser."
+        ),
     )
     legal_form: LegalForm
     registration_number: str | None = Field(default=None, description="e.g. 'HRB 84512'")

@@ -20,7 +20,6 @@ import contextlib
 import inspect
 import json
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -50,7 +49,10 @@ from crossbid.ingestion.embeddings import (
 )
 from crossbid.llm import OPENROUTER_BASE_URL
 from crossbid.settings import ModelRole, Settings
-from tests.conftest import FAKE_OPENROUTER_KEY
+from tests.conftest import (
+    FAKE_OPENROUTER_KEY,
+    FakeConnectionSource,
+)
 
 COMPANY_ID = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_COMPANY_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -159,81 +161,6 @@ def scripted(*responses: httpx.Response) -> Handler:
     return handler
 
 
-# ---------------------------------------------------------- the recording fake database
-
-
-@dataclass(frozen=True)
-class RecordedStatement:
-    """One statement the store sent, and what it bound to it."""
-
-    sql: str
-    params: Any
-    is_many: bool
-
-
-class FakeCursor:
-    """The slice of `psycopg.AsyncCursor` the store uses, recording instead of executing."""
-
-    def __init__(self, rows: Sequence[Mapping[str, Any]], log: list[RecordedStatement]) -> None:
-        self._rows = list(rows)
-        self._log = log
-        self.rowcount = -1
-
-    async def __aenter__(self) -> FakeCursor:
-        return self
-
-    async def __aexit__(self, *_exc: object) -> None:
-        return None
-
-    async def execute(self, sql: str, params: Any = None) -> FakeCursor:
-        self._log.append(RecordedStatement(sql=sql, params=params, is_many=False))
-        self.rowcount = len(self._rows)
-        return self
-
-    async def executemany(self, sql: str, params_seq: Any) -> None:
-        rows = list(params_seq)
-        self._log.append(RecordedStatement(sql=sql, params=rows, is_many=True))
-        self.rowcount = len(rows)
-
-    async def fetchall(self) -> list[Mapping[str, Any]]:
-        return list(self._rows)
-
-
-class FakeConnection:
-    def __init__(self, rows: Sequence[Mapping[str, Any]], log: list[RecordedStatement]) -> None:
-        self._cursor = FakeCursor(rows, log)
-
-    def cursor(self, **_kwargs: Any) -> FakeCursor:
-        return self._cursor
-
-
-class FakeConnectionSource:
-    """Satisfies `ConnectionSource`, and counts how often a connection was borrowed."""
-
-    def __init__(self, rows: Sequence[Mapping[str, Any]] = ()) -> None:
-        self.log: list[RecordedStatement] = []
-        self.borrows = 0
-        self._rows = rows
-
-    def connection(self) -> Any:
-        source = self
-
-        class _Borrow:
-            async def __aenter__(self) -> FakeConnection:
-                source.borrows += 1
-                return FakeConnection(source._rows, source.log)
-
-            async def __aexit__(self, *_exc: object) -> None:
-                return None
-
-        return _Borrow()
-
-    @property
-    def only(self) -> RecordedStatement:
-        assert len(self.log) == 1, self.log
-        return self.log[0]
-
-
 def store(
     rows: Sequence[Mapping[str, Any]] = (),
 ) -> tuple[ChunkVectorStore, FakeConnectionSource]:
@@ -245,6 +172,7 @@ def match_row(**overrides: Any) -> dict[str, Any]:
     row: dict[str, Any] = {
         "id": 7,
         "document_id": DOCUMENT_ID,
+        "document_name": "ISO_27001_Zertifikat.pdf",
         "page": 12,
         "pages": [12, 13],
         "text": "Wir sind nach ISO 27001 zertifiziert.",
@@ -653,6 +581,25 @@ def test_every_search_statement_carries_the_tenant_predicate() -> None:
         assert "%(company_id)s" in sql
 
 
+def test_every_search_statement_scopes_the_chunk_table_itself() -> None:
+    """The join brought a second `company_id` into scope, so the predicate is qualified.
+
+    `documents` has its own `company_id`, `id`, `name` and `pages`. An unqualified
+    `company_id = ...` would not be ambiguous *to a reader* but is ambiguous to Postgres,
+    and the qualified form also pins which table's tenant column the filter is on --
+    filtering `documents.company_id` while reading another tenant's chunks would be a leak
+    that still returned rows (ADR-0009).
+    """
+    # Assert
+    for sql, table in (
+        (COMPANY_SEARCH_SQL, "company_chunks"),
+        (TENDER_SEARCH_SQL, "tender_chunks"),
+    ):
+        assert f"where {table}.{TENANT_PREDICATE}" in sql, sql
+        assert "join documents" in sql, sql
+        assert "documents.name as document_name" in sql, sql
+
+
 def test_no_statement_interpolates_a_value() -> None:
     """Every binding is a named placeholder; nothing is formatted into the SQL."""
     # Assert
@@ -713,6 +660,7 @@ async def test_company_search_binds_the_company_scope() -> None:
         ChunkMatch(
             id=7,
             document_id=DOCUMENT_ID,
+            document_name="ISO_27001_Zertifikat.pdf",
             page=12,
             pages=(12, 13),
             text="Wir sind nach ISO 27001 zertifiziert.",

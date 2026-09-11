@@ -16,7 +16,8 @@ OpenRouter and rejected by the `vector(1536)` column — a loud failure. The qui
 worse: a corpus half-embedded by one model and half by another still compares without error
 and ranks nonsense first. One integer comparison per row buys that away.
 
-**`ChunkVectorStore`** writes and searches `company_chunks` and `tender_chunks`. Every
+**`ChunkVectorStore`** writes and searches `company_chunks` and `tender_chunks`, joining
+`documents` on the way out so that every match carries the file name a citation needs. Every
 statement is a module constant with the tenant predicate already in its text, so no code
 path can build an unscoped query — `company_id = %(company_id)s` is not an argument a
 caller may leave out, and `SEARCH_STATEMENTS` exists so a test can assert that across all
@@ -339,12 +340,19 @@ class ConnectionSource(Protocol):
 
 
 class ChunkMatch(BaseModel):
-    """One retrieved chunk and how far it sat from the query vector."""
+    """One retrieved chunk, the document it belongs to, and how far it sat from the query.
+
+    `document_name` comes from the join rather than from a second query per hit: a citation
+    a reviewer can act on names a file, not a UUID (`models.matrix.Evidence` requires it),
+    and five hits would otherwise be five extra round trips inside a per-requirement ReAct
+    loop that runs once per requirement (S2.4.2, S3.3.1).
+    """
 
     model_config = ConfigDict(frozen=True)
 
     id: int
     document_id: uuid.UUID
+    document_name: str
     page: int = Field(ge=1)
     pages: tuple[int, ...]
     text: str
@@ -353,9 +361,15 @@ class ChunkMatch(BaseModel):
     """Cosine distance: 0 is identical, 1 is orthogonal. Lower ranks first."""
 
 
-TENANT_PREDICATE: Final = "where company_id = %(company_id)s"
+TENANT_PREDICATE: Final = "company_id = %(company_id)s"
 """The one clause that stands between two tenants. Named so a test can assert it appears
 in every search statement, and so a reader grepping for it finds all of them at once.
+
+The `where` keyword is deliberately not part of it. Both search statements join `documents`
+for the chunk's file name, and `documents` has a `company_id`, an `id`, a `name` and a
+`pages` of its own -- so every column is table-qualified and the predicate reads
+`company_chunks.company_id = %(company_id)s`. The qualified form still contains this one,
+which is what keeps the assertion honest across the join.
 
 It is written out again in each statement below rather than interpolated: a query built by
 string composition is a query that can be built wrongly, and the test asserts the two agree.
@@ -364,23 +378,41 @@ nothing else, so a scope assembled at run time would not type-check.
 """
 
 COMPANY_SEARCH_SQL: Final[LiteralString] = """
-select id, document_id, page, pages, text, token_count,
-       embedding <=> %(embedding)s as distance
+select company_chunks.id,
+       company_chunks.document_id,
+       documents.name as document_name,
+       company_chunks.page,
+       company_chunks.pages,
+       company_chunks.text,
+       company_chunks.token_count,
+       company_chunks.embedding <=> %(embedding)s as distance
 from company_chunks
-where company_id = %(company_id)s
-  and embedding is not null
-order by embedding <=> %(embedding)s
+join documents
+  on documents.id = company_chunks.document_id
+ and documents.company_id = company_chunks.company_id
+where company_chunks.company_id = %(company_id)s
+  and company_chunks.embedding is not null
+order by company_chunks.embedding <=> %(embedding)s
 limit %(limit)s
 """
 
 TENDER_SEARCH_SQL: Final[LiteralString] = """
-select id, document_id, page, pages, text, token_count,
-       embedding <=> %(embedding)s as distance
+select tender_chunks.id,
+       tender_chunks.document_id,
+       documents.name as document_name,
+       tender_chunks.page,
+       tender_chunks.pages,
+       tender_chunks.text,
+       tender_chunks.token_count,
+       tender_chunks.embedding <=> %(embedding)s as distance
 from tender_chunks
-where company_id = %(company_id)s
-  and bid_id = %(bid_id)s
-  and embedding is not null
-order by embedding <=> %(embedding)s
+join documents
+  on documents.id = tender_chunks.document_id
+ and documents.company_id = tender_chunks.company_id
+where tender_chunks.company_id = %(company_id)s
+  and tender_chunks.bid_id = %(bid_id)s
+  and tender_chunks.embedding is not null
+order by tender_chunks.embedding <=> %(embedding)s
 limit %(limit)s
 """
 
@@ -432,6 +464,11 @@ class ChunkVectorStore:
     own module-constant statement with the scope already in the text, so "forgot the
     `WHERE`" is not a mistake this class can make. The scope arguments are keyword-only
     and have no defaults, so omitting one does not type-check and does not run.
+
+    The join to `documents` carries `company_id` in its own `on` clause as well. It is
+    redundant while the foreign keys hold -- a chunk cannot outlive its document, which
+    cascades -- and it costs nothing, so a mislinked row surfaces as a missing match rather
+    than as another tenant's file name in a citation.
     """
 
     def __init__(self, source: ConnectionSource) -> None:

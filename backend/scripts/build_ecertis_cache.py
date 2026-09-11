@@ -1,4 +1,4 @@
-"""S1.1.1 + S1.1.3 — build the committed eCertis cache and the criterion enum.
+"""S1.1.1 + S1.1.2 + S1.1.3 — build the committed eCertis cache and the criterion enum.
 
 Fetches the EU criterion list and the German and French evidence lists from eCertis, writes
 them under `crossbid/reference/data/ecertis/`, and regenerates
@@ -6,7 +6,15 @@ them under `crossbid/reference/data/ecertis/`, and regenerates
 
     uv run python scripts/build_ecertis_cache.py                 # fetch, write, verify
     uv run python scripts/build_ecertis_cache.py --countries de,fr,nl
+    uv run python scripts/build_ecertis_cache.py --languages de  # bidder-language overlays
     uv run python scripts/build_ecertis_cache.py --check          # verify only, no network
+
+S1.1.2 adds a second pass over the same criteria with the undocumented `?lang=` parameter,
+written to `l10n_{lang}.json`. It is a *separate* file on purpose: the three English files
+are what the generated criterion Literal and the content hashes are pinned to, so a
+language has to be addable without reopening them. Re-verified 2026-09-11 that `lang` swaps
+only the words — the EU, sub-criterion and evidence UUIDs are byte-identical across
+languages — which is what lets the overlay be one flat map keyed on the UUID.
 
 **A second run must change nothing.** Everything that could differ between two runs is
 pinned: keys are sorted, every list has an explicit sort key, the indent is fixed, the
@@ -56,19 +64,28 @@ from crossbid.reference.ecertis_client import (  # noqa: E402  (after the sys.pa
     content_hash,
     criteria_path,
     evidence_path,
+    l10n_path,
 )
 from crossbid.reference.ecertis_schema import (  # noqa: E402  (after the sys.path fix)
     CACHE_SCHEMA_VERSION,
     ECERTIS_SPEC_VERSION,
     CachedCriterion,
     CachedCriterionEvidence,
+    CachedLocalisation,
     CriteriaCache,
     EvidenceCache,
+    LocalisationCache,
 )
 
 GENERATED_ENUM_PATH = BACKEND_DIR / "crossbid" / "models" / "ecertis_criteria.py"
 GENERATOR_NAME = "scripts/build_ecertis_cache.py"
 DEFAULT_COUNTRIES = ("de", "fr")
+DEFAULT_LANGUAGES = ("de",)
+"""The demo company is a German GmbH, so German is the one bidder language v1 ships.
+
+Adding one costs 1 + (criteria x countries) GETs and about 100 kB in the repo. Nothing
+breaks without it: `ecertis_lookup` falls back to the English text for a language it has no
+overlay for."""
 
 MIN_ANSWERING_FRACTION = 0.5
 """Fewer answering criteria than this and the country is a failed fetch, not a sparse one.
@@ -200,6 +217,60 @@ def _shrunk_criteria(path: Path, fresh: Sequence[CachedCriterionEvidence]) -> li
     )
 
 
+def _fetch_language(
+    client: EcertisRestClient,
+    criteria: Sequence[CachedCriterion],
+    countries: Sequence[str],
+    language: str,
+) -> Mapping[str, CachedLocalisation]:
+    """The whole cache again in one bidder language, as one flat UUID-keyed map.
+
+    `update` rather than a merge because the three id spaces are disjoint (asserted in
+    `tests/unit/test_ecertis_localisation.py`), so no country can overwrite another's
+    entry and the result cannot depend on the order `countries` is walked in. Within a
+    single payload the merge does happen — see `_localised_entities`.
+
+    A criterion that answers `200` with nothing contributes nothing, exactly as in the
+    English pass; there is no threshold check here because the English pass has already
+    refused to proceed if the service was having a bad afternoon.
+    """
+    entries: dict[str, CachedLocalisation] = dict(client.fetch_localised_criteria(language))
+    print(f"  l10n_{language}             {len(entries)} EU-level criteria")
+    for country in countries:
+        for index, criterion in enumerate(criteria, start=1):
+            entries.update(client.fetch_localised_evidence(criterion, country, language))
+            print(
+                f"\r  l10n_{language} · {country}         {index}/{len(criteria)}",
+                end="",
+                flush=True,
+            )
+        print()
+    return entries
+
+
+def _shrunk_localisation(path: Path, fresh: Mapping[str, CachedLocalisation]) -> int:
+    """How many ids the committed overlay has that this fetch did not produce.
+
+    `0` is the number that licenses `_build` to overwrite the file, so it is only ever
+    returned when the comparison actually happened. A file that exists but holds no readable
+    `entries` map is a hard stop: eCertis answers `200` with an empty body often enough that
+    a half-empty fetch looks exactly like a register that shrank, and "I could not read the
+    overlay" must not come out of that comparison as "nothing was lost". Nothing committed at
+    all is different — a first run has nothing to lose.
+    """
+    previous = _read_existing(path)
+    if previous is None:
+        return 0
+    committed = previous.get("entries")
+    if not isinstance(committed, dict):
+        raise SystemExit(
+            f"refusing to write {path}: the committed overlay could not be read, so this "
+            "fetch cannot be compared with it. Restore the file from git, or delete it to "
+            "build the language from scratch."
+        )
+    return len(set(committed) - set(fresh))
+
+
 # ---------------------------------------------------------------------------- code gen
 
 
@@ -299,7 +370,7 @@ def _first_evidence_name(row: CachedCriterionEvidence) -> str:
     return ""
 
 
-def _verify(countries: Sequence[str]) -> None:
+def _verify(countries: Sequence[str], languages: Sequence[str]) -> None:
     """S1.1.3's acceptance criterion, asserted rather than assumed. No network.
 
     The cache loader is imported fresh so the hash check in it runs against what was just
@@ -372,6 +443,39 @@ def _verify(countries: Sequence[str]) -> None:
             f"{_first_evidence_name(richest)!r}"
         )
 
+    _verify_localisation(countries, languages, known)
+
+
+def _verify_localisation(
+    countries: Sequence[str], languages: Sequence[str], probe_id: str
+) -> None:
+    """S1.1.2's acceptance criterion: every cached id has words in the bidder language.
+
+    A missing id is not fatal at run time -- `ecertis_lookup` falls back to the English
+    text -- but it is exactly the silent hole this script exists to keep out of the repo,
+    so the build refuses to claim success with one.
+    """
+    from crossbid.reference import ecertis_client
+
+    for language in languages:
+        overlay = ecertis_client.load_localisation(language)
+        wanted = {criterion.id for criterion in ecertis_client.load_criteria().criteria}
+        for country in countries:
+            for row in ecertis_client.load_evidence(country).criteria:
+                wanted |= {sub.id for sub in row.sub_criteria}
+                wanted |= {e.id for sub in row.sub_criteria for e in sub.evidences}
+        missing = wanted - set(overlay.entries)
+        if missing:
+            raise SystemExit(
+                f"l10n_{language}.json is missing {len(missing)} of {len(wanted)} ids, "
+                f"e.g. {sorted(missing)[:3]}. Re-run; eCertis was probably flaky."
+            )
+        print(
+            f"  l10n_{language}             {len(overlay.entries)} entries, "
+            f"all {len(wanted)} cached ids covered"
+        )
+        print(f"    e.g. {probe_id} -> {overlay.entries[probe_id].name!r}")
+
 
 # --------------------------------------------------------------------------------- main
 
@@ -386,6 +490,14 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         help=f"comma-separated ISO-3166 alpha-2 codes (default: {','.join(DEFAULT_COUNTRIES)})",
     )
     parser.add_argument(
+        "--languages",
+        default=",".join(DEFAULT_LANGUAGES),
+        help=(
+            "comma-separated ISO-639-1 bidder languages for the l10n overlay "
+            f"(default: {','.join(DEFAULT_LANGUAGES)})"
+        ),
+    )
+    parser.add_argument(
         "--check", action="store_true", help="verify the committed cache and enum; no network"
     )
     parser.add_argument(
@@ -396,7 +508,17 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _build(countries: Sequence[str], *, allow_shrink: bool) -> list[WriteOutcome]:
+def _codes(raw: str, flag: str) -> tuple[str, ...]:
+    """A comma-separated CLI list as lower-case codes. Empty is a usage error, not a no-op."""
+    codes = tuple(code for token in raw.split(",") if (code := token.strip().lower()))
+    if not codes:
+        raise SystemExit(f"{flag} needs at least one code")
+    return codes
+
+
+def _build(
+    countries: Sequence[str], languages: Sequence[str], *, allow_shrink: bool
+) -> list[WriteOutcome]:
     header = {
         "source": ECERTIS_BASE_URL,
         "ecertis_spec_version": ECERTIS_SPEC_VERSION,
@@ -432,6 +554,28 @@ def _build(countries: Sequence[str], *, allow_shrink: bool) -> list[WriteOutcome
                     EvidenceCache,
                 )
             )
+        for language in languages:
+            entries = _fetch_language(client, criteria, countries, language)
+            path = l10n_path(language)
+            if (lost := _shrunk_localisation(path, entries)) and not allow_shrink:
+                raise SystemExit(
+                    f"refusing to write {path}: {lost} ids the committed overlay has are "
+                    f"missing from this fetch. eCertis is probably flaky — re-run, or pass "
+                    f"--allow-shrink if the loss is real."
+                )
+            outcomes.append(
+                _write_cache(
+                    path,
+                    {
+                        **header,
+                        "language": language,
+                        "entries": {
+                            key: row.model_dump(mode="json") for key, row in entries.items()
+                        },
+                    },
+                    LocalisationCache,
+                )
+            )
     criteria_source_date = outcomes[0].source_date
     outcomes.append(_write_enum(criteria, criteria_source_date))
     return outcomes
@@ -439,18 +583,16 @@ def _build(countries: Sequence[str], *, allow_shrink: bool) -> list[WriteOutcome
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
-    requested = (code.strip().lower() for code in args.countries.split(","))
-    countries = tuple(code for code in requested if code)
-    if not countries:
-        raise SystemExit("--countries needs at least one code")
+    countries = _codes(args.countries, "--countries")
+    languages = _codes(args.languages, "--languages")
 
     print(f"eCertis cache · {ECERTIS_BASE_URL} · spec v{ECERTIS_SPEC_VERSION}")
     if args.check:
         print("  --check: no network, verifying the committed files")
     else:
-        print(f"  countries: {', '.join(countries)}")
+        print(f"  countries: {', '.join(countries)} · languages: {', '.join(languages)}")
         try:
-            outcomes = _build(countries, allow_shrink=args.allow_shrink)
+            outcomes = _build(countries, languages, allow_shrink=args.allow_shrink)
         except EcertisUnavailableError as err:
             print(f"\neCertis is not usable right now: {err}", file=sys.stderr)
             return 1
@@ -460,7 +602,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             rel = str(outcome.path.relative_to(BACKEND_DIR))
             print(f"  {state:<9} {rel:<52} {outcome.size_bytes:>8,} B  {outcome.source_date}")
 
-    _verify(countries)
+    _verify(countries, languages)
     print("\nOK")
     return 0
 

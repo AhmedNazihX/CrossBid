@@ -1,0 +1,1711 @@
+{
+  "content_sha256": "d7aad9e9ec6fc9aed0a26405efa5119cdddcb3dd510068941148b4447f9d7380",
+  "ecertis_spec_version": "0.6",
+  "entries": {
+    "005eb9ed-1347-4ca3-bb29-9bc0db64e1ab": {
+      "description": "Beteiligung an einer kriminellen Vereinigung im Sinne von Artikel 2 des Rahmenbeschlusses 2008/841/JHA des Rates vom 24. Oktober 2008 zur Bekämpfung der organisierten Kriminalität (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Beteiligung an einer kriminellen Vereinigung (Automatische Übersetzung)"
+    },
+    "027557d8-aade-4471-b20e-1e2ebe18f755": {
+      "description": "\"3. Zum Nachweis der beruflichen und technischen Leistungsfähigkeit kann der öffentliche Auftraggeber je nach Art, Menge oder Umfang oder Verwendungszweck der ausgeschriebenen Leistung verlangen: a) Angaben über die Ausführung von Leistungen in den letzten bis zu fünf abgeschlossenen Kalenderjahren, die mit der zu vergebenden Leistung vergleichbar sind, wobei für die wichtigsten Bauleistungen Bescheinigungen über die ordnungsgemäße Ausführung und das Ergebnis beizufügen sind. Um einen ausreichenden Wettbewerb sicherzustellen, kann der öffentliche Auftraggeber darauf hinweisen, dass er auch einschlägige Bauleistungen berücksichtigen werde, die mehr als fünf Jahre zurückliegen;\"",
+      "issuers": [],
+      "name": "Ausführung von Leistungen"
+    },
+    "057fbc5e-31a7-4339-946f-92b239c1f831": {
+      "description": "Der Dienstleister oder der Auftragnehmer selbst hat folgende schulische und berufliche Qualifikationen und/oder (abhängig von den Anforderungen der einschlägigen Bekanntmachung oder der Auftragsunterlagen durch seine Führungskräfte). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Ausbildung und fachliche Qualifikation (Automatische Übersetzung)"
+    },
+    "06fe9b50-d140-4bab-a0bc-21fa930d3244": {
+      "description": "Der Wirtschaftsteilnehmer wird während der Auftragsausführung folgende Umweltmanagementmaßnahmen anwenden können: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Umweltmanagementmaßnahmen (Automatische Übersetzung)"
+    },
+    "07301031-2270-41af-8e7e-66fe0c777107": {
+      "description": "Der Dienstleister oder der Auftragnehmer selbst hat folgende schulische und berufliche Qualifikationen und/oder (abhängig von den Anforderungen der einschlägigen Bekanntmachung oder der Auftragsunterlagen durch seine Führungskräfte). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Ausbildung und fachliche Qualifikation (Automatische Übersetzung)"
+    },
+    "074f6031-55f9-4e99-b9a4-c4363e8bc315": {
+      "description": "Der spezifische Jahresumsatz des Wirtschaftsteilnehmers in dem vom Auftrag abgedeckten Geschäftsbereich betrug in den gemäß der einschlägigen Bekanntmachung, den Auftragsunterlagen oder der EEE verlangten Anzahl von Geschäftsjahren: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Spezifischer Jahresumsatz (Automatische Übersetzung)"
+    },
+    "0859d149-427e-4a38-9303-05af1e65447d": {
+      "description": "\"3. Zum Nachweis der beruflichen und technischen Leistungsfähigkeit kann der öffentliche Auftraggeber je nach Art, Menge oder Umfang oder Verwendungszweck der ausgeschriebenen Leistung verlangen: g) Angaben über die Zahl der in den letzten drei abgeschlossenen Kalenderjahren jahresdurchschnittlich beschäftigten Arbeitskräfte, gegliedert nach Lohngruppen mit gesondert ausgewiesenem technischen Leitungspersonal;\"",
+      "issuers": [],
+      "name": "Zahl der Führungskräfte"
+    },
+    "08900ccb-9a3c-4a2d-ba4c-25197539db6c": {
+      "description": "",
+      "issuers": [
+        "zuständiges Finanzamt"
+      ],
+      "name": "Freistellungsbescheinigung (Automatische Übersetzung)"
+    },
+    "08dc6beb-3c62-455b-9af3-7b0057e8166e": {
+      "description": "Je nach Bedarf des öffentlichen Auftraggebers: Geeignete Referenzen bereits abgeschlossener öffentlicher Aufträge für ausreichende Erfahrung (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Besondere Bedingungen für Bauaufträge: Geeignete Referenzen aus öffentlichen Aufträgen, die ausgeführt wurden (Automatische Übersetzung)"
+    },
+    "095978e9-fa8f-42f0-a6e4-c636ed8dd384": {
+      "description": "Angaben zum Jahresabschluss (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Angaben zum Jahresabschluss (Automatische Übersetzung)"
+    },
+    "095c30f1-f629-4cea-b6da-668ef3efc29a": {
+      "description": "Eintragung in das Unternehmer- und Lieferantenverzeichnis für öffentliche Aufträge des Landes Berlins nach Durchführung eines Präqualifikationsverfahrens beruht auf Vorlage folgender Nachweise: https://ssl.stadtentwicklung.berlin.de/ULVAuskunft/formulare2018.shtml",
+      "issuers": [
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin"
+      ],
+      "name": "Berliner Unternehmer- und Lieferantenverzeichnis"
+    },
+    "0b2c8ce5-b793-47ca-8643-d210200a4797": {
+      "description": "Ein Unternehmen mit Sitz im Ausland kann vorübergehend Beschäftigte für eine Dienstreise an ein anderes in Frankreich ansässiges Unternehmen ablösen. Jeder Arbeitgeber, der im Ausland niedergelassen ist, muss vor Beginn der Intervention eine vorherige Meldung der transnationalen Abordnung vor Beginn der Intervention an die Gewerbeaufsicht richten, von der der Ort seiner Tätigkeit abhängt. (Automatische Übersetzung)",
+      "issuers": [
+        "Generaldirektion Arbeit (Automatische Übersetzung)"
+      ],
+      "name": "Kopie der Erklärung über die vorübergehende Abstellung von Beschäftigten durch ein ausländisches Unternehmen (Automatische Übersetzung)"
+    },
+    "0ba39484-90b4-4e81-87a9-a1e6578ae76f": {
+      "description": "Personen, die durch ihre vorherige direkte oder indirekte Beteiligung an der Vorbereitung des Vergabeverfahrens Zugang zu Informationen hatten, die geeignet sind, den Wettbewerb gegenüber den anderen Bewerbern zu verfälschen, sofern dies nicht auf andere Weise behoben werden kann. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Fakultative Anforderungen an die Ausschreibung: Frühzeitige Teilnahme am Verfahren und Zugang zu Informationen (Automatische Übersetzung)"
+    },
+    "0bdfb7e1-82ef-43a8-942e-6ba5588375c1": {
+      "description": "Erklärung über die durchschnittliche jährliche Beschäftigtenzahl des Bewerbers und die Zahl der Führungskräfte in den letzten drei Jahren (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Erklärung über die durchschnittliche jährliche Beschäftigtenzahl des Bewerbers und die Zahl der Führungskräfte in den letzten drei Jahren (Automatische Übersetzung)"
+    },
+    "0cc80a6c-f96d-4a7f-8223-2dd5270b0dae": {
+      "description": "",
+      "issuers": [],
+      "name": "Angabe von Umweltmanagementmaßnahmen"
+    },
+    "0dbc19c9-9679-4126-a8ad-eb801d043eaf": {
+      "description": "Die durchschnittliche jährliche Beschäftigtenzahl des Wirtschaftsteilnehmers in den vergangenen drei Jahren belief sich auf: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Durchschnittliche jährliche Beschäftigtenzahl (Automatische Übersetzung)"
+    },
+    "0de4b90c-633b-4eed-9e0d-779bc434b315": {
+      "description": "Ist der Wirtschaftsteilnehmer selbst oder jede Person, die Mitglied seines Verwaltungs-, Leitungs- oder Aufsichtsorgans ist oder darin Vertretungs-, Entscheidungs- oder Kontrollbefugnisse hat, durch rechtskräftige Verurteilung wegen Geldwäsche oder Terrorismusfinanzierung verurteilt worden, und zwar durch eine Verurteilung, die vor höchstens fünf Jahren ergangen ist oder in denen ein unmittelbar in der Verurteilung festgelegtes Ausschlusszeitraum weiterhin Anwendung findet? Im Sinne des Artikel 1 der Richtlinie 2005/60/EG des Europäischen Parlaments und des Rates vom 26. Oktober 2005 zur Verhinderung der Nutzung des Finanzsystems zum Zwecke der Geldwäsche und der Terrorismusfinanzierung (ABl. L 309 vom 25.11.2005, S. 15). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Geldwäsche oder Terrorismusfinanzierung (Automatische Übersetzung)"
+    },
+    "0e17e7a0-9005-43bc-9c6a-c571de66ce9e": {
+      "description": "Die durchschnittliche jährliche Beschäftigtenzahl des Wirtschaftsteilnehmers in den vergangenen drei Jahren belief sich auf: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Durchschnittliche jährliche Beschäftigtenzahl (Automatische Übersetzung)"
+    },
+    "101a44c1-f185-41dd-8a4d-7d67c71ffa97": {
+      "description": "n/a",
+      "issuers": [],
+      "name": "Beschreibung der technischen Ausrüstung"
+    },
+    "10530588-503c-43e1-9613-4ddcb575c8cc": {
+      "description": "Die vereinfachte EEE ist eine Möglichkeit, die Teilnahme an einem Verfahren zur Vergabe öffentlicher Aufträge zu beantragen, indem lediglich zwei Informationen ausgefüllt werden: Jahresumsatz und Personal. Voraussetzung für die Anwendung dieser vereinfachten EEE ist, dass der Käufer selbst die Möglichkeit hat, dies auf dem Profil seines Käufers zu tun. (Automatische Übersetzung)",
+      "issuers": [
+        "Direktion Recht (MEF) (Automatische Übersetzung)",
+        "Europäische Union (Automatische Übersetzung)"
+      ],
+      "name": "Vereinfachte Einheitliche Europäische Eigenerklärung (EEE) (Automatische Übersetzung)"
+    },
+    "115fc41b-6372-40e7-b0d9-acc50cfdc611": {
+      "description": "Der Wirtschaftsteilnehmer hat eine Berufshaftpflichtversicherung über folgenden Betrag abgeschlossen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Berufshaftpflichtversicherung (Automatische Übersetzung)"
+    },
+    "11756a7f-9e0a-466a-9589-91f87f09fe55": {
+      "description": "Ist der Wirtschaftsteilnehmer selbst oder jede Person, die Mitglied seines Verwaltungs-, Leitungs- oder Aufsichtsorgans ist oder darin Vertretungs-, Entscheidungs- oder Kontrollbefugnisse hat, durch rechtskräftige Verurteilung wegen Geldwäsche oder Terrorismusfinanzierung verurteilt worden, und zwar durch eine Verurteilung, die vor höchstens fünf Jahren ergangen ist oder in denen ein unmittelbar in der Verurteilung festgelegtes Ausschlusszeitraum weiterhin Anwendung findet? Im Sinne des Artikel 1 der Richtlinie 2005/60/EG des Europäischen Parlaments und des Rates vom 26. Oktober 2005 zur Verhinderung der Nutzung des Finanzsystems zum Zwecke der Geldwäsche und der Terrorismusfinanzierung (ABl. L 309 vom 25.11.2005, S. 15). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Geldwäsche oder Terrorismusfinanzierung (Automatische Übersetzung)"
+    },
+    "11799fed-d3a3-4fba-b8cd-8d259ad9ad12": {
+      "description": "\"Ein Führungszeugnis kostet 13,00 EUR. Es bezieht sich immer auf Verurteilungen von natürliche Personen. Ein Europäisches Führungszeugnis kostet 17,00 EUR.\"",
+      "issuers": [
+        "Bundesamt für Justiz"
+      ],
+      "name": "Auszug aus dem Bundeszentralregister / Führungszeugnis"
+    },
+    "11b311e6-5de1-488b-803e-63ac6c097646": {
+      "description": "",
+      "issuers": [
+        "zuständige Berufsgenossenschaft"
+      ],
+      "name": "Bescheinigung über die Mitgliederschaft bei einer Berufsgenossenschaft und darüber, Dass keine Behaigszahnschüsse (Automatische Übersetzung)"
+    },
+    "12a44922-fd81-4bdb-8877-19c284876d7d": {
+      "description": "n/a",
+      "issuers": [
+        "diverse"
+      ],
+      "name": "Mitgliedsbescheinigung in der Industrie- und Handelskammer, Handwerkskammer oder einer berufsständischen Kammer"
+    },
+    "1370b03c-0fb9-4bdf-af04-594dd87f6fc0": {
+      "description": "\"1. Zum Nachweis der Befähigung und Erlaubnis zur Berufsausübung kann der öffentliche Auftraggeber die Eintragung in das Berufs- oder Handelsregister oder der Handwerksrolle ihres Sitzes oder Wohnsitzes verlangen.\"",
+      "issuers": [],
+      "name": "Eintragung ins nationale Berufsregister oder Handwerksrolle"
+    },
+    "149c0dca-d62d-4013-a3d8-5b7312e4efab": {
+      "description": "Ist die Mitgliedschaft in einer bestimmten Organisation erforderlich, um die betreffende Dienstleistung im Niederlassungsstaat des Wirtschaftsteilnehmers erbringen zu können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Berechtigung einer bestimmten Organisation erforderlich (Automatische Übersetzung)"
+    },
+    "155fd28e-8e1c-48a1-8196-326f6b560e52": {
+      "description": "\"2. Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit kann der öffentliche Auftraggeber verlangen: c) eine Erklärung über den Umsatz des Unternehmens jeweils bezogen auf die letzten drei abgeschlossenen Geschäftsjahre, soweit er Bauleistungen und andere Leistungen betrifft, die mit der zu vergebenden Leistung vergleichbar sind, unter Einschluss des Anteils bei gemeinsam mit anderen Unternehmen ausgeführten Aufträgen. Der öffentliche Auftraggeber kann von den Unternehmen insbesondere verlangen, einen bestimmten Mindestjahresumsatz, einschließlich eines Mindestumsatzes in dem vom Auftrag abgedeckten Bereich nachzuweisen. Der geforderte Mindestjahresumsatz darf das Zweifache des geschätzten Auftragswerts nur in hinreichend begründeten Fällen übersteigen. Die Gründe sind in den Vergabeunterlagen oder in dem Vergabevermerk gemäß § 20 EU anzugeben. Ist ein Auftrag in Lose unterteilt, finden diese Regelungen auf jedes einzelne Los Anwendung. Der öffentliche Auftraggeber kann jedoch den Mindestjahresumsatz, der von Unternehmen verlangt wird, unter Bezugnahme auf eine Gruppe von Losen in dem Fall festlegen, dass der erfolgreiche Bieter den Zuschlag für mehrere Lose erhält, die gleichzeitig auszuführen sind. Sind auf einer Rahmenvereinbarung basierende Aufträge infolge eines erneuten Aufrufs zum Wettbewerb zu vergeben, wird der Höchstjahresumsatz aufgrund des erwarteten maximalen Umfangs spezifischer Aufträ- ge berechnet, die gleichzeitig ausgeführt werden, oder – wenn dieser nicht bekannt ist – aufgrund des geschätzten Werts der Rahmenvereinbarung. Bei dynamischen Beschaffungssystemen wird der Höchstjahresumsatz auf der Basis des erwarteten Höchstumfangs konkreter Aufträge berechnet, die nach diesem System vergeben werden sollen.\"",
+      "issuers": [],
+      "name": "Umsatz im Tätigkeitsbereich des Auftrags"
+    },
+    "16506938-622c-4269-8b22-69effbb6b42b": {
+      "description": "Wenn die zu liefernden Waren oder zu erbringenden Dienstleistungen komplex sind oder in Ausnahmefällen einem bestimmten Zweck dienen, eine Kontrolle, die vom öffentlichen Auftraggeber oder in seinem Namen von einer zuständigen amtlichen Stelle des Landes durchgeführt wird, in dem der Lieferant oder Dienstleistungserbringer niedergelassen ist, vorbehaltlich der Zustimmung dieser Einrichtung; Diese Kontrolle erstreckt sich auf die Produktionskapazität des Lieferanten oder die technische Leistungsfähigkeit des Dienstleisters und, falls erforderlich, die ihm zur Verfügung stehenden Untersuchungs- und Forschungsmittel sowie die Maßnahmen, die er zur Kontrolle der Qualität ergreifen wird. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungs- und Lieferaufträgen: Außerordentliche Kontrolle der Waren und Dienstleistungen (Automatische Übersetzung)"
+    },
+    "166536e2-77f7-455c-b018-70582474e4f6": {
+      "description": "Wurde seine gewerbliche Tätigkeit eingestellt? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Einstellung der gewerblichen Tätigkeit (Automatische Übersetzung)"
+    },
+    "16ce0281-0d37-4c49-806e-9569c8583513": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine arbeitsrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verletzung von arbeitsrechtlichen Verpflichtungen (Automatische Übersetzung)"
+    },
+    "17e07fa0-275f-4ebc-8d11-ce2dfcb0bf21": {
+      "description": "Geldwäsche oder Terrorismusfinanzierung im Sinne des Artikel 2 der Richtlinie 2011/36/EU des Europäischen Parlaments und des Rates vom 5. April 2011 zur Verhütung und Bekämpfung des Menschenhandels und zum Schutz seiner Opfer sowie zur Ersetzung des Rahmenbeschlusses 2002/629/JHA des Rates (ABl. L 101 vom 15.4.2011). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Kinderarbeit und andere Formen des Menschenhandels (Automatische Übersetzung)"
+    },
+    "1b786c8a-fad5-4a8b-9f77-de2df5aec95f": {
+      "description": "Der Wirtschaftsteilnehmer ist in den einschlägigen Handelsregistern seines Niederlassungsmitgliedstaats verzeichnet; aufgelistet in Anhang XI der Richtlinie 2014/24/EU; Wirtschaftsteilnehmer aus bestimmten Mitgliedstaaten müssen ggf. andere in jenem Anhang aufgeführte Anforderungen erfüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Eintragung in einem Handelsregister (Automatische Übersetzung)"
+    },
+    "1c9ceec3-3b8d-4b6a-9f82-d1d3e0a31c4f": {
+      "description": "Wird der Wirtschaftsteilnehmer in der Lage sein, Bescheinigungen unabhängiger Stellen darüber vorzulegen, dass er die Anforderungen an die Umweltmanagementsysteme oder -normen erfüllt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bescheinigungen unabhängiger Stellen über Umweltmanagementsysteme oder -normen (Automatische Übersetzung)"
+    },
+    "1dcf65c6-7cad-4786-8ec4-4499bccd9e26": {
+      "description": "Der Wirtschaftsteilnehmer ist in den einschlägigen Berufsregistern seines Niederlassungsmitgliedstaats verzeichnet; aufgelistet in Anhang XI der Richtlinie 2014/24/EU;. Wirtschaftsteilnehmer aus bestimmten Mitgliedstaaten müssen ggf. andere in jenem Anhang aufgeführte Anforderungen erfüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Eintragung in einem einschlägigen Berufsregister (Automatische Übersetzung)"
+    },
+    "1dd2e635-0d89-49a4-9761-7fe7cce89544": {
+      "description": "Ist die Mitgliedschaft in einer bestimmten Organisation erforderlich, um die betreffende Dienstleistung im Niederlassungsstaat des Wirtschaftsteilnehmers erbringen zu können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Mitgliedschaft in einer bestimmten Organisation erforderlich (Automatische Übersetzung)"
+    },
+    "1ec413e5-79f4-414e-92a2-eb295f1844a2": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 2. Angabe der technischen Fachkräfte oder der technischen Stellen, die im Zusammenhang mit der Leistungserbringung eingesetzt werden sollen, unabhängig davon, ob diese dem Unternehmen angehören oder nicht, und zwar insbesondere derjenigen, die mit der Qualitätskontrolle beauftragt sind,\"",
+      "issuers": [],
+      "name": "Technische Fachkräfte oder technische Stellen, die mit der Qualitätskontrolle beauftragt sind"
+    },
+    "1f49b3f0-d50f-43f6-8b30-4bafab108b9b": {
+      "description": "Die durchschnittliche jährliche Beschäftigtenzahl des Wirtschaftsteilnehmers in den vergangenen drei Jahren belief sich auf: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Durchschnittliche jährliche Beschäftigtenzahl (Automatische Übersetzung)"
+    },
+    "1f694fcf-2747-42c2-92ea-6a30b9bc248a": {
+      "description": "Ist der Wirtschaftsteilnehmer zahlungsunfähig? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Konkurs (Automatische Übersetzung)"
+    },
+    "20cbeda7-4db4-4d22-88c9-3c017652be92": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 6. Studien- und Ausbildungsnachweise sowie Bescheinigungen über die Erlaubnis zur Berufsausübung für die Inhaberin, den Inhaber oder die Führungskräfte des Unternehmens, sofern diese Nachweise nicht als Zuschlagskriterium bewertet werden,\"",
+      "issuers": [],
+      "name": "Studien- und Ausbildungsnachweise, Erlaubnis zur Berufsausübung"
+    },
+    "221f3cc3-b623-4094-9719-d420ac6112ff": {
+      "description": "\"3. Zum Nachweis der beruflichen und technischen Leistungsfähigkeit kann der öffentliche Auftraggeber je nach Art, Menge oder Umfang oder Verwendungszweck der ausgeschriebenen Leistung verlangen: b) Angabe der technischen Fachkräfte oder der technischen Stellen, unabhängig davon, ob sie seinem Unternehmen angehören oder nicht, und zwar insbesondere derjenigen, die mit der Qualitätskontrolle beauftragt sind, und derjenigen, über die der Unternehmer für die Errichtung des Bauwerks verfügt;\"",
+      "issuers": [],
+      "name": "Technische Fachkräfte oder technische Stellen, die im Zusammenhang mit der Leistungserbringung eingesetzt werden sollen"
+    },
+    "224b87c2-3f7a-4a6b-80f1-d78e5b7f40a7": {
+      "description": "",
+      "issuers": [],
+      "name": "Mindestlohngesetz (Automatische Übersetzung)"
+    },
+    "22a98838-c8a4-4279-861d-8536b52422d9": {
+      "description": "Angemessener Grad der Arbeitsunfallversicherung (Automatische Übersetzung)",
+      "issuers": [
+        "Versicherer oder Banker (Automatische Übersetzung)"
+      ],
+      "name": "Angemessener Grad der Arbeitsunfallversicherung (Automatische Übersetzung)"
+    },
+    "22e4b838-52f0-4b5f-9c93-4f6e4e9d014b": {
+      "description": "Ist die Mitgliedschaft in einer bestimmten Organisation erforderlich, um die betreffende Dienstleistung im Niederlassungsstaat des Wirtschaftsteilnehmers erbringen zu können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Berechtigung einer bestimmten Organisation erforderlich (Automatische Übersetzung)"
+    },
+    "236b739b-83af-4505-9c34-c2f2c7bf03dc": {
+      "description": "Rechtskräftige Verurteilung wegen Drogenhandels (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Drogenhandel, (Automatische Übersetzung)"
+    },
+    "2591ec7d-2520-401e-be07-ba0b6b52b46c": {
+      "description": "Betrug im Sinne des Artikel 1 des Übereinkommens über den Schutz der finanziellen Interessen der Europäischen Gemeinschaften (ABl. C 316 vom 27.11.1995) (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Betrugsbekämpfung (Automatische Übersetzung)"
+    },
+    "263a7b16-afaf-4a3a-a130-7e97525cefdb": {
+      "description": "Hat der Wirtschaftsteilnehmer mit anderen Wirtschaftsteilnehmern Vereinbarungen getroffen, die auf eine Verzerrung des Wettbewerbs abzielen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vereinbarungen mit anderen Wirtschaftsteilnehmern zur Verzerrung des Wettbewerbs (Automatische Übersetzung)"
+    },
+    "27b566bf-63af-46dd-a4e9-1c2d64cf188d": {
+      "description": "Kann der Wirtschaftsteilnehmer die erforderlichen Bescheinigungen beibringen, die von als zuständig anerkannten Instituten oder amtlichen Stellen für Qualitätskontrolle ausgestellt wurden und in denen bestätigt wird, dass die Waren, die durch Bezugnahme auf die in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen genannten technischen Spezifikationen oder Normen genau bezeichnet werden, diesen entsprechen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Bescheinigungen von Instituten für die Qualitätskontrolle (Automatische Übersetzung)"
+    },
+    "27fc68b6-4bd7-40ad-a14f-b07255a4c2de": {
+      "description": "Ist dem Wirtschaftsteilnehmer ein Interessenkonflikt im Sinne des nationalen Rechts, der einschlägigen Bekanntmachung oder der Auftragsunterlagen aufgrund seiner Teilnahme am Vergabeverfahren bekannt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Interessenkonflikt aufgrund seiner Teilnahme an dem Vergabeverfahren (Automatische Übersetzung)"
+    },
+    "28262c46-0feb-4390-957e-008f0ba9247d": {
+      "description": "Handelt es sich bei dem Käufer um ein Formular, so handelt es sich um das Muster-Antragsschreiben, das von den Bewerbern für öffentliche Aufträge zur Einreichung ihrer Bewerbung verwendet werden muss. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Formular für die Erklärung des Bewerbers, das der Käufer zur Verfügung stellt (Automatische Übersetzung)"
+    },
+    "28eb1e8a-d5eb-494a-8997-b0d529720882": {
+      "description": "Wurde in der Vergangenheit ein zwischen dem Wirtschaftsteilnehmer und einem öffentlichen Auftraggeber oder Sektorenauftraggeber geschlossener Vertrag über die Vergabe eines öffentlichen Auftrags oder einer Konzession vorzeitig beendigt oder hat ein entsprechender früherer Auftrag Schadenersatz oder andere vergleichbare Sanktionen nach sich gezogen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vorzeitige Beendigung, Schadensersatz oder andere vergleichbare Sanktionen (Automatische Übersetzung)"
+    },
+    "296a38c0-1086-46f7-af46-ecedea468dc3": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine umweltrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verstoß gegen umweltrechtliche Verpflichtungen (Automatische Übersetzung)"
+    },
+    "297d2323-3ede-424e-94bc-a91561e6f320": {
+      "description": "Betrug im Sinne des Artikel 1 des Übereinkommens über den Schutz der finanziellen Interessen der Europäischen Gemeinschaften (ABl. C 316 vom 27.11.1995) (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Betrugsbekämpfung (Automatische Übersetzung)"
+    },
+    "29923b10-9c99-4ec5-957b-5c302a2d56fc": {
+      "description": "Bescheinigung über die Ordnungsmäßigkeit der Situation des Arbeitgebers in Bezug auf die Verpflichtung zur Beschäftigung behinderter Arbeitnehmer, ausgestellt von der Vereinigung für die Verwaltung des Fonds für die berufliche Eingliederung behinderter Menschen (Automatische Übersetzung)",
+      "issuers": [
+        "Arbeitsministerium (Automatische Übersetzung)"
+      ],
+      "name": "Obligatorische Meldung der Beschäftigung behinderter Arbeitnehmer (Tele-DOETH) (Automatische Übersetzung)"
+    },
+    "299a6a11-0f11-4368-ad44-d24dc17dea89": {
+      "description": "Bei öffentlichen Bauaufträgen wird der Wirtschaftsteilnehmer folgende technische Fachkräfte oder technische Stellen mit der Ausführung der Arbeiten betrauen können: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Bauaufträgen: Technische Fachkräfte oder technische Stellen für die Ausführung der Arbeiten (Automatische Übersetzung)"
+    },
+    "2a9ae2ea-45d0-4f52-99c9-d26cb3a84489": {
+      "description": "\"Der öffentliche Auftraggeber wird andere ihm geeignet erscheinende Nachweise der wirtschaftlichen und finanziellen Leistungsfähigkeit zulassen, wenn er feststellt, dass stichhaltige Gründe dafür bestehen. \"",
+      "issuers": [],
+      "name": "Datum der Unternehmensgründung"
+    },
+    "2b273dd6-362f-498e-893f-adf87b9366ba": {
+      "description": "Kann der Wirtschaftsteilnehmer bestätigen, dass er sich bei der Erteilung der für die Überprüfung des Fehlens von Ausschlussgründen oder der Erfüllung der Auswahlkriterien erforderlichen Informationen in erheblichem Maße falscher Erklärungen schuldig gemacht hat, diese Informationen nicht vorenthalten, aber unverzüglich in der Lage ist, die von einem öffentlichen Auftraggeber oder einer Vergabestelle verlangten Nachweise beizubringen, und er sich nicht verpflichtet hat, den Entscheidungsprozess des öffentlichen Auftraggebers oder der Vergabestelle ungebührlich zu beeinflussen, vertrauliche Informationen zu erhalten, die ihm ungerechtfertigte Vorteile im Vergabeverfahren verschaffen oder die die Entscheidungen in Bezug auf den Ausschluss, die Auswahl oder die Vergabe erheblich beeinflussen können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Falsche Angaben, verweigerte Informationen, die nicht in der Lage sind, die erforderlichen Unterlagen vorzulegen, und haben vertrauliche Informationen über dieses Verfahren erhalten. (Automatische Übersetzung)"
+    },
+    "2c43ba3a-660f-42a0-b69a-8bf344189072": {
+      "description": "Die Angabe von Technikern oder technischen Einrichtungen, unabhängig davon, ob sie mit dem Bewerber verbunden sind oder nicht, und zwar insbesondere derjenigen, die für die Qualitätskontrolle zuständig sind, und bei öffentlichen Bauaufträgen, bei denen der Bewerber die Durchführung der Arbeiten verlangen kann (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Angabe von Technikern oder technischen Stellen (Automatische Übersetzung)"
+    },
+    "2e3d423b-3e6d-42bb-b436-82b248f9b315": {
+      "description": "Hinweis auf Supply Chain Management and Supply Chain Management Systems (Lieferkettenmanagement und Supply Chain Management Systems), das der Antragsteller in der Lage sein wird, die Auftragsvergabe durchzuführen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Hinweis auf Supply Chain Management and Supply Chain Management Systems (Lieferkettenmanagement und Supply Chain Management Systems), das der Antragsteller in der Lage sein wird, die Auftragsvergabe durchzuführen (Automatische Übersetzung)"
+    },
+    "2e8faa15-d10e-43e4-9636-f8968842476e": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 9. Erklärung, aus der ersichtlich ist, über welche Ausstattung, welche Geräte und welche technische Ausrüstung das Unternehmen für die Ausführung des Auftrags verfügt,\"",
+      "issuers": [],
+      "name": "Ausstattung, Geräte und technische Ausrüstung"
+    },
+    "2ed78d51-f396-4fe8-870b-4a4b4ace07e1": {
+      "description": "Betrug im Sinne des Artikel 1 des Übereinkommens über den Schutz der finanziellen Interessen der Europäischen Gemeinschaften (ABl. C 316 vom 27.11.1995) (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Betrugsbekämpfung (Automatische Übersetzung)"
+    },
+    "30bac33d-34b5-4f30-a436-e94fcb3a91df": {
+      "description": "Bei öffentlichen Lieferaufträgen: Der Wirtschaftsteilnehmer wird die verlangten Muster, Beschreibungen oder Fotografien der zu liefernden Waren zur Verfügung stellen und ggf. die Echtheitsbescheinigungen vorlegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Muster, Beschreibungen oder Fotografien mit Echtheitsbescheinigung (Automatische Übersetzung)"
+    },
+    "30f9b6f1-21c9-4c21-8915-a5bd0d1a56f0": {
+      "description": "Steuerbescheinigung [Bescheinigung der Steuerverwaltung über Steuern und Abgaben (IS, IR, MwSt.)]. (Automatische Übersetzung)",
+      "issuers": [
+        "Generaldirektion für öffentliche Finanzen (Automatische Übersetzung)"
+      ],
+      "name": "Steuerbescheinigung – Cerfa n°3666 (Automatische Übersetzung)"
+    },
+    "31653b76-d083-462a-803d-2fedffd467dc": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 1. geeignete Referenzen über früher ausgeführte Liefer- und Dienstleistungsaufträge in Form einer Liste der in den letzten höchstens drei Jahren erbrachten wesentlichen Liefer- oder Dienstleistungen mit Angabe des Werts, des Liefer- beziehungsweise Erbringungszeitpunkts sowie des öffentlichen oder privaten Empfängers; soweit erforderlich, um einen ausreichenden Wettbewerb sicherzustellen, kann der öffentliche Auftraggeber darauf hinweisen, dass er auch einschlägige Liefer- oder Dienstleistungen berücksichtigen wird, die mehr als drei Jahre zurückliegen,\"",
+      "issuers": [],
+      "name": "Ausführung von erbrachten Leistungen"
+    },
+    "3293e92b-7f3e-42f1-bee6-a7641bb04251": {
+      "description": "Wurde in der Vergangenheit ein zwischen dem Wirtschaftsteilnehmer und einem öffentlichen Auftraggeber oder Sektorenauftraggeber geschlossener Vertrag über die Vergabe eines öffentlichen Auftrags oder einer Konzession vorzeitig beendigt oder hat ein entsprechender früherer Auftrag Schadenersatz oder andere vergleichbare Sanktionen nach sich gezogen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vorzeitige Beendigung, Schadensersatz oder andere vergleichbare Sanktionen (Automatische Übersetzung)"
+    },
+    "344ca7d9-a751-469c-9c01-46228950caa6": {
+      "description": "Geldwäsche oder Terrorismusfinanzierung im Sinne des Artikel 2 der Richtlinie 2011/36/EU des Europäischen Parlaments und des Rates vom 5. April 2011 zur Verhütung und Bekämpfung des Menschenhandels und zum Schutz seiner Opfer sowie zur Ersetzung des Rahmenbeschlusses 2002/629/JHA des Rates (ABl. L 101 vom 15.4.2011). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Kinderarbeit und andere Formen des Menschenhandels (Automatische Übersetzung)"
+    },
+    "3480f84d-9976-4933-87be-3bdbd253da3b": {
+      "description": "Es ist nicht Sache des Gebotes und wie gehttig ist und wie gehttig ist. (Automatische Übersetzung)",
+      "issuers": [
+        "diverse"
+      ],
+      "name": "Qualitätssicherungsverfahren (Automatische Übersetzung)"
+    },
+    "37a7aada-1b64-47f2-8198-29890bfe265e": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 3.Beschreibung der technischen Ausrüstung, der Maßnahmen zur Qualitätssicherung und der Untersuchungs- und Forschungsmöglichkeiten des Unternehmens,\"",
+      "issuers": [],
+      "name": "Technische Ausrüstung und Maßnahmen zur Qualitätssicherung"
+    },
+    "38c06b9f-93b1-494c-a14c-6a6aa80f7b59": {
+      "description": "Eintragung einer juristischen Person, eines reglementierten Berufs oder einer anderen Art von Metier in einem spezialisierten Register (Automatische Übersetzung)",
+      "issuers": [
+        "Kanzlei des Handelsgerichts (Automatische Übersetzung)"
+      ],
+      "name": "Eintragung in ein Berufsregister (Automatische Übersetzung)"
+    },
+    "39541143-46b6-4620-a55b-22ef4d3a6418": {
+      "description": "Bei öffentlichen Bauaufträgen wird der Wirtschaftsteilnehmer folgende technische Fachkräfte oder technische Stellen mit der Ausführung der Arbeiten betrauen können: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Bauaufträgen: Technische Fachkräfte oder technische Stellen für die Ausführung der Arbeiten (Automatische Übersetzung)"
+    },
+    "396f288a-e267-4c20-851a-ed4f7498f137": {
+      "description": "Befindet sich der Wirtschaftsteilnehmer in einem Insolvenzverfahren oder in Liquidation? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahlungsunfähigkeit (Automatische Übersetzung)"
+    },
+    "39b7173a-fdf7-4736-ac30-cb285243c3cc": {
+      "description": "Rechtskräftige Verurteilung wegen Bestechlichkeit und Einflussnahme durch Personen, die eine öffentliche Funktion ausüben (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Passive Bestechung und Einflussnahme (Automatische Übersetzung)"
+    },
+    "3a18a175-1863-4b1d-baef-588ce61960ca": {
+      "description": "Nur bei öffentlichen Lieferaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende wesentliche Lieferungen der genannten Art ausgeführt. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu drei Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als drei Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Ausführung von Lieferungen der genannten Art (Automatische Übersetzung)"
+    },
+    "3aaca389-4a7b-406b-a4b9-080845d127e7": {
+      "description": "Der Wirtschaftsteilnehmer kann – insbesondere für die Qualitätssicherung – auf folgende technische Fachkräfte oder technische Stellen zurückgreifen. Für technische Fachkräfte oder technische Stellen, die nicht unmittelbar dem Unternehmen des Wirtschaftsteilnehmers angehören, deren Kapazitäten der Wirtschaftsteilnehmer aber wie in Teil II Abschnitt C angegeben in Anspruch nehmen will, sind separate EEE auszufüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Technische Fachkräfte oder technische Stellen für die Qualitätssicherung (Automatische Übersetzung)"
+    },
+    "3b4b6e4f-2242-44ed-8334-d28ad67b21bb": {
+      "description": "Alle Entscheidungen, die für eine Person ergangen sind, die Gegenstand eines Insolvenzverfahrens, eines Bewirtschaftungsverbots oder einer gleichwertigen Maßnahme in einem anderen Land ist, oder für eine juristische Person, gegen die ein Verfahren zur gerichtlichen Liquidation oder eine Zwangsverwaltung während der für ein Land bestimmten Frist für das öffentliche Beschaffungswesen oder ein gleichwertiges Verfahren anhängig ist (Automatische Übersetzung)",
+      "issuers": [
+        "Ministerium der Justiz (Automatische Übersetzung)"
+      ],
+      "name": "Kopien von Urteilen im Fall einer Insolvenz oder eines Konkurses – Cerfa n°11808 * 04 (Automatische Übersetzung)"
+    },
+    "3bd3ca4b-d3a9-41cc-9f5d-4f1d4faa93af": {
+      "description": "",
+      "issuers": [
+        "Industrie- und Handelskammern"
+      ],
+      "name": "IHK-Mitglied (Automatische Übersetzung)"
+    },
+    "3c642037-498b-4b21-a459-c13caccf4192": {
+      "description": "Je nach Bedarf des öffentlichen Auftraggebers: Die öffentlichen Auftraggeber können eine angemessene Berufshaftpflichtversicherung verlangen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Besondere Bedingungen für die Berufshaftpflichtversicherung (Automatische Übersetzung)"
+    },
+    "3d0f1f75-b12f-42b3-9ee1-435fa8d8708a": {
+      "description": "\"(4) Als Beleg der erforderlichen wirtschaftlichen und finanziellen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber in der Regel die Vorlage einer oder mehrerer der folgenden Unterlagen verlangen: 1. entsprechende Bankerklärungen, 2. Nachweis einer entsprechenden Berufs- oder Betriebshaftpflichtversicherung, 3. Jahresabschlüsse oder Auszüge von Jahresabschlüssen, falls deren Veröffentlichung in dem Land, in dem der Bewerber oder Bieter niedergelassen ist, gesetzlich vorgeschrieben ist, (5) Kann ein Bewerber oder Bieter aus einem berechtigten Grund die geforderten Unterlagen nicht beibringen, so kann er seine wirtschaftliche und finanzielle Leistungsfähigkeit durch Vorlage anderer, vom öffentlichen Auftraggeber als geeignet angesehener Unterlagen belegen.\"",
+      "issuers": [],
+      "name": "Zusätzliche Informationen zur wirtschaftlichen und finanziellen Leistungsfähigkeit"
+    },
+    "3d994c8a-4221-4747-ac0d-4b70ce711943": {
+      "description": "Rechtskräftige Verurteilung wegen Korruption und Einflussnahme auf die öffentliche Verwaltung eines ausländischen Staatsmitglieds der Europäischen Union (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Korruption und Einflussnahme auf die öffentliche Verwaltung eines ausländischen Staatsmitglieds der Europäischen Union (Automatische Übersetzung)"
+    },
+    "3e743af4-5c2e-4cd6-b81a-0da29ad9acea": {
+      "description": "Hat der Wirtschaftsteilnehmer im Rahmen seiner beruflichen Tätigkeit eine schwere Verfehlung begangen? Siehe ggf. Definitionen im nationalen Recht, in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Schwere Verfehlung im Rahmen der beruflichen Tätigkeit (Automatische Übersetzung)"
+    },
+    "3fc03c64-b024-489c-b8c6-69150b606f27": {
+      "description": "Der allgemeine Jahresumsatz des Wirtschaftsteilnehmers in der in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE verlangten Anzahl von Geschäftsjahren betrug: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Allgemeiner Jahresumsatz (Automatische Übersetzung)"
+    },
+    "3fcc98a5-cdda-45c4-b864-c9f9e7f555cb": {
+      "description": "Befindet sich der Wirtschaftsteilnehmer in einem Vergleichsverfahren? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vergleichsverfahren (Automatische Übersetzung)"
+    },
+    "4040c78a-1eef-4f7d-963f-ac86114a7fa3": {
+      "description": "Der spezifische Jahresumsatz des Wirtschaftsteilnehmers in dem vom Auftrag abgedeckten Geschäftsbereich betrug in den gemäß der einschlägigen Bekanntmachung, den Auftragsunterlagen oder der EEE verlangten Anzahl von Geschäftsjahren: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Spezifischer Jahresumsatz (Automatische Übersetzung)"
+    },
+    "40a6d7df-eb43-4053-aa68-903e28f9b1eb": {
+      "description": "n/a",
+      "issuers": [],
+      "name": "Angaben zum Umsatz in den letzten drei abgeschlossenen Geschäftsjahren"
+    },
+    "40c09f62-05cd-46f5-9050-31be83e95e33": {
+      "description": "Sind die Informationen zum Umsatz („allgemeiner“ oder „spezifischer“ Umsatz) nicht für den gesamten vorgegebenen Zeitraum erhältlich, geben Sie bitte an, an welchem Datum das Unternehmen des Wirtschaftsteilnehmers gegründet wurde oder seine Tätigkeit aufgenommen hat: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Gründung des Wirtschaftsteilnehmers (Automatische Übersetzung)"
+    },
+    "41c3f8c3-3aef-4f76-8892-5cfe7e74dd28": {
+      "description": "Es kann nicht pauschal angegeben werden, ob das erforderliche Zertifikat kostenfrei oder -pflichtig ist und wie hoch gegebenenfalls die Gebühr ist.",
+      "issuers": [
+        "Zuständige unabhängige Stelle für Umweltmanagement"
+      ],
+      "name": "Bescheinigungen unabhängiger Stellen für das Umweltmanagement und die Umweltbetriebsprüfung (EMAS)"
+    },
+    "41e45e13-a575-4d3a-959a-f02fa0606f5e": {
+      "description": "Der Wirtschaftsteilnehmer kann – insbesondere für die Qualitätssicherung – auf folgende technische Fachkräfte oder technische Stellen zurückgreifen. Für technische Fachkräfte oder technische Stellen, die nicht unmittelbar dem Unternehmen des Wirtschaftsteilnehmers angehören, deren Kapazitäten der Wirtschaftsteilnehmer aber wie in Teil II Abschnitt C angegeben in Anspruch nehmen will, sind separate EEE auszufüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Technische Fachkräfte oder technische Stellen für die Qualitätssicherung (Automatische Übersetzung)"
+    },
+    "4201da4d-1a60-4f4d-bf4b-1a6174e5a034": {
+      "description": "Je nach Bedarf des öffentlichen Auftraggebers: Geeignete Referenzen bereits abgeschlossener öffentlicher Aufträge für ausreichende Erfahrung (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Besondere Bedingungen für Dienstleistungsverträge: Geeignete Referenzen aus öffentlichen Aufträgen, die ausgeführt wurden (Automatische Übersetzung)"
+    },
+    "43aa9030-7fc3-4a1f-99c1-802cfc3c2c71": {
+      "description": "n/a",
+      "issuers": [
+        "Bundesamt für Justiz"
+      ],
+      "name": "Auszug aus dem Gewerbezentralregister"
+    },
+    "448e0075-308d-4e51-86eb-70566021e931": {
+      "description": "Bestechung im Sinne des Artikel 3 des Übereinkommens über die Bekämpfung der Bestechung, an der Beamte der Europäischen Gemeinschaften oder der Mitgliedstaaten der Europäischen Union beteiligt sind, ABl. C 195 vom 25.6.1997 und Artikel 2 Absatz 1 des Rahmenbeschlusses 2003/568/JHA des Rates vom 22. Juli 2003 zur Bekämpfung der Bestechung im privaten Sektor (ABl. L 192 vom 31.7.2003). Dieser Ausschlussgrund umfasst auch Bestechung im Sinne des nationalen Rechts des öffentlichen Auftraggebers oder des Wirtschaftsteilnehmers. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Korruption (Automatische Übersetzung)"
+    },
+    "452570af-ceb4-43d7-981d-971a80037ed2": {
+      "description": "— (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Auskunft aus dem Gewerbezentralregister (Automatische Übersetzung)"
+    },
+    "4582a7e9-de31-47dc-b73a-cee9474a35a0": {
+      "description": "Nur bei öffentlichen Lieferaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende wesentliche Lieferungen der genannten Art ausgeführt. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu drei Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als drei Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Ausführung von Lieferungen der genannten Art (Automatische Übersetzung)"
+    },
+    "45f3e56a-74ee-4a61-b05d-1fb7b4057a08": {
+      "description": "Ist der Wirtschaftsteilnehmer zahlungsunfähig? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Konkurs (Automatische Übersetzung)"
+    },
+    "461186bf-bdd7-4079-b297-4e43ff798630": {
+      "description": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Entrichtung von Steuern (Automatische Übersetzung)"
+    },
+    "46a575fc-884a-41b4-9d28-9f74b222a4fc": {
+      "description": "Anforderungen an die Humanressourcen und die technischen Ressourcen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Anforderungen an die Humanressourcen und die technischen Ressourcen (Automatische Übersetzung)"
+    },
+    "47112079-6fec-47a3-988f-e561668c3aef": {
+      "description": "Ist der Wirtschaftsteilnehmer selbst oder jede Person, die Mitglied seines Verwaltungs-, Leitungs- oder Aufsichtsorgans ist oder darin Vertretungs-, Entscheidungs- oder Kontrollbefugnisse hat, durch rechtskräftige Verurteilung wegen Geldwäsche oder Terrorismusfinanzierung verurteilt worden, und zwar durch eine Verurteilung, die vor höchstens fünf Jahren ergangen ist oder in denen ein unmittelbar in der Verurteilung festgelegtes Ausschlusszeitraum weiterhin Anwendung findet? Im Sinne des Artikel 1 der Richtlinie 2005/60/EG des Europäischen Parlaments und des Rates vom 26. Oktober 2005 zur Verhinderung der Nutzung des Finanzsystems zum Zwecke der Geldwäsche und der Terrorismusfinanzierung (ABl. L 309 vom 25.11.2005, S. 15). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Geldwäsche oder Terrorismusfinanzierung (Automatische Übersetzung)"
+    },
+    "486eca2f-f492-40cb-9bfe-ee630963a2ad": {
+      "description": "Zur Vertragserfüllung steht ihm folgendes Lieferkettenmanagement- und -überwachungssystem zur Verfügung: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Lieferkettenmanagement (Automatische Übersetzung)"
+    },
+    "48c4ed72-2dde-42b2-a6cc-c367fc378ce5": {
+      "description": "n/a",
+      "issuers": [
+        "zuständige Stelle"
+      ],
+      "name": "Muster, Beschreibungen oder Fotografien mit Echtheitsnachweis"
+    },
+    "499efc97-2ac1-4af2-9e84-323c2ca67747": {
+      "description": "Der allgemeine Jahresumsatz des Wirtschaftsteilnehmers in der in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE verlangten Anzahl von Geschäftsjahren betrug: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Allgemeiner Jahresumsatz (Automatische Übersetzung)"
+    },
+    "4bf996d9-439c-40c6-9ab9-980a48cb55a1": {
+      "description": "Der Wirtschaftsteilnehmer wendet folgende technische Ausrüstungen und Maßnahmen zur Qualitätssicherung an und verfügt über folgende Untersuchungs- und Forschungsmöglichkeiten: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Technische Ausrüstungen und Maßnahmen zur Qualitätssicherung (Automatische Übersetzung)"
+    },
+    "4d21db2a-070c-4817-bf06-47592f609642": {
+      "description": "Eintragung einer juristischen Person im Handelsregister (Automatische Übersetzung)",
+      "issuers": [
+        "Kanzlei des Handelsgerichts (Automatische Übersetzung)"
+      ],
+      "name": "Extrakt K (Automatische Übersetzung)"
+    },
+    "4f00583b-f768-4b8c-a6dd-df5de1623a2e": {
+      "description": "\"(1) Verlangt der öffentliche Auftraggeber als Beleg dafür, dass Bewerber oder Bieter bestimmte Normen der Qualitätssicherung erfüllen, die Vorlage von Bescheinigungen unabhängiger Stellen, so bezieht sich der öffentliche Auftraggeber auf Qualitätssicherungssysteme, die 1. den einschlägigen europäischen Normen genügen und 2. von akkreditierten Stellen zertifiziert sind. Der öffentliche Auftraggeber erkennt auch gleichwertige Bescheinigungen von akkreditierten Stellen aus anderen Staaten an. Konnte ein Bewerber oder Bieter aus Gründen, die er nicht zu vertreten hat, die betreffenden Bescheinigungen nicht innerhalb einer angemessenen Frist einholen, so muss der öffentliche Auftraggeber auch andere Unterlagen über gleichwertige Qualitätssicherungssysteme anerkennen, sofern der Bewerber oder Bieter nachweist, dass die vorgeschlagenen Qualitätssicherungsmaßnahmen den geforderten Qualitätssicherungsnormen entsprechen.\"",
+      "issuers": [],
+      "name": "Qualitätssicherungsnormen"
+    },
+    "50fa8f11-fd4d-4686-ae0b-bb1571da53c1": {
+      "description": "In Bezug auf etwaige andere wirtschaftliche und finanzielle Anforderungen, die in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen genannt sind, erklärt der Wirtschaftsteilnehmer Folgendes: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Andere wirtschaftliche und finanzielle Anforderungen (Automatische Übersetzung)"
+    },
+    "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3": {
+      "description": "Hat der Wirtschaftsteilnehmer im Rahmen seiner beruflichen Tätigkeit eine schwere Verfehlung begangen? Siehe ggf. Definitionen im nationalen Recht, in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Schwere Verfehlung im Rahmen der beruflichen Tätigkeit (Automatische Übersetzung)"
+    },
+    "516c8e77-fed7-48ba-8f85-f69f25537a96": {
+      "description": "Der spezifische Jahresumsatz des Wirtschaftsteilnehmers in dem vom Auftrag abgedeckten Geschäftsbereich betrug in den gemäß der einschlägigen Bekanntmachung, den Auftragsunterlagen oder der EEE verlangten Anzahl von Geschäftsjahren: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Spezifischer Jahresumsatz (Automatische Übersetzung)"
+    },
+    "5218c47d-699f-4d0a-85f2-2baafaf2d8ad": {
+      "description": "Verurteilung wegen Diskriminierung bei der beruflichen Gleichstellung von Frauen und Männern (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Diskriminierung bei der beruflichen Gleichstellung von Frauen und Männern (Automatische Übersetzung)"
+    },
+    "52463b39-1430-41a5-91e8-0794c68dca0a": {
+      "description": "\"(2) Verlangt der öffentliche Auftraggeber als Beleg dafür, dass Bewerber oder Bieter bestimmte Systeme oder Normen des Umweltmanagements erfüllen, die Vorlage von Bescheinigungen unabhängiger Stellen, so bezieht sich der öffentliche Auftraggeber 1. entweder auf das Gemeinschaftssystem für das Umweltmanagement und die Umweltbetriebsprüfung EMAS der Europäischen Union oder 2. auf andere nach Artikel 45 der Verordnung (EG) Nr. 1221/2009 des Europäischen Parlaments und des Rates vom 25. November 2009 über die freiwillige Teilnahme von Organisationen an einem Gemeinschaftssystem für Umweltmanagement und Umweltbetriebsprüfung und zur Aufhebung der Verordnung (EG) Nr. 761/2001, sowie der Beschlüsse der Kommission 2001/681/EG und 2006/193/EG (ABl. L 342 vom 22.12.2009, S. 1) anerkannte Umweltmanagementsysteme oder 3. auf andere Normen für das Umweltmanagement, die auf den einschlägigen europäischen oder internationalen Normen beruhen und von akkreditierten Stellen zertifiziert sind. Der öffentliche Auftraggeber erkennt auch gleichwertige Bescheinigungen von Stellen in anderen Staaten an. Hatte ein Bewerber oder Bieter aus Gründen, die ihm nicht zugerechnet werden können, nachweislich keinen Zugang zu den betreffenden Bescheinigungen oder aus Gründen, die er nicht zu vertreten hat, keine Möglichkeit, diese innerhalb der einschlägigen Fristen zu erlangen, so muss der öffentliche Auftraggeber auch andere Unterlagen über gleichwertige Umweltmanagementmaßnahmen anerkennen, sofern der Bewerber oder Bieter nachweist, dass diese Maßnahmen mit denen, die nach dem geltenden System oder den geltenden Normen für das Umweltmanagement erforderlich sind, gleichwertig sind.\"",
+      "issuers": [],
+      "name": "Umweltmanagementverfahren"
+    },
+    "5465908e-426a-4cec-9425-655a0faac9c3": {
+      "description": "\"Der öffentliche Auftraggeber kann unter Berücksichtigung des Grundsatzes der Verhältnismäßigkeit ein Unternehmen zu jedem Zeitpunkt des Vergabeverfahrens von der Teilnahme an einem Vergabeverfahren ausschließen, wenn 1. das Unternehmen bei der Ausführung öffentlicher Aufträge nachweislich gegen geltende umwelt-, sozial- und arbeitsrechtliche Verpflichtungen verstoßen hat\"",
+      "issuers": [],
+      "name": "Verstoß gegen arbeitsrechtliche Verpflichtungen"
+    },
+    "54fc9793-e42d-4fbf-a652-887b8359e2f7": {
+      "description": "Verwaltungsentscheidung über den Ausschluss von Verwaltungsverträgen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Ausschluss von Verwaltungsverträgen (Automatische Übersetzung)"
+    },
+    "56d13e3d-76e8-4f23-8af6-13e60a2ee356": {
+      "description": "Hat der Wirtschaftsteilnehmer mit anderen Wirtschaftsteilnehmern Vereinbarungen getroffen, die auf eine Verzerrung des Wettbewerbs abzielen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vereinbarungen mit anderen Wirtschaftsteilnehmern zur Verzerrung des Wettbewerbs (Automatische Übersetzung)"
+    },
+    "5808145f-1679-4927-a8b9-103660a50533": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 11. bei Lieferleistungen: a) Muster, Beschreibungen oder Fotografien der zu liefernden Güter, wobei die Echtheit auf Verlangen des öffentlichen Auftraggebers nachzuweisen ist, oder\"",
+      "issuers": [],
+      "name": "Bei Lieferleistungen: Muster, Beschreibungen oder Fotografien"
+    },
+    "5a84ac22-c3c6-4088-93c2-23c60a64b55e": {
+      "description": "Ist die Mitgliedschaft in einer bestimmten Organisation erforderlich, um die betreffende Dienstleistung im Niederlassungsstaat des Wirtschaftsteilnehmers erbringen zu können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Mitgliedschaft in einer bestimmten Organisation erforderlich (Automatische Übersetzung)"
+    },
+    "5ac6c537-fb58-4c31-923c-132eb041e2d7": {
+      "description": "Eintragung einer juristischen Person im Handelsregister (Automatische Übersetzung)",
+      "issuers": [
+        "Kanzlei des Handelsgerichts (Automatische Übersetzung)"
+      ],
+      "name": "KK-bis (Automatische Übersetzung)"
+    },
+    "5d05d5d6-ac86-4a11-8e28-c65c0fe32deb": {
+      "description": "Der Wirtschaftsteilnehmer wendet folgende technische Ausrüstungen und Maßnahmen zur Qualitätssicherung an und verfügt über folgende Untersuchungs- und Forschungsmöglichkeiten: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Technische Ausrüstungen und Maßnahmen zur Qualitätssicherung (Automatische Übersetzung)"
+    },
+    "5e506c16-26ab-4e32-bb78-b27f87dc0565": {
+      "description": "Nur bei öffentlichen Dienstleistungsaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende wesentliche Dienstleistungen der genannten Art erbracht. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu drei Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als drei Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Erbringung von Dienstleistungen der genannten Art (Automatische Übersetzung)"
+    },
+    "612a1625-118d-4ea4-a6db-413184e7c0a8": {
+      "description": "Der Wirtschaftsteilnehmer beabsichtigt, unter Umständen folgenden Teil (Prozentsatz) des Auftrags als Unterauftrag zu vergeben: Hat der Wirtschaftsteilnehmer beschlossen, einen Teil des Auftrags als Unterauftrag zu vergeben, und nimmt er für die Durchführung dieses Teils Kapazitäten des Unterauftragnehmers in Anspruch, füllen Sie bitte eine separate EEE für den betreffenden Unterauftragnehmer aus (siehe Teil II Abschnitt C). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Als Unterauftrag vergebener Anteil (Automatische Übersetzung)"
+    },
+    "61874050-5130-4f1c-a174-720939c7b483": {
+      "description": "Hat der Wirtschaftsteilnehmer oder ein mit ihm in Verbindung stehendes Unternehmen den öffentlichen Auftraggeber oder Sektorenauftraggeber beraten oder war er auf andere Art und Weise an der Vorbereitung des Vergabeverfahrens beteiligt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Direkte oder indirekte Beteiligung an der Vorbereitung des Vergabeverfahrens (Automatische Übersetzung)"
+    },
+    "622741dd-5a42-4e04-8a7d-1040b8109e0d": {
+      "description": "Wenn die zu liefernden Waren oder die zu erbringenden Dienstleistungen komplexer Art sind oder – ausnahmsweise – wenn sie einem besonderen Zweck dienen sollen: Der Wirtschaftsteilnehmer wird Kontrollen gestatten, die seine Produktionskapazität bzw. seine technische Leistungsfähigkeit und erforderlichenfalls seine Untersuchungs- und Forschungsmöglichkeiten sowie die von ihm für die Qualitätskontrolle getroffenen Vorkehrungen betreffen. Die Kontrollen werden vom öffentlichen Auftraggeber oder – mit dessen Einwilligung – in seinem Namen von einer zuständigen amtlichen Stelle des Landes, in dem der Lieferant oder Dienstleister ansässig ist, vorgenommen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Gestatten von Kontrollen (Automatische Übersetzung)"
+    },
+    "6346959b-e097-4ea1-89cd-d1b4c131ea4d": {
+      "description": "Die Zahl der Führungskräfte des Wirtschaftsteilnehmers in den letzten drei Jahren belief sich auf: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahl der Führungskräfte (Automatische Übersetzung)"
+    },
+    "6359ef3d-2bee-4723-acab-4e637ae53776": {
+      "description": "Die zuständigen Stellen sind je nach Bundesland verschieden. Die Kosten für einen Gewerbeschein betragen, je nach Gemeinde, mindestens 15 und maximal 65 Euro.",
+      "issuers": [
+        "zuständige Stelle"
+      ],
+      "name": "Gewerbean- bzw. -ummeldung, Gewerbeerlaubnis"
+    },
+    "63adb07d-db1b-4ef0-a14e-a99785cf8cf6": {
+      "description": "Liegen in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen angegebene rein innerstaatliche Ausschlussgründe vor? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Rein innerstaatliche Ausschlussgründe (Automatische Übersetzung)"
+    },
+    "64520c62-ea9c-4b81-b035-89c2cf924284": {
+      "description": "Eintragung in das amtliche Verzeichnis nach Durchführung eines bundesweit einheitlichen Präqualifikationsverfahrens für öffentlichen Liefer- und Dienstleistungsaufträge beruht auf Volage folgender Nachweise: https://www.amtliches-verzeichnis.ihk.de/Eignungsnachweise.aspx",
+      "issuers": [
+        "Industrie- und Handelskammern"
+      ],
+      "name": "Amtliches Verzeichnis AVPQ"
+    },
+    "68918c7a-f5bc-4a1a-a62f-ad8983600d48": {
+      "description": "Befindet sich der Wirtschaftsteilnehmer in einem Vergleichsverfahren? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vergleichsverfahren (Automatische Übersetzung)"
+    },
+    "696a75b2-6107-428f-8b74-82affb67e184": {
+      "description": "Kann der Wirtschaftsteilnehmer bestätigen, dass er sich bei der Erteilung der für die Überprüfung des Fehlens von Ausschlussgründen oder der Erfüllung der Auswahlkriterien erforderlichen Informationen in erheblichem Maße falscher Erklärungen schuldig gemacht hat, diese Informationen nicht vorenthalten, aber unverzüglich in der Lage ist, die von einem öffentlichen Auftraggeber oder einer Vergabestelle verlangten Nachweise beizubringen, und er sich nicht verpflichtet hat, den Entscheidungsprozess des öffentlichen Auftraggebers oder der Vergabestelle ungebührlich zu beeinflussen, vertrauliche Informationen zu erhalten, die ihm ungerechtfertigte Vorteile im Vergabeverfahren verschaffen oder die die Entscheidungen in Bezug auf den Ausschluss, die Auswahl oder die Vergabe erheblich beeinflussen können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Falsche Angaben, verweigerte Informationen, die nicht in der Lage sind, die erforderlichen Unterlagen vorzulegen, und haben vertrauliche Informationen über dieses Verfahren erhalten. (Automatische Übersetzung)"
+    },
+    "6a428fd8-892a-4812-a0d2-d7ddd3414e08": {
+      "description": "\"Der öffentliche Auftraggeber schließt ein Unternehmen von der Teilnahme an einem Vergabeverfahren aus, wenn 1. das Unternehmen seinen Verpflichtungen zur Zahlung von Steuern, Abgaben und Beiträgen zur Sozialversicherung nicht nachgekommen ist und dies durch eine rechtskräftige Gerichts- oder bestandskräftige Verwaltungsentscheidung festgestellt wurde oder 2. die öffentlichen Auftraggeber auf sonstige geeignete Weise die Verletzung einer Verpflichtung nach Nummer 1 nachweisen können.\"",
+      "issuers": [],
+      "name": "Verpflichtung zur Zahlung von Sozialversicherungsbeiträgen nicht ordnungsgemäß erfüllt"
+    },
+    "6bb34da4-2ff2-4e34-91fb-dea91fee4a5f": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 4. Angabe des Lieferkettenmanagement- und Lieferkettenüberwachungssystems, das dem Unternehmen zur Vertragserfüllung zur Verfügung steht,\"",
+      "issuers": [],
+      "name": "Lieferkettenmanagement- und Lieferkettenüberwachungssystems"
+    },
+    "6e241391-3301-4215-9ba0-e6be8ceeb79c": {
+      "description": "Bankerklärung oder Nachweis der Versicherung relevanter Berufsrisiken (Automatische Übersetzung)",
+      "issuers": [
+        "Versicherer oder Banker (Automatische Übersetzung)"
+      ],
+      "name": "Bankerklärung oder Nachweis der Versicherung relevanter Berufsrisiken (Automatische Übersetzung)"
+    },
+    "6e75a990-5593-4f46-923e-293089870b7f": {
+      "description": "Je nach Bedarf des öffentlichen Auftraggebers (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Besondere Bedingungen für Techniker oder technische Stellen für die Qualitätskontrolle (Automatische Übersetzung)"
+    },
+    "6ecea649-87b7-4817-82d3-b332df4c6267": {
+      "description": "Auf der angegebenen Internetseite veröffentlichen die Insolvenzgerichte der Bundesrepublik Deutschland die Bekanntmachungen, die vorzunehmen sind, wenn ein Insolvenzverfahren bei Gericht beantragt worden ist.",
+      "issuers": [
+        "zuständiges Insolvenzgericht"
+      ],
+      "name": "Auskunft des zuständigen Insolvenzgerichts"
+    },
+    "6ed8d930-aef8-435c-bebc-e9b479565b26": {
+      "description": "\"2. Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit kann der öffentliche Auftraggeber verlangen: c) eine Erklärung über den Umsatz des Unternehmens jeweils bezogen auf die letzten drei abgeschlossenen Geschäftsjahre, soweit er Bauleistungen und andere Leistungen betrifft, die mit der zu vergebenden Leistung vergleichbar sind, unter Einschluss des Anteils bei gemeinsam mit anderen Unternehmen ausgeführten Aufträgen. Der öffentliche Auftraggeber kann von den Unternehmen insbesondere verlangen, einen bestimmten Mindestjahresumsatz, einschließlich eines Mindestumsatzes in dem vom Auftrag abgedeckten Bereich nachzuweisen. Der geforderte Mindestjahresumsatz darf das Zweifache des geschätzten Auftragswerts nur in hinreichend begründeten Fällen übersteigen. Die Gründe sind in den Vergabeunterlagen oder in dem Vergabevermerk gemäß § 20 EU anzugeben. Ist ein Auftrag in Lose unterteilt, finden diese Regelungen auf jedes einzelne Los Anwendung. Der öffentliche Auftraggeber kann jedoch den Mindestjahresumsatz, der von Unternehmen verlangt wird, unter Bezugnahme auf eine Gruppe von Losen in dem Fall festlegen, dass der erfolgreiche Bieter den Zuschlag für mehrere Lose erhält, die gleichzeitig auszuführen sind. Sind auf einer Rahmenvereinbarung basierende Aufträge infolge eines erneuten Aufrufs zum Wettbewerb zu vergeben, wird der Höchstjahresumsatz aufgrund des erwarteten maximalen Umfangs spezifischer Aufträ- ge berechnet, die gleichzeitig ausgeführt werden, oder – wenn dieser nicht bekannt ist – aufgrund des geschätzten Werts der Rahmenvereinbarung. Bei dynamischen Beschaffungssystemen wird der Höchstjahresumsatz auf der Basis des erwarteten Höchstumfangs konkreter Aufträge berechnet, die nach diesem System vergeben werden sollen.\"",
+      "issuers": [],
+      "name": "Durchschnittlicher Umsatz im Tätigkeitsbereich des Auftrags"
+    },
+    "6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f": {
+      "description": "Der Wirtschaftsteilnehmer ist in den einschlägigen Berufsregistern seines Niederlassungsmitgliedstaats verzeichnet; aufgelistet in Anhang XI der Richtlinie 2014/24/EU;. Wirtschaftsteilnehmer aus bestimmten Mitgliedstaaten müssen ggf. andere in jenem Anhang aufgeführte Anforderungen erfüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Eintragung in einem einschlägigen Berufsregister (Automatische Übersetzung)"
+    },
+    "6f78e656-b2e4-4ff2-9385-221578d3f481": {
+      "description": "",
+      "issuers": [
+        "diverse"
+      ],
+      "name": "Bescheinigung der Berechtigung zur Berufsausübung"
+    },
+    "700fd043-52d3-4853-98a9-1532c3e74cb2": {
+      "description": "Ein Unternehmen mit Sitz im Ausland kann vorübergehend Beschäftigte für eine Dienstreise an ein anderes in Frankreich ansässiges Unternehmen ablösen. Jeder Arbeitgeber, der im Ausland niedergelassen ist, muss vor Beginn der Intervention eine vorherige Meldung der transnationalen Abordnung vor Beginn der Intervention an die Gewerbeaufsicht richten, von der der Ort seiner Tätigkeit abhängt. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Arbeitnehmer, die vorübergehend von einem nicht in Frankreich niedergelassenen Unternehmen beschäftigt werden (Automatische Übersetzung)"
+    },
+    "715274ba-2e46-4fbf-a88a-b12c6206f0ec": {
+      "description": "Liegen in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen angegebene rein innerstaatliche Ausschlussgründe vor? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Rein innerstaatliche Ausschlussgründe (Automatische Übersetzung)"
+    },
+    "7321c3e7-bdf5-4a10-abc3-e261008e85bb": {
+      "description": "Wenn die zu liefernden Waren oder zu erbringenden Dienstleistungen komplex sind oder in Ausnahmefällen einem bestimmten Zweck dienen, eine Kontrolle, die vom öffentlichen Auftraggeber oder in seinem Namen von einer zuständigen amtlichen Stelle des Landes durchgeführt wird, in dem der Lieferant oder Dienstleistungserbringer niedergelassen ist, vorbehaltlich der Zustimmung dieser Einrichtung; Diese Kontrolle erstreckt sich auf die Produktionskapazität des Lieferanten oder die technische Leistungsfähigkeit des Dienstleisters und, falls erforderlich, die ihm zur Verfügung stehenden Untersuchungs- und Forschungsmittel sowie die Maßnahmen, die er zur Kontrolle der Qualität ergreifen wird. (Automatische Übersetzung)",
+      "issuers": [
+        "Käufer (Automatische Übersetzung)"
+      ],
+      "name": "Kontrolle der Produktionskapazität des Lieferanten oder der technischen Kapazität des Dienstleisters (Automatische Übersetzung)"
+    },
+    "73e7b495-5052-4a00-8e62-386403e77bb4": {
+      "description": "Wird der Wirtschaftsteilnehmer in der Lage sein, Bescheinigungen unabhängiger Stellen darüber vorzulegen, dass er die vorgegebenen Qualitätssicherungsnormen – einschließlich der Zugänglichkeit für Menschen mit Behinderungen – erfüllt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bescheinigungen unabhängiger Stellen über Qualitätssicherungsnormen (Automatische Übersetzung)"
+    },
+    "73f10e36-ed7a-412e-995c-aa76463e3776": {
+      "description": "Ist die Mitgliedschaft in einer bestimmten Organisation erforderlich, um die betreffende Dienstleistung im Niederlassungsstaat des Wirtschaftsteilnehmers erbringen zu können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Mitgliedschaft in einer bestimmten Organisation erforderlich (Automatische Übersetzung)"
+    },
+    "756be7d0-4d12-4e40-98a8-2119c1c774bd": {
+      "description": "Wurde in der Vergangenheit ein zwischen dem Wirtschaftsteilnehmer und einem öffentlichen Auftraggeber oder Sektorenauftraggeber geschlossener Vertrag über die Vergabe eines öffentlichen Auftrags oder einer Konzession vorzeitig beendigt oder hat ein entsprechender früherer Auftrag Schadenersatz oder andere vergleichbare Sanktionen nach sich gezogen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vorzeitige Beendigung, Schadensersatz oder andere vergleichbare Sanktionen (Automatische Übersetzung)"
+    },
+    "7604bd40-4462-4086-8763-a50da51a869c": {
+      "description": "Der Wirtschaftsteilnehmer hat eine Berufshaftpflichtversicherung über folgenden Betrag abgeschlossen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Berufshaftpflichtversicherung (Automatische Übersetzung)"
+    },
+    "7662b7a9-bcb8-4763-a0a7-7505d8e8470d": {
+      "description": "Bei öffentlichen Lieferaufträgen: Der Wirtschaftsteilnehmer wird die verlangten Muster, Beschreibungen oder Fotografien der zu liefernden Waren zur Verfügung stellen und ggf. die Echtheitsbescheinigungen vorlegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Muster, Beschreibungen oder Fotografien mit Echtheitsbescheinigung (Automatische Übersetzung)"
+    },
+    "768a9833-8fa4-46e4-b3ec-53af81daa061": {
+      "description": "Jährlicher Mindestumsatz (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Jährlicher Mindestumsatz (Automatische Übersetzung)"
+    },
+    "775c1181-cff3-4cb4-a99e-aae593e1f1e2": {
+      "description": "(1) Der öffentliche Auftraggeber kann verlangen, dass Bewerber oder Bieter je nach den Rechtsvorschriften des Staats, in dem sie niedergelassen sind, entweder die Eintragung in einem Berufs- oder Handelsregister dieses Staats nachweisen oder auf andere Weise die erlaubte Berufsausübung nachweisen. Für die Mitgliedstaaten der Europäischen Union sind die jeweiligen Berufs- oder Handelsregister und die Bescheinigungen oder Erklärungen über die Berufsausübung in Anhang XI der Richtlinie 2014/24/EU des Europäischen Parlaments und des Rates vom 26. Februar 2014 über die öffentliche Auftragsvergabe und zur Aufhebung der Richtlinie 2004/18/EG (ABl. L 94 vom 28.3.2014, S. 65) aufgeführt.",
+      "issuers": [],
+      "name": "Eintragung ins nationale Handelsregister"
+    },
+    "77f481ce-ffb6-483f-8e2b-c78db5e68292": {
+      "description": "Sind die Informationen zum Umsatz („allgemeiner“ oder „spezifischer“ Umsatz) nicht für den gesamten vorgegebenen Zeitraum erhältlich, geben Sie bitte an, an welchem Datum das Unternehmen des Wirtschaftsteilnehmers gegründet wurde oder seine Tätigkeit aufgenommen hat: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Gründung des Wirtschaftsteilnehmers (Automatische Übersetzung)"
+    },
+    "7b5f8122-5451-4509-8a83-e9b607fc2fd7": {
+      "description": "\"2. Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit kann der öffentliche Auftraggeber verlangen: c) eine Erklärung über den Umsatz des Unternehmens jeweils bezogen auf die letzten drei abgeschlossenen Geschäftsjahre, soweit er Bauleistungen und andere Leistungen betrifft, die mit der zu vergebenden Leistung vergleichbar sind, unter Einschluss des Anteils bei gemeinsam mit anderen Unternehmen ausgeführten Aufträgen. Der öffentliche Auftraggeber kann von den Unternehmen insbesondere verlangen, einen bestimmten Mindestjahresumsatz, einschließlich eines Mindestumsatzes in dem vom Auftrag abgedeckten Bereich nachzuweisen. Der geforderte Mindestjahresumsatz darf das Zweifache des geschätzten Auftragswerts nur in hinreichend begründeten Fällen übersteigen. Die Gründe sind in den Vergabeunterlagen oder in dem Vergabevermerk gemäß § 20 EU anzugeben. Ist ein Auftrag in Lose unterteilt, finden diese Regelungen auf jedes einzelne Los Anwendung. Der öffentliche Auftraggeber kann jedoch den Mindestjahresumsatz, der von Unternehmen verlangt wird, unter Bezugnahme auf eine Gruppe von Losen in dem Fall festlegen, dass der erfolgreiche Bieter den Zuschlag für mehrere Lose erhält, die gleichzeitig auszuführen sind. Sind auf einer Rahmenvereinbarung basierende Aufträge infolge eines erneuten Aufrufs zum Wettbewerb zu vergeben, wird der Höchstjahresumsatz aufgrund des erwarteten maximalen Umfangs spezifischer Aufträ- ge berechnet, die gleichzeitig ausgeführt werden, oder – wenn dieser nicht bekannt ist – aufgrund des geschätzten Werts der Rahmenvereinbarung. Bei dynamischen Beschaffungssystemen wird der Höchstjahresumsatz auf der Basis des erwarteten Höchstumfangs konkreter Aufträge berechnet, die nach diesem System vergeben werden sollen.\"",
+      "issuers": [],
+      "name": "Jahresumsatz"
+    },
+    "7d6107e4-6cd5-44ba-8ba7-bf6f9ad4cb68": {
+      "description": "Ist dem Wirtschaftsteilnehmer ein Interessenkonflikt im Sinne des nationalen Rechts, der einschlägigen Bekanntmachung oder der Auftragsunterlagen aufgrund seiner Teilnahme am Vergabeverfahren bekannt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Interessenkonflikt aufgrund seiner Teilnahme an dem Vergabeverfahren (Automatische Übersetzung)"
+    },
+    "7d85e333-bbab-49c0-be8d-c36d71a72f5e": {
+      "description": "Hat der Wirtschaftsteilnehmer seine Verpflichtungen in Bezug auf die Zahlung von Sozialversicherungsbeiträgen sowohl in dem Land, in dem er niedergelassen ist, als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder des Auftraggebers, sofern es sich nicht um das Niederlassungsland handelt, verletzt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahlung der Sozialversicherungsbeiträge (Automatische Übersetzung)"
+    },
+    "7d9949d0-225b-4cc3-b925-f9779ebf4cd7": {
+      "description": "Der Wirtschaftsteilnehmer beabsichtigt, unter Umständen folgenden Teil (Prozentsatz) des Auftrags als Unterauftrag zu vergeben: Hat der Wirtschaftsteilnehmer beschlossen, einen Teil des Auftrags als Unterauftrag zu vergeben, und nimmt er für die Durchführung dieses Teils Kapazitäten des Unterauftragnehmers in Anspruch, füllen Sie bitte eine separate EEE für den betreffenden Unterauftragnehmer aus (siehe Teil II Abschnitt C). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Als Unterauftrag vergebener Anteil (Automatische Übersetzung)"
+    },
+    "7dad2c37-2de7-4f47-bc51-101a34c4afa4": {
+      "description": "Hat der Wirtschaftsteilnehmer mit anderen Wirtschaftsteilnehmern Vereinbarungen getroffen, die auf eine Verzerrung des Wettbewerbs abzielen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vereinbarungen mit anderen Wirtschaftsteilnehmern zur Verzerrung des Wettbewerbs (Automatische Übersetzung)"
+    },
+    "7e3fc824-9607-4c07-9051-8cc6c2b6d55a": {
+      "description": "In Bezug auf die in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE genannten Finanzkennzahlen erklärt der Wirtschaftsteilnehmer, dass die aktuellen Werte wie folgt lauten: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Finanzkennzahl (Automatische Übersetzung)"
+    },
+    "7f0fe1dc-9b2b-4a15-acaa-ffedff9fe6ea": {
+      "description": "Terroristische Straftaten oder Straftaten im Zusammenhang mit terroristischen Aktivitäten im Sinne der Artikel 1 und 3 des Rahmenbeschlusses des Rates vom 13. Juni 2002 zur Terrorismusbekämpfung (ABl. L 164 vom 22.6.2002). Dieser Ausschlussgrund umfasst auch die Anstiftung oder die Beihilfe oder den Versuch der Begehung einer Straftat gemäß Artikel 4 des genannten Rahmenbeschlusses. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Terroristische Straftaten oder Straftaten im Zusammenhang mit terroristischen Aktivitäten (Automatische Übersetzung)"
+    },
+    "7f295359-9703-4efc-a615-4832f3dcb539": {
+      "description": "Der allgemeine Jahresumsatz des Wirtschaftsteilnehmers in der in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE verlangten Anzahl von Geschäftsjahren betrug: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Allgemeiner Jahresumsatz (Automatische Übersetzung)"
+    },
+    "7f7d89d8-a182-445a-8e66-6b68830d0d5c": {
+      "description": "Geeignete Verweise auf bereits abgeschlossene öffentliche Vergabeverfahren für ausreichende Erfahrung (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Angemessene Referenzen von zuvor abgeschlossenen öffentlichen Aufträgen für ausreichende Erfahrung (Automatische Übersetzung)"
+    },
+    "7fcb132a-d44b-4576-98ea-1b99f2c0f10f": {
+      "description": "Berufsspezifischer Nachweis über die Befähigung und Berufsausübung im Handwerk.",
+      "issuers": [
+        "zuständige Handwerkskammer"
+      ],
+      "name": "Bestätigung über die Eintragung in der Handwerksrolle"
+    },
+    "80bdc30f-5d7f-4895-a07e-65cb0baa2a98": {
+      "description": "\"(1) Der öffentliche Auftraggeber kann im Hinblick auf die wirtschaftliche und finanzielle Leistungsfähigkeit der Bewerber oder Bieter Anforderungen stellen, die sicherstellen, dass die Bewerber oder Bieter über die erforderlichen wirtschaftlichen und finanziellen Kapazitäten für die Ausführung des Auftrags verfügen. Zu diesem Zweck kann er insbesondere Folgendes verlangen: 1. einen bestimmten Mindestjahresumsatz, einschließlich eines bestimmten Mindestjahresumsatzes in dem Tätigkeitsbereich des Auftrags, (2) Sofern ein Mindestjahresumsatz verlangt wird, darf dieser das Zweifache des geschätzten Auftragswerts nur überschreiten, wenn aufgrund der Art des Auftragsgegenstands spezielle Risiken bestehen. Der öffentliche Auftraggeber hat eine solche Anforderung in den Vergabeunterlagen oder im Vergabevermerk hinreichend zu begründen. (3) Ist ein öffentlicher Auftrag in Lose unterteilt, finden die Absätze 1 und 2 auf jedes einzelne Los Anwendung. Der öffentliche Auftraggeber kann jedoch für den Fall, dass der erfolgreiche Bieter den Zuschlag für mehrere gleichzeitig auszuführende Lose erhält, einen Mindestjahresumsatz verlangen, der sich auf diese Gruppe von Losen bezieht. (4) Als Beleg der erforderlichen wirtschaftlichen und finanziellen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber in der Regel die Vorlage einer oder mehrerer der folgenden Unterlagen verlangen: 4. eine Erklärung über den Gesamtumsatz und gegebenenfalls den Umsatz in dem Tätigkeitsbereich des Auftrags; eine solche Erklärung kann höchstens für die letzten drei Geschäftsjahre verlangt werden und nur, sofern entsprechende Angaben verfügbar sind.\"",
+      "issuers": [],
+      "name": "Gesamt-Jahresumsatz"
+    },
+    "81319264-08fb-40ae-a18d-752e442e163d": {
+      "description": "Verzeichnis der in den letzten fünf Jahren ausgeführten Arbeiten zusammen mit Leistungsbescheinigungen für die wichtigsten Bauleistungen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Liste der bereits ausgeführten Aufträge (Automatische Übersetzung)"
+    },
+    "81bc0dcd-43a5-40b8-bc8f-0f027152b613": {
+      "description": "Es kann nicht pauschal angegeben werden, ob das erforderliche Zertifikat kostenfrei oder -pflichtig ist und wie hoch gegebenenfalls die Gebühr ist.",
+      "issuers": [
+        "Zuständige unabhängige Stelle für Qualitätssicherung"
+      ],
+      "name": "Bescheinigungen unabhängiger Stellen oder Institute für Qualitätsicherung (z.B. DIN, ISO)"
+    },
+    "8272d106-a8e5-4c89-88f1-6bd067977f5e": {
+      "description": "Endgültige Verurteilung wegen concussion (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Gehirnerschütterung (Automatische Übersetzung)"
+    },
+    "830c7713-8fd3-4db7-994d-6bb63fac0e45": {
+      "description": "\"(1) Verlangt der öffentliche Auftraggeber zum Nachweis dafür, dass Bewerber oder Bieter bestimmte Normen der Qualitätssicherung erfüllen, die Vorlage von Bescheinigungen unabhängiger Stellen, so bezieht sich der öffentliche Auftraggeber auf Qualitätssicherungssysteme, die 1. den einschlägigen europäischen Normen genügen und 2. von akkreditierten Stellen zertifiziert sind. Der öffentliche Auftraggeber erkennt auch gleichwertige Bescheinigungen von akkreditierten Stellen aus anderen Staaten an. Konnte ein Unternehmen aus Gründen, die es nicht zu vertreten hat, die betreffenden Bescheinigungen nicht innerhalb der einschlägigen Fristen einholen, so muss der öffentliche Auftraggeber auch andere Unterlagen über gleichwertige Qualitätssicherungssysteme anerkennen, sofern das Unternehmen nachweist, dass die vorgeschlagenen Qualitätssicherungsmaßnahmen den geforderten Qualitätssicherungsnormen entsprechen.\"",
+      "issuers": [],
+      "name": "Qualitätssicherungsnormen"
+    },
+    "83ba2b8a-7145-4f85-8384-97073d154005": {
+      "description": "Rechtskräftige Verurteilung wegen Fälschung (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verfälschung (Automatische Übersetzung)"
+    },
+    "843660cf-235e-4441-af2a-d9c7cb1f5bc1": {
+      "description": "\"(2) Verlangt der öffentliche Auftraggeber zum Nachweis dafür, dass Bewerber oder Bieter bestimmte Systeme oder Normen des Umweltmanagements erfüllen, die Vorlage von Bescheinigungen unabhängiger Stellen, so bezieht sich der öffentliche Auftraggeber 1. entweder auf das Gemeinschaftssystem für das Umweltmanagement und die Umweltbetriebsprüfung (EMAS) der Europäischen Union oder 2. auf andere nach Artikel 45 der Verordnung (EG) 1221/2009 anerkannte Umweltmanagementsysteme oder 3. auf andere Normen für das Umweltmanagement, die auf den einschlägigen europäischen oder internationalen Normen beruhen und von akkreditierten Stellen zertifiziert sind. Der öffentliche Auftraggeber erkennt auch gleichwertige Bescheinigungen von Stellen in anderen Staaten an. Hatte ein Unternehmen aus Gründen, die ihm nicht zugerechnet werden können, nachweislich keinen Zugang zu den betreffenden Bescheinigungen oder aus Gründen, die es nicht zu vertreten hat, keine Möglichkeit, diese innerhalb der einschlägigen Fristen zu erlangen, so muss der öffentliche Auftraggeber auch andere Nachweise über gleichwertige Umweltmanagementmaß- nahmen anerkennen, sofern das Unternehmen nachweist, dass diese Maßnahmen mit denen, die nach dem geltenden System oder den geltenden Normen für das Umweltmanagement erforderlich sind, gleichwertig sind.\"",
+      "issuers": [],
+      "name": "Umweltmanagementverfahren"
+    },
+    "8660f33c-762c-40c9-8bc8-1922b253212b": {
+      "description": "Bescheinigungen oder Bescheinigungen, die im Einklang mit den Empfehlungen der Stellungnahme zu Art und Inhalt der technischen Spezifikationen im öffentlichen Auftragswesen (NOR: EINM1608199V) Bescheinigungen, die von den für die Qualitätskontrolle zuständigen Instituten oder Dienststellen ausgestellt und zur Bescheinigung der Vertragsmäßigkeit durch Bezugnahmen auf bestimmte technische Spezifikationen ausgestellt wurden (Automatische Übersetzung)",
+      "issuers": [
+        "Offizielle Organisationen, Institute oder Dienste (Automatische Übersetzung)"
+      ],
+      "name": "Bescheinigungen, die von amtlichen Qualitätskontrollinstituten oder -dienststellen ausgestellt wurden und die Konformität der Lieferungen durch Bezugnahmen auf bestimmte technische Spezifikationen bescheinigen lassen (Automatische Übersetzung)"
+    },
+    "8750ea2c-5a8b-4004-8ddb-4a9080b00f79": {
+      "description": "Beschreibung der technischen Ausrüstung und der Maßnahmen, die der Bewerber verwendet, um die Qualität und die Mittel der Studie und der Forschung seines Unternehmens zu gewährleisten (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Beschreibung der technischen Ausrüstung und der Maßnahmen, die der Bewerber verwendet, um die Qualität und die Mittel der Studie und der Forschung seines Unternehmens zu gewährleisten (Automatische Übersetzung)"
+    },
+    "87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7": {
+      "description": "Der Wirtschaftsteilnehmer ist in den einschlägigen Handelsregistern seines Niederlassungsmitgliedstaats verzeichnet; aufgelistet in Anhang XI der Richtlinie 2014/24/EU; Wirtschaftsteilnehmer aus bestimmten Mitgliedstaaten müssen ggf. andere in jenem Anhang aufgeführte Anforderungen erfüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Eintragung in einem Handelsregister (Automatische Übersetzung)"
+    },
+    "886362e8-622d-4bb6-bb84-afbee846ba0c": {
+      "description": "Einem Unternehmen, das einen Antrag auf öffentliche Auftragsvergabe gestellt hat, die Möglichkeit zu geben, seinen finanziellen Status, seine finanzielle Leistungsfähigkeit und seine Fähigkeit, sich am Vergabeverfahren zu beteiligen, anzugeben. Wenn das Verfahren elektronisch erfolgt, kann die Dume den Bewerbern zur Verfügung gestellt, gespeichert und elektronisch übermittelt werden, aber dieses Formular kann auch ausgefüllt, ausgedruckt und der Akte beigefügt werden, wenn das Unternehmen seine Antwort in Papierform (mit Ausnahme der zentralen Beschaffungsstellen) übermitteln möchte und kann. (Automatische Übersetzung)",
+      "issuers": [
+        "Direktion Recht (MEF) (Automatische Übersetzung)",
+        "Europäische Union (Automatische Übersetzung)"
+      ],
+      "name": "Einheitliche Europäische Eigenerklärung (EEE) (Automatische Übersetzung)"
+    },
+    "8b821269-93b9-4634-8a06-df8354184a5f": {
+      "description": "Handelsregister Abteilung A für Einzelkaufleute und Personengesellschaften (z.B. OHG, KG, GmbH & Co. KG, AG & Co. KG)",
+      "issuers": [
+        "zuständiges Amtsgericht"
+      ],
+      "name": "Amtlicher chronologischer Ausdruck aus dem Handelsregister A"
+    },
+    "8cce0794-2f16-4527-bb15-c655187ebc2c": {
+      "description": "n/a",
+      "issuers": [],
+      "name": "Angaben zur durchschnittlichen Anzahl der Beschäftigten und der Führungskräfte in den letzten drei abgeschlossenen Geschäftsjahren"
+    },
+    "8cfefa01-0be1-4658-87ef-e9dd0258ffaa": {
+      "description": "",
+      "issuers": [
+        "Zuständige Versicherungsgesellschaft"
+      ],
+      "name": "Versicherungsberatung (Automatische Übersetzung)"
+    },
+    "8d32498c-bdd8-459b-aa3c-99a830a2229e": {
+      "description": "Bilanzauszug der letzten 3 Jahre (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bilanzauszug der letzten 3 Jahre (Automatische Übersetzung)"
+    },
+    "8ed65e48-fd0d-444f-97bd-4f58da632999": {
+      "description": "Wird der Wirtschaftsteilnehmer in der Lage sein, Bescheinigungen unabhängiger Stellen darüber vorzulegen, dass er die Anforderungen an die Umweltmanagementsysteme oder -normen erfüllt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bescheinigungen unabhängiger Stellen über Umweltmanagementsysteme oder -normen (Automatische Übersetzung)"
+    },
+    "8fda202a-0c37-41bb-9d7d-de3f49edbfcb": {
+      "description": "Werden die Vermögenswerte des Wirtschaftsteilnehmers von einem Insolvenzverwalter oder einem Gericht verwaltet? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verwaltung der Vermögenswerte durch einen Insolvenzverwalter (Automatische Übersetzung)"
+    },
+    "904aa8f2-a28f-4e2f-9b62-2068608e27eb": {
+      "description": "Der spezifische, durchschnittliche Jahresumsatz des Wirtschaftsteilnehmers in dem vom Auftrag abgedeckten Geschäftsbereich betrug in der gemäß der einschlägigen Bekanntmachung, den Auftragsunterlagen oder der EEE verlangten Anzahl von Geschäftsjahren: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Spezifischer, durchschnittlicher Umsatz (Automatische Übersetzung)"
+    },
+    "90a2e100-44cc-45d3-9970-69d6714f1596": {
+      "description": "Folgende Untersuchungs- und Forschungsmöglichkeiten sind vorgesehen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Untersuchungs- und Forschungsmöglichkeiten (Automatische Übersetzung)"
+    },
+    "91f8cf97-1a8b-4e51-8b5c-e2f561ed98d8": {
+      "description": "Von unabhängigen Einrichtungen ausgestellte Bescheinigungen über die berufliche Qualifikation (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Berufsbefähigungszeugnisse (Automatische Übersetzung)"
+    },
+    "932553f9-ab4c-49ba-a8c1-3115d5aa9917": {
+      "description": "entsprechend § 48b EStG; In Sachsen werden keine Bescheinigung von den Finanzämtern ausgestellt; hier erfolgt ein Nachweis durch Eigenerklärung.",
+      "issuers": [
+        "zuständiges Finanzamt"
+      ],
+      "name": "Bescheinigung in Steuersachen"
+    },
+    "934a6302-822f-4ba6-b043-345c1a0aa1af": {
+      "description": "Nur bei öffentlichen Dienstleistungsaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende wesentliche Dienstleistungen der genannten Art erbracht. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu drei Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als drei Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Erbringung von Dienstleistungen der genannten Art (Automatische Übersetzung)"
+    },
+    "935cf634-44e6-461d-8448-5350bba910b9": {
+      "description": "\"2. 1Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit kann der öffentliche Auftraggeber verlangen: a) die Vorlage entsprechender Bankerklärungen oder gegebenenfalls den Nachweis einer entsprechenden Berufshaftpflichtversicherung. b) 1die Vorlage von Jahresabschlüssen, falls deren Veröffentlichung in dem Land, in dem das Unternehmen ansässig ist, gesetzlich vorgeschrieben ist. 2Zusätzlich können weitere Informationen, zum Beispiel über das Verhältnis zwischen Vermögen und Verbindlichkeiten in den Jahresabschlüssen, verlangt werden. 3Die Methoden und Kriterien für die Berücksichtigung weiterer Informationen müssen in den Vergabeunterlagen spezifiziert werden; sie müssen transparent, objektiv und nichtdiskriminierend sein.\"",
+      "issuers": [],
+      "name": "Zusätzliche Informationen zur wirtschaftlichen und finanziellen Leistungsfähigkeit"
+    },
+    "9460457e-b43d-48a9-acd1-615de6ddd33e": {
+      "description": "Der Wirtschaftsteilnehmer wird während der Auftragsausführung folgende Umweltmanagementmaßnahmen anwenden können: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Umweltmanagementmaßnahmen (Automatische Übersetzung)"
+    },
+    "954af275-720f-49fa-8b23-f7336433c511": {
+      "description": "Gesamtumsatz in den letzten drei Geschäftsjahren (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Gesamtumsatz in den letzten drei Geschäftsjahren (Automatische Übersetzung)"
+    },
+    "95850429-ee94-497e-9c1f-fb88fd0dcb19": {
+      "description": "Der Wirtschaftsteilnehmer wendet folgende technische Ausrüstungen und Maßnahmen zur Qualitätssicherung an und verfügt über folgende Untersuchungs- und Forschungsmöglichkeiten: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Technische Ausrüstungen und Maßnahmen zur Qualitätssicherung (Automatische Übersetzung)"
+    },
+    "992ece42-1437-42b3-9fc4-bbac6ebaeed8": {
+      "description": "\"2. Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit kann der öffentliche Auftraggeber verlangen: a) die Vorlage entsprechender Bankerklärungen oder gegebenenfalls den Nachweis einer entsprechenden Berufshaftpflichtversicherung.\"",
+      "issuers": [],
+      "name": "Berufshaftpflichtversicherung"
+    },
+    "99dd42f7-4e3b-4239-a6c3-c29761598abb": {
+      "description": "n/a (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Angabe zur Absicht des Unterauftrags (Automatische Übersetzung)"
+    },
+    "99f0bef4-e7f9-47ca-8b50-a67c03970b36": {
+      "description": "Der Wirtschaftsteilnehmer kann – insbesondere für die Qualitätssicherung – auf folgende technische Fachkräfte oder technische Stellen zurückgreifen. Für technische Fachkräfte oder technische Stellen, die nicht unmittelbar dem Unternehmen des Wirtschaftsteilnehmers angehören, deren Kapazitäten der Wirtschaftsteilnehmer aber wie in Teil II Abschnitt C angegeben in Anspruch nehmen will, sind separate EEE auszufüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Technische Fachkräfte oder technische Stellen für die Qualitätssicherung (Automatische Übersetzung)"
+    },
+    "9a9eab09-84a3-4060-9082-5248aa54c78a": {
+      "description": "n/a",
+      "issuers": [
+        "Öffentlicher oder privater Leistungsempfänger"
+      ],
+      "name": "Referenz des öffentlichen oder privaten Leistungsempfängers"
+    },
+    "9b31c16e-a8c7-4c33-885d-ad6ed79de8ad": {
+      "description": "(1) Der öffentliche Auftraggeber kann verlangen, dass Bewerber oder Bieter je nach den Rechtsvorschriften des Staats, in dem sie niedergelassen sind, entweder die Eintragung in einem Berufs- oder Handelsregister dieses Staats nachweisen oder auf andere Weise die erlaubte Berufsausübung nachweisen. Für die Mitgliedstaaten der Europäischen Union sind die jeweiligen Berufs- oder Handelsregister und die Bescheinigungen oder Erklärungen über die Berufsausübung in Anhang XI der Richtlinie 2014/24/EU des Europäischen Parlaments und des Rates vom 26. Februar 2014 über die öffentliche Auftragsvergabe und zur Aufhebung der Richtlinie 2004/18/EG (ABl. L 94 vom 28.3.2014, S. 65) aufgeführt.",
+      "issuers": [],
+      "name": "Eintragung ins nationale Berufsregister"
+    },
+    "9b8c89ca-ae34-4f9d-bfd7-f90e90664b32": {
+      "description": "In Zweifelsfällen kann die Vorlage eines Auszuges aus dem Bundes- und/oder Gewerbezentralregister gefordert werden.",
+      "issuers": [],
+      "name": "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+    },
+    "9b8f8049-0861-45e9-89b7-d7b4772b02eb": {
+      "description": "Rechtskräftige Verurteilung wegen Vertrauensbruch (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Vertrauensbruch (Automatische Übersetzung)"
+    },
+    "9baabf9c-04ad-4f80-9bd2-ae4fd5e3a355": {
+      "description": "Rechtskräftige Verurteilung wegen Behinderung der Justiz (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Behinderung der Justiz (Automatische Übersetzung)"
+    },
+    "9c92203d-fb33-4138-b0ad-f0c60c5c90f0": {
+      "description": "In Bezug auf etwaige andere wirtschaftliche und finanzielle Anforderungen, die in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen genannt sind, erklärt der Wirtschaftsteilnehmer Folgendes: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Andere wirtschaftliche und finanzielle Anforderungen (Automatische Übersetzung)"
+    },
+    "9d1b72c1-d88f-4c59-a0e9-3656ac1bec29": {
+      "description": "Der Dienstleister oder der Auftragnehmer selbst hat folgende schulische und berufliche Qualifikationen und/oder (abhängig von den Anforderungen der einschlägigen Bekanntmachung oder der Auftragsunterlagen durch seine Führungskräfte). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Ausbildung und fachliche Qualifikation (Automatische Übersetzung)"
+    },
+    "9d8e495e-62c5-4d68-ac47-82a64c0a28fc": {
+      "description": "Je nach Bedarf des öffentlichen Auftraggebers (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Angaben zum Jahresabschluss (Automatische Übersetzung)"
+    },
+    "9e46f549-9e5d-4fec-b4a5-fb6b0c1b2f2c": {
+      "description": "",
+      "issuers": [],
+      "name": "Mindestlohngesetz (Automatische Übersetzung)"
+    },
+    "9ecb44bd-b3b6-4d63-ae6b-34a475ecb38c": {
+      "description": "Es müssen mindestens 3 Leistungen angegeben werden.",
+      "issuers": [],
+      "name": "Referenzliste über wesentliche, in den letzten drei abgeschlossenen Geschäftsjahren erbrachten Leistungen"
+    },
+    "9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4": {
+      "description": "Ist die Mitgliedschaft in einer bestimmten Organisation erforderlich, um die betreffende Dienstleistung im Niederlassungsstaat des Wirtschaftsteilnehmers erbringen zu können? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Berechtigung einer bestimmten Organisation erforderlich (Automatische Übersetzung)"
+    },
+    "9fcf5f7f-cedb-44a8-9cf1-717d54dd9852": {
+      "description": "Rechtskräftige Verurteilung wegen illegaler Zinsen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Rechtswidriges Interesse (Automatische Übersetzung)"
+    },
+    "a114bf3b-ca81-44f8-9105-9ac66517b08d": {
+      "description": "Verurteilung wegen Beschäftigung von Ausländern, die nicht zur Ausübung einer Erwerbstätigkeit befugt sind (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Beschäftigung von Ausländern, die nicht zur Ausübung einer Erwerbstätigkeit befugt sind (Automatische Übersetzung)"
+    },
+    "a205fa3b-0719-4c8a-b09d-8f6b2cbf8bd2": {
+      "description": "Wird der Wirtschaftsteilnehmer in der Lage sein, Bescheinigungen unabhängiger Stellen darüber vorzulegen, dass er die vorgegebenen Qualitätssicherungsnormen – einschließlich der Zugänglichkeit für Menschen mit Behinderungen – erfüllt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bescheinigungen unabhängiger Stellen über Qualitätssicherungsnormen (Automatische Übersetzung)"
+    },
+    "a2395014-fde9-4c79-867a-6143545c8a40": {
+      "description": "Bescheinigungen oder Bescheinigungen, die im Einklang mit den Empfehlungen der Stellungnahme zu Art und Inhalt der technischen Spezifikationen im öffentlichen Auftragswesen (NOR: EINMA1608199V) von unabhängigen Einrichtungen ausgestellte Berufsqualifikationen (Automatische Übersetzung)",
+      "issuers": [
+        "Offizielle Organisationen, Institute oder Dienste (Automatische Übersetzung)"
+      ],
+      "name": "Von unabhängigen Einrichtungen ausgestellte Bescheinigungen über die berufliche Qualifikation (Automatische Übersetzung)"
+    },
+    "a261a395-ed17-4939-9c75-b9ff1109ca6e": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine sozialrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verstoß gegen sozialrechtliche Verpflichtungen (Automatische Übersetzung)"
+    },
+    "a34b70d6-c43d-4726-9a88-8e2b438424bf": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine arbeitsrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verletzung von arbeitsrechtlichen Verpflichtungen (Automatische Übersetzung)"
+    },
+    "a527f090-f4c7-4360-b2ea-3c94f0b52990": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 8. Erklärung, aus der die durchschnittliche jährliche Beschäftigtenzahl des Unternehmens und die Zahl seiner Führungskräfte in den letzten drei Jahren ersichtlich ist,\"",
+      "issuers": [],
+      "name": "Durchschnittliche jährliche Beschäftigtenzahl"
+    },
+    "a5d58a8c-03e1-483d-adad-2e6f6f8b0aa2": {
+      "description": "",
+      "issuers": [
+        "diverse"
+      ],
+      "name": "Bankauskunft"
+    },
+    "a7669d7d-9297-43e1-9d10-691a1660187c": {
+      "description": "Kann der Wirtschaftsteilnehmer die erforderlichen Bescheinigungen beibringen, die von als zuständig anerkannten Instituten oder amtlichen Stellen für Qualitätskontrolle ausgestellt wurden und in denen bestätigt wird, dass die Waren, die durch Bezugnahme auf die in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen genannten technischen Spezifikationen oder Normen genau bezeichnet werden, diesen entsprechen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Bescheinigungen von Instituten für die Qualitätskontrolle (Automatische Übersetzung)"
+    },
+    "a80ddb62-d25b-4e4e-ae22-3968460dc0a9": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine umweltrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verstoß gegen umweltrechtliche Verpflichtungen (Automatische Übersetzung)"
+    },
+    "a89e7875-7cea-4aab-9730-89bf884af82b": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine arbeitsrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verletzung von arbeitsrechtlichen Verpflichtungen (Automatische Übersetzung)"
+    },
+    "a957e364-6507-4d12-b199-5d63fdeca6b7": {
+      "description": "Liste der in den letzten drei Jahren erbrachten wesentlichen Lieferungen oder Dienstleistungen oder – im Hinblick auf die Beschaffung von Verteidigungsgütern – in den letzten fünf Jahren (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Liste der in den letzten drei Jahren erbrachten großen Lieferungen oder Dienstleistungen (Automatische Übersetzung)"
+    },
+    "a9b177a1-dff1-4416-80bc-90f9d52ae7d7": {
+      "description": "Terroristische Straftaten oder Straftaten im Zusammenhang mit terroristischen Aktivitäten im Sinne der Artikel 1 und 3 des Rahmenbeschlusses des Rates vom 13. Juni 2002 zur Terrorismusbekämpfung (ABl. L 164 vom 22.6.2002). Dieser Ausschlussgrund umfasst auch die Anstiftung oder die Beihilfe oder den Versuch der Begehung einer Straftat gemäß Artikel 4 des genannten Rahmenbeschlusses. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Terroristische Straftaten oder Straftaten im Zusammenhang mit terroristischen Aktivitäten (Automatische Übersetzung)"
+    },
+    "a9be7a8b-144c-45e5-a710-b2f868eef723": {
+      "description": "\"(1) Der öffentliche Auftraggeber kann im Hinblick auf die wirtschaftliche und finanzielle Leistungsfähigkeit der Bewerber oder Bieter Anforderungen stellen, die sicherstellen, dass die Bewerber oder Bieter über die erforderlichen wirtschaftlichen und finanziellen Kapazitäten für die Ausführung des Auftrags verfügen. Zu diesem Zweck kann er insbesondere Folgendes verlangen: 2. Informationen über die Bilanzen der Bewerber oder Bieter; dabei kann das in den Bilanzen angegebene Verhältnis zwischen Vermögen und Verbindlichkeiten dann berücksichtigt werden, wenn der öffentliche Auftraggeber transparente, objektive und nichtdiskriminierende Methoden und Kriterien für die Berücksichtigung anwendet und die Methoden und Kriterien in den Vergabeunterlagen angibt, oder\"",
+      "issuers": [],
+      "name": "Verhältnis zwischen Vermögen und Verbindlichkeiten"
+    },
+    "a9e2613e-0891-4ae8-8fe4-db45eee58997": {
+      "description": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Entrichtung von Steuern (Automatische Übersetzung)"
+    },
+    "aa85e661-91ba-4411-971f-9daafafa1fc1": {
+      "description": "Befindet sich der Wirtschaftsteilnehmer aufgrund eines in den nationalen Rechtsvorschriften vorgesehenen gleichartigen Verfahrens in einer der Zahlungsunfähigkeit vergleichbaren Lage? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Der Zahlungsunfähigkeit vergleichbare Lage gemäß nationaler Rechtsvorschriften (Automatische Übersetzung)"
+    },
+    "aa91ac1d-4994-4811-9ace-132bfbbb0037": {
+      "description": "\"(1) Der öffentliche Auftraggeber kann im Hinblick auf die wirtschaftliche und finanzielle Leistungsfähigkeit der Bewerber oder Bieter Anforderungen stellen, die sicherstellen, dass die Bewerber oder Bieter über die erforderlichen wirtschaftlichen und finanziellen Kapazitäten für die Ausführung des Auftrags verfügen. Zu diesem Zweck kann er insbesondere Folgendes verlangen: 3. eine Berufs- oder Betriebshaftpflichtversicherung in bestimmter geeigneter Höhe.\"",
+      "issuers": [],
+      "name": "Berufshaftpflichtversicherung"
+    },
+    "aafaf615-acbf-4265-80ad-38b4c03efb49": {
+      "description": "Die Gebühren für die Prüfung der Qualifikation richten sich nach dem Prüfumfang. Die Prüfung in einer einzelnen Beurteilungsgruppe kostet zwischen 1.000,00 und 1.750,00 Euro. Bei der Prüfung in mehreren Beurteilungsgruppen reduzieren sich diese Gebühren. Das Gütezeichen gilt nur mit dem Eintrag der Beurteilungsgruppe(-n) im unteren Feld als erteilt.",
+      "issuers": [
+        "Güteschutz Kanalbau e.V."
+      ],
+      "name": "Gütezeichen Kanalbau RAL-GZ 961"
+    },
+    "ab0e7f2e-6418-40e2-8870-6713123e41ad": {
+      "description": "In Bezug auf etwaige andere wirtschaftliche und finanzielle Anforderungen, die in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen genannt sind, erklärt der Wirtschaftsteilnehmer Folgendes: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Andere wirtschaftliche und finanzielle Anforderungen (Automatische Übersetzung)"
+    },
+    "ae08ca72-81b4-42fa-986f-13c58ad32bc7": {
+      "description": "Rechtskräftige Verurteilung wegen Korruption gegen eine Person, die nicht im öffentlichen Dienst tätig ist (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Korruption gegen eine Person, die nicht im öffentlichen Dienst tätig ist (Automatische Übersetzung)"
+    },
+    "af3bd106-929c-4c75-8742-9d576871b72d": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 2. Angabe der technischen Fachkräfte oder der technischen Stellen, die im Zusammenhang mit der Leistungserbringung eingesetzt werden sollen, unabhängig davon, ob diese dem Unternehmen angehören oder nicht, und zwar insbesondere derjenigen, die mit der Qualitätskontrolle beauftragt sind,\"",
+      "issuers": [],
+      "name": "Technische Fachkräfte oder technische Stellen, die im Zusammenhang mit der Leistungserbringung eingesetzt werden sollen"
+    },
+    "b1193ac1-56c9-4d72-aa98-bc1e78be63ed": {
+      "description": "Nur bei öffentlichen Bauaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende Arbeiten der genannten Art ausgeführt. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu fünf Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als fünf Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Bauaufträgen: Durchführung von Arbeiten der genannten Art (Automatische Übersetzung)"
+    },
+    "b16cb9fc-6cb7-4585-9302-9533b415cf48": {
+      "description": "Der durchschnittliche Jahresumsatz des Wirtschaftsteilnehmers in der in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE verlangten Anzahl von Geschäftsjahren betrug: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Durchschnittlicher Jahresumsatz (Automatische Übersetzung)"
+    },
+    "b1b5ac18-f393-4280-9659-1367943c1a2e": {
+      "description": "Ist dem Wirtschaftsteilnehmer ein Interessenkonflikt im Sinne des nationalen Rechts, der einschlägigen Bekanntmachung oder der Auftragsunterlagen aufgrund seiner Teilnahme am Vergabeverfahren bekannt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Interessenkonflikt aufgrund seiner Teilnahme an dem Vergabeverfahren (Automatische Übersetzung)"
+    },
+    "b380589a-6ccf-4adf-a7da-eee94255907a": {
+      "description": "",
+      "issuers": [],
+      "name": "Amlicher chronologischer Ausdruck, Handelsregister B (Automatische Übersetzung)"
+    },
+    "b4498063-40fa-453d-819d-bcfd515f79e7": {
+      "description": "n/a",
+      "issuers": [
+        "zuständige Sozialversicherungsträger (Kranken/Rentenversicherung)"
+      ],
+      "name": "Unbedenklichkeitsbescheinigung über die Zahlung von Sozialversicherungsbeiträgen"
+    },
+    "b55af728-4444-4b6b-92e0-267692ceafcb": {
+      "description": "Nur bei öffentlichen Lieferaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende wesentliche Lieferungen der genannten Art ausgeführt. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu drei Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als drei Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Ausführung von Lieferungen der genannten Art (Automatische Übersetzung)"
+    },
+    "b5a4ca4c-cc13-4d8c-9a61-ffc806db892b": {
+      "description": "Liegen in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen angegebene rein innerstaatliche Ausschlussgründe vor? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Rein innerstaatliche Ausschlussgründe (Automatische Übersetzung)"
+    },
+    "b5ae25eb-117e-49ee-89d6-293c0fdb85b5": {
+      "description": "Befindet sich der Wirtschaftsteilnehmer in einem Insolvenzverfahren oder in Liquidation? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahlungsunfähigkeit (Automatische Übersetzung)"
+    },
+    "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4": {
+      "description": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Entrichtung von Steuern (Automatische Übersetzung)"
+    },
+    "b63b35cf-6712-4ee9-8dc1-6c70dc500dc1": {
+      "description": "Warenmuster, Beschreibungen oder Fotografien der Lieferungen (Automatische Übersetzung)",
+      "issuers": [
+        "Wirtschaftsteilnehmer (Automatische Übersetzung)"
+      ],
+      "name": "Warenmuster, Beschreibungen oder Fotografien der Lieferungen (Automatische Übersetzung)"
+    },
+    "b64e0912-1b57-4625-a9da-eb59e92ff54e": {
+      "description": "Verurteilung für das Verleihen von Arbeitskräften (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Überlassung von Arbeitskräften (Automatische Übersetzung)"
+    },
+    "b7b8fab8-b9da-42b8-961e-7c3b4062bf04": {
+      "description": "n/a",
+      "issuers": [
+        "Zuständige Versicherungsgesellschaft"
+      ],
+      "name": "Bescheinigung der Berufs- oder Betriebshaftplichtversicherung"
+    },
+    "b8d9fcd4-7464-491d-a66b-bb308dd45419": {
+      "description": "Diese Bescheinigung ist dem Käufer alle sechs Monate vorzulegen. Für jeden Vertrag über einen Betrag von mindestens 5 000 EUR ohne Steuern (Gesamtbetrag der Dienstleistung, auch wenn er Gegenstand mehrerer Zahlungen oder Rechnungen ist) muss der Kunde zum Zeitpunkt des Vertragsabschlusses und danach alle sechs Monate bis zum Ende seiner Ausführung überprüfen, ob seine Vertragspartei seine Verpflichtungen zur Meldung und Zahlung der Beiträge in Bezug auf die URSSAF erfüllt. (Automatische Übersetzung)",
+      "issuers": [
+        "URSSAF (Automatische Übersetzung)"
+      ],
+      "name": "Wachsamkeitsfunktion (Automatische Übersetzung)"
+    },
+    "ba079f93-6ed8-4d09-a5db-6ba93e514462": {
+      "description": "Bescheinigungen oder Bescheinigungen, die im Einklang mit den Empfehlungen der Stellungnahme zu Art und Inhalt der technischen Spezifikationen im öffentlichen Auftragswesen (NOR: EIN1608199V) Nachweis der Zugehörigkeit oder Zulassung des Wirtschaftsteilnehmers zu einer bestimmten Organisation (Automatische Übersetzung)",
+      "issuers": [
+        "Offizielle Organisationen, Institute oder Dienste (Automatische Übersetzung)"
+      ],
+      "name": "Nachweis der Zugehörigkeit oder Genehmigung einer bestimmten Organisation (Automatische Übersetzung)"
+    },
+    "bae372a7-1d15-4120-8d58-eedd1d512b5c": {
+      "description": "\"Der öffentliche Auftraggeber schließt ein Unternehmen von der Teilnahme an einem Vergabeverfahren aus, wenn 1. das Unternehmen seinen Verpflichtungen zur Zahlung von Steuern, Abgaben und Beiträgen zur Sozialversicherung nicht nachgekommen ist und dies durch eine rechtskräftige Gerichts- oder bestandskräftige Verwaltungsentscheidung festgestellt wurde oder 2. die öffentlichen Auftraggeber auf sonstige geeignete Weise die Verletzung einer Verpflichtung nach Nummer 1 nachweisen können.\"",
+      "issuers": [],
+      "name": "Verpflichtung zur Zahlung von Steuern, Abgaben, nicht ordnungsgemäß erfüllt"
+    },
+    "bbea54e5-eea2-49e5-9403-31de580ecd0a": {
+      "description": "Berufs- und rechtsformspezifischer Nachweis für freie Berufe.",
+      "issuers": [
+        "zuständiges Amtsgericht"
+      ],
+      "name": "Amtlicher chronologischer Ausdruck aus dem Partnerschaftsregister"
+    },
+    "bc93bbda-123b-437e-b11d-c67d52ae3752": {
+      "description": "Die Zahl der Führungskräfte des Wirtschaftsteilnehmers in den letzten drei Jahren belief sich auf: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahl der Führungskräfte (Automatische Übersetzung)"
+    },
+    "bdf0601d-2480-4250-b870-658d0ee95be6": {
+      "description": "Bei öffentlichen Lieferaufträgen: Der Wirtschaftsteilnehmer wird die verlangten Muster, Beschreibungen oder Fotografien der zu liefernden Waren zur Verfügung stellen, die nicht zusammen mit einer Echtheitsbescheinigung vorgelegt werden müssen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Muster, Beschreibungen oder Fotografien ohne Echtheitsbescheinigung (Automatische Übersetzung)"
+    },
+    "be1c5077-3f01-4c63-977f-8e6a11448faf": {
+      "description": "Bescheinigung über die Ordnungsmäßigkeit der Situation des Arbeitgebers in Bezug auf die Verpflichtung zur Beschäftigung behinderter Arbeitnehmer, ausgestellt von der Vereinigung für die Verwaltung des Fonds für die berufliche Eingliederung behinderter Menschen (Automatische Übersetzung)",
+      "issuers": [
+        "Arbeitsministerium (Automatische Übersetzung)"
+      ],
+      "name": "Obligatorische Erklärung der Beschäftigung behinderter Arbeitnehmer (DOETH) – Cerfa n°11391 * 19 (Automatische Übersetzung)"
+    },
+    "be72adb0-2a8e-4faf-bd60-afd69dafb4b3": {
+      "description": "Folgende Leitlinie beschreibt Regelungen zur bundesweit einheitlichen Durchführung eines Präqualifikationsverfahrens bei öffentlichen Bauaufträgen: https://www.zert-bau.de/fileadmin/user_upload/leitlinie_mit_Anlagen.pdf",
+      "issuers": [
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ],
+      "name": "Präqualifikationsverzeichnis VOB"
+    },
+    "bf5baa60-98fe-4832-af84-de8451b0f17f": {
+      "description": "Werden die Vermögenswerte des Wirtschaftsteilnehmers von einem Insolvenzverwalter oder einem Gericht verwaltet? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verwaltung der Vermögenswerte durch einen Insolvenzverwalter (Automatische Übersetzung)"
+    },
+    "bff6d2f6-7b3a-4926-9c92-150841efb9e1": {
+      "description": "Bescheinigung über die Mitgliedschaft in einer Berufsgenossenschaft und darüber, dass keine Beitragszahlungsrückstände bestehen",
+      "issuers": [
+        "zuständige Berufsgenossenschaft"
+      ],
+      "name": "Unbedenklichkeitsbescheinigung der Berufsgenossenschaft"
+    },
+    "c0e402f8-6f33-4448-89bf-c36959b69bf1": {
+      "description": "Bei öffentlichen Lieferaufträgen: Der Wirtschaftsteilnehmer wird die verlangten Muster, Beschreibungen oder Fotografien der zu liefernden Waren zur Verfügung stellen, die nicht zusammen mit einer Echtheitsbescheinigung vorgelegt werden müssen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Muster, Beschreibungen oder Fotografien ohne Echtheitsbescheinigung (Automatische Übersetzung)"
+    },
+    "c1c43491-2d13-4153-b5ce-d2544f1965a9": {
+      "description": "",
+      "issuers": [],
+      "name": "Bescheinigung in Steuersachen (Automatische Übersetzung)"
+    },
+    "c216857f-a10a-4c43-b461-f73e18e34bff": {
+      "description": "",
+      "issuers": [],
+      "name": "Amlicher chronologischer Ausdruck, Partnerschaftsregister (Automatische Übersetzung)"
+    },
+    "c27b7c4e-c837-4529-b867-ed55ce639db5": {
+      "description": "Bestechung im Sinne des Artikel 3 des Übereinkommens über die Bekämpfung der Bestechung, an der Beamte der Europäischen Gemeinschaften oder der Mitgliedstaaten der Europäischen Union beteiligt sind, ABl. C 195 vom 25.6.1997 und Artikel 2 Absatz 1 des Rahmenbeschlusses 2003/568/JHA des Rates vom 22. Juli 2003 zur Bekämpfung der Bestechung im privaten Sektor (ABl. L 192 vom 31.7.2003). Dieser Ausschlussgrund umfasst auch Bestechung im Sinne des nationalen Rechts des öffentlichen Auftraggebers oder des Wirtschaftsteilnehmers. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Korruption (Automatische Übersetzung)"
+    },
+    "c3350e01-f9e9-470b-aea5-7a5935f0af96": {
+      "description": "Endgültige Verurteilung wegen betrügerischen Subtraktion bei Zahlung und Festsetzung der Steuer (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Betrügerische Subtraktion bei Zahlung und Festsetzung der Steuer (Automatische Übersetzung)"
+    },
+    "c4546d6c-6025-46fb-8a2e-e0f187180531": {
+      "description": "Eintragung eines Handwerkers in das Handwerksverzeichnis (Automatische Übersetzung)",
+      "issuers": [
+        "Metiers und Handwerkskammern (CMA) (Automatische Übersetzung)"
+      ],
+      "name": "Auszug D1 (Automatische Übersetzung)"
+    },
+    "c599c130-b29f-461e-a187-4e16c7d40db7": {
+      "description": "Bei öffentlichen Bauaufträgen wird der Wirtschaftsteilnehmer folgende technische Fachkräfte oder technische Stellen mit der Ausführung der Arbeiten betrauen können: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Bauaufträgen: Technische Fachkräfte oder technische Stellen für die Ausführung der Arbeiten (Automatische Übersetzung)"
+    },
+    "c63b7f6a-ffe9-4b60-8f63-439d0df42e40": {
+      "description": "Der Wirtschaftsteilnehmer wird während der Auftragsausführung folgende Umweltmanagementmaßnahmen anwenden können: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Umweltmanagementmaßnahmen (Automatische Übersetzung)"
+    },
+    "c8809aa1-29b6-4f27-ae2f-27e612e394db": {
+      "description": "Wenn die zu liefernden Waren oder die zu erbringenden Dienstleistungen komplexer Art sind oder – ausnahmsweise – wenn sie einem besonderen Zweck dienen sollen: Der Wirtschaftsteilnehmer wird Kontrollen gestatten, die seine Produktionskapazität bzw. seine technische Leistungsfähigkeit und erforderlichenfalls seine Untersuchungs- und Forschungsmöglichkeiten sowie die von ihm für die Qualitätskontrolle getroffenen Vorkehrungen betreffen. Die Kontrollen werden vom öffentlichen Auftraggeber oder – mit dessen Einwilligung – in seinem Namen von einer zuständigen amtlichen Stelle des Landes, in dem der Lieferant oder Dienstleister ansässig ist, vorgenommen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Gestatten von Kontrollen (Automatische Übersetzung)"
+    },
+    "c97256d9-77cc-4c46-9baa-d3e5090c59a0": {
+      "description": "Der durchschnittliche Jahresumsatz des Wirtschaftsteilnehmers in der in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE verlangten Anzahl von Geschäftsjahren betrug: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Durchschnittlicher Jahresumsatz (Automatische Übersetzung)"
+    },
+    "cb51ed28-0c03-4137-b2a2-112338cdc00d": {
+      "description": "Der Wirtschaftsteilnehmer ist in den einschlägigen Berufsregistern seines Niederlassungsmitgliedstaats verzeichnet; aufgelistet in Anhang XI der Richtlinie 2014/24/EU;. Wirtschaftsteilnehmer aus bestimmten Mitgliedstaaten müssen ggf. andere in jenem Anhang aufgeführte Anforderungen erfüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Eintragung in einem einschlägigen Berufsregister (Automatische Übersetzung)"
+    },
+    "cba9c6dc-883f-44c6-b3dc-fe500e3d8b11": {
+      "description": "Angabe der Umweltmanagementmaßnahmen, die der Antragsteller bei der Durchführung des öffentlichen Beschaffungswesens anwenden kann (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Angabe der Umweltmanagementmaßnahmen, die der Antragsteller bei der Durchführung des öffentlichen Beschaffungswesens anwenden kann (Automatische Übersetzung)"
+    },
+    "cbfbef8e-cc4d-4be2-940f-8e1f818e78a6": {
+      "description": "Innerhalb einer angemessenen Frist, in der die Professionalität und Zuverlässigkeit des Wirtschaftsteilnehmers nicht mehr infrage gestellt werden kann, und gegebenenfalls seine Teilnahme an dem Vergabeverfahren nicht zu einer Gleichbehandlung führen kann (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Jedes Beweismittel (Automatische Übersetzung)"
+    },
+    "cc18c023-211d-484d-a32e-52f3f970285f": {
+      "description": "Für die Ausführung des Auftrags wird der Wirtschaftsteilnehmer über folgende Ausstattung, Geräte und technische Ausrüstung verfügen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Ausstattung, Geräte und technische Ausrüstung (Automatische Übersetzung)"
+    },
+    "ccf7a4a9-a923-4356-ab6f-42708888e755": {
+      "description": "\"Der öffentliche Auftraggeber kann unter Berücksichtigung des Grundsatzes der Verhältnismäßigkeit ein Unternehmen zu jedem Zeitpunkt des Vergabeverfahrens von der Teilnahme an einem Vergabeverfahren ausschließen, wenn 2. das Unternehmen zahlungsunfähig ist, über das Vermögen des Unternehmens ein Insolvenzverfahren oder ein vergleichbares Verfahren beantragt oder eröffnet worden ist, die Eröffnung eines solchen Verfahrens mangels Masse abgelehnt worden ist, sich das Unternehmen im Verfahren der Liquidation befindet oder seine Tätigkeit eingestellt hat,\"",
+      "issuers": [],
+      "name": "Zahlungsunfähigkeit, Insolvenzverfahren, Liquidation, Einstellung der Tätigkeit"
+    },
+    "cd65382d-6c66-4960-85f7-19332d8bf407": {
+      "description": "Arbeitnehmerüberlassung setzt nach deutschem Recht grundsätzlich den Besitz einer gültigen Erlaubnisurkunde voraus. Das Arbeitnehmerüberlassungsgesetz (AÜG) gilt innerhalb Deutschlands für inländische und ausländische Verleiher gleichermaßen. Umfasst wird der Verleih von Arbeitnehmern in Deutschland sowie der Verleih nach Deutschland hinein und aus Deutschland heraus. Das Zertifikat wird befristet oder unbefristed ausgestellt. Weitere Informationen: https://www.arbeitsagentur.de/unternehmen/personalfragen/arbeitnehmerueberlassung",
+      "issuers": [
+        "Bundesagentur für Arbeit"
+      ],
+      "name": "Erlaubnis zur Arbeitnehmerüberlassung"
+    },
+    "cdd3bb3e-34a5-43d5-b668-2aab86a73822": {
+      "description": "Nur bei öffentlichen Bauaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende Arbeiten der genannten Art ausgeführt. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu fünf Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als fünf Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Bauaufträgen: Durchführung von Arbeiten der genannten Art (Automatische Übersetzung)"
+    },
+    "ce195021-3f58-4f7c-bc12-315d9ca995d3": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine sozialrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verstoß gegen sozialrechtliche Verpflichtungen (Automatische Übersetzung)"
+    },
+    "cf3f2e35-0ad4-4f50-a783-0df123ee32ba": {
+      "description": "",
+      "issuers": [],
+      "name": "Fehlende Umsetzung der jährlichen Verhandlungsverpflichtung in Bezug auf Vergütung, Arbeitszeit und Aufteilung der Wertschöpfung seit dem letzten Jahr des laufenden Vergabeverfahrens (Automatische Übersetzung)"
+    },
+    "d0c8433b-87f7-4b86-b335-94f77068fca8": {
+      "description": "\"3. Zum Nachweis der beruflichen und technischen Leistungsfähigkeit kann der öffentliche Auftraggeber je nach Art, Menge oder Umfang oder Verwendungszweck der ausgeschriebenen Leistung verlangen: g) Angaben über die Zahl der in den letzten drei abgeschlossenen Kalenderjahren jahresdurchschnittlich beschäftigten Arbeitskräfte, gegliedert nach Lohngruppen mit gesondert ausgewiesenem technischen Leitungspersonal;\"",
+      "issuers": [],
+      "name": "Durchschnittliche jährliche Beschäftigtenzahl"
+    },
+    "d1ce5ed9-0dbe-40b7-97c3-944332a51395": {
+      "description": "\"(1) Der öffentliche Auftraggeber kann im Hinblick auf die wirtschaftliche und finanzielle Leistungsfähigkeit der Bewerber oder Bieter Anforderungen stellen, die sicherstellen, dass die Bewerber oder Bieter über die erforderlichen wirtschaftlichen und finanziellen Kapazitäten für die Ausführung des Auftrags verfügen. Zu diesem Zweck kann er insbesondere Folgendes verlangen: 1. einen bestimmten Mindestjahresumsatz, einschließlich eines bestimmten Mindestjahresumsatzes in dem Tätigkeitsbereich des Auftrags, (2) Sofern ein Mindestjahresumsatz verlangt wird, darf dieser das Zweifache des geschätzten Auftragswerts nur überschreiten, wenn aufgrund der Art des Auftragsgegenstands spezielle Risiken bestehen. Der öffentliche Auftraggeber hat eine solche Anforderung in den Vergabeunterlagen oder im Vergabevermerk hinreichend zu begründen. (3) Ist ein öffentlicher Auftrag in Lose unterteilt, finden die Absätze 1 und 2 auf jedes einzelne Los Anwendung. Der öffentliche Auftraggeber kann jedoch für den Fall, dass der erfolgreiche Bieter den Zuschlag für mehrere gleichzeitig auszuführende Lose erhält, einen Mindestjahresumsatz verlangen, der sich auf diese Gruppe von Losen bezieht. (4) Als Beleg der erforderlichen wirtschaftlichen und finanziellen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber in der Regel die Vorlage einer oder mehrerer der folgenden Unterlagen verlangen: 4. eine Erklärung über den Gesamtumsatz und gegebenenfalls den Umsatz in dem Tätigkeitsbereich des Auftrags; eine solche Erklärung kann höchstens für die letzten drei Geschäftsjahre verlangt werden und nur, sofern entsprechende Angaben verfügbar sind.\"",
+      "issuers": [],
+      "name": "Durchschnittlicher Jahresumsatz"
+    },
+    "d1e02b80-f6e1-4fa6-8044-b650c0bcf1d6": {
+      "description": "Befindet sich der Wirtschaftsteilnehmer in einem Insolvenzverfahren oder in Liquidation? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahlungsunfähigkeit (Automatische Übersetzung)"
+    },
+    "d31bd37e-412e-4aa0-a3c6-216d37fbe967": {
+      "description": "Ein Unternehmen mit Sitz im Ausland kann vorübergehend Beschäftigte für eine Dienstreise an ein anderes in Frankreich ansässiges Unternehmen ablösen. Jeder Arbeitgeber, der seinen Sitz im Ausland hat, muss vor Beginn der Intervention ein schriftliches Dokument mit Benennung des Vertreters der Gesellschaft im Inland übermitteln. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Kopie des Dokuments mit Benennung des Vertreters (Automatische Übersetzung)"
+    },
+    "d3732c09-7d62-4edc-a172-241da6636e7c": {
+      "description": "Ist der Wirtschaftsteilnehmer zahlungsunfähig? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Konkurs (Automatische Übersetzung)"
+    },
+    "d37be06c-c3bb-4db7-a6a7-13cbd4da675f": {
+      "description": "",
+      "issuers": [],
+      "name": "Insolvency bzw. Liquidation (Automatische Übersetzung)"
+    },
+    "d3dfb714-f558-4512-bbc5-e456fa2339de": {
+      "description": "Der spezifische, durchschnittliche Jahresumsatz des Wirtschaftsteilnehmers in dem vom Auftrag abgedeckten Geschäftsbereich betrug in der gemäß der einschlägigen Bekanntmachung, den Auftragsunterlagen oder der EEE verlangten Anzahl von Geschäftsjahren: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Spezifischer, durchschnittlicher Umsatz (Automatische Übersetzung)"
+    },
+    "d486fb70-86b3-4e75-97f2-0d71b5697c7d": {
+      "description": "Terroristische Straftaten oder Straftaten im Zusammenhang mit terroristischen Aktivitäten im Sinne der Artikel 1 und 3 des Rahmenbeschlusses des Rates vom 13. Juni 2002 zur Terrorismusbekämpfung (ABl. L 164 vom 22.6.2002). Dieser Ausschlussgrund umfasst auch die Anstiftung oder die Beihilfe oder den Versuch der Begehung einer Straftat gemäß Artikel 4 des genannten Rahmenbeschlusses. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Terroristische Straftaten oder Straftaten im Zusammenhang mit terroristischen Aktivitäten (Automatische Übersetzung)"
+    },
+    "d4a53805-ed7c-4c56-b16e-63bbcaf5d216": {
+      "description": "Für die Ausführung des Auftrags wird der Wirtschaftsteilnehmer über folgende Ausstattung, Geräte und technische Ausrüstung verfügen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Ausstattung, Geräte und technische Ausrüstung (Automatische Übersetzung)"
+    },
+    "d5e6bba6-3291-45e4-bacf-97a0fb2c31fd": {
+      "description": "Bei öffentlichen Bauaufträgen, öffentlichen Dienstleistungsaufträgen oder öffentlichen Lieferaufträgen, die auch Installationsarbeiten oder Dienstleistungen umfassen, Angaben zur Ausbildung und beruflichen Qualifikation des Bewerbers oder des Personals des Organs, insbesondere der für die Erbringung von Dienstleistungen oder die Ausführung von Leistungen gleicher Art wie die des öffentlichen Auftrags verantwortlichen Personen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Angabe der Bildungsabschlüsse und beruflichen Qualifikationen des Bewerbers oder der Leitung des Unternehmens, insbesondere derjenigen, die für die Erbringung von Dienstleistungen oder für die Durchführung von Arbeiten derselben Art wie bei der Vergabe öffentlicher Aufträge zuständig sind. (Automatische Übersetzung)"
+    },
+    "d6b457c0-19d0-40e8-997b-99cf552da4c2": {
+      "description": "",
+      "issuers": [
+        "Bundesamt für Justiz"
+      ],
+      "name": "Auskunft aus dem Gewerbezentralregister (Automatische Übersetzung)"
+    },
+    "d726bac9-e153-4e75-bfca-c5385587766d": {
+      "description": "Wird der Wirtschaftsteilnehmer in der Lage sein, Bescheinigungen unabhängiger Stellen darüber vorzulegen, dass er die vorgegebenen Qualitätssicherungsnormen – einschließlich der Zugänglichkeit für Menschen mit Behinderungen – erfüllt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bescheinigungen unabhängiger Stellen über Qualitätssicherungsnormen (Automatische Übersetzung)"
+    },
+    "d789d01a-fe03-4ccd-9898-73f9cfa080d1": {
+      "description": "Geldwäsche oder Terrorismusfinanzierung im Sinne des Artikel 2 der Richtlinie 2011/36/EU des Europäischen Parlaments und des Rates vom 5. April 2011 zur Verhütung und Bekämpfung des Menschenhandels und zum Schutz seiner Opfer sowie zur Ersetzung des Rahmenbeschlusses 2002/629/JHA des Rates (ABl. L 101 vom 15.4.2011). (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Kinderarbeit und andere Formen des Menschenhandels (Automatische Übersetzung)"
+    },
+    "d7fdd332-9547-448f-8468-e2f389eae80f": {
+      "description": "\"3. Zum Nachweis der beruflichen und technischen Leistungsfähigkeit kann der öffentliche Auftraggeber je nach Art, Menge oder Umfang oder Verwendungszweck der ausgeschriebenen Leistung verlangen: e) Studiennachweise und Bescheinigungen über die berufliche Befähigung des Dienstleisters oder Unternehmers und/oder der Führungskräfte des Unternehmens, sofern sie nicht als Zuschlagskriterium bewertet werden;\"",
+      "issuers": [],
+      "name": "Studien- und Ausbildungsnachweise, Erlaubnis zur Berufsausübung"
+    },
+    "d8adb4f7-8e29-4d0d-a761-50ea701727b8": {
+      "description": "Verurteilungen aufgrund von Verhandlungen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verhandlungsführung (Automatische Übersetzung)"
+    },
+    "d96da418-8493-486a-bc86-175c45907e21": {
+      "description": "Juristische Person, gegen die ein Rechtsbehelf eingelegt werden kann, ohne dass die Fortsetzung der Tätigkeit während des in der öffentlichen Auftragsvergabe oder einem gleichwertigen Verfahren für ein ausländisches Land festgelegten Zeitraums genehmigt wird (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Konkurs (Automatische Übersetzung)"
+    },
+    "da158a56-565b-4c91-82a2-9471dbc7679e": {
+      "description": "Umsatz im Tätigkeitsbereich, der in den letzten drei abgeschlossenen Geschäftsjahren im Rahmen des öffentlichen Auftrags erwirtschaftet wurde (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Umsatz im Tätigkeitsbereich, der in den letzten drei abgeschlossenen Geschäftsjahren im Rahmen des öffentlichen Auftrags erwirtschaftet wurde (Automatische Übersetzung)"
+    },
+    "dad80c8a-ca5a-49f0-8db9-92f7a9923b27": {
+      "description": "Der Wirtschaftsteilnehmer hat eine Berufshaftpflichtversicherung über folgenden Betrag abgeschlossen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Berufshaftpflichtversicherung (Automatische Übersetzung)"
+    },
+    "dae96b24-8a72-4e34-985a-f1b8a910380f": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 3.Beschreibung der technischen Ausrüstung, der Maßnahmen zur Qualitätssicherung und der Untersuchungs- und Forschungsmöglichkeiten des Unternehmens,\"",
+      "issuers": [],
+      "name": "Untersuchungs- und Forschungsmöglichkeiten des Unternehmens"
+    },
+    "daffa2a9-9f8f-4568-8be8-7b8bf306d096": {
+      "description": "Befindet sich der Wirtschaftsteilnehmer aufgrund eines in den nationalen Rechtsvorschriften vorgesehenen gleichartigen Verfahrens in einer der Zahlungsunfähigkeit vergleichbaren Lage? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Der Zahlungsunfähigkeit vergleichbare Lage gemäß nationaler Rechtsvorschriften (Automatische Übersetzung)"
+    },
+    "dc12a151-7fdf-4733-a8f0-30f667292e66": {
+      "description": "Zur Vertragserfüllung steht ihm folgendes Lieferkettenmanagement- und -überwachungssystem zur Verfügung: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Lieferkettenmanagement (Automatische Übersetzung)"
+    },
+    "dd358f2c-fbb8-4665-ae53-90b81b8617d9": {
+      "description": "Bilanz der letzten 3 Jahre (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bilanz der letzten 3 Jahre (Automatische Übersetzung)"
+    },
+    "dd61d770-28d5-4ab2-8abd-c11a84dfedac": {
+      "description": "Personen, die sich verpflichtet haben, den Entscheidungsprozess des Käufers in unzulässiger Weise zu beeinflussen oder vertrauliche Informationen zu erhalten, die ihnen einen ungerechtfertigten Vorteil beim Vergabeverfahren verschaffen könnten, oder irreführende Informationen vorgelegt haben, die einen entscheidenden Einfluss auf die Entscheidungen über den Ausschluss, die Auswahl oder die Zuschlagserteilung haben könnten (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Fakultative Anforderungen an die Ausschreibung: Einfluss auf die Entscheidung des Käufers durch Information (Automatische Übersetzung)"
+    },
+    "dd8770ca-5305-493b-9f43-16451651ec86": {
+      "description": "Bescheinigungen oder Bescheinigungen, die im Einklang mit den Empfehlungen der Stellungnahme zu Art und Inhalt der technischen Spezifikationen im öffentlichen Auftragswesen (NOR: EINM1608199V: Qualitätszertifikate, die bescheinigen, dass der Wirtschaftsteilnehmer bestimmte Qualitätssicherungsnormen einhält, auch in Bezug auf die Zugänglichkeit für Personen mit Behinderungen (Automatische Übersetzung)",
+      "issuers": [
+        "Offizielle Organisationen, Institute oder Dienste (Automatische Übersetzung)"
+      ],
+      "name": "Qualitätszertifikate, die bescheinigen, dass der Wirtschaftsteilnehmer bestimmte Qualitätssicherungsnormen erfüllt, auch in Bezug auf die Barrierefreiheit für Menschen mit Behinderungen (Automatische Übersetzung)"
+    },
+    "dde2be46-07bb-4ebc-9774-8be8ccaabcfe": {
+      "description": "Nur bei öffentlichen Bauaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende Arbeiten der genannten Art ausgeführt. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu fünf Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als fünf Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Bauaufträgen: Durchführung von Arbeiten der genannten Art (Automatische Übersetzung)"
+    },
+    "ddf4df82-e3c3-4825-92da-109b9439c19e": {
+      "description": "Rechtsformspezifischer Nachweis für Genossenschaften.",
+      "issuers": [
+        "zuständiges Amtsgericht"
+      ],
+      "name": "Amtlicher chronologischer Ausdruck aus dem Genossenschaftsregister"
+    },
+    "de3162c6-3bec-4a7d-a370-6c819add2f66": {
+      "description": "n/a",
+      "issuers": [],
+      "name": "Einverständniserklärung zur Kontrolle durch den öffentlichen Auftraggeber"
+    },
+    "df745374-0e8b-4f3a-9da4-0853e8b5d424": {
+      "description": "Steuerbescheinigung [Bescheinigung der Steuerverwaltung über Steuern und Abgaben (IS, IR, MwSt.)]. (Automatische Übersetzung)",
+      "issuers": [
+        "Generaldirektion für öffentliche Finanzen (Automatische Übersetzung)"
+      ],
+      "name": "Steuerbescheinigung (IS) (Automatische Übersetzung)"
+    },
+    "e00ff0e5-cc92-4b0e-9c97-2efff8f8705d": {
+      "description": "Handelsregister Abteilung B für Kapitalgesellschaften wie die GmbH oder AG.",
+      "issuers": [
+        "zuständiges Amtsgericht"
+      ],
+      "name": "Amtlicher chronologischer Ausdruck aus dem Handelsregister B"
+    },
+    "e036ef4c-f634-4664-8038-5987ffcce6b5": {
+      "description": "Folgende Untersuchungs- und Forschungsmöglichkeiten sind vorgesehen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Untersuchungs- und Forschungsmöglichkeiten (Automatische Übersetzung)"
+    },
+    "e128f541-167b-49a6-98eb-726dc0666a23": {
+      "description": "Kann der Wirtschaftsteilnehmer die erforderlichen Bescheinigungen beibringen, die von als zuständig anerkannten Instituten oder amtlichen Stellen für Qualitätskontrolle ausgestellt wurden und in denen bestätigt wird, dass die Waren, die durch Bezugnahme auf die in der einschlägigen Bekanntmachung oder in den Auftragsunterlagen genannten technischen Spezifikationen oder Normen genau bezeichnet werden, diesen entsprechen? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Bescheinigungen von Instituten für die Qualitätskontrolle (Automatische Übersetzung)"
+    },
+    "e27abb31-c158-4821-8b32-ec2204f01176": {
+      "description": "Beteiligung an einer kriminellen Vereinigung im Sinne von Artikel 2 des Rahmenbeschlusses 2008/841/JHA des Rates vom 24. Oktober 2008 zur Bekämpfung der organisierten Kriminalität (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Beteiligung an einer kriminellen Vereinigung (Automatische Übersetzung)"
+    },
+    "e29d5c62-3718-41c8-99ae-4bc6b3084275": {
+      "description": "Beschreibung der Instrumente, Ausrüstung und technischen Ausrüstung, die dem Bewerber für die Zwecke der Auftragsvergabe zur Verfügung stehen (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Beschreibung der Instrumente, Ausrüstung und technischen Ausrüstung, die dem Bewerber für die Zwecke der Auftragsvergabe zur Verfügung stehen (Automatische Übersetzung)"
+    },
+    "e371dadc-d55a-4bb1-9006-8f6dafb42188": {
+      "description": "n/a",
+      "issuers": [
+        "Wirtschaftsprüfer und Steuerberater"
+      ],
+      "name": "Bescheinigung über Jahresabschluss (z.B. Umsätze, Bilanzen, Bilanzauszüge, Gewinn- und Verlustrechnung)"
+    },
+    "e4640f4a-8c03-4479-b3f0-5c05fee8c311": {
+      "description": "\"§8 Absatz 2 Der öffentliche Auftraggeber fertigt über jedes Vergabeverfahren einen Vermerk in Textform nach § 126b des Bürgerlichen Gesetzbuchs an. Dieser Vergabevermerk umfasst mindestens Folgendes: 5.den Namen des erfolgreichen Bieters und die Gründe für die Auswahl seines Angebots sowie, falls bekannt, den Anteil am Auftrag oder an der Rahmenvereinbarung, den der Zuschlagsempfänger an Dritte weiterzugeben beabsichtigt, und gegebenenfalls, soweit zu jenem Zeitpunkt bekannt, die Namen der Unterauftragnehmer des Hauptauftragnehmers, §36 (1) Der öffentliche Auftraggeber kann Unternehmen in der Auftragsbekanntmachung oder den Vergabeunterlagen auffordern, bei Angebotsabgabe die Teile des Auftrags, die sie im Wege der Unterauftragsvergabe an Dritte zu vergeben beabsichtigen, sowie, falls zumutbar, die vorgesehenen Unterauftragnehmer zu benennen. Vor Zuschlagserteilung kann der öffentliche Auftraggeber von den Bietern, deren Angebote in die engere Wahl kommen, verlangen, die Unterauftragnehmer zu benennen und nachzuweisen, dass ihnen die erforderlichen Mittel dieser Unterauftragnehmer zur Verfügung stehen. Wenn ein Bewerber oder Bieter die Vergabe eines Teils des Auftrags an einen Dritten im Wege der Unterauftragsvergabe beabsichtigt und sich zugleich im Hinblick auf seine Leistungsfähigkeit gemäß den §§ 45 und 46 auf die Kapazitäten dieses Dritten beruft, ist auch § 47 anzuwenden. (2) Die Haftung des Hauptauftragnehmers gegenüber dem öffentlichen Auftraggeber bleibt von Absatz 1 unberührt. (3) Bei der Vergabe von Dienstleistungsaufträgen, die in einer Einrichtung des öffentlichen Auftraggebers unter dessen direkter Aufsicht zu erbringen sind, schreibt der öffentliche Auftraggeber in den Vertragsbedingungen vor, dass der Auftragnehmer spätestens bei Beginn der Auftragsausführung die Namen, die Kontaktdaten und die gesetzlichen Vertreter seiner Unterauftragnehmer mitteilt und dass jede im Rahmen der Auftragsausführung eintretende Änderung auf der Ebene der Unterauftragnehmer mitzuteilen ist. Der öffentliche Auftraggeber kann die Mitteilungspflichten nach Satz 1 auch als Vertragsbedingungen bei der Vergabe anderer Dienstleistungsaufträge oder bei der Vergabe von Lieferaufträgen vorsehen. Des Weiteren können die Mitteilungspflichten auch auf Lieferanten, die an Dienstleistungsaufträgen beteiligt sind, sowie auf weitere Stufen in der Kette der Unterauftragnehmer ausgeweitet werden. (4) Für Unterauftragnehmer aller Stufen gilt § 128 Absatz 1 des Gesetzes gegen Wettbewerbsbeschränkungen. (5) Der öffentliche Auftraggeber überprüft vor der Erteilung des Zuschlags, ob Gründe für den Ausschluss des Unterauftragnehmers vorliegen. Bei Vorliegen zwingender Ausschlussgründe verlangt der öffentliche Auftraggeber die Ersetzung des Unterauftragnehmers. Bei Vorliegen fakultativer Ausschlussgründe kann der öffentliche Auftraggeber verlangen, dass dieser ersetzt wird. Der öffentliche Auftraggeber kann dem Bewerber oder Bieter dafür eine Frist setzen. §46 Absatz 3 Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 10. Angabe, welche Teile des Auftrags das Unternehmen unter Umständen als Unteraufträge zu vergeben beabsichtigt,\"",
+      "issuers": [],
+      "name": "\"Vergabe von Unteraufträgen [no equivalent implementation in the German procurement law]\""
+    },
+    "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46": {
+      "description": "In Bezug auf die in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE genannten Finanzkennzahlen erklärt der Wirtschaftsteilnehmer, dass die aktuellen Werte wie folgt lauten: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Finanzkennzahl (Automatische Übersetzung)"
+    },
+    "e623969a-ee1a-4203-8a24-39a65650688e": {
+      "description": "Bestechung im Sinne des Artikel 3 des Übereinkommens über die Bekämpfung der Bestechung, an der Beamte der Europäischen Gemeinschaften oder der Mitgliedstaaten der Europäischen Union beteiligt sind, ABl. C 195 vom 25.6.1997 und Artikel 2 Absatz 1 des Rahmenbeschlusses 2003/568/JHA des Rates vom 22. Juli 2003 zur Bekämpfung der Bestechung im privaten Sektor (ABl. L 192 vom 31.7.2003). Dieser Ausschlussgrund umfasst auch Bestechung im Sinne des nationalen Rechts des öffentlichen Auftraggebers oder des Wirtschaftsteilnehmers. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Korruption (Automatische Übersetzung)"
+    },
+    "e6587a8d-df98-424a-9b92-4aed929aa1f9": {
+      "description": "Wurde seine gewerbliche Tätigkeit eingestellt? Diese Angabe ist nicht erforderlich, wenn der Ausschluss von Wirtschaftsteilnehmern in diesem Fall nach dem anwendbaren nationalen Recht zwingend vorgeschrieben wurde, ohne dass die Möglichkeit einer Ausnahme für den Fall besteht, dass der Wirtschaftsteilnehmer dennoch in der Lage ist, den Auftrag auszuführen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Einstellung der gewerblichen Tätigkeit (Automatische Übersetzung)"
+    },
+    "e8407f25-6dd5-469c-9b05-3bb2fc16c69a": {
+      "description": "Für die Ausführung des Auftrags wird der Wirtschaftsteilnehmer über folgende Ausstattung, Geräte und technische Ausrüstung verfügen: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Ausstattung, Geräte und technische Ausrüstung (Automatische Übersetzung)"
+    },
+    "e8d3a88f-9920-4d56-9906-6125e90b631a": {
+      "description": "Die Arbeitnehmerüberlassung nach deutschem Recht einer bestimmten Erltigen Erlaubniserurkunde voraus. Das Arbeitnehmerüberlassungsgesetz Umfasst wird in Deutschland sowie der Verleih nach Deutschland hinein und aus Deutschland heraus. (Automatische Übersetzung)",
+      "issuers": [
+        "Bundesagentur für Arbeit"
+      ],
+      "name": "Erlaubnis zur Arbeitnehmerübergabe (Automatische Übersetzung)"
+    },
+    "ea711da5-8593-4e07-a197-74d9f22a5ac3": {
+      "description": "Hat der Wirtschaftsteilnehmer seines Wissens gegen seine sozialrechtlichen Verpflichtungen verstoßen? Gemäß den für diese Auftragsvergabe geltenden Vorgaben des nationalen Rechts, der einschlägigen Bekanntmachung, der Auftragsunterlagen oder des Artikel 18 Absatz 2 der Richtlinie 2004/18/EU. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Verstoß gegen sozialrechtliche Verpflichtungen (Automatische Übersetzung)"
+    },
+    "eb264d1c-7edb-4551-8c92-e80a3f403f3d": {
+      "description": "\"3. Zum Nachweis der beruflichen und technischen Leistungsfähigkeit kann der öffentliche Auftraggeber je nach Art, Menge oder Umfang oder Verwendungszweck der ausgeschriebenen Leistung verlangen: h) eine Erklärung, aus der hervorgeht, über welche Ausstattung, welche Geräte und welche technische Ausrüstung das Unternehmen für die Ausführung des Auftrags verfügt;\"",
+      "issuers": [],
+      "name": "Ausstattung, Geräte und technische Ausrüstung"
+    },
+    "ec420f1a-0729-41a9-b14c-41cc64c3693d": {
+      "description": "Bei öffentlichen Lieferaufträgen: Der Wirtschaftsteilnehmer wird die verlangten Muster, Beschreibungen oder Fotografien der zu liefernden Waren zur Verfügung stellen und ggf. die Echtheitsbescheinigungen vorlegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Muster, Beschreibungen oder Fotografien mit Echtheitsbescheinigung (Automatische Übersetzung)"
+    },
+    "edd6995e-b4c9-4ebd-8f7f-979b36f49c52": {
+      "description": "Je nach Bedarf des öffentlichen Auftraggebers: Geeignete Referenzen bereits abgeschlossener öffentlicher Aufträge für ausreichende Erfahrung (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Besondere Bedingungen für Lieferaufträge: Geeignete Referenzen aus öffentlichen Aufträgen, die ausgeführt wurden (Automatische Übersetzung)"
+    },
+    "eea5620a-890a-4ada-b91a-fcdfa6f5604c": {
+      "description": "Zur Vertragserfüllung steht ihm folgendes Lieferkettenmanagement- und -überwachungssystem zur Verfügung: (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Lieferkettenmanagement (Automatische Übersetzung)"
+    },
+    "ef6d23c5-03ad-4cf8-8869-ece68b20b729": {
+      "description": "Beteiligung an einer kriminellen Vereinigung im Sinne von Artikel 2 des Rahmenbeschlusses 2008/841/JHA des Rates vom 24. Oktober 2008 zur Bekämpfung der organisierten Kriminalität (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Beteiligung an einer kriminellen Vereinigung (Automatische Übersetzung)"
+    },
+    "efc5763f-5fac-4680-b170-86677a5af850": {
+      "description": "Nur bei öffentlichen Dienstleistungsaufträgen: Im Bezugszeitraum hat der Wirtschaftsteilnehmer folgende wesentliche Dienstleistungen der genannten Art erbracht. Die öffentlichen Auftraggeber können einen Zeitraum von bis zu drei Jahren vorgeben und Erfahrungen berücksichtigen, die mehr als drei Jahre zurückliegen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Dienstleistungsaufträgen: Erbringung von Dienstleistungen der genannten Art (Automatische Übersetzung)"
+    },
+    "efd34db9-162b-4d33-8fa5-a3fea51aa756": {
+      "description": "Bei öffentlichen Lieferaufträgen: Der Wirtschaftsteilnehmer wird die verlangten Muster, Beschreibungen oder Fotografien der zu liefernden Waren zur Verfügung stellen, die nicht zusammen mit einer Echtheitsbescheinigung vorgelegt werden müssen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Bei Lieferaufträgen: Muster, Beschreibungen oder Fotografien ohne Echtheitsbescheinigung (Automatische Übersetzung)"
+    },
+    "efdb28c5-880d-4ff2-8449-b21d4b45ce06": {
+      "description": "Die Formulare DC sind ein Musterschreiben und die Erklärung (des Bewerbers oder der Bewerber), die von den Bewerbern für das öffentliche Auftragswesen (Verträge oder Rahmenvereinbarungen) verwendet werden können. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Anmeldeformular für die Erklärung (DC1, DC2) (Automatische Übersetzung)"
+    },
+    "f457b923-d08d-4e8a-a9b8-5d4bafaffae8": {
+      "description": "\"1. Zum Nachweis der Befähigung und Erlaubnis zur Berufsausübung kann der öffentliche Auftraggeber die Eintragung in das Berufs- oder Handelsregister oder der Handwerksrolle ihres Sitzes oder Wohnsitzes verlangen.\"",
+      "issuers": [],
+      "name": "Eintragung ins nationale Handelsregister"
+    },
+    "f4c8c288-f06c-4b14-a42a-c24e3037fe5b": {
+      "description": "\"(3) Als Beleg der erforderlichen technischen und beruflichen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber je nach Art, Verwendungszweck und Menge oder Umfang der zu erbringenden Liefer- oder Dienstleistungen ausschließlich die Vorlage von einer oder mehreren der folgenden Unterlagen verlangen: 7. Angabe der Umweltmanagementmaßnahmen, die das Unternehmen während der Auftragsausführung anwendet,\"",
+      "issuers": [],
+      "name": "Umweltmanagementmaßnahmen"
+    },
+    "f703435c-4617-444a-978a-8b77595e9834": {
+      "description": "",
+      "issuers": [],
+      "name": "Amlicher chronologischer Ausdruck, Genossenschaftsregister (Automatische Übersetzung)"
+    },
+    "f764a237-80be-404e-bb32-3831049ff862": {
+      "description": "n/a",
+      "issuers": [
+        "diverse"
+      ],
+      "name": "Studien- und Ausbildungsnachweise"
+    },
+    "f7f8054f-ef9d-4732-942d-fc72a37876e1": {
+      "description": "\"(4) Als Beleg der erforderlichen wirtschaftlichen und finanziellen Leistungsfähigkeit des Bewerbers oder Bieters kann der öffentliche Auftraggeber in der Regel die Vorlage einer oder mehrerer der folgenden Unterlagen verlangen: 4. eine Erklärung über den Gesamtumsatz und gegebenenfalls den Umsatz in dem Tätigkeitsbereich des Auftrags; eine solche Erklärung kann höchstens für die letzten drei Geschäftsjahre verlangt werden und nur, sofern entsprechende Angaben verfügbar sind.\"",
+      "issuers": [],
+      "name": "Datum der Unternehmensgründung"
+    },
+    "fa8a5b10-e245-461c-b8d0-536a0feafb61": {
+      "description": "n/a",
+      "issuers": [],
+      "name": "Muster, Beschreibungen oder Fotografien"
+    },
+    "fab782a9-0e86-4ab8-a18a-51b7b3054fd3": {
+      "description": "Hat der Wirtschaftsteilnehmer seine Verpflichtungen in Bezug auf die Zahlung von Sozialversicherungsbeiträgen sowohl in dem Land, in dem er niedergelassen ist, als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder des Auftraggebers, sofern es sich nicht um das Niederlassungsland handelt, verletzt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahlung der Sozialversicherungsbeiträge (Automatische Übersetzung)"
+    },
+    "fafd3bd5-2542-4b51-8258-64a828ade88d": {
+      "description": "Bestätigung der Einreichung der Anmeldung bei Aufnahme der Registrierung bei einer Einkaufszentrale der Unternehmen (CFE) (Automatische Übersetzung)",
+      "issuers": [
+        "Business Formalities Center (CFE) (Automatische Übersetzung)"
+      ],
+      "name": "Bestätigung des Eingangs einer Anmeldung zum Zeitpunkt der laufenden Registrierung (Automatische Übersetzung)"
+    },
+    "fbaf8e82-e1a1-428b-ae4a-a170e771697d": {
+      "description": "Hat der Wirtschaftsteilnehmer seine Verpflichtungen in Bezug auf die Zahlung von Sozialversicherungsbeiträgen sowohl in dem Land, in dem er niedergelassen ist, als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder des Auftraggebers, sofern es sich nicht um das Niederlassungsland handelt, verletzt? (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Zahlung der Sozialversicherungsbeiträge (Automatische Übersetzung)"
+    },
+    "fdbc10b8-b883-400e-8584-941f1aeb9877": {
+      "description": "Je nach Bedarf des öffentlichen Auftraggebers (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Besondere Bedingungen für Werkzeuge, Anlagen oder technische Ausrüstung (Automatische Übersetzung)"
+    },
+    "ff165a6e-aa16-4083-b2d8-0970ac562b3d": {
+      "description": "Bescheinigung über die regelmäßige Entrichtung von Sozialbeiträgen zur Sozialversicherung, die aufgrund ungünstiger Witterungsverhältnisse die Leistungen der bezahlten Ferien und der Arbeitslosigkeit erbringen (Automatische Übersetzung)",
+      "issuers": [
+        "Soziale Organisationen (Automatische Übersetzung)"
+      ],
+      "name": "Bescheinigung über die regelmäßige Entrichtung von Sozialbeiträgen zur Sozialversicherung, die aufgrund ungünstiger Witterungsverhältnisse die Leistungen der bezahlten Ferien und der Arbeitslosigkeit erbringen (Automatische Übersetzung)"
+    },
+    "ff7850c3-5ac5-4795-9241-01992348b9cb": {
+      "description": "Der Wirtschaftsteilnehmer ist in den einschlägigen Handelsregistern seines Niederlassungsmitgliedstaats verzeichnet; aufgelistet in Anhang XI der Richtlinie 2014/24/EU; Wirtschaftsteilnehmer aus bestimmten Mitgliedstaaten müssen ggf. andere in jenem Anhang aufgeführte Anforderungen erfüllen. (Automatische Übersetzung)",
+      "issuers": [],
+      "name": "Eintragung in einem Handelsregister (Automatische Übersetzung)"
+    },
+    "ffdf5f27-493c-4836-9357-df10fc73316f": {
+      "description": "",
+      "issuers": [],
+      "name": "IHK-Mitglied (Automatische Übersetzung)"
+    }
+  },
+  "language": "de",
+  "schema_version": 1,
+  "source": "https://ec.europa.eu/growth/tools-databases/ecertisrest/",
+  "source_date": "2026-09-11"
+}

@@ -4,6 +4,10 @@ Two runs produce identical bytes only if (a) the encoding is a pure function of 
 content, ignoring dict insertion order, and (b) `source_date` is derived from the content
 rather than read off the clock. Those are the two things asserted here, plus the guard
 that stops a hand-edited cache from being loaded as if it were generated.
+
+The last group is the other half of "refusing to write": eCertis answers `200` with an empty
+body often enough that a fetch which lost half the register looks exactly like a register
+that shrank, so the generator compares against what is committed before it overwrites it.
 """
 
 from __future__ import annotations
@@ -247,3 +251,54 @@ def test_write_cache_output_is_the_canonical_encoding(
     # Assert
     assert written == canonical_json(json.loads(written))
     assert json.loads(written)["content_sha256"] == content_hash(_body())
+
+
+# ------------------------------------------------------------------- the shrink guards
+
+
+def _overlay(path: Path, entries: Any) -> Path:
+    """A committed `l10n_*.json` as the generator would find it on disk."""
+    path.write_text(json.dumps({"entries": entries}), encoding="utf-8")
+    return path
+
+
+def test_shrunk_localisation_counts_the_ids_this_fetch_did_not_produce(
+    ecertis_generator: ModuleType, tmp_path: Path
+) -> None:
+    """The number `_build` refuses on: ids the bidder-language overlay would lose."""
+    # Arrange
+    path = _overlay(tmp_path / "l10n_de.json", {"kept": {}, "lost": {}, "also-lost": {}})
+
+    # Act
+    lost = ecertis_generator._shrunk_localisation(path, {"kept": object(), "new": object()})
+
+    # Assert
+    assert lost == 2
+
+
+def test_shrunk_localisation_reports_no_loss_when_nothing_is_committed_yet(
+    ecertis_generator: ModuleType, tmp_path: Path
+) -> None:
+    """A first run has nothing to lose, so the guard must not block the initial build."""
+    # Act / Assert
+    assert ecertis_generator._shrunk_localisation(tmp_path / "absent.json", {}) == 0
+
+
+@pytest.mark.parametrize(
+    "entries", [["not", "a", "map"], "not a map", None], ids=["list", "string", "null"]
+)
+def test_shrunk_localisation_refuses_an_overlay_it_cannot_read(
+    ecertis_generator: ModuleType, tmp_path: Path, entries: Any
+) -> None:
+    """An unreadable overlay is not an empty one, and "0 lost" is what licenses the write.
+
+    Answering 0 here would let a fetch that came back half-empty overwrite `l10n_de.json`
+    unchallenged — the exact loss the guard exists to prevent, waved through by the guard
+    itself. The English pass has no such escape hatch, so this one has none either.
+    """
+    # Arrange
+    path = _overlay(tmp_path / "l10n_de.json", entries)
+
+    # Act / Assert
+    with pytest.raises(SystemExit, match="could not be read"):
+        ecertis_generator._shrunk_localisation(path, {})

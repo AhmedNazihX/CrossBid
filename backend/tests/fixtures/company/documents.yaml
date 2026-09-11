@@ -1,0 +1,313 @@
+# Demo company pack - the page content, Story S6.3.
+#
+# The generator's second input, beside `profile.yaml`: `scripts/build_demo_company_pack.py`
+# renders every entry here to one PDF in `documents/`. The text lives in YAML rather than in
+# the script so that a reviewer reads German prose as prose, and so that the script stays an
+# engine. Order matters: the documents, their pages and the blocks on a page are rendered in
+# the order written here.
+#
+# All of it is fabricated. Each `{placeholder}` is filled from `profile.yaml` at render time,
+# which is what keeps the evidence on the page and the structured facts from drifting apart;
+# an unknown placeholder is a build error, never a blank.
+#
+# Block styles: `h` subheading, `p` paragraph, `li` bullet, `kv` label and value separated by
+# a tab. `heading` is the page title.
+
+- file: Angebotszusammenfassung_2023_ISMS_Beratung.pdf
+  pages:
+  - heading: Angebotszusammenfassung
+    blocks:
+    - h: Aufbau eines Informationssicherheits-Managementsystems nach ISO/IEC 27001
+    - kv: "Auftraggeber\tKommunaler Zweckverband Musterland (fiktiver öffentlicher Auftraggeber)"
+    - kv: "Verfahrensart\tOffenes Verfahren nach VgV"
+    - kv: "CPV-Code\t72220000 - Systemberatung und technische Beratung"
+    - kv: "Los\tLos 1 von 1"
+    - kv: "Angebot eingereicht am\t14.11.2022"
+    - kv: "Ergebnis\tZuschlag erhalten"
+    - kv: "Auftragswert (netto)\t118.000,00 EUR"
+    - kv: "Abgerechnete Personentage\t142 Personentage"
+    - kv: "Leistungszeitraum\t03/2023 bis 11/2023"
+    - kv: "Eingesetzte Kapazität\t3,5 VZÄ über die Vertragslaufzeit"
+    - p: '{fiction_note}'
+  - heading: Leistungsinhalte und Auswertung
+    blocks:
+    - h: Erbrachte Leistungen
+    - li: Schutzbedarfsfeststellung und Risikoanalyse für 14 Fachverfahren
+    - li: Informationssicherheitsleitlinie und 22 abgeleitete Richtliniendokumente
+    - li: Aufbau des Maßnahmenkatalogs nach Anhang A der ISO/IEC 27001
+    - li: Begleitung des Zertifizierungsaudits bis zur Zertifikatserteilung
+    - h: Auswertung für künftige Angebote
+    - p: Der Aufwand für die Dokumentenlenkung wurde unterschätzt. Er wird seither als eigener Posten
+        kalkuliert.
+    - p: Der Auftrag ist abgeschlossen und kann als Referenz benannt werden; der Umfang von 142
+        Personentagen liegt über der in vergleichbaren Verfahren geforderten Mindestgröße von 25
+        Personentagen.
+- file: Angebotszusammenfassung_2024_IPv6_Migration.pdf
+  pages:
+  - heading: Angebotszusammenfassung
+    blocks:
+    - h: Beratung und Unterstützung bei der Migration auf IPv6
+    - kv: "Auftraggeber\tLandesamt für Digitalisierung Musterland (fiktive Behörde)"
+    - kv: "Verfahrensart\tOffenes Verfahren nach VgV"
+    - kv: "CPV-Code\t72000000 - IT-Dienstleistungen: Beratung, Software, Internet und Support"
+    - kv: "Los\tLos 2: Netzwerk- und Informationstechnik"
+    - kv: "Angebot eingereicht am\t09.01.2024"
+    - kv: "Ergebnis\tZuschlag erhalten"
+    - kv: "Auftragswert (netto)\t265.000,00 EUR"
+    - kv: "Abgerechnete Personentage\t310 Personentage"
+    - kv: "Leistungszeitraum\t02/2024 bis 12/2024"
+    - kv: "Eingesetzte Kapazität\t5,0 VZÄ über die Vertragslaufzeit"
+    - p: '{fiction_note}'
+  - heading: Leistungsinhalte und Auswertung
+    blocks:
+    - h: Erbrachte Leistungen
+    - li: Bestandsaufnahme von 240 Netzsegmenten und Erstellung des Adresskonzepts
+    - li: Dual-Stack-Migration von Netzwerk-, Server- und Sicherheitskomponenten
+    - li: Anpassung der Firewall-, DNS- und Monitoringregeln auf IPv6
+    - li: Schulung von 60 Beschäftigten der Behörde
+    - h: Auswertung für künftige Angebote
+    - p: Die Abstimmung mit den Dienstleistern der Fachverfahren war der kritische Pfad. Sie wird
+        seither vor Projektbeginn terminiert.
+    - p: Der Auftrag ist abgeschlossen und kann als Referenz benannt werden; der Umfang von 310
+        Personentagen liegt über der in vergleichbaren Verfahren geforderten Mindestgröße von 25
+        Personentagen.
+- file: Angebotszusammenfassung_2025_Netzwerkbetrieb.pdf
+  pages:
+  - heading: Angebotszusammenfassung
+    blocks:
+    - h: Betrieb und Weiterentwicklung der Netzwerk- und Informationstechnik
+    - kv: "Auftraggeber\tStadtwerke Musterstadt GmbH (fiktiver Sektorenauftraggeber)"
+    - kv: "Verfahrensart\tVerhandlungsverfahren mit Teilnahmewettbewerb nach SektVO"
+    - kv: "CPV-Code\t72500000 - Computerdienste"
+    - kv: "Los\tLos 1 von 2"
+    - kv: "Angebot eingereicht am\t04.03.2025"
+    - kv: "Ergebnis\tZuschlag erhalten"
+    - kv: "Auftragswert (netto)\t196.000,00 EUR"
+    - kv: "Abgerechnete Personentage\t96 Personentage"
+    - kv: "Leistungszeitraum\t04/2025 bis 02/2026"
+    - kv: "Eingesetzte Kapazität\t2,5 VZÄ über die Vertragslaufzeit"
+    - p: '{fiction_note}'
+  - heading: Leistungsinhalte und Auswertung
+    blocks:
+    - h: Erbrachte Leistungen
+    - li: Second-Level-Support der Netzwerkinfrastruktur an vier Standorten
+    - li: Erneuerung der Perimeter-Firewalls und segmentierte Netzarchitektur
+    - li: Zentrales Protokollierungs- und Schwachstellenmanagement
+    - h: Auswertung für künftige Angebote
+    - p: Die Übernahme aus dem Altbetrieb gelang, weil vier Wochen Parallelbetrieb eingeplant waren.
+        Das ist seither Standard in der Kalkulation.
+    - p: Der Auftrag ist abgeschlossen und kann als Referenz benannt werden; der Umfang von 96 Personentagen
+        liegt über der in vergleichbaren Verfahren geforderten Mindestgröße von 25 Personentagen.
+- file: Betriebshaftpflichtversicherung_Bestaetigung.pdf
+  pages:
+  - heading: Versicherungsbestätigung
+    blocks:
+    - p: Betriebshaftpflichtversicherung einschließlich Berufshaftpflicht- und Vermögensschadenhaftpflichtversicherung.
+    - kv: "Ausstellende Stelle\t{insurer}"
+    - kv: "Nummer\t{policy_number}"
+    - kv: "Ausgestellt am\t{policy_issued}"
+    - kv: "Gültig bis\t{policy_expires}"
+    - kv: "Versicherungsnehmerin\t{name}, {address}"
+    - h: Deckungssummen
+    - kv: "Personen- und Sachschäden\t5.000.000,00 EUR je Schadenereignis"
+    - kv: "Vermögensschäden\t2.000.000,00 EUR je Schadenereignis"
+    - p: Die Deckungssummen stehen je Versicherungsjahr zweifach zur Verfügung. Es bestehen keine
+        Beitragsrückstände; der Vertrag ist ungekündigt.
+    - p: '{fiction_note}'
+  - heading: Anlage - Versicherte Tätigkeiten und Besonderheiten
+    blocks:
+    - li: IT-Beratung, Systemintegration und Softwareentwicklung
+    - li: Betrieb von Netzwerk- und Informationstechnik für Dritte
+    - li: Cyber-Deckung für Datenschutz- und Netzwerksicherheitsverletzungen, 1.000.000,00 EUR je
+        Versicherungsjahr
+    - li: Selbstbehalt 2.500,00 EUR je Schadenfall
+    - li: 'Geltungsbereich: Europäische Union und Europäischer Wirtschaftsraum'
+    - h: Bestätigung
+    - p: Diese Bestätigung wird zur Vorlage bei öffentlichen Auftraggebern ausgestellt und gilt
+        für die Dauer der oben genannten Laufzeit.
+- file: Eigenerklaerung_Umsatz_und_Beschaeftigte.pdf
+  pages:
+  - heading: Eigenerklärung zum Umsatz im Tätigkeitsbereich des Auftrags
+    blocks:
+    - p: 'Hiermit erklären wir, die {name}, {address}, die folgenden Umsätze im Tätigkeitsbereich
+        des Auftrags für die letzten drei Geschäftsjahre:'
+    - kv: '{turnover_1}'
+    - kv: '{turnover_2}'
+    - kv: '{turnover_3}'
+    - p: Die Angaben beruhen auf den festgestellten Jahresabschlüssen. Ein Jahresabschluss für das
+        laufende Geschäftsjahr liegt noch nicht vor.
+    - p: Diese Eigenerklärung wird zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit
+        nach § 45 VgV abgegeben.
+    - p: '{fiction_note}'
+  - heading: Eigenerklärung zur Beschäftigtenzahl und zu Ausschlussgründen
+    blocks:
+    - p: 'Die durchschnittliche Anzahl an Beschäftigten und Führungskräften in Vollzeitäquivalenten
+        (VZÄ) betrug in den letzten drei Geschäftsjahren:'
+    - kv: '{staff_total_line}'
+    - kv: '{staff_relevant_line}'
+    - p: Einschlägiger Geschäftsbereich ist die IT-Beratung einschließlich Netzwerk- und Informationstechnik.
+    - h: Referenzen
+    - p: Drei abgeschlossene Referenzaufträge mit jeweils mehr als 25 abgerechneten Personentagen
+        sind in den Angebotszusammenfassungen und Referenzschreiben dieses Pakets belegt.
+    - h: Eigenerklärung nach §§ 123, 124 GWB
+    - p: Wir erklären, dass Ausschlussgründe nach § 123 GWB und § 124 GWB bei uns nicht vorliegen.
+        Steuern und Sozialabgaben werden pünktlich entrichtet; ein Insolvenzverfahren ist weder
+        beantragt noch eröffnet.
+    - p: '{fiction_note}'
+- file: Handelsregisterauszug.pdf
+  pages:
+  - heading: Handelsregisterauszug - Abteilung B
+    blocks:
+    - kv: "Registergericht\t{registration_court}"
+    - kv: "Registerblatt\t{registration_number}"
+    - kv: "Abrufdatum\t04.09.2026"
+    - kv: "Firma\t{name}"
+    - kv: "Sitz\tMusterstadt"
+    - kv: "Geschäftsanschrift\t{address}"
+    - h: Gegenstand des Unternehmens
+    - p: Beratung, Planung, Aufbau und Betrieb von Netzwerk- und Informationstechnik, IT-Sicherheit
+        sowie die Beratung zur Migration auf IPv6; Erbringung von IT-Dienstleistungen für öffentliche
+        Auftraggeber und für Unternehmen der Daseinsvorsorge.
+    - p: '{fiction_note}'
+  - heading: Stammkapital, Organe und Vertretungsregelung
+    blocks:
+    - kv: "Stammkapital\t250.000,00 EUR"
+    - kv: "Geschäftsführerin\tDr. Katrin Beispiel, Musterstadt"
+    - kv: "Geschäftsführer\tJonas Mustermann, Musterstadt"
+    - kv: "Prokura\tAylin Musterfrau, Gesamtprokura"
+    - h: Vertretungsregelung
+    - p: Ist nur ein Geschäftsführer bestellt, vertritt er die Gesellschaft allein. Sind mehrere
+        Geschäftsführer bestellt, wird die Gesellschaft durch zwei Geschäftsführer oder durch einen
+        Geschäftsführer gemeinsam mit einem Prokuristen vertreten.
+    - h: Rechtsform
+    - p: Gesellschaft mit beschränkter Haftung. Gesellschaftsvertrag vom 12.04.2011, zuletzt geändert
+        am 03.02.2021.
+  - heading: Eintragungen in zeitlicher Reihenfolge
+    blocks:
+    - li: 12.04.2011 - Gründung der Gesellschaft, Stammkapital 25.000,00 EUR
+    - li: 09.08.2016 - Kapitalerhöhung auf 250.000,00 EUR aus Gesellschaftsmitteln
+    - li: 03.02.2021 - Änderung des Unternehmensgegenstands um IT-Sicherheit
+    - li: 17.05.2024 - Erteilung der Gesamtprokura an Aylin Musterfrau
+    - li: 04.09.2026 - Abruf dieses Auszugs; seither keine weiteren Eintragungen
+    - h: Hinweis
+    - p: Dieser Auszug stammt nicht von einem Registergericht. Er wurde für die Demonstration von
+        Crossbid erzeugt und hat keinerlei Beweiskraft.
+- file: Referenzschreiben_Landesamt_Musterland.pdf
+  pages:
+  - heading: Referenzschreiben
+    blocks:
+    - kv: "Referenzgeber\tLandesamt für Digitalisierung Musterland (fiktive Behörde)"
+    - kv: "Anschrift\tMusterring 3, 12345 Musterstadt"
+    - kv: "Datum\t20.01.2025"
+    - h: 'Referenz: Migration der Landesverwaltung auf IPv6'
+    - p: Die {name} hat für uns die nachstehend beschriebenen Leistungen erbracht. Die Leistungen
+        wurden vertragsgemäß, termingerecht und in guter Qualität erbracht. Wir würden das Unternehmen
+        erneut beauftragen.
+    - kv: "Leistungszeitraum\t02/2024 bis 12/2024"
+    - kv: "Abgerechnete Personentage\t310 Personentage"
+    - kv: "Auftragswert (netto)\t265.000,00 EUR"
+    - kv: "Ausgeführt als\tHauptauftragnehmerin auf Grundlage eines Einzelauftrags"
+    - p: '{fiction_note}'
+  - heading: Anlage - Leistungsumfang im Einzelnen
+    blocks:
+    - li: Adresskonzept und Migrationsplan für 240 Netzsegmente
+    - li: Dual-Stack-Migration der Netzwerk- und Sicherheitskomponenten
+    - li: Anpassung von Firewall-, DNS- und Monitoringkonfigurationen
+    - li: Wissenstransfer an die eigene Betriebsmannschaft
+    - h: Ansprechstelle für Rückfragen
+    - kv: "Name\tFrau Dr. Silke Musterfrau, Referat Z 4"
+    - kv: "Telefon\t+49 000 000000-14"
+    - kv: "E-Mail\tvergabe@digitalisierung-musterland.example"
+    - p: Wir bestätigen die vorstehenden Angaben und stehen für Rückfragen der Vergabestelle zur
+        Verfügung.
+- file: Referenzschreiben_Stadtwerke_Musterstadt.pdf
+  pages:
+  - heading: Referenzschreiben
+    blocks:
+    - kv: "Referenzgeber\tStadtwerke Musterstadt GmbH (fiktiver Sektorenauftraggeber)"
+    - kv: "Anschrift\tAm Musterhafen 8, 12345 Musterstadt"
+    - kv: "Datum\t11.03.2026"
+    - h: 'Referenz: Betrieb und Weiterentwicklung der Netzwerktechnik'
+    - p: Die {name} hat für uns die nachstehend beschriebenen Leistungen erbracht. Die Leistungen
+        wurden vertragsgemäß, termingerecht und in guter Qualität erbracht. Wir würden das Unternehmen
+        erneut beauftragen.
+    - kv: "Leistungszeitraum\t04/2025 bis 02/2026"
+    - kv: "Abgerechnete Personentage\t96 Personentage"
+    - kv: "Auftragswert (netto)\t196.000,00 EUR"
+    - kv: "Ausgeführt als\tHauptauftragnehmerin auf Grundlage eines Einzelauftrags"
+    - p: '{fiction_note}'
+  - heading: Anlage - Leistungsumfang im Einzelnen
+    blocks:
+    - li: Second-Level-Support der Netzwerkinfrastruktur an vier Standorten
+    - li: Erneuerung der Perimeter-Firewalls und Netzsegmentierung
+    - li: Zentrales Protokollierungs- und Schwachstellenmanagement
+    - h: Ansprechstelle für Rückfragen
+    - kv: "Name\tHerr Tobias Beispiel, Leiter IT-Betrieb"
+    - kv: "Telefon\t+49 000 000000-77"
+    - kv: "E-Mail\tit-betrieb@stadtwerke-musterstadt.example"
+    - p: Wir bestätigen die vorstehenden Angaben und stehen für Rückfragen der Vergabestelle zur
+        Verfügung.
+- file: Unbedenklichkeitsbescheinigung_Finanzamt.pdf
+  pages:
+  - heading: Unbedenklichkeitsbescheinigung in Steuersachen
+    blocks:
+    - kv: "Ausstellende Stelle\t{tax_issuer}"
+    - kv: "Nummer\t{tax_number}"
+    - kv: "Ausgestellt am\t{tax_issued}"
+    - kv: "Gültig bis\t{tax_expires}"
+    - kv: "Steuerpflichtige\t{name}, {address}"
+    - kv: "Steuernummer\t000/0000/0000 (frei erfunden)"
+    - h: Bescheinigung
+    - p: Über die vorbezeichnete Firma bestehen zum Zeitpunkt der Ausstellung keine Rückstände an
+        Steuern und steuerlichen Nebenleistungen. Die Steuererklärungen wurden fristgerecht abgegeben
+        und die Vorauszahlungen pünktlich entrichtet.
+    - p: Diese Bescheinigung dient der Vorlage bei öffentlichen Auftraggebern zum Ausschlussgrund
+        der Nichtzahlung von Steuern und Abgaben nach § 123 Abs. 4 GWB. Sie trifft keine Aussage
+        über künftige Zeiträume.
+    - p: '{fiction_note}'
+  - heading: Anlage 1 - Freistellungsbescheinigung nach § 48b EStG
+    blocks:
+    - kv: "Ausstellende Stelle\t{tax_issuer}"
+    - kv: "Nummer\t{exemption_number}"
+    - kv: "Ausgestellt am\t{exemption_issued}"
+    - kv: "Gültig bis\t{exemption_expires}"
+    - p: 'Freistellungsbescheinigung nach § 48b EStG: Der Leistungsempfänger kann den Steuerabzug
+        in Höhe von 15 vom Hundert der Gegenleistung für Bauleistungen im Sinne des § 48 Abs. 1
+        EStG unterlassen.'
+    - h: Hinweis zur Gültigkeit
+    - p: Diese Bescheinigung ist am {exemption_expires} abgelaufen. Eine Anschlussbescheinigung
+        ist beim Finanzamt zu beantragen; bis dahin steht für laufende Vergabeverfahren kein gültiger
+        Nachweis zur Verfügung.
+    - p: '{fiction_note}'
+- file: Zertifikat_ISO_IEC_27001_2022.pdf
+  pages:
+  - heading: Zertifikat - Informationssicherheits-Managementsystem
+    blocks:
+    - p: Die {iso_issuer} bescheinigt hiermit, dass die
+    - h: '{name}, {address}'
+    - p: 'ein Informationssicherheits-Managementsystem (ISMS) eingeführt hat und aufrechterhält,
+        das die Anforderungen der folgenden Norm erfüllt:'
+    - h: ISO/IEC 27001:2022
+    - kv: "Ausstellende Stelle\t{iso_issuer}"
+    - kv: "Nummer\t{iso_number}"
+    - kv: "Ausgestellt am\t{iso_issued}"
+    - kv: "Gültig bis\t{iso_expires}"
+    - kv: "Auditart\tZertifizierungsaudit, Stufe 1 und Stufe 2"
+    - p: Die Wirksamkeit des Managementsystems wird jährlich durch Überwachungsaudits geprüft.
+    - p: '{fiction_note}'
+  - heading: Anlage zum Zertifikat - Geltungsbereich
+    blocks:
+    - p: 'Geltungsbereich des Informationssicherheits-Managementsystems:'
+    - li: Beratung, Planung, Aufbau und Betrieb von Netzwerk- und Informationstechnik
+    - li: IT-Sicherheitsberatung einschließlich Migrationen auf IPv6
+    - li: Betrieb des eigenen Rechenzentrums am Standort Musterstadt
+    - li: Entwicklung und Pflege von Fachanwendungen für öffentliche Auftraggeber
+    - h: Schutzziele
+    - p: Vertraulichkeit, Integrität und Verfügbarkeit der verarbeiteten Informationen sind die
+        Schutzziele des Managementsystems; personenbezogene Daten sind ausdrücklich einbezogen.
+    - h: Berücksichtigte Maßnahmenbereiche nach Anhang A
+    - li: Organisatorische Maßnahmen, darunter Sicherheitsrichtlinien und Lieferantenbeziehungen
+    - li: Personelle Maßnahmen, darunter Sensibilisierung und Verpflichtung auf Vertraulichkeit
+    - li: Physische Maßnahmen, darunter Zutrittskontrolle und Schutz der Verkabelung
+    - li: Technologische Maßnahmen, darunter Zugriffskontrolle, Kryptografie, Protokollierung und
+        Schwachstellenmanagement

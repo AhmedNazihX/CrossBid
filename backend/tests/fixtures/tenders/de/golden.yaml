@@ -1,0 +1,3029 @@
+# =====================================================================================
+#  UNVERIFIED DRAFT -- NOT YET A SCORING REFERENCE.
+#
+#  Every label below was drafted by an LLM (Claude, Opus 5) reading the parsed PDFs.
+#  NO HUMAN HAS CHECKED THE JUDGEMENT CALLS YET: the category, kind, stage, checkability,
+#  threshold and eCertis mapping on each row are a proposal, not a finding. Do not use
+#  this file to score extraction (S3.2.3) or to report a recall number until a person has
+#  read it and `verified_by` names them.
+#
+#  What *is* mechanically guaranteed, by `tests/unit/test_golden_labels.py`: every `doc`
+#  exists in the pack, every `page` is inside it, and every `quote` literally occurs on
+#  the page it cites under the extractor's own normalisation. A fabricated quote or a
+#  wrong page cannot be committed. What a machine cannot check is whether an obligation
+#  was *missed*, and whether the judgement fields are right.
+#
+#  Closed by: S6.4 (this file's human-verification half). Supersedes
+#  `scripts/spike_golden_de.yaml` (SP.1), which it does not contradict except where noted
+#  in `notes:` -- see the header's `method` for the three places SP.1 is wrong.
+# =====================================================================================
+
+meta:
+  ted_publication_number: "614251-2026"
+  fixture_dir: tests/fixtures/tenders/de
+  source_language: de
+  labelled_by: llm_draft
+  verified_by: pending
+  verified_on: null
+  labelled_on: 2026-09-11
+  story: S6.4
+  method: |
+    Drafted by an LLM (Claude Opus 5) on 2026-09-11, from the text the repo's own
+    `PyMuPDFParser` produces -- not from the raw PDFs and not from `page.get_text()`.
+    That matters: `pymupdf4llm` returns markdown, so a bold clause arrives as
+    `**mindestens 29 VZAE**` and a table cell arrives with literal `<br>` between its
+    lines. Quotes here are copied out of that markdown, and the validator compares them
+    with `extract_reqs._is_verbatim`, which strips inline `*_` runs and collapses
+    whitespace but does NOT strip `<br>`, `<sup>` or `<u>`. Where a sentence is broken by
+    one of those tags the quote is the longest unbroken span of the clause rather than
+    the whole sentence; those rows say so in `notes`.
+
+    Procedure: all 28 PDFs in `documents/` (191 pages) plus the 11-page TED notice one
+    level up were parsed and read in full. Each document was then classified as bearing a
+    bidder requirement or not; `documents_excluded` records every exclusion with its
+    reason, so no file was passed over silently. For each distinct obligation one entry
+    was written with a verbatim source-language quote, an English one-line summary, and
+    the typed fields of `crossbid.models.requirement`.
+
+    eCertis mapping is deliberately sparse. An id is set only where the correspondence is
+    determinate -- mostly where the TED notice itself names the ESPD criterion (BT-750
+    "Spezifischer Jahresumsatz", "Durchschnittliche jaehrliche Belegschaft", "Referenzen
+    zu bestimmten Dienstleistungen") or where a GWB paragraph maps one-to-one onto an
+    Art. 57 ground. Where one sentence covers several ESPD criteria (the combined
+    environmental/social/labour question, the combined taxes-and-social-security ground)
+    the field is null and the candidates are named in `notes`: S3.3.1 fetches national
+    evidence for whatever id is written here, so a wrong id is worse than none.
+
+    Scope, inherited from SP.1: the base case is a single bidder submitting alone.
+    Obligations that bind only a Bietergemeinschaft, an Eignungsleihe, a subcontractor or
+    a multi-lot bid are in `conditional_not_scored`, not `requirements`.
+
+    Deliberately included beyond SP.1: `contract_performance` rows (insurance, ILO
+    compliance, e-invoicing, personnel deployment). They are NOT noise -- ADR-0003's
+    stage discriminator is what keeps them out of the matrix, and having them labelled is
+    the only way S3.2.3 can score that filter in both directions. A scorer measuring
+    extraction recall must filter this file on `stage: bid_eligibility` first.
+
+    Three corrections to SP.1 (`scripts/spike_golden_de.yaml`), all verified here:
+    (1) SP.1's FIN-02 quote contains a `[...]` elision marker and is therefore not
+    verbatim -- it cannot pass a substring check against any page. Split into DE-061 and
+    DE-062. (2) SP.1's EXCL-02 and EXCL-03 quotes join text across a markdown table
+    boundary; under the repo's parser those cells are separated by a literal `<br>` or sit
+    in different cells, so neither quote occurs on the cited page. Replaced by DE-085,
+    DE-090 and neighbours, each quoting one unbroken span. (3) SP.1 labelled only three
+    documents as requirement-bearing; that is wrong. The Allgemeine Bewerbungsbedingungen
+    carry the language, form, deadline and Nebenangebot rules, the Rahmenvereinbarung
+    carries a liability-insurance minimum, the TED notice carries the deadline and the
+    ESPD criterion names, and the Kriterienkatalog Leistung and Leistungsbeschreibung
+    carry the personnel prerequisites. Ten documents bear requirements, not three.
+
+    Known gaps the verifier should treat as open: the per-Unterstuetzungsbereich
+    prerequisites in the Kriterienkatalog Leistung (Ziffern 1.4.1.1, 1.5.1.1, 1.6.1.1)
+    and the long content-bullet catalogues under each B-Kriterium are NOT exploded into
+    one entry per bullet; the equivalent obligations are labelled once from the
+    Leistungsbeschreibung's Erfahrungsstufen (DE-250..DE-253). The `Erklaerung zur
+    sozialen Nachhaltigkeit von IT` document catalogue (pages 8-16) is represented by one
+    entry rather than one per ILO norm.
+  documents_scanned:
+    - 614251-2026.notice.de.pdf
+    - Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    - Anlage_Unternehmensdaten_VV2.pdf
+    - Aufforderungsschreiben_VV2_V1.pdf
+    - Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    - Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    - Eigenerklaerung_Sanktionen_Russland_VV2.pdf
+    - Eigenerklaerung_Verpflichtungsgesetz_VV2.pdf
+    - Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf
+    - Kriterienkatalog_Eignung_VV2_V1.pdf
+    - Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    - Leistungsbeschreibung_VV2_V1.pdf
+    - Rahmenvereinbarung_VV2_V1.pdf
+    - Unterauftraege_VV2.pdf
+    - Verpflichtung_VS-NfD_und_VS-NfD-Merkblatt_im_Anhang_VV2.pdf
+    - Verpflichtungserklaerung_Eignungsleihe_Unterauftraege_VV2.pdf
+    - Verpflichtungserklaerung_Scientology_VV2.pdf
+    - Vordruck_Referenzen_VV2.pdf
+  documents_excluded:
+    AGB.pdf: >-
+      Beschaffungsamt general terms of contract; binds the contractor after award and
+      states no obligation a bidder must satisfy to qualify.
+    EVB_IT_Dienstleistung_AGB.pdf: >-
+      EVB-IT standard terms for IT services; contract document, no bidder requirement.
+    EVB_IT_Dienstleistung_Kurzfassung_VV2_V1.pdf: >-
+      EVB-IT short-form contract; signed at award, states no bidder requirement.
+    EVB_IT_Dienstleistung_Langfassung_VV2_V1.pdf: >-
+      EVB-IT long-form contract; signed at award, states no bidder requirement.
+    EVB_IT_Dienstleistung_Muster1_Leistungsnachweis_VV2_V1.pdf: >-
+      One-page performance-record template used during delivery; no bidder requirement.
+    Information_in_English.pdf: >-
+      English courtesy note; restates the German-language rule already labelled as DE-030
+      from the Allgemeine Bewerbungsbedingungen, and adds no obligation of its own.
+    Liste_Bedarfstraeger_VV2_V1.pdf: >-
+      List of the federal bodies entitled to call off the framework; purely informational.
+    Mustervereinbarung_Auftragsverarbeitung_VV2.pdf: >-
+      GDPR data-processing agreement template concluded by the Bedarfstraeger after award;
+      not submitted with the offer.
+    Rechtsbehelfsbelehrung.pdf: >-
+      Legal-remedies notice; states the bidder's ten-day Ruege deadline for challenging the
+      procedure, which is a right to complain rather than a qualification requirement.
+    VOL_B_2003.pdf: >-
+      VOL/B general conditions for the execution of supply and service contracts;
+      contract performance only.
+    Vordruck_Information_Arbeitsbedingungen_BTTG_VV2.pdf: >-
+      Template the contractor uses to inform its own employees of collective-agreement
+      terms during performance; states no bidder requirement.
+
+requirements:
+
+  # ---------------------------------------------------------------------------------
+  # Besondere Bewerbungsbedingungen -- the list of documents to submit with the offer.
+  # DE-001..DE-010 are SP.1's DOC-01..DOC-10, same quotes and same page.
+  # ---------------------------------------------------------------------------------
+  - id: DE-001
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Mit dem Angebot sind folgende Dokumente einzureichen: Angebotsformular
+    summary: The completed Angebotsformular must be submitted with the offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The buyer prints the ten required documents as one run-on paragraph, so the list
+      head and the first item share a line. Each following entry is quoted on its own.
+
+  - id: DE-002
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Nachweise und Erklärungen zu den Eignungskriterien, s. Kriterienkatalog Eignung
+    summary: Evidence and declarations for the selection criteria must be submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-003
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Eigenerklärung Ausschlussgründe
+    summary: The self-declaration on the absence of exclusion grounds must be submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      No criterion id: the form covers all of GWB 123 and 124 at once, which is a dozen
+      separate ESPD criteria. The individual grounds are mapped on DE-085 and DE-096..098.
+
+  - id: DE-004
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Eigenerklärung Sanktionen Russland
+    summary: >-
+      The self-declaration under Art. 5k of Regulation (EU) 833/2014 must be submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The Russia-sanctions ground postdates the 2016 ESPD criterion set and has no eCertis
+      entry; this is exactly the kind of national/EU add-on the matrix must carry itself.
+
+  - id: DE-005
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Anlage Unternehmensdaten
+    summary: The company-data annex must be completed and submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-006
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Erklärung zur sozialen Nachhaltigkeit von IT
+    summary: The declaration on the social sustainability of IT must be submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-007
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Verpflichtungserklärung Scientology
+    summary: The Scientology non-affiliation undertaking must be submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-008
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Verpflichtung VS-NfD und VS-NfD-Merkblatt im Anhang
+    summary: >-
+      The VS-NfD classified-information undertaking must be submitted, with the embedded
+      VS-NfD leaflet.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-009
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Eigenerklärung Verpflichtungsgesetz
+    summary: The self-declaration under the Verpflichtungsgesetz must be submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-010
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Nachweise und Erklärungen zur Leistung, s. Kriterienkatalog Leistung
+    summary: Evidence and declarations on the performance criteria must be submitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-011
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Geforderte Unterlagen, für die kein Formular vorgesehen ist, sind von Ihnen zu
+      erstellen und z. B. eingescannt als PDF-Datei einzureichen.
+    summary: >-
+      Required documents with no template must be produced by the bidder and submitted as
+      scanned PDFs.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-012
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Die Originale müssen auf Verlangen des Beschaffungsamtes des BMI vorgelegt werden.
+    summary: Originals must be produced on demand.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-013
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Bitte beachten Sie, dass Sie alle während des Verfahrens eintretenden Umstände, die
+      Einfluss auf Ihre Eignung und Ihre sonstigen Erklärungen haben könnten, unverzüglich
+      dem Beschaffungsamt des BMI mitteilen müssen
+    summary: >-
+      Any circumstance arising during the procedure that could affect eligibility or the
+      declarations already given must be reported without delay.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Checkable `neither`: it is a duty to act in future, which no corpus of company facts
+      can settle now.
+
+  - id: DE-014
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 5
+    quote: >-
+      Die geforderten Dokumente sind jeweils einzeln für jedes Los einzureichen.
+    summary: The required documents must be submitted separately for each lot.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-015
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 6
+    quote: >-
+      Fragen müssen vollständig und nachvollziehbar beantwortet werden.
+    summary: Questions in the forms must be answered completely and comprehensibly.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-016
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 6
+    quote: >-
+      Es werden keine Nachweise und Erklärungen gefordert.
+    summary: >-
+      No evidence is required for authorisation to pursue the profession (Section 44 VgV).
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      A negative requirement, and worth keeping: an extractor that reports a professional
+      register requirement here has hallucinated one.
+
+  - id: DE-017
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 7
+    quote: >-
+      Mit der Angebotsabgabe verpflichten Sie sich, die Bedingungen während der gesamten
+      Vertragslaufzeit einzuhalten.
+    summary: >-
+      Submitting the offer commits the bidder to the ILO labour standards for the whole
+      contract term.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-018
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 8
+    quote: >-
+      Der Vordruck „Angebotsformular“ ist vollständig auszufüllen.
+    summary: The Angebotsformular template must be filled in completely.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-019
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 8
+    quote: >-
+      Der für die angebotene Leistung gültige Umsatzsteuersatz ist im Angebotsformular aus
+      dem zur Verfügung stehenden Drop-Down-Menü auszuwählen.
+    summary: The applicable VAT rate must be selected in the offer form.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-020
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 8
+    quote: >-
+      Legen Sie bitte alle im Dokument „Kriterienkatalog Leistung“ geforderten Nachweise
+      und Erklärungen unter Verwendung der Vorlagen "CV Externe Hardware", "CV
+      IT-Security", "CV Netzwerktechnik" sowie "Personalreferenzen" mit dem Angebot vor.
+    summary: >-
+      The CV and personnel-reference templates must be used and submitted with the offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-021
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 9
+    quote: >-
+      Der Zuschlag wird auf das wirtschaftlichste bedingungsgemäße Angebot erteilt.
+    summary: The contract is awarded to the most economically advantageous compliant offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-022
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 10
+    quote: >-
+      Gemäß der E-Rechnungs-Verordnung des Bundes (ERechV) sind Sie zur elektronischen
+      Rechnungsstellung verpflichtet.
+    summary: The contractor must invoice electronically under the federal ERechV.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-023
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 9
+    quote: >-
+      Hierfür ist es erforderlich, dass entsprechende Katalogdaten von Ihnen im Fall der
+      Zuschlagserteilung bereitgestellt werden.
+    summary: >-
+      Catalogue data for the Kaufhaus des Bundes ordering platform must be supplied if the
+      contract is awarded.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-024
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 8
+    quote: >-
+      Der Bieter erhält mindestens 10 Werktage vor dem geplanten Termin zur Präsentation
+      der einschlägigen Fachkenntnisse des für die Leistungserbringung vorgesehenen
+      Personals eine Einladung einschließlich einer Agenda mit Zeit und Ort der
+      Angebotspräsentation.
+    summary: >-
+      Bidders invited to the evaluation presentation get at least ten working days' notice.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Allgemeine Bewerbungsbedingungen -- form, language and deadline rules. SP.1 missed
+  # this document entirely; several of these rules exclude an offer outright.
+  # ---------------------------------------------------------------------------------
+  - id: DE-030
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 3
+    quote: >-
+      Alle Dokumente, Nachweise und Erklärungen sind in deutscher Sprache abzufassen.
+    summary: All documents, evidence and declarations must be drawn up in German.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The single most consequential row for a cross-border bidder, and the reason the
+      wedge exists: a foreign bidder must produce German paperwork, not translate later.
+
+  - id: DE-031
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 3
+    quote: >-
+      Eine anderweitige Abgabe von Teilnahmeanträgen/Angeboten (z. B. schriftlich oder auch
+      per E-Mail) ist nicht zulässig und führt zum Ausschluss vom Vergabeverfahren.
+    summary: >-
+      Any submission route other than the e-Vergabe platform leads to exclusion.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-032
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 3
+    quote: >-
+      Voraussetzung für die elektronische Abgabe eines Teilnahmeantrags/Angebots ist eine
+      Registrierung auf der e-Vergabe-Plattform unter www.evergabe-online.de.
+    summary: Electronic submission requires registration on the e-Vergabe platform.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-033
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 3
+    quote: >-
+      Für Ihren Teilnahmeantrag ist das Teilnahmeantragsformular und für Ihr Angebot das
+      Angebotsformular zu verwenden.
+    summary: The prescribed offer form must be used.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-034
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 3
+    quote: >-
+      An den vorgegebenen Texten in den Vergabeunterlagen dürfen keine Zusätze angebracht
+      oder Änderungen vorgenommen werden.
+    summary: The buyer's given texts may not be altered or added to.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-035
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 3
+    quote: >-
+      Es genügt die vollständige Namensangabe des Erklärenden, eine Unterschrift oder ein
+      Stempel sind nicht erforderlich.
+    summary: >-
+      Text form suffices; a signature or stamp is not required unless a form says so.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-036
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 3
+    quote: >-
+      Nebenangebote sind grundsätzlich nicht zugelassen und werden nicht berücksichtigt.
+    summary: Variant offers are not admitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-037
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 4
+    quote: >-
+      Es dürfen grundsätzlich nicht mehrere Hauptangebote abgegeben werden.
+    summary: >-
+      More than one main offer is not allowed; submitting several excludes all of them.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-038
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 4
+    quote: >-
+      Sofern es erforderlich ist zusätzliche Dokumente einzureichen, sind diese als
+      PDF-Dateien zu übermitteln.
+    summary: Additional documents must be submitted as PDF files.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-039
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 4
+    quote: >-
+      Ihr Teilnahmeantrag/Angebot sollte einen Umfang von 1024 MB nicht überschreiten.
+    summary: The submission should stay under 1024 MB.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      `optional` on purpose: the buyer wrote "sollte", not "muss". The distinction is what
+      `kind` exists for.
+
+  - id: DE-040
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 6
+    quote: >-
+      Der Teilnahmeantrag/das Angebot muss vor Ablauf der jeweiligen Frist vollständig
+      eingegangen sein (i.d.R. 11:30:00 Uhr).
+    summary: The offer must arrive complete before the deadline expires.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-041
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 6
+    quote: >-
+      Bis zum Ablauf der Bindefrist sind Sie an Ihr Angebot gebunden.
+    summary: The bidder is bound by its offer until the binding period expires.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-042
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 6
+    quote: >-
+      Nur ein angebotenes Skonto mit einer Skontofrist von mindestens 10 Tagen fließt in
+      die Wertung ein.
+    summary: >-
+      Only an early-payment discount with a period of at least ten days counts in the
+      evaluation.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-043
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 8
+    quote: >-
+      Sie können die Nachweise zur Eignung bzw. zum Nichtvorliegen von Ausschlussgründen
+      gemäß den Anforderungen der BBB auch über die für das Beschaffungsamt des BMI frei
+      zugängliche Präqualifizierungsdatenbank (DIHK) erbringen.
+    summary: >-
+      Evidence may alternatively be provided through the DIHK pre-qualification database.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The German national evidence route eCertis names for these criteria
+      (amtliches-verzeichnis.ihk.de). Left unmapped because it is an evidence *channel*,
+      not a criterion.
+
+  - id: DE-044
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 9
+    quote: >-
+      Soweit die Nachweise der Präqualifizierungsdatenbank den gestellten Anforderungen
+      nicht vollständig entsprechen, sind ergänzende Nachweise und Angaben dem
+      Teilnahmeantrag/Angebot beizufügen.
+    summary: >-
+      Where the pre-qualification database does not cover a requirement in full,
+      supplementary evidence must be attached.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-045
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 9
+    quote: >-
+      Bitte beachten Sie, dass fehlende, unvollständige oder fehlerhafte Unterlagen den
+      Ausschluss Ihres Teilnahmeantrags/Angebots zur Folge haben können.
+    summary: Missing, incomplete or faulty documents can lead to exclusion.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-046
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 5
+    quote: >-
+      Die Antworten werden Bestandteil der Vergabeunterlagen und sind somit verbindlich für
+      die Erstellung des Teilnahmeantrags/Angebots sowie für die Prüfung und Wertung der
+      eingegangenen Teilnahmeanträge/Angebote.
+    summary: >-
+      Answers to bidder questions become binding parts of the procurement documents.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-047
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 5
+    quote: >-
+      Für die Erstellung des Teilnahmeantrags/Angebots und der ggf. geforderten
+      Angebotsmuster wird keine Vergütung gewährt.
+    summary: No remuneration is paid for preparing the offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Kriterienkatalog Eignung -- the selection criteria. This is where the thresholds are.
+  # ---------------------------------------------------------------------------------
+  - id: DE-060
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: >-
+      Der Umsatz muss mindestens 3.000.000,00 EUR pro Jahr betragen.
+    summary: >-
+      Turnover in the contract's field of activity must be at least EUR 3,000,000 per year.
+    ecertis_criterion_id: 074f6031-55f9-4e99-b9a4-c4363e8bc315
+    threshold:
+      comparator: at_least
+      value: 3000000
+      unit: currency
+      currency: EUR
+      period: per_year
+    notes: >-
+      Mapped to "Specific yearly turnover" rather than "General yearly turnover" because
+      the sentence above it restricts the figure to the contract's field
+      (IT-Beratungsleistungen); the TED notice names the same criterion "Spezifischer
+      Jahresumsatz". Same quote and page as SP.1's FIN-01.
+
+  - id: DE-061
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: >-
+      Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit ist der Umsatz
+      im Tätigkeitsbereich des Auftrags (IT-Beratungsleistungen) für die letzten drei
+      Geschäftsjahre (ein Jahresabschluss muss noch nicht erfolgt sein) anzugeben.
+    summary: >-
+      Turnover in the contract's field must be stated for the last three fiscal years.
+    ecertis_criterion_id: 074f6031-55f9-4e99-b9a4-c4363e8bc315
+    threshold:
+      comparator: at_least
+      value: 3
+      unit: years
+      currency: null
+      period: last_three_fiscal_years
+    notes: >-
+      SP.1's FIN-02 covered this and DE-062 in one entry, using a quote with a `[...]`
+      elision marker. That quote cannot pass a verbatim check; split here into the
+      obligation and the evidence form, each quoted whole.
+
+  - id: DE-062
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: >-
+      Übersenden Sie hierzu bitte mit Angebotsabgabe eine Eigenerklärung in Form einer
+      selbsterstellten Liste.
+    summary: >-
+      The turnover figures must be submitted as a self-drafted list with the offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-063
+    category: economic_financial
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: >-
+      Sofern Sie aus berechtigten Gründen die Unterlagen nicht beibringen können, teilen
+      Sie diese Gründe im Angebot dem Beschaffungsamt des BMI mit und legen Sie einen
+      anderen geeigneten Nachweis der wirtschaftlichen und finanziellen
+      Leistungsfähigkeit vor.
+    summary: >-
+      A bidder unable to supply the documents for good reason may offer alternative
+      evidence, stated in the offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      This is the Art. 60(3) escape hatch, and it is exactly what a cross-border bidder
+      needs: it is the clause that lets foreign evidence in at all.
+
+  - id: DE-064
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 2
+    quote: >-
+      Zum Nachweis der technischen und beruflichen Leistungsfähigkeit reichen Sie bitte mit
+      Angebotsabgabe eine Liste mit mindestens drei geeigneten Referenzen in Bezug zur
+      gegenständlichen Leistung ein.
+    summary: At least three suitable references must be submitted with the offer.
+    ecertis_criterion_id: 5e506c16-26ab-4e32-bb78-b27f87dc0565
+    threshold:
+      comparator: at_least
+      value: 3
+      unit: references
+      currency: null
+      period: null
+    notes: >-
+      The TED notice names this criterion "Referenzen zu bestimmten Dienstleistungen",
+      which is the German rendering of the ESPD's "For service contracts: performance of
+      services of the specified type". Same page as SP.1's TECH-01, longer quote.
+
+  - id: DE-065
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 2
+    quote: >-
+      Für die Referenzen ist die Vorlage „Vordruck_Referenzen“ zu verwenden.
+    summary: The Vordruck_Referenzen template must be used for the references.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-066
+    category: technical_professional
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 2
+    quote: >-
+      Alternativ können Sie eine selbst erstellte Referenzliste einreichen, wenn die in
+      diesem Vordruck geforderten Angaben enthalten und übersichtlich dargestellt sind.
+    summary: >-
+      A self-made reference list is accepted if it carries the same particulars.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-067
+    category: technical_professional
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 2
+    quote: >-
+      empfiehlt das Beschaffungsamt des BMI, eine Liste von weiteren als bedingungsgemäß
+      betrachteten Referenzen einzureichen.
+    summary: >-
+      The buyer recommends naming further compliant references beyond the three required.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Quoted from mid-sentence because the clause's opening depends on a long subordinate
+      that would make the quote unreadable; the recommendation is the obligation-bearing
+      half.
+
+  - id: DE-068
+    category: technical_professional
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 2
+    quote: >-
+      Das Beschaffungsamt des BMI behält sich darüber hinaus vor, die angegebenen
+      Referenzen durch Rückfrage bei den in den Referenzen genannten Ansprechpersonen zu
+      verifizieren.
+    summary: The buyer may verify references by contacting the named referees.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-069
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Die Referenzen dürfen nicht älter als drei Jahre sein (gerechnet vom Datum der
+      letzten Leistungserbringung im jeweiligen Referenzprojekt bis zum Tag der
+      Auftragsbekanntmachung).
+    summary: References must be no older than three years.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: max_age
+      value: 3
+      unit: years
+      currency: null
+      period: null
+    notes: Same quote and page as SP.1's TECH-03.
+
+  - id: DE-070
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Der Umfang der erbrachten Leistungen umfasst mindestens 25 abgerechnete
+      Personentage auf Seiten des Leistungserbringers
+    summary: Each reference must cover at least 25 invoiced person-days.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 25
+      unit: person_days
+      currency: null
+      period: null
+    notes: Same quote and page as SP.1's TECH-04.
+
+  - id: DE-071
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Die Referenzaufträge müssen grundsätzlich abgeschlossen sein.
+    summary: Reference contracts must in principle be completed.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: Same quote and page as SP.1's TECH-05.
+
+  - id: DE-072
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Zum Nachweis der personellen Leistungsfähigkeit ist die durchschnittliche Anzahl an
+      Beschäftigten und Führungskräften pro Jahr in den letzten drei Geschäftsjahren im
+      einschlägigen Geschäftsbereich in Vollzeitäquivalenten (VZÄ) anzugeben.
+    summary: >-
+      Average headcount and management headcount per year over the last three fiscal years
+      must be stated in full-time equivalents.
+    ecertis_criterion_id: 1f49b3f0-d50f-43f6-8b30-4bafab108b9b
+    threshold: null
+    notes: >-
+      "Average annual manpower" -- the TED notice names this criterion "Durchschnittliche
+      jährliche Belegschaft", and the DUME evidence in the FR fixture carries the same id.
+
+  - id: DE-073
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Die durchschnittliche Anzahl an Fachkräften im einschlägigen Geschäftsbereich pro
+      Geschäftsjahr muss mindestens 29 VZÄ betragen.
+    summary: >-
+      At least 29 full-time-equivalent skilled staff on average per fiscal year in the
+      relevant business area.
+    ecertis_criterion_id: 1f49b3f0-d50f-43f6-8b30-4bafab108b9b
+    threshold:
+      comparator: at_least
+      value: 29
+      unit: fte
+      currency: null
+      period: per_year
+    notes: >-
+      The row the demo company fails (25 staff against 29 VZAE), so the S7.4 no-go
+      walkthrough hangs off it. Same quote and page as SP.1's TECH-06.
+
+  - id: DE-074
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: >-
+      Fehlen Erklärungen oder Nachweise, so entscheidet die Vergabestelle gemäß § 56 Abs.
+      2-4 VgV über eine Nachforderung.
+    summary: >-
+      Missing declarations may, at the buyer's discretion, be requested subsequently.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Eigenerklaerung Ausschlussgruende -- the exclusion grounds, and the richest source of
+  # determinate eCertis mappings in the pack.
+  # ---------------------------------------------------------------------------------
+  - id: DE-080
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 1
+    quote: >-
+      Erklärung entsprechend § 123 GWB, bezogen auf rechtskräftige Verurteilungen oder
+      rechtskräftige Festsetzungen einer Geldbuße nach § 30 OWiG in den letzten 5 Jahren
+    summary: >-
+      The bidder must declare that no mandatory exclusion ground under Section 123 GWB
+      applies.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: max_age
+      value: 5
+      unit: years
+      currency: null
+      period: null
+    notes: >-
+      Null id although this is plainly Art. 57(1): Section 123 GWB rolls six separate ESPD
+      criteria into one declaration. They are mapped individually from Anhang 1 on page 5
+      (DE-101..DE-106). Same quote and page as SP.1's EXCL-01.
+
+  - id: DE-081
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 1
+    quote: >-
+      Ihr Unternehmen kann gemäß § 124 Abs. 1 Nr. 8 GWB von der Teilnahme am Wettbewerb
+      ausgeschlossen werden, wenn Sie in Bezug auf Ausschlussgründe oder Eignungskriterien
+      eine schwerwiegende Täuschung begehen, Auskünfte zurückhalten oder nicht in der Lage
+      sind, die erforderlichen Nachweise zu übermitteln.
+    summary: >-
+      Serious misrepresentation, withholding information, or inability to supply the
+      required evidence is itself an exclusion ground.
+    ecertis_criterion_id: 696a75b2-6107-428f-8b74-82affb67e184
+    threshold: null
+    notes: >-
+      Section 124(1)(8) GWB is the German transposition of Art. 57(4)(h)-(i), which the
+      ESPD carries as one combined criterion; the wording matches limb for limb.
+
+  - id: DE-082
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 1
+    quote: >-
+      Präqualifizierung (sofern gegeben)
+    summary: >-
+      An IHK pre-qualification certificate number may be given in place of the individual
+      evidence.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The form prints the IHK register address next to this. It is the national evidence
+      route eCertis lists for the German entries of these criteria.
+
+  - id: DE-083
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Mein/Unser Unternehmen ist zahlungsunfähig.
+    summary: The bidder must declare whether it is unable to pay its debts.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Left unmapped deliberately: German "Zahlungsunfähigkeit" is the statutory *trigger*
+      for insolvency proceedings, not a proceeding, so it fits neither "Bankruptcy" nor
+      "Insolvency" cleanly. DE-085 carries the mapping for the opened proceeding.
+
+  - id: DE-084
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Ein Insolvenzverfahren oder vergleichbares Verfahren ist beantragt worden.
+    summary: >-
+      The bidder must declare whether insolvency proceedings have been applied for.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      An application is not yet an opened proceeding; the ESPD criterion set has no entry
+      for the filing stage.
+
+  - id: DE-085
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Ein Insolvenzverfahren oder vergleichbares Verfahren ist eröffnet worden.
+    summary: >-
+      The bidder must declare whether insolvency proceedings have been opened.
+    ecertis_criterion_id: 396f288a-e267-4c20-851a-ed4f7498f137
+    threshold: null
+    notes: >-
+      Replaces SP.1's EXCL-02, whose quote joined the section heading to a table cell; the
+      repo's parser renders that table with `<br>` separators, so SP.1's quote does not
+      occur on page 2 at all.
+
+  - id: DE-086
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Ein Insolvenzplan ist rechtskräftig bestätigt worden.
+    summary: >-
+      The bidder must declare whether an insolvency plan has been confirmed with legal
+      effect.
+    ecertis_criterion_id: 68918c7a-f5bc-4a1a-a62f-ad8983600d48
+    threshold: null
+    notes: >-
+      An Insolvenzplan under Sections 217 ff. InsO is the German instrument the ESPD calls
+      "Arrangement with creditors". Worth a second pair of eyes -- this is the least
+      certain mapping in the file.
+
+  - id: DE-087
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Mein/Unser Unternehmen befindet sich in Liquidation.
+    summary: The bidder must declare whether it is in liquidation.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Not mapped to "Assets being administered by liquidator": a solvent voluntary
+      winding-up is not administration by a liquidator or the court, and the difference
+      decides whether the ground bites.
+
+  - id: DE-088
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Mein/Unser Unternehmen hat seine Tätigkeit eingestellt.
+    summary: The bidder must declare whether it has ceased trading.
+    ecertis_criterion_id: 166536e2-77f7-455c-b018-70582474e4f6
+    threshold: null
+    notes: null
+
+  - id: DE-089
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 2
+    quote: >-
+      Sofern bei Ihnen einer oder mehrere Ausschlussgründe vorliegen, erläutern Sie bitte
+      die näheren Umstände und legen Sie dar, ob und gegebenenfalls welche
+      Selbstreinigungsmaßnahmen i. S. d. § 125 Abs. 1 GWB Sie durchgeführt haben.
+    summary: >-
+      Where a ground applies, the circumstances and any self-cleaning measures must be
+      explained on a separate annex.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Conditional on a ground applying, but on the bidder alone, so it stays in
+      `requirements` rather than `conditional_not_scored` (which is about bidder
+      constellation, not about conditionality).
+
+  - id: DE-090
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 3
+    quote: >-
+      umwelt-, sozial- oder arbeitsrechtliche Verpflichtungen verstoßen?
+    summary: >-
+      The bidder must declare any breach of environmental, social or labour-law
+      obligations in performing public contracts.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Quote is the tail of the question: the parser renders this table cell with a literal
+      `<br>` after "gegen geltende", which no normalisation strips, so the whole sentence
+      does not occur as one span. Unmapped because it covers three separate ESPD criteria
+      at once -- a80ddb62 (environmental), a261a395 (social), a34b70d6 (labour). SP.1's
+      EXCL-03 quoted the whole sentence and would fail the verbatim check.
+
+  - id: DE-091
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 3
+    quote: >-
+      Sind Sie oder eine Person, deren Verhalten dem Unternehmen zuzurechnen ist
+    summary: >-
+      The bidder must declare criminal penalties for undeclared work, posted-worker,
+      residence or minimum-wage offences attributable to it.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Short quote for the same `<br>` reason: the statutes and the penalty thresholds are
+      each on their own line in the rendered cell. These are purely national grounds; see
+      DE-220 for the notice's own "rein innerstaatliche Ausschlussgründe" entry.
+
+  - id: DE-092
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 3
+    quote: >-
+      Sind Sie gemäß § 22 Abs. 1 des Lieferkettensorgfaltspflichtengesetzes (LkSG)
+    summary: >-
+      The bidder must declare any fine under the German supply-chain due-diligence act.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Purely national and post-2016; no ESPD criterion exists for it.
+
+  - id: DE-093
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 3
+    quote: >-
+      Wurde gegen Sie gemäß § 14 Bundestariftreuegesetz (BTTG) ein Verstoß nach
+    summary: >-
+      The bidder must declare any incontestably established breach under the federal
+      collective-agreement compliance act.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: Purely national and post-2016; truncated at the cell's `<br>`.
+
+  - id: DE-094
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 3
+    quote: >-
+      eine schwere Verfehlung begangen, durch die die Integrität des Unternehmens
+    summary: >-
+      The bidder must declare grave professional misconduct calling its integrity into
+      question.
+    ecertis_criterion_id: 514d3fde-1e3e-4dcd-b02a-9f984d5bbda3
+    threshold: null
+    notes: Truncated at the cell's `<br>`; the mapping to Art. 57(4)(c) is exact.
+
+  - id: DE-095
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 4
+    quote: >-
+      Hat Ihr Unternehmen mit einem anderen Unternehmen Vereinbarungen getroffen oder
+      Verhaltensweisen aufeinander abgestimmt, die eine Verhinderung, Einschränkung oder
+      Verfälschung des Wettbewerbs bezwecken oder erwirken sollen?
+    summary: >-
+      The bidder must declare agreements with other operators aimed at distorting
+      competition.
+    ecertis_criterion_id: 56d13e3d-76e8-4f23-8af6-13e60a2ee356
+    threshold: null
+    notes: >-
+      Page 4 renders this table as plain prose rather than a markdown table, which is why
+      the whole question is quotable here and not on page 3.
+
+  - id: DE-096
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 4
+    quote: >-
+      War Ihr Unternehmen in die Vorbereitung des Vergabeverfahrens einbezogen?
+    summary: >-
+      The bidder must declare involvement in the preparation of this procurement procedure.
+    ecertis_criterion_id: 61874050-5130-4f1c-a174-720939c7b483
+    threshold: null
+    notes: >-
+      Note the buyer answers this itself on page 5 of the Besondere Bewerbungsbedingungen,
+      naming the four consultancies that drafted the documents.
+
+  - id: DE-097
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 4
+    quote: >-
+      Hat Ihr Unternehmen eine wesentliche Anforderung bei der Durchführung eines früheren
+      öffentlichen Auftrags oder Konzessionsvertrags erheblich oder fortdauernd mangelhaft
+      erfüllt und hat dies zu einer vorzeitigen Beendigung, zu Schadensersatz oder zu einer
+      vergleichbaren Rechtsfolge geführt?
+    summary: >-
+      The bidder must declare prior significant or persistent deficient performance that
+      led to early termination, damages or a comparable sanction.
+    ecertis_criterion_id: 3293e92b-7f3e-42f1-bee6-a7641bb04251
+    threshold: null
+    notes: null
+
+  - id: DE-098
+    category: exclusion_ground
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 4
+    quote: >-
+      bei Vorliegen eines Ausschlussgrundes nach § 123 GWB höchstens fünf Jahre ab dem Tag
+      der rechtskräftigen Verurteilung von der Teilnahme an Vergabeverfahren
+      ausgeschlossen werden,
+    summary: >-
+      A Section 123 exclusion lasts at most five years from the day the conviction became
+      final.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_most
+      value: 5
+      unit: years
+      currency: null
+      period: null
+    notes: null
+
+  - id: DE-101
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 5
+    quote: >-
+      § 129 des Strafgesetzbuchs (Bildung krimineller Vereinigungen), § 129a des
+      Strafgesetzbuchs (Bildung terroristischer Vereinigungen) oder § 129b des
+      Strafgesetzbuchs (Kriminelle und terroristische Vereinigungen im Ausland),
+    summary: >-
+      Conviction for forming a criminal or terrorist organisation is a mandatory exclusion
+      ground.
+    ecertis_criterion_id: 005eb9ed-1347-4ca3-bb29-9bc0db64e1ab
+    threshold: null
+    notes: >-
+      Mapped to "Participation in a criminal organisation". The German provision bundles
+      terrorist organisations into the same sentence, which the ESPD keeps separate as
+      d486fb70 -- DE-103 carries that one from Section 89c.
+
+  - id: DE-102
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 5
+    quote: >-
+      § 261 des Strafgesetzbuchs (Geldwäsche),
+    summary: Conviction for money laundering is a mandatory exclusion ground.
+    ecertis_criterion_id: 47112079-6fec-47a3-988f-e561668c3aef
+    threshold: null
+    notes: null
+
+  - id: DE-103
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 5
+    quote: >-
+      § 89c des Strafgesetzbuchs (Terrorismusfinanzierung) oder wegen der Teilnahme an
+      einer solchen Tat,
+    summary: >-
+      Conviction for terrorist financing or participation is a mandatory exclusion ground.
+    ecertis_criterion_id: d486fb70-86b3-4e75-97f2-0d71b5697c7d
+    threshold: null
+    notes: null
+
+  - id: DE-104
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 5
+    quote: >-
+      § 263 des Strafgesetzbuchs (Betrug), soweit sich die Straftat gegen den Haushalt der
+      Europäischen Union oder gegen Haushalte richtet, die von der Europäischen Union oder
+      in ihrem Auftrag verwaltet werden,
+    summary: >-
+      Conviction for fraud against the EU budget is a mandatory exclusion ground.
+    ecertis_criterion_id: 297d2323-3ede-424e-94bc-a91561e6f320
+    threshold: null
+    notes: null
+
+  - id: DE-105
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 5
+    quote: >-
+      den §§ 333 und 334 des Strafgesetzbuchs (Vorteilsgewährung und Bestechung), jeweils
+      auch in Verbindung mit § 335a des Strafgesetzbuchs (Ausländische und internationale
+      Bedienstete),
+    summary: Conviction for corruption is a mandatory exclusion ground.
+    ecertis_criterion_id: c27b7c4e-c837-4529-b867-ed55ce639db5
+    threshold: null
+    notes: null
+
+  - id: DE-106
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 5
+    quote: >-
+      den §§ 232, 232a Absatz 1 bis 5, den §§ 232b bis 233a des Strafgesetzbuches
+      (Menschenhandel, Zwangsprostitution, Zwangsarbeit, Ausbeutung der Arbeitskraft,
+      Ausbeutung unter Ausnutzung einer Freiheitsberaubung).
+    summary: >-
+      Conviction for human trafficking or forced labour is a mandatory exclusion ground.
+    ecertis_criterion_id: d789d01a-fe03-4ccd-9898-73f9cfa080d1
+    threshold: null
+    notes: null
+
+  - id: DE-107
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+    page: 6
+    quote: >-
+      das Unternehmen seinen Verpflichtungen zur Zahlung von Steuern, Abgaben oder
+      Beiträgen zur Sozialversicherung nicht nachgekommen ist und dies durch eine
+      rechtskräftige Gerichts- oder bestandskräftige Verwaltungsentscheidung festgestellt
+      wurde oder
+    summary: >-
+      Established non-payment of taxes, levies or social-security contributions is a
+      mandatory exclusion ground.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Unmapped because one sentence covers two ESPD criteria -- b61bbeb7 (payment of
+      taxes) and 7d85e333 (payment of social security contributions). Splitting it would
+      mean quoting the same span twice.
+
+  # ---------------------------------------------------------------------------------
+  # Eigenerklaerung Sanktionen Russland
+  # ---------------------------------------------------------------------------------
+  - id: DE-110
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Sanktionen_Russland_VV2.pdf
+    page: 2
+    quote: >-
+      Ich/Wir erkläre/n, dass ich/wir nicht zu den genannten Personen oder Unternehmen
+      gehören, die einen Bezug zu Russland im Sinne des Artikel 5k der Verordnung (EU) Nr.
+      833/2014 aufweisen,
+    summary: >-
+      The bidder must declare it has no Russia nexus within the meaning of Art. 5k of
+      Regulation (EU) 833/2014.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-111
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Eigenerklaerung_Sanktionen_Russland_VV2.pdf
+    page: 2
+    quote: >-
+      Ich/Wir verpflichte/n mich/uns, den Auftraggeber unverzüglich zu informieren, wenn
+      und soweit sich nach Abgabe dieser Erklärung Umstände ergeben, die zu einem Ausschluss
+      nach Artikel 5k der Verordnung (EU) Nr. 833/2014 in der jeweils geltend Fassung
+      führen können oder die Einhaltung der Verordnung (EU) Nr. 269/2014 gefährden.
+    summary: >-
+      The bidder undertakes to report without delay any circumstance arising later that
+      could trigger the sanctions exclusion.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      "in der jeweils geltend Fassung" is the buyer's own typo for "geltenden"; it is
+      reproduced because the quote is verbatim.
+
+  - id: DE-112
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Eigenerklaerung_Sanktionen_Russland_VV2.pdf
+    page: 3
+    quote: >-
+      Ich/Wir erkläre/n ferner, dass weder ich/unser Unternehmen selbst noch von mir/uns
+      eingesetzte Unterauftragnehmer, Lieferant oder sonstige Dritte Personen oder
+      Organisation sind:
+    summary: >-
+      The bidder must declare that neither it nor its suppliers are listed under
+      Regulation (EU) 269/2014 or controlled by a listed person.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-113
+    category: exclusion_ground
+    kind: mandatory
+    stage: contract_performance
+    checkable: neither
+    doc: Eigenerklaerung_Sanktionen_Russland_VV2.pdf
+    page: 3
+    quote: >-
+      Ich/Wir stelle/stellen insbesondere sicher, dass keine Gelder oder wirtschaftlichen
+      Ressourcen unmittelbar oder mittelbar solchen Personen oder Organisationen
+      zugutekommen.
+    summary: >-
+      The contractor must ensure no funds or economic resources reach listed persons.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Eigenerklaerung Verpflichtungsgesetz
+  # ---------------------------------------------------------------------------------
+  - id: DE-120
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Eigenerklaerung_Verpflichtungsgesetz_VV2.pdf
+    page: 2
+    quote: >-
+      Ich/Wir erkläre(n), dass ich/wir das Dokument „Verpflichtung der Auftragnehmerseite
+      nach dem Verpflichtungsgesetz“ inkl. der zugehörigen Anlagen zur Kenntnis genommen
+      habe(n) und im Falle der Auftragserteilung eine ausreichende Anzahl an
+      Mitarbeiter/innen zur Verfügung stellen werde(n), die mit einer Verpflichtung auf die
+      gewissenhafte Erfüllung seiner/ihrer Obliegenheiten nach § 1 Abs. 1 VerpflG
+      einverstanden sind.
+    summary: >-
+      The bidder declares it will provide enough staff willing to be formally obligated
+      under Section 1(1) VerpflG if awarded.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Printed in italics, so the parser emits it wrapped in `_`; the verbatim check strips
+      those on both sides.
+
+  - id: DE-121
+    category: other
+    kind: informational
+    stage: contract_performance
+    checkable: neither
+    doc: Eigenerklaerung_Verpflichtungsgesetz_VV2.pdf
+    page: 1
+    quote: >-
+      Im Falle der Auftragserteilung werden die von Ihnen für die Auftragsausführung
+      vorgesehenen Mitarbeiter/innen durch den Bedarfsträger nach § 1 Abs. 1 des
+      Verpflichtungsgesetzes auf die gewissenhafte Erfüllung seiner/ihrer Obliegenheiten
+      verpflichtet.
+    summary: >-
+      If awarded, the staff deployed will be formally obligated by the ordering body.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Verpflichtungserklaerung Scientology
+  # ---------------------------------------------------------------------------------
+  - id: DE-130
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Verpflichtungserklaerung_Scientology_VV2.pdf
+    page: 1
+    quote: >-
+      Das Beratungs- und Schulungsunternehmen verpflichtet sich, sicherzustellen, dass die
+      zur Erfüllung des Auftrages eingesetzten Personen nicht die „Technologien von L. Ron
+      Hubbard“ anwenden, lehren oder in sonstiger Weise verbreiten.
+    summary: >-
+      The bidder undertakes that no one deployed on the contract applies, teaches or
+      spreads L. Ron Hubbard technology.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      A German federal peculiarity with no EU equivalent -- the kind of clause a foreign
+      bidder cannot guess at, and a good demonstration of why the matrix quotes rather
+      than summarises.
+
+  - id: DE-131
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Verpflichtungserklaerung_Scientology_VV2.pdf
+    page: 1
+    quote: >-
+      Diese Erklärung ist dem Angebot beizufügen.
+    summary: The declaration must be attached to the offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-132
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Verpflichtungserklaerung_Scientology_VV2.pdf
+    page: 1
+    quote: >-
+      Sie ist nicht gesondert zu unterschreiben oder zu signieren.
+    summary: >-
+      It need not be signed separately; signing the offer form covers it.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Verpflichtung VS-NfD
+  # ---------------------------------------------------------------------------------
+  - id: DE-140
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Verpflichtung_VS-NfD_und_VS-NfD-Merkblatt_im_Anhang_VV2.pdf
+    page: 1
+    quote: >-
+      Sie müssen sich als VS-NfD-Auftragnehmer verpflichten, die im VS-NfD-Merkblatt (s.
+      Anlage 4 zum Geheimschutzhandbuch des BMWK) festgelegten Bestimmungen einzuhalten und
+      die Verschlusssachen entsprechend zu behandeln.
+    summary: >-
+      The bidder must undertake to observe the VS-NfD classified-information rules.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-141
+    category: other
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Verpflichtung_VS-NfD_und_VS-NfD-Merkblatt_im_Anhang_VV2.pdf
+    page: 1
+    quote: >-
+      Erst wenn dem Beschaffungsamt des BMI Ihre Verpflichtungserklärung vorliegt, können
+      Ihnen die als VS-NfD eingestuften Unterlagen/Informationen überlassen werden.
+    summary: >-
+      Classified documents are released only once the undertaking has been received.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-142
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Verpflichtung_VS-NfD_und_VS-NfD-Merkblatt_im_Anhang_VV2.pdf
+    page: 2
+    quote: >-
+      Als verantwortliche Personen für die Einhaltung und Durchführung der erforderlichen
+      Maßnahmen zum Schutz der Verschlusssachen (VS) des Geheimhaltungsgrades VS-NUR FÜR
+      DEN DIENSTGEBRAUCH (VS-NfD) nach dem VS-NfD-Merkblatt (s. Anlage 4 zum
+      Geheimschutzhandbuch des BMWK) werden benannt:
+    summary: >-
+      The bidder must name the persons responsible for protecting classified information.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Anlage Unternehmensdaten
+  # ---------------------------------------------------------------------------------
+  - id: DE-150
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Anlage_Unternehmensdaten_VV2.pdf
+    page: 1
+    quote: >-
+      Jahresnettoumsatz im letzten Geschäftsjahr in Euro:
+    summary: Net annual turnover in the last fiscal year must be stated.
+    ecertis_criterion_id: 499efc97-2ac1-4af2-9e84-323c2ca67747
+    threshold: null
+    notes: >-
+      "General yearly turnover" here, unlike DE-060: this field is unrestricted by field of
+      activity and is collected for statistics and the Wettbewerbsregister enquiry.
+
+  - id: DE-151
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Anlage_Unternehmensdaten_VV2.pdf
+    page: 1
+    quote: >-
+      Durchschnittliche Anzahl der Beschäftigten in diesem Zeitraum:
+    summary: Average headcount over the same period must be stated.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Not mapped to "Average annual manpower": this is the statistical company-size field,
+      not the selection criterion, which DE-072 carries.
+
+  - id: DE-152
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Anlage_Unternehmensdaten_VV2.pdf
+    page: 1
+    quote: >-
+      Bei Aufträgen ab einer Höhe von 50.000 Euro (ohne Umsatzsteuer) holt die Vergabestelle
+      bei allen Losen für den Bieter, der im Rahmen des Vergabeverfahrens beim jeweiligen
+      Los den Zuschlag erhalten soll, vor der Zuschlagsentscheidung gemäß § 6 WRegG eine
+      Auskunft aus dem Wettbewerbsregister ein.
+    summary: >-
+      The buyer queries the federal competition register before awarding contracts over
+      EUR 50,000.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-153
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Anlage_Unternehmensdaten_VV2.pdf
+    page: 2
+    quote: >-
+      Bitte tragen Sie die für Sie zutreffenden Daten (Angaben zur juristischen Person bzw.
+      Personenvereinigung oder Angabe zur natürlichen Person) in die folgenden Felder ein:
+    summary: >-
+      Legal form, register number, register court and address must be entered.
+    ecertis_criterion_id: 77f481ce-ffb6-483f-8e2b-c78db5e68292
+    threshold: null
+    notes: >-
+      "Set up of economic operator" is the ESPD criterion for the operator's identifying
+      particulars. Flagged for the verifier: this is a defensible but not obvious mapping.
+
+  # ---------------------------------------------------------------------------------
+  # Vordruck Referenzen
+  # ---------------------------------------------------------------------------------
+  - id: DE-160
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Vordruck_Referenzen_VV2.pdf
+    page: 1
+    quote: >-
+      Berücksichtigen Sie bei der Auswahl Ihrer in diesem Vordruck anzugebenden
+      Referenzaufträge zwingend die im Dokument „Besondere Bewerbungsbedingungen“ unter dem
+      Abschnitt „Referenzen“ aufgestellten Anforderungen
+    summary: >-
+      Reference projects entered on the form must satisfy the reference requirements.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The form points at a "Referenzen" section of the Besondere Bewerbungsbedingungen
+      that does not exist -- the reference requirements are in the Kriterienkatalog
+      Eignung. A real cross-reference error in the buyer's pack, worth keeping visible.
+
+  - id: DE-161
+    category: technical_professional
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Vordruck_Referenzen_VV2.pdf
+    page: 1
+    quote: >-
+      Referenzen, die die in den „Besonderen Bewerbungsbedingungen“ aufgestellten
+      Eignungsanforderungen nicht erfüllen, gelten als fehlerhaft und können zum Ausschluss
+      aus dem Verfahren führen.
+    summary: >-
+      A reference that fails the requirements is faulty and can lead to exclusion, and
+      cannot be replaced after the deadline.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-162
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Vordruck_Referenzen_VV2.pdf
+    page: 1
+    quote: >-
+      Die Beschreibung der ausgeführten Leistungen muss dem Beschaffungsamt des BMI die
+      Prüfung ermöglichen, ob Ihre Referenz die aufgestellten Eignungsanforderungen erfüllt.
+    summary: >-
+      The description of the work performed must let the buyer check the reference against
+      the requirements.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Erklaerung zur sozialen Nachhaltigkeit von IT
+  # ---------------------------------------------------------------------------------
+  - id: DE-170
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf
+    page: 1
+    quote: >-
+      im Falle der Auftragserteilung (im Folgenden „Auftragnehmer“) bei Ausführung des
+      Auftrags die Vorschriften einzuhalten, mit denen die Kernarbeitsnormen der
+      Internationalen Arbeitsorganisation (ILO) sowie die ILO-Normen 1, 102, 131, 155 und
+      170 in das nationale Recht am jeweiligen Produktionsstandort oder am sonstigen Ort
+      der individuellen Arbeitsleistung umgesetzt worden sind.
+    summary: >-
+      The bidder undertakes to observe the ILO core labour standards during performance.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Quote starts mid-sentence: a footnote marker (`<sup>1</sup>`) sits between "Bieter"
+      and the rest, and no normalisation removes it.
+
+  - id: DE-171
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf
+    page: 7
+    quote: >-
+      Bei Angebotsabgabe ist die beabsichtigte Auswahl der nachfolgenden Varianten zu
+      erklären (Ziff. 6.).
+    summary: >-
+      The bidder must declare with the offer which plausibility-evidence variant it
+      intends to use.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The only bid-time obligation in a sixteen-page contract-performance document -- a
+      good test of whether the extractor's stage filter is doing real work rather than
+      binning the file.
+
+  - id: DE-172
+    category: other
+    kind: optional
+    stage: contract_performance
+    checkable: document_submission
+    doc: Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf
+    page: 8
+    quote: >-
+      Bitte stellen Sie bezüglich jeder der aufgeführten ILO-Normen die folgenden Aspekte
+      dar (die Antwort darf einen Gesamtumfang von 13 Seiten nicht überschreiten):
+    summary: >-
+      Under variant 1, measures and evidence must be described for each ILO norm in at
+      most thirteen pages.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      `optional` because it binds only a bidder that chose variant 1 at DE-171. One entry
+      stands for the whole nine-page catalogue rather than one per ILO norm.
+
+  - id: DE-173
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf
+    page: 2
+    quote: >-
+      Des Weiteren hat der Auftragnehmer sicherzustellen, dass die Mitarbeitenden an der
+      jeweiligen Produktionsstätte über die einzuhaltenden Arbeits- und Sozialstandards
+      durch Aushang oder in vergleichbarer Form in Sprachen und in einer Art und Weise
+      informiert werden, die allen Mitarbeitenden ein Verstehen ermöglicht.
+    summary: >-
+      Staff must be informed of the applicable labour and social standards in a form they
+      can understand.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Kriterienkatalog Leistung -- award criteria. The A-Kriterien exclude an offer that
+  # misses them, so they are bid_eligibility, but no company fact can settle them.
+  # ---------------------------------------------------------------------------------
+  - id: DE-180
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 3
+    quote: >-
+      Aus den Eigenerklärungen muss eindeutig hervorgehen, welche Voraussetzungen und
+      Anforderungen erfüllt werden.
+    summary: >-
+      The self-declarations must show unambiguously which requirements are met.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-181
+    category: technical_professional
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 3
+    quote: >-
+      Es ist keine Mindestanzahl an Personalprofilen gefordert.
+    summary: No minimum number of personnel profiles is required.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-182
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 3
+    quote: >-
+      Die Nachforderung fehlender Angaben ist unzulässig (§ 56 Abs. 3 VgV).
+    summary: >-
+      Missing particulars in the performance evidence cannot be requested afterwards.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Directly contradicts the discretion DE-074 grants for the Eignung evidence, and that
+      is correct in law: Section 56(3) VgV bars subsequent requests for award-relevant
+      particulars. A bidder who reads only one of the two rows gets it wrong.
+
+  - id: DE-183
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 5
+    quote: >-
+      Beherrschung der deutschen Sprache (in Wort und Schrift) auf dem Niveau C1 des
+      gemeinsamen Europäischen Referenzrahmens für Sprachen
+    summary: >-
+      Each person put forward must command German at CEFR level C1 or equivalent.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The second hard barrier for a cross-border bidder after DE-030, and one no
+      certificate-equivalence service can bridge. Quote stops before the footnote marker.
+
+  - id: DE-184
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 5
+    quote: >-
+      Berufsqualifizierender Abschluss (Hochschulstudium oder Berufsausbildung) im
+      MINTBereich
+    summary: >-
+      Each person must hold a STEM degree or vocational qualification, or an equivalent
+      qualification plus technical training.
+    ecertis_criterion_id: 07301031-2270-41af-8e7e-66fe0c777107
+    threshold: null
+    notes: >-
+      "MINTBereich" without the hyphen is what the parser returns: the PDF breaks
+      "MINT-Bereich" across a line and pymupdf4llm joins it without the hyphen. Quoted as
+      the reader will actually see it.
+
+  - id: DE-185
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 5
+    quote: >-
+      Die Referenz ist nicht älter als zehn Jahre (maßgeblich ist das Datum der letzten
+      persönlichen Leistungserbringung - gerechnet bis zum Datum der Bekanntmachung des
+      Teilnahmewettbewerbs).
+    summary: A personnel reference must be no older than ten years.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: max_age
+      value: 10
+      unit: years
+      currency: null
+      period: null
+    notes: >-
+      Ten years here against three years for company references (DE-069). Two different
+      age limits in one pack is precisely the sort of thing a bidder gets wrong.
+
+  - id: DE-186
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 5
+    quote: >-
+      Die persönliche erbrachte Leistung umfasst mindestens 20 abgerechnete Personentage.
+    summary: A personnel reference must cover at least 20 invoiced person-days.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 20
+      unit: person_days
+      currency: null
+      period: null
+    notes: Twenty here against twenty-five for company references (DE-070).
+
+  - id: DE-187
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 7
+    quote: >-
+      Das Angebot muss im B-Kriterium B 1.3 „Referenzen – Netzwerk- und
+      Informationstechnik“ mindestens 50% der maximalen Leistungspunkte, d. h. mindestens
+      80 LP, erreichen.
+    summary: >-
+      Criterion A 1.1: the offer must reach at least 80 points on the network-technology
+      references.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The buyer's own error, reproduced verbatim: the heading says A 1.1 / B 1.1 but the
+      sentence says B 1.3. No threshold on any A-Kriterium: the number is Leistungspunkte,
+      which `ThresholdUnit` has no member for, and inventing one (percent, headcount)
+      would put a false comparison into the answer key. All eleven A-Kriterien are
+      recorded the same way.
+
+  - id: DE-188
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 9
+    quote: >-
+      Das Angebot muss im B-Kriterium B 1.2 „Referenzen – Externe Hardware“ mindestens 50%
+      der maximalen Leistungspunkte, d. h. mindestens 20 LP, erreichen.
+    summary: >-
+      Criterion A 1.2: the offer must reach at least 20 points on the external-hardware
+      references.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-189
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 11
+    quote: >-
+      Das Angebot muss im B-Kriterium B 1.3 „Referenzen – IT-Security“ mindestens 50% der
+      maximalen Leistungspunkte, d. h. mindestens 45 LP, erreichen.
+    summary: >-
+      Criterion A 1.3: the offer must reach at least 45 points on the IT-security
+      references.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-190
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 11
+    quote: >-
+      Das Angebot muss für die KHG 1 mindestens 60% der maximalen Gesamt-Leistungspunkte,
+      d. h. mindestens 174 LP, erreichen.
+    summary: >-
+      Criterion A 1.4: the offer must reach at least 174 points across criteria group 1.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-191
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 13
+    quote: >-
+      Das Angebot muss für die Ad-Hoc-Fragen im Unterstützungsbereich „Netzwerk- und
+      Informationstechnik“ mindestens 50% der Summe der maximalen Leistungspunkte in den
+      Kriterien B 2.1 bis 2.3, d. h. mindestens 45 LP , erreichen.
+    summary: >-
+      Criterion A 2.1: at least 45 points on the network-technology ad-hoc questions.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-192
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 14
+    quote: >-
+      Das Angebot muss für die Ad-Hoc-Fragen im Unterstützungsbereich „Externe Hardware“
+      mindestens 50% der Summe der maximalen Leistungspunkte in den Kriterien B 2.4 bis
+      2.6, mindestens 45 LP, erreichen.
+    summary: >-
+      Criterion A 2.2: at least 45 points on the external-hardware ad-hoc questions.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-193
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 14
+    quote: >-
+      Das Angebot muss für den Unterstützungsbereich „IT-Security“ mindestens 50% der
+      Summe der maximalen Leistungspunkte in den Kriterien B 2.7 bis 2.9, mindestens 45
+      LP, erreichen.
+    summary: >-
+      Criterion A 2.3: at least 45 points on the IT-security ad-hoc questions.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-194
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 14
+    quote: >-
+      Das Angebot muss für den Unterstützungsbereich „Netzwerk- und Informationstechnik“
+      mindestens 50% der maximalen Leistungspunkte im Kriterium B 2.10, d.h. mindestens 60
+      LP erreichen.
+    summary: >-
+      Criterion A 2.4: at least 60 points on the network-technology trial task.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-195
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 14
+    quote: >-
+      Das Angebot muss für den Unterstützungsbereich „Externe Hardware“ mindestens 50% der
+      maximalen Leistungspunkte im Kriterium B 2.11, mindestens 60 LP erreichen.
+    summary: >-
+      Criterion A 2.5: at least 60 points on the external-hardware trial task.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-196
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 14
+    quote: >-
+      Das Angebot muss für die Probearbeit im Unterstützungsbereich „IT-Security“
+      mindestens 50% der maximalen Leistungspunkte im Kriterium B 2.12, mindestens 60 LP
+      erreichen.
+    summary: >-
+      Criterion A 2.6: at least 60 points on the IT-security trial task.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-197
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 14
+    quote: >-
+      Das Angebot muss für die KHG 2 insgesamt mindestens 60% der maximalen
+      Leistungspunkte, d. h. mindestens 378 LP , erreichen.
+    summary: >-
+      Criterion A 2.7: at least 378 points across criteria group 2.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-198
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: neither
+    doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+    page: 3
+    quote: >-
+      Bitte beachten Sie die Verpflichtung zum Einsatz der bei der Bewertung
+      berücksichtigten Personen gemäß Ziffer 5.1.1 der Leistungsbeschreibung.
+    summary: >-
+      The persons scored in the evaluation must actually be deployed on the contract.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Leistungsbeschreibung -- the personnel experience levels the CV evidence is judged on.
+  # ---------------------------------------------------------------------------------
+  - id: DE-250
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Leistungsbeschreibung_VV2_V1.pdf
+    page: 10
+    quote: >-
+      Mindestens sechs Jahre Berufserfahrung, davon mindestens vier Jahre im
+      Leistungsgegenstand gemäß Ziffer 4.1.1oder gleichwertige Erfahrungen
+    summary: >-
+      A "Senior" consultant needs at least six years' experience, four of them in the
+      subject matter.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 6
+      unit: years
+      currency: null
+      period: null
+    notes: >-
+      "4.1.1oder" is the buyer's own missing space, reproduced verbatim.
+
+  - id: DE-251
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Leistungsbeschreibung_VV2_V1.pdf
+    page: 10
+    quote: >-
+      Mindestens drei Jahre Berufserfahrung, davon mindestens ein Jahr im
+      Leistungsgegenstand gemäß Ziffer 4.1.1 oder gleichwertige Erfahrungen
+    summary: >-
+      A "Junior" consultant needs at least three years' experience, one of them in the
+      subject matter.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 3
+      unit: years
+      currency: null
+      period: null
+    notes: null
+
+  - id: DE-252
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Leistungsbeschreibung_VV2_V1.pdf
+    page: 10
+    quote: >-
+      Eine Referenz kann nur anerkannt werden, wenn der persönliche Einsatz mindestens 20
+      PT umfasst.
+    summary: >-
+      A personnel reference counts only if the individual's own effort was at least 20
+      person-days.
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 20
+      unit: person_days
+      currency: null
+      period: null
+    notes: null
+
+  - id: DE-253
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Leistungsbeschreibung_VV2_V1.pdf
+    page: 10
+    quote: >-
+      Mindestens ein Weiterbildungszertifikat: IPv6 Forum IPv6 Education Certification
+      Certified Network Engineer For IPv6 (CNE6) Silver
+    summary: >-
+      A "Senior" consultant needs at least one named IPv6 or network certification, or an
+      equivalent.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Quote truncated after the first certificate: the full list runs to twenty named
+      vendor certifications. eCertis cannot help here -- ADR-0007 established it maps ESPD
+      criteria, not arbitrary standards, and CCIE is not an ESPD criterion.
+
+  - id: DE-254
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Leistungsbeschreibung_VV2_V1.pdf
+    page: 15
+    quote: >-
+      Die für die Leistungserbringung vorgesehenen Beraterinnen und Berater müssen
+      innerhalb von 15 Werktagen nach Einzelabruf zur Verfügung stehen.
+    summary: >-
+      Consultants must be available within 15 working days of a call-off.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-255
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Leistungsbeschreibung_VV2_V1.pdf
+    page: 15
+    quote: >-
+      Die Auftragnehmerin hat zwingend mindestens das Personal einzusetzen, das sie im
+      Rahmen ihres Angebots als konkret einzusetzende Personen (ggf. anonymisiert) benannt
+      hat
+    summary: >-
+      The contractor must deploy at least the people it named and had scored in its offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Rahmenvereinbarung -- the one hard company property hidden in a contract document.
+  # ---------------------------------------------------------------------------------
+  - id: DE-210
+    category: economic_financial
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Rahmenvereinbarung_VV2_V1.pdf
+    page: 12
+    quote: >-
+      Für die Auftragnehmerin und jedes Mitglied einer Bietergemeinschaft muss während der
+      gesamten Vereinbarungslaufzeit eine geeignete Haftpflichtversicherung für Sach- und
+      Personenschäden über mindestens den Betrag von 1 Million Euro und für
+      Vermögensschäden über mindestens den Betrag von 2 Millionen Euro bestehen.
+    summary: >-
+      Liability cover of at least EUR 1m for property and personal injury and EUR 2m for
+      financial loss must be held throughout the agreement.
+    ecertis_criterion_id: 7604bd40-4462-4086-8763-a50da51a869c
+    threshold:
+      comparator: at_least
+      value: 2000000
+      unit: currency
+      currency: EUR
+      period: null
+    notes: >-
+      Formally a contract clause rather than an Eignungskriterium, hence
+      `stage: contract_performance` -- but it is a hard, checkable company property and the
+      demo company pack carries a Betriebshaftpflicht confirmation for it. Threshold
+      records the larger of the two limits; the EUR 1m limb is in the quote. The verifier
+      should decide whether a two-limb money requirement deserves two rows.
+
+  - id: DE-211
+    category: economic_financial
+    kind: mandatory
+    stage: contract_performance
+    checkable: document_submission
+    doc: Rahmenvereinbarung_VV2_V1.pdf
+    page: 13
+    quote: >-
+      Auf Anforderung der Auftraggeberin hat die Auftragnehmerin den Nachweis über die
+      Versicherung vorzuweisen.
+    summary: Proof of insurance must be produced on request.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # Aufforderungsschreiben
+  # ---------------------------------------------------------------------------------
+  - id: DE-240
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Aufforderungsschreiben_VV2_V1.pdf
+    page: 1
+    quote: >-
+      Ihr Angebot muss bis zum Ablauf der im Angebotsformular genannten Frist eingehen und
+      den in den Bewerbungsbedingungen genannten Anforderungen entsprechen.
+    summary: >-
+      The offer must arrive before the deadline named in the offer form and meet the
+      application conditions.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  # ---------------------------------------------------------------------------------
+  # TED notice -- the only document that names the ESPD criteria by their eForms labels,
+  # which is what makes several of the mappings above determinate rather than guessed.
+  # ---------------------------------------------------------------------------------
+  - id: DE-220
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 614251-2026.notice.de.pdf
+    page: 2
+    quote: >-
+      Verstoß gegen die in den rein innerstaatlichen Ausschlussgründen verankerten
+      Verpflichtungen: Nachweis gemäß Vergabeunterlagen
+    summary: >-
+      The notice declares purely national exclusion grounds apply, evidenced per the
+      procurement documents.
+    ecertis_criterion_id: 63adb07d-db1b-4ef0-a14e-a99785cf8cf6
+    threshold: null
+    notes: >-
+      This is the eForms field that carries the ESPD's "Purely national exclusion grounds",
+      and it is what covers DE-092 (LkSG) and DE-093 (BTTG), which have no criterion of
+      their own.
+
+  - id: DE-221
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 614251-2026.notice.de.pdf
+    page: 8
+    quote: >-
+      Frist für den Eingang der Angebote: 06/10/2026 11:30:00 (UTC+02:00) Osteuropäische
+      Zeit, Mitteleuropäische Sommerzeit
+    summary: Offers must be received by 6 October 2026, 11:30 (CEST).
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      The one date a bid may not get wrong, and S3.2.2 takes it from the notice's
+      structured `deadline-receipt-tender-date-lot` field rather than from this prose.
+
+  - id: DE-222
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 614251-2026.notice.de.pdf
+    page: 8
+    quote: >-
+      Dauer, während der das Angebot gültig bleiben muss: 8 Monate
+    summary: The offer must remain valid for eight months.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-223
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 614251-2026.notice.de.pdf
+    page: 8
+    quote: >-
+      Varianten: Nicht zulässig Die Bieter können mehrere Angebote einreichen: Nicht
+      zulässig
+    summary: Neither variants nor multiple offers are admitted.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Two eForms fields printed on one line; quoted together because that is how the page
+      reads and neither half is a sentence on its own.
+
+  - id: DE-224
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: 614251-2026.notice.de.pdf
+    page: 4
+    quote: >-
+      Die Namen und beruflichen Qualifikationen des zur Auftragsausführung eingesetzten
+      Personals sind anzugeben: Nicht erforderlich
+    summary: >-
+      Naming the staff and their qualifications is declared not required in the notice.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Flatly contradicted by the Kriterienkatalog Leistung, which requires CVs and
+      personnel references. Kept because the contradiction is real and a bidder relying on
+      the notice alone would under-prepare.
+
+  - id: DE-225
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: 614251-2026.notice.de.pdf
+    page: 8
+    quote: >-
+      Nach Ermessen des Käufers können alle fehlenden Bieterunterlagen nach Fristablauf
+      nachgereicht werden.
+    summary: >-
+      Missing bidder documents may, at the buyer's discretion, be supplied after the
+      deadline.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: >-
+      Also in tension with DE-182, which bars subsequent requests for the performance
+      evidence.
+
+  - id: DE-226
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 614251-2026.notice.de.pdf
+    page: 7
+    quote: >-
+      Die durchschnittliche Anzahl an Fachkräften im einschlägigen Geschäftsbereich pro
+      Geschäftsjahr muss mindestens 25 VZÄ (Los 1 betreffend) 29 VZÄ (Los 2 betreffend)
+      betragen.
+    summary: >-
+      The notice restates the staff minimum: 25 FTE for lot 1, 29 FTE for lot 2.
+    ecertis_criterion_id: 1f49b3f0-d50f-43f6-8b30-4bafab108b9b
+    threshold:
+      comparator: at_least
+      value: 29
+      unit: fte
+      currency: null
+      period: per_year
+    notes: >-
+      Same obligation as DE-073 but a different document, so it is a second citation and
+      not a duplicate -- `extract_reqs` dedupes within a document only, deliberately.
+
+  - id: DE-227
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 614251-2026.notice.de.pdf
+    page: 7
+    quote: >-
+      Der Umsatz muss mindestens 2.500.000,00 EUR pro Jahr (Los 1 betreffend) 3.000.000,00
+      EUR pro Jahr (Los 2 betreffend) betragen.
+    summary: >-
+      The notice restates the turnover minimum: EUR 2.5m for lot 1, EUR 3m for lot 2.
+    ecertis_criterion_id: 074f6031-55f9-4e99-b9a4-c4363e8bc315
+    threshold:
+      comparator: at_least
+      value: 3000000
+      unit: currency
+      currency: EUR
+      period: per_year
+    notes: >-
+      The notice's own criterion label for this field is "Spezifischer Jahresumsatz",
+      which is what makes the mapping on DE-060 determinate rather than a guess.
+
+  - id: DE-228
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 614251-2026.notice.de.pdf
+    page: 5
+    quote: >-
+      Quellen der Eignungskriterien: Bekanntmachung, Auftragsunterlagen Kriterium:
+      Referenzen zu bestimmten Dienstleistungen
+    summary: >-
+      The notice names the reference criterion, sourced from both the notice and the
+      procurement documents.
+    ecertis_criterion_id: 5e506c16-26ab-4e32-bb78-b27f87dc0565
+    threshold: null
+    notes: >-
+      "Referenzen zu bestimmten Dienstleistungen" is the eForms BT-750 label for the ESPD
+      criterion "For service contracts: performance of services of the specified type".
+
+# =====================================================================================
+#  Out of the base case: obligations that bind only a Bietergemeinschaft, an
+#  Eignungsleihe, a subcontractor, or a bid on more than one lot. Labelled to the same
+#  standard, kept out of the recall denominator (SP.1's scope decision, ADR-0003).
+# =====================================================================================
+conditional_not_scored:
+
+  - id: DE-C01
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Im Falle der Bildung von Bietergemeinschaften zusätzlich:
+    summary: >-
+      A consortium must additionally submit the Bietergemeinschaftserklärung.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C02
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Eigenerklärung Ausschlussgründe (siehe oben) für jedes Mitglied der
+      Bietergemeinschaft
+    summary: >-
+      Each consortium member files its own exclusion-grounds declaration.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C03
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Eigenerklärung Sanktionen Russland (siehe oben) für jedes Mitglied der
+      Bietergemeinschaft
+    summary: Each consortium member files its own Russia-sanctions declaration.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C04
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Anlage Unternehmensdaten (siehe oben) für jedes Mitglied der Bietergemeinschaft
+    summary: Each consortium member files its own company-data annex.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C05
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Eigenerklärung Verpflichtungsgesetz (siehe oben) für jedes Mitglied der
+      Bietergemeinschaft
+    summary: Each consortium member files its own Verpflichtungsgesetz declaration.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C06
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Verpflichtungserklärung Scientology für jedes Mitglied der Bietergemeinschaft
+    summary: Each consortium member files its own Scientology undertaking.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C07
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Verpflichtung VS-NfD und VS-NfD-Merkblatt im Anhang für jedes Mitglied der
+      Bietergemeinschaft
+    summary: Each consortium member files its own VS-NfD undertaking.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C08
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Im Falle des Einsatzes anderer Unternehmen im Rahmen einer Eignungsleihe zusätzlich
+      vom eignungsverleihenden Unternehmen:
+    summary: >-
+      A capacity-lending undertaking is required from each firm whose capacity is relied on.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C09
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Anlage Unteraufträge
+    summary: The subcontracting annex is required where parts are subcontracted.
+    ecertis_criterion_id: 612a1625-118d-4ea4-a6db-413184e7c0a8
+    threshold: null
+    notes: >-
+      "Subcontracting proportion" is the ESPD criterion the annex serves; the form asks
+      which parts go to subcontractors.
+
+  - id: DE-C10
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 4
+    quote: >-
+      Die konkrete Benennung der Unterauftragnehmer muss spätestens vor Zuschlagserteilung
+      erfolgen.
+    summary: Subcontractors must be named at the latest before award.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C11
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+    page: 5
+    quote: >-
+      Wenn Sie sich an mehr als einem Los beteiligen, beachten Sie bitte, dass die Eignung
+      im weiteren Los nur dann gegeben ist, wenn die Mindestanforderungen an Umsatz und
+      Beschäftigtenzahl für Los 1 und Los 2 summiert erfüllt werden.
+    summary: >-
+      Bidding on both lots requires the turnover and staff minima of both lots added
+      together.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C12
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 1
+    quote: >-
+      Die Summe der Umsätze der Unternehmen muss den geforderten Mindestumsatz erreichen.
+    summary: >-
+      For a consortium or capacity lending, the members' turnovers are added to meet the
+      minimum.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C13
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+    page: 3
+    quote: >-
+      Die Summe der Beschäftigtenanzahl in den Unternehmen muss die Mindestanzahl erreichen.
+    summary: >-
+      For a consortium or capacity lending, the members' headcounts are added to meet the
+      minimum.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C14
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 6
+    quote: >-
+      Bewerber-/Bietergemeinschaften müssen mit der Abgabe des Angebots bzw. bei
+      Vergabeverfahren mit Teilnahmewettbewerb bereits mit der Abgabe des Teilnahmeantrags
+      alle Mitglieder der Bewerber-/Bietergemeinschaft benennen sowie Art und Umfang des
+      jeweiligen Leistungsteils des einzelnen Mitglieds angeben.
+    summary: >-
+      A consortium must name all members and their shares of the work with the offer.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C15
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 7
+    quote: >-
+      Im Falle der Eignungsleihe müssen die eignungsverleihenden Unternehmen mit der Abgabe
+      des Teilnahmeantrags/Angebots benannt werden und es sind Art und Umfang der von diesen
+      in Anspruch genommenen Kapazitäten anzugeben.
+    summary: >-
+      Firms lending capacity must be named with the offer, with the nature and extent of
+      the capacity relied on.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C16
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+    page: 8
+    quote: >-
+      Im Falle der einfachen Unterauftragsvergabe an andere Unternehmen sind mit der Abgabe
+      des Angebots die Art und der Umfang des zu übertragenden Leistungsteils anzugeben
+    summary: >-
+      Plain subcontracting requires the nature and extent of the subcontracted part with
+      the offer.
+    ecertis_criterion_id: 612a1625-118d-4ea4-a6db-413184e7c0a8
+    threshold: null
+    notes: null
+
+  - id: DE-C17
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Unterauftraege_VV2.pdf
+    page: 1
+    quote: >-
+      Ich beabsichtige folgende Teile des Auftrages im Wege der Unterauftragsvergabe an
+      Dritte zu vergeben:
+    summary: The form lists the parts of the contract to be subcontracted.
+    ecertis_criterion_id: 612a1625-118d-4ea4-a6db-413184e7c0a8
+    threshold: null
+    notes: null
+
+  - id: DE-C18
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Verpflichtungserklaerung_Eignungsleihe_Unterauftraege_VV2.pdf
+    page: 2
+    quote: >-
+      Wir erklären, dass uns die vorgenannten technischen, personellen und/oder finanziellen
+      Mittel zur vertragsgerechten Erbringung der vorgenannten Leistungen zur Verfügung
+      stehen.
+    summary: >-
+      The lending firm declares the technical, personnel and financial means are available.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: DE-C19
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Verpflichtungserklaerung_Eignungsleihe_Unterauftraege_VV2.pdf
+    page: 1
+    quote: >-
+      In beiden Fällen hat der Bieter durch Abgabe der nachfolgenden Erklärung
+      nachzuweisen, dass ihm die für den Auftrag erforderlichen Mittel tatsächlich auch zur
+      Verfügung stehen.
+    summary: >-
+      Both capacity lending and subcontracting require proof that the means are genuinely
+      available.
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null

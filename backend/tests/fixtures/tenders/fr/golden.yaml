@@ -1,0 +1,774 @@
+# =============================================================================
+#  UNVERIFIED DRAFT — DO NOT USE AS A SCORING REFERENCE YET.
+#
+#  Every label below was drafted by an LLM (Claude, Opus 5) reading the parsed
+#  PDF text. NO HUMAN HAS CHECKED THE JUDGEMENT CALLS YET: the category / kind /
+#  stage / checkable assignments, the thresholds, the eCertis mappings and the
+#  requirement/conditional split are all machine drafts. Only the `quote` fields
+#  are mechanically guaranteed (see `method`); the *meaning* attached to each
+#  quote is not.
+#
+#  S6.4 is closed only when a human has reviewed this file and set
+#  `verified_by` / `verified_on` and `labelled_by: llm_assisted_human_verified`.
+#  Until then no recall or precision figure computed against this file means
+#  anything.
+# =============================================================================
+
+meta:
+  ted_publication_number: "618320-2026"
+  fixture_dir: tests/fixtures/tenders/fr
+  source_language: fr
+  labelled_by: llm_draft
+  verified_by: pending
+  verified_on: null
+  labelled_on: 2026-09-11
+  story: S6.4
+  method: |
+    How these labels were produced, exactly.
+
+    1. Every PDF in `tests/fixtures/tenders/fr/` and `.../fr/documents/` was read
+       with the repository's own parser, `crossbid.ingestion.pymupdf_parser.PyMuPDFParser`
+       (pymupdf4llm, `page_chunks=True`, one entry per page, `.strip()`ed), so the
+       `page` numbers here are the page numbers extraction will see. The RC parses
+       to 20 pages / 56 045 characters and the notice to 5 pages / 9 671 characters,
+       with zero unread pages in either.
+    2. Every `quote` is a LITERAL SUBSTRING of that parser's output for the cited
+       page — not of `page.get_text()`, and not of the PDF as a human reads it.
+       The two differ: pymupdf4llm renders emphasis as markdown, so a bolded run
+       arrives as `**...**`, an underlined run as `<u>...</u>`, and a table cell
+       break as `<br>`. Where such an artefact falls inside a clause the quote was
+       trimmed to a clean span rather than reflowed; no quote was ever retyped,
+       re-spaced, or translated. Each quote was re-checked against the parsed page
+       by script after the file was written, and the file must parse with `pyyaml`.
+       English appears only in `summary` and `notes`.
+    3. The English `summary` lines were written by the same LLM from the French
+       source. They are a convenience, not a translation of record.
+    4. eCertis mapping — this is the one part of this file that is NOT inference.
+       `documents/DUME_acheteur.xml` is the buyer's own pre-filled ESPD request
+       (`espd-req:ESPDRequest`, ESPDRequest-1). It declares 30 `ccv:Criterion`
+       elements, and all 30 of their `cbc:ID` values were checked at drafting time
+       against `crossbid.models.ecertis_criteria.EcertisCriterionId`: 30 of 30 are
+       members of the EU-level Literal. So where this tender's prose asks for a
+       thing the buyer has also declared as an ESPD criterion, the criterion id is
+       READ OFF THE BUYER'S OWN DUME, not guessed — those rows say so in `notes`
+       ("from DUME"). Eight rows carry an id on that basis. No id was assigned by
+       inference anywhere in this file; every other row is `null` on purpose,
+       because a wrong id makes S3.3.1 fetch the wrong national evidence.
+       The six selection criteria the DUME declares are: chiffre d'affaires annuel
+       général (499efc97), ratios financiers (e4d37adc), assurance contre les
+       risques professionnels (7604bd40), effectifs moyens annuels (1f49b3f0),
+       principaux services fournis antérieurement (5e506c16), certificats
+       d'assurance de la qualité (d726bac9). The other 24 are exclusion grounds.
+    5. KNOWN GAP, for the verifier to rule on: the DUME is XML and has no pages,
+       so nothing is quoted from it and its 24 declared exclusion grounds are NOT
+       labelled one by one here. They enter the file only through RC page 10, which
+       incorporates them wholesale ("n'entre dans aucun des motifs d'exclusion ...
+       articles L.2141-1 et suivants"), and through the two attributaire
+       certificates on page 17. If the golden set is meant to score per-ground
+       exclusion recall for France, this schema needs a source that is not a PDF
+       page, and that is a decision for a human, not for this draft.
+    6. Scope follows SP.1 (`backend/scripts/spike_golden_de.yaml`): the base case is
+       a single bidder submitting alone. Obligations that bind only a groupement
+       momentané d'opérateurs économiques, an operator whose capacity is borrowed,
+       or a sous-traitant are listed under `conditional_not_scored`, not scored.
+  # These two lists partition the fixture's PDFs (the pack plus the notice one level
+  # up) and are validated to do so. They name PDFs only: the third artefact,
+  # `documents/DUME_acheteur.xml`, was read in full and is what every criterion id in
+  # this file comes from, but it is XML with no pages, so it appears in neither list —
+  # see method steps 4 and 5.
+  documents_scanned:
+    - 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  documents_excluded:
+    618320-2026.notice.fr.pdf: "eForms notice; §2.1.6 and §5.1.9 both answer 'Document de marché', and its only bidder obligations (the 5/10 capacity pass mark, electronic submission) restate RC articles 15.1 and 16, labelled there."
+
+requirements:
+  # ---- Article 2-3: deadline and validity (RC p.3) ----
+  - id: FR-001
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 3
+    quote: "Les plis parvenant après la date et l’heure limites fixées ci-dessus ne seront pas admis."
+    summary: "Tenders arriving after the deadline are not admitted."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Deadline is 09/10/2026 at 16H00, stated in bold on the same page; the schema has no deadline field, so it is recorded here."
+
+  - id: FR-002
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 3
+    quote: "Les offres sont valables pendant une durée de quatre (4) mois à compter de la date limite de remise des plis."
+    summary: "The tender must remain valid for four months from the submission deadline."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Four months. ThresholdUnit has no MONTHS member, so no typed threshold is set."
+
+  # ---- Article 10-11: variants and the social-insertion clause (RC p.5-6) ----
+  - id: FR-003
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 5
+    quote: "Les variantes proposées à l’initiative des soumissionnaires ne sont pas autorisées."
+    summary: "Bidder-initiated variants are not allowed."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-004
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 6
+    quote: "Les candidats ne sont pas autorisés à formuler de réserve dans leur offre sur la clause obligatoire d’insertion par l’activité économique."
+    summary: "The tender may state no reservation about the compulsory social-insertion clause."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The next sentence on the same page makes a non-compliant offer irrégulière, so this is a bid-stage gate even though the clause itself is performed after award (FR-005)."
+
+  - id: FR-005
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 6
+    quote: "Pour l’exécution du marché, l’entreprise attributaire devra réaliser une action d’insertion qui permette l’accès ou le retour à l’emploi de personnes rencontrant des difficultés sociales ou professionnelles particulières."
+    summary: "The awardee must carry out a social-insertion action during performance of the contract."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Contract-performance, by the ADR-0003 test: a bidder that never wins never does this. Kept so the stage discriminator has a real negative case in this fixture."
+
+  # ---- Article 14: presentation of the proposal (RC p.7) ----
+  - id: FR-006
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 7
+    quote: "L’offre du candidat doit être entièrement conforme aux exigences du dossier de consultation."
+    summary: "The tender must comply in full with the consultation file."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-007
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 7
+    quote: "Tous les documents constituant ou accompagnant l’offre doivent être rédigés en français ou traduits s’ils émanent d’une autorité étrangère."
+    summary: "All tender documents must be in French, or translated if issued by a foreign authority."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Directly relevant to the cross-border wedge: a German bidder's national certificates must be translated."
+
+  # ---- Article 14.4: the candidature file (RC p.9-11) ----
+  - id: FR-008
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 9
+    quote: "La production des documents figurant dans le tableau ci-dessous, en fonction du mode de candidature choisi, conditionne la validité de la candidature."
+    summary: "Producing the documents listed for the chosen candidature mode is a condition of the candidature's validity."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Umbrella obligation over FR-010 (DUME route) and FR-011/FR-012 (standard route)."
+
+  - id: FR-009
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 9
+    quote: "Le candidat non établi en France produit les attestations et certificats équivalents dans son pays d’origine ou, à défaut, une déclaration sur l'honneur ou sous serment, selon le pays considéré."
+    summary: "A bidder not established in France produces the equivalent certificates from its home country, or failing that a declaration on honour or under oath."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "This is the tender stating Crossbid's wedge in its own words. No single ESPD criterion corresponds to it — it is the equivalence rule itself, not a criterion — so the id is null on purpose."
+
+  - id: FR-010
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 10
+    quote: "Le formulaire DUME complété."
+    summary: "Under the DUME route, the completed ESPD form is the candidature file."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "kind=optional because the RC offers two alternative candidature modes (article 14.2); this one is mandatory only if the DUME route is chosen. The buyer's pre-filled DUME is committed at documents/DUME_acheteur.xml."
+
+  - id: FR-011
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 10
+    quote: "Une « lettre de candidature – Habilitation du mandataire par ses cotraitants ». Il convient d’utiliser le formulaire DC1."
+    summary: "Under the standard route, form DC1 (letter of candidature) must be used."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Alternative to FR-010."
+
+  - id: FR-012
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 10
+    quote: "Une « déclaration du candidat individuel ou du membre du groupement ». Il convient d’utiliser le formulaire DC2*."
+    summary: "Under the standard route, form DC2 (declaration of the candidate) must be used."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Alternative to FR-010."
+
+  - id: FR-013
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 10
+    quote: "Il permet de justifier que le candidat (individuel ou membre d’un groupement) n’entre dans aucun des motifs d’exclusion de la procédure de passation mentionnés aux articles L.2141-1 et suivants du Code de la commande publique."
+    summary: "The bidder must be in none of the exclusion situations of articles L.2141-1 ff. of the Code de la commande publique."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "This single clause incorporates the whole exclusion set. The buyer's DUME breaks it into 24 named ESPD exclusion grounds (criminal organisation, corruption, fraud, terrorism, money laundering, child labour, taxes, social security, environmental/social/labour law, bankruptcy, insolvency, conciliation, analogous situation, liquidator, cessation of activity, grave professional misconduct, market distortion, conflict of interest, involvement in preparation, early termination, misrepresentation, purely national grounds). No single id fits, so null — see method step 5."
+
+  - id: FR-014
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 10
+    quote: "Une présentation du candidat [à joindre en annexe du formulaire DC2]."
+    summary: "A presentation of the bidder must be annexed to form DC2."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-015
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 10
+    quote: "Le candidat donne toutes les informations permettant de justifier de sa compétence dans le domaine objet du marché"
+    summary: "The bidder must give all information justifying its competence in the contract's field."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Open-ended; the scored form of it is article 15.1 (FR-021 to FR-024)."
+
+  - id: FR-016
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 11
+    quote: "Son chiffre d’affaires annuel global sur le dernier exercice disponible"
+    summary: "The bidder must state its overall annual turnover for the last available financial year."
+    ecertis_criterion_id: "499efc97-2ac1-4af2-9e84-323c2ca67747"
+    threshold: null
+    notes: "Criterion id from DUME (CRITERION.SELECTION.ECONOMIC_FINANCIAL_STANDING.TURNOVER.GENERAL_YEARLY, 'Chiffre d’affaires annuel général') — no inference. The RC adds that it must be the bidder's own turnover, not the group's or parent's."
+
+  # ---- Article 14.5: the offer file (RC p.11-12) ----
+  - id: FR-017
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 11
+    quote: "L’annexe 1 à l’acte d’engagement valant Bordereau des Prix Unitaires (BPU), complétée."
+    summary: "The completed unit-price schedule (BPU), annex 1 to the acte d'engagement, must be submitted."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-018
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 11
+    quote: "Le soumissionnaire doit obligatoirement compléter l’ensemble des lignes."
+    summary: "Every line of the BPU must be filled in."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The same page also forbids changing the BPU's structure."
+
+  - id: FR-019
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 12
+    quote: "Un « mémoire technique » daté comportant les rubriques suivantes :"
+    summary: "A dated technical memorandum with the listed sections must be submitted."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Sections a) staff profiles, b) methodology and draft quality-assurance plan, c) tooling, d) environmental quality — all on the same page."
+
+  - id: FR-020
+    category: technical_professional
+    kind: optional
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 12
+    quote: "Le ministère souhaite que les candidats proposent des intervenants ayant plus de 10 ans d’expérience."
+    summary: "The ministry wishes the proposed consultants to have more than 10 years of experience."
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 10
+      unit: years
+    notes: "kind=optional: 'souhaite', a wish, not a minimum level of capacity. A good test that an extractor does not promote a preference to a pass/fail rule."
+
+  # ---- Article 15.1: the scored selection criteria (RC p.13) ----
+  - id: FR-021
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 13
+    quote: "Critère n°1 : Chiffre d'affaires annuel en euros Hors Taxes (HT) du candidat (dernier exercice disponible). Ce critère est noté sur 3 comme suit :"
+    summary: "Selection criterion 1: annual turnover (last available year), scored out of 3 in bands."
+    ecertis_criterion_id: "499efc97-2ac1-4af2-9e84-323c2ca67747"
+    threshold:
+      comparator: at_least
+      value: 1460000
+      unit: currency
+      currency: EUR
+      period: last_financial_year
+    notes: "Criterion id from DUME — no inference. Bands quoted on the same page: '> 1 950 000 euros HT : 3/3', '<= 1 950 000 et >= 1 460 000 euros HT : 2/3', '< 1 460 000 euros HT ou non précisé : 0/3'. The typed threshold is the point below which the criterion scores zero; it is NOT a pass/fail minimum on its own — the pass/fail is the 5/10 total in FR-025. The banded shape is the thing this fixture exists to test, and the schema cannot express it."
+
+  - id: FR-022
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 13
+    quote: "Critère n°2 : Effectifs du candidat intervenants dans le domaine objet de la consultation. Ce critère est noté 3 comme suit :"
+    summary: "Selection criterion 2: staff working in the contract's field, scored out of 3 in bands."
+    ecertis_criterion_id: "1f49b3f0-d50f-43f6-8b30-4bafab108b9b"
+    threshold:
+      comparator: at_least
+      value: 7
+      unit: headcount
+    notes: "Criterion id from DUME ('Effectifs moyens annuels') — no inference. Bands on the same page: '> 12 : 3/3', '<= 12 et > 6 : 2/3', '<= 6 ou non précisé : 0/2'. Typed threshold is the smallest headcount that scores anything (7)."
+
+  - id: FR-023
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 13
+    quote: "Critère n°3 : Nombre de références datées et chiffrées de moins de trois ans pour des prestations similaires. Ce critère est noté 2 comme suit :"
+    summary: "Selection criterion 3: number of dated, costed references under three years old for similar services, scored out of 2."
+    ecertis_criterion_id: "5e506c16-26ab-4e32-bb78-b27f87dc0565"
+    threshold:
+      comparator: at_least
+      value: 2
+      unit: references
+    notes: "Criterion id from DUME ('Décrivez des principaux services fournis antérieurement') — no inference. Bands on the same page: '>= 4 : 2/2', '2 ou 3 : 1/2', '< 2 ou non précisé : 0/2'. A second, independent max-age constraint of three years is carried in the criterion's own wording and is not expressible alongside the count in one Threshold."
+
+  - id: FR-024
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 13
+    quote: "Critère n°4 : Processus ou certification qualité du candidat. Ce critère est noté sur 2 comme suit :"
+    summary: "Selection criterion 4: the bidder's quality process or certification, scored out of 2."
+    ecertis_criterion_id: "d726bac9-e153-4e75-bfca-c5385587766d"
+    threshold: null
+    notes: "Criterion id from DUME ('Détail des certificats établis par des organismes indépendants concernant les normes d’assurance de la qualité') — no inference. Note the RC is broader than the DUME criterion: an own documented process scores 2/2 without any independent certificate, so evidence mapping must not demand a certificate. This is also the row where CLAUDE.md's eCertis finding bites — eCertis holds no ISO 9001 mapping."
+
+  - id: FR-025
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 13
+    quote: "La note finale est obtenue par la somme des critères. Elle est exprimée sur 10. Les candidats n'ayant pas obtenu la note de 5/10, équivalent au niveau de capacité attendu, sont éliminés."
+    summary: "Candidates scoring less than 5/10 across the four selection criteria are eliminated."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The real pass/fail gate of this tender. ThresholdUnit has no POINTS member and PERCENT would misrepresent a 5-of-10 sum, so no typed threshold is set — flagged for the verifier."
+
+  # ---- Article 16: how the proposal is sent (RC p.14-16) ----
+  - id: FR-026
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 14
+    quote: "Le mode de transmission des propositions indiqué au présent article est obligatoire."
+    summary: "Tenders must be submitted electronically on the PLACE platform; any other route is irregular."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-027
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 15
+    quote: "L’offre dématérialisée doit être constituée de documents zippés en format PDF, à l’exception des annexes financières qui doivent être remises au format .xls ou .xlsx."
+    summary: "The tender must be zipped PDFs, except financial annexes which must be .xls or .xlsx."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-028
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 15
+    quote: "Le candidat ne doit pas utiliser de code actif dans sa réponse, tels que :"
+    summary: "No active code (executables, macros, ActiveX, applets, scripts) may be used in the response."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-029
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 15
+    quote: "Le candidat s’assure avant la constitution de son pli que les fichiers transmis ne comportent pas de virus."
+    summary: "The bidder must check its files for viruses before submitting; an infected tender counts as not received."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-030
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 15
+    quote: "La signature électronique n’est pas exigée à ce stade de la procédure."
+    summary: "No electronic signature is required at tender stage."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Informational: it removes an obligation rather than creating one, but an extractor that turns it into a requirement is wrong and this row is here to catch that."
+
+  - id: FR-031
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 16
+    quote: "Il est fortement recommandé aux sociétés souhaitant soumissionner d’utiliser cette faculté."
+    summary: "Sending a backup copy of the tender on physical media is strongly recommended but optional."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "'Copie de sauvegarde' under article R.2132-11. The same page sets the required envelope wording."
+
+  # ---- Article 17.1: documents from the presumed awardee (RC p.17-18) ----
+  - id: FR-032
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "le soumissionnaire auquel il est envisagé d’attribuer le marché produira dans un délai approprié et mentionné dans la demande du ministère les documents et informations énumérés ci-dessous, selon les modalités fixées par celle-ci. Dans le cas contraire, son offre sera rejetée."
+    summary: "The presumed awardee must produce the listed documents on request or its tender is rejected."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Stage judgement call for the verifier: these bind only the presumed awardee, but failure rejects the OFFER, so they are classed bid_eligibility rather than contract_performance. Umbrella over FR-033 to FR-041."
+
+  - id: FR-033
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "Une attestation de fourniture des déclarations sociales et de paiement des cotisations et contributions de sécurité sociale prévue à l’article L.243-15 du Code de sécurité sociale émanant de l’organisme de protection sociale chargé du recouvrement des cotisations et des contributions datant de moins de 6 mois ;"
+    summary: "A social-security clearance certificate (URSSAF attestation de vigilance) less than 6 months old."
+    ecertis_criterion_id: "7d85e333-bbab-49c0-be8d-c36d71a72f5e"
+    threshold: null
+    notes: "Criterion id from DUME ('Paiement de cotisations de sécurité sociale') — no inference. The canonical cross-border case: a German bidder has no URSSAF attestation and needs the national equivalent under FR-009."
+
+  - id: FR-034
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "Le certificat attestant la souscription des déclarations et les paiements correspondants aux impôts (impôts sur le revenu, sur les sociétés, taxe sur la valeur ajoutée) délivrée par l'administration fiscale dont relève l'attributaire ;"
+    summary: "A tax-clearance certificate from the awardee's tax administration."
+    ecertis_criterion_id: "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+    threshold: null
+    notes: "Criterion id from DUME ('Paiement d’impôts et taxes') — no inference. Same cross-border equivalence problem as FR-033."
+
+  - id: FR-035
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "Le SIREN, numéro unique d’identification délivré par l’INSEE ;"
+    summary: "The SIREN company identifier issued by INSEE."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "A German bidder has no SIREN at all — it has an HRB number. No ESPD criterion covers national company identifiers, so null; the equivalence is governed by FR-009."
+
+  - id: FR-036
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "La liste nominative des salariés étrangers employés et soumis à l’autorisation de travail prévue à l’article D.8254-2 du Code du Travail"
+    summary: "A nominative list of foreign employees subject to work authorisation under art. D.8254-2."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-037
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "L'accusé de réception de la déclaration de détachement effectuée sur le télé-service « SIPSI » du ministère chargé du travail, conformément aux articles R.1263-5 et R.1263-7 du code du travail ;"
+    summary: "If established outside France and using posted workers, the SIPSI posting-declaration receipt."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "kind=optional because it is conditional on posting workers, but it is the obligation that bites hardest on a non-French bidder and belongs in the base case, not in conditional_not_scored (it has nothing to do with groupements or subcontracting)."
+
+  - id: FR-038
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "Pour tout employeur occupant au moins 50 salariés, le procès-verbal de la dernière réunion du Comité social et économique consacrée à l'examen du rapport et du programme conformément à l’article L.2312-27 du Code du Travail ;"
+    summary: "Employers with at least 50 staff must supply the minutes of the last works-council meeting."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The 50-employee figure triggers the obligation; it is not a level the bidder must clear, so no Threshold is set — putting {at_least, 50, headcount} here would invert the meaning."
+
+  - id: FR-039
+    category: exclusion_ground
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "En cas de redressement judiciaire, la copie du ou des jugement(s) prononcé(s) ;"
+    summary: "If in court-supervised reorganisation, copies of the judgments."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Deliberately null. 'Redressement judiciaire' is a French collective proceeding that could plausibly map to any of three DUME criteria — Insolvabilité (396f288a), Situation analogue à la faillite (daffa2a9) or Procédure de conciliation (68918c7a) — so no mapping is determinate and a guess would send S3.3.1 after the wrong national evidence."
+
+  - id: FR-040
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "Une attestation d'assurance en cours de validité ;"
+    summary: "A valid insurance certificate."
+    ecertis_criterion_id: "7604bd40-4462-4086-8763-a50da51a869c"
+    threshold: null
+    notes: "Criterion id from DUME ('Assurance contre les risques professionnels') — the buyer declares this criterion in its own ESPD request, so the mapping is read off, not inferred. Verifier: the RC does not name a cover level, so only the existence of cover is checkable."
+
+  - id: FR-041
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "L’acte d’engagement complété et signé ;"
+    summary: "The completed and signed acte d'engagement."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Not supplied at tender stage (see RC p.12), only by the awardee."
+
+  - id: FR-042
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 18
+    quote: "Les pièces pour lesquelles la signature est exigée doivent être datées et signées d’une personne ayant le pouvoir d’engager la société."
+    summary: "Documents requiring signature must be dated and signed by a person empowered to bind the company."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "A delegation of authority must be attached if the signatory is not the legal representative."
+
+  - id: FR-043
+    category: other
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 18
+    quote: "Le cas échéant, l’annexe RGPD avec l’article 3.6 a) complété par les items d’évaluation concernant le pays dans lequel sont transférées les données ."
+    summary: "Where applicable, the GDPR annex with article 3.6(a) completed for the data-transfer destination country."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The trailing space before the full stop is in the parser output; the quote is verbatim."
+
+  - id: FR-044
+    category: other
+    kind: optional
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 18
+    quote: "Le candidat auquel il est envisagé d’attribuer le marché est invité à répondre en ligne au questionnaire Egalité Professionnelle Femmes/Hommes, disponible à l’adresse suivante :"
+    summary: "The presumed awardee is invited to fill in the gender-equality questionnaire."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "'Invité' — an invitation, not an obligation."
+
+  # ---- Article 19: signature requirements (RC p.18-19) ----
+  - id: FR-045
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 18
+    quote: "La signature électronique doit reposer sur un certificat qualifié, conforme au Règlement (UE) n°910/2014 du Parlement européen et du Conseil du 23 juillet 2014 sur l’identification électronique et les services de confiance pour les transactions électroniques au sein du marché intérieur (eIDAS)."
+    summary: "Electronic signatures must use an eIDAS-qualified certificate (level 3 advanced with qualified certificate, or level 4 qualified)."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Cross-border relevance: a German qualified certificate is explicitly accepted under the '2ème cas' on the following page."
+
+  - id: FR-046
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 19
+    quote: "Les formats de signature sont XAdES, CAdES ou PAdES tels que mentionnés aux articles 1 et 2 de la décision d'exécution (UE) n° 2015/1506 de la Commission du 8 septembre 2015."
+    summary: "Accepted signature formats are XAdES, CAdES or PAdES."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: FR-047
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 19
+    quote: "Une signature manuscrite scannée ne donne pas la qualité d’original à ce document."
+    summary: "A scanned handwritten signature does not make a document an original."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+# Obligations that bind only a groupement momentané d'opérateurs économiques, an
+# operator whose capacity the bidder borrows, or a sous-traitant. Out of scope for
+# the base case (a single bidder submitting alone), kept so a later run can score
+# them. Each line names the RC page it is on.
+conditional_not_scored:
+  - id: FR-C01
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 8
+    quote: "Remarque : si le candidat se présente sous la forme d’un groupement momentané d’entreprises, chaque membre du groupement doit fournir les pièces et documents mentionnés ci-après."
+    summary: "In a consortium, every member must supply the candidature documents; capacity is assessed globally."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Groupement only."
+
+  - id: FR-C02
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 9
+    quote: "Dans ce cas, il doit produire pour chacun des opérateurs les mêmes documents et renseignements qui lui sont demandés, ainsi qu’un engagement écrit de ceux-ci justifiant de leurs capacités pour l’exécution des prestations."
+    summary: "A bidder relying on another operator's capacity must supply that operator's documents plus its written commitment."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Capacity lending only."
+
+  - id: FR-C03
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 11
+    quote: "En cas de sous-traitance déclarée, le candidat doit fournir à l’appui de son offre, la liste nominative des sous-traitants auxquels il envisage de confier l’exécution de certaines prestations."
+    summary: "A bidder declaring subcontracting must list the subcontractors with its tender."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Subcontracting only. The DC4 form and the per-subcontractor powers and judgments on the same page follow from this."
+
+  - id: FR-C04
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+    page: 17
+    quote: "Dans le cas où l’attributaire est un groupement d’opérateurs économiques représenté par un mandataire, une habilitation signée justifiant la capacité du mandataire à représenter les autres membres du groupement ;"
+    summary: "A consortium awardee must supply a signed authorisation for its lead member."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Groupement only."

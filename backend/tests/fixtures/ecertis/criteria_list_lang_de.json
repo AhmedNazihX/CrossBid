@@ -1,0 +1,70 @@
+{
+    "criterion": [
+        {
+            "Id": {
+                "value": "c27b7c4e-c837-4529-b867-ed55ce639db5"
+            },
+            "CriteriaTypeID": {
+                "value": "3"
+            },
+            "Name": {
+                "value": "Korruption (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Bestechung im Sinne des Artikel 3 des Übereinkommens über die Bekämpfung der Bestechung, an der Beamte der Europäischen Gemeinschaften oder der Mitgliedstaaten der Europäischen Union beteiligt sind, ABl. C 195 vom 25.6.1997 und Artikel 2 Absatz 1 des Rahmenbeschlusses 2003/568/JHA des Rates vom 22. Juli 2003 zur Bekämpfung der Bestechung im privaten Sektor (ABl. L 192 vom 31.7.2003). Dieser Ausschlussgrund umfasst auch Bestechung im Sinne des nationalen Rechts des öffentlichen Auftraggebers oder des Wirtschaftsteilnehmers. (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "DomainID": {
+                "value": "eproc"
+            },
+            "VersionID": {
+                "value": "5"
+            }
+        },
+        {
+            "Id": {
+                "value": "499efc97-2ac1-4af2-9e84-323c2ca67747"
+            },
+            "CriteriaTypeID": {
+                "value": "8"
+            },
+            "Name": {
+                "value": "Allgemeiner Jahresumsatz (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Der allgemeine Jahresumsatz des Wirtschaftsteilnehmers in der in der einschlägigen Bekanntmachung, in den Auftragsunterlagen oder in der EEE verlangten Anzahl von Geschäftsjahren betrug: (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "DomainID": {
+                "value": "eproc"
+            },
+            "VersionID": {
+                "value": "2"
+            }
+        },
+        {
+            "Id": {
+                "value": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4"
+            },
+            "CriteriaTypeID": {
+                "value": "4"
+            },
+            "Name": {
+                "value": "Entrichtung von Steuern\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "Description": {
+                "value": "Hat der Wirtschaftsteilnehmer gegen seine Verpflichtungen im Zusammenhang mit der Entrichtung von Steuern sowohl in seinem Niederlassungsstaat als auch in dem Mitgliedstaat des öffentlichen Auftraggebers oder Sektorenauftraggebers – sofern es sich um einen anderen Staat als den Niederlassungsstaat handelt – verstoßen?\n (Automatische Übersetzung)",
+                "languageID": "de"
+            },
+            "DomainID": {
+                "value": "eproc"
+            },
+            "VersionID": {
+                "value": "3"
+            }
+        }
+    ]
+}

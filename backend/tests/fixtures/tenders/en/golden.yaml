@@ -1,0 +1,799 @@
+# =============================================================================
+#  UNVERIFIED DRAFT — DO NOT USE AS A SCORING REFERENCE YET.
+#
+#  Every label below was drafted by an LLM (Claude, Opus 5) reading the parsed
+#  PDF text. NO HUMAN HAS CHECKED THE JUDGEMENT CALLS YET: the category / kind /
+#  stage / checkable assignments, the thresholds and the requirement/conditional
+#  split are all machine drafts. Only the `quote` fields are mechanically
+#  guaranteed (see `method`); the *meaning* attached to each quote is not.
+#
+#  S6.4 is closed only when a human has reviewed this file and set
+#  `verified_by` / `verified_on` and `labelled_by: llm_assisted_human_verified`.
+#  Until then no recall or precision figure computed against this file means
+#  anything.
+# =============================================================================
+
+meta:
+  ted_publication_number: "606362-2026"
+  fixture_dir: tests/fixtures/tenders/en
+  source_language: en
+  labelled_by: llm_draft
+  verified_by: pending
+  verified_on: null
+  labelled_on: 2026-09-11
+  story: S6.4
+  method: |
+    How these labels were produced, exactly.
+
+    1. Every PDF in `tests/fixtures/tenders/en/` and `.../en/documents/` was read
+       with the repository's own parser, `crossbid.ingestion.pymupdf_parser.PyMuPDFParser`
+       (pymupdf4llm, `page_chunks=True`, one entry per page, `.strip()`ed), so the
+       `page` numbers here are the page numbers extraction will see. Six PDFs,
+       138 pages, zero unread pages: notice 5 pp, Invitation 5 pp, Tender
+       Specifications 50 pp / 106 302 chars, Draft Framework Service Contract 50 pp,
+       Appendix 2 10 pp, Appendix 3 15 pp, Annex 9 3 pp.
+    2. Every `quote` is a LITERAL SUBSTRING of that parser's output for the cited
+       page — not of `page.get_text()`, and not of the PDF as a human reads it.
+       That distinction is load-bearing here, because EASA states its selection
+       criteria in TABLES, and pymupdf4llm renders a table cell's internal line
+       breaks as the literal string `<br>` and bold runs as `**`. Several quotes
+       below therefore contain `<br>` or `**` inside them. That is not corruption
+       and must not be "cleaned up": it is exactly the text an extractor will see,
+       and removing it would make the quote fail a verbatim check. Where the
+       artefact could be avoided without losing the clause the quote was trimmed
+       instead. No quote was retyped, reflowed or re-spaced. Each was re-checked
+       against the parsed page by script after the file was written, and the file
+       must parse with `pyyaml`.
+    3. `summary` is English because the source is English; it restates, it does not
+       translate.
+    4. eCertis: EVERY row is `null`, deliberately and not for lack of trying. This
+       procedure runs under Article 138 of the EU Financial Regulation
+       (Reg. (EU, Euratom) 2024/2509), not Directive 2014/24/EU, and the Tender
+       Specifications say in footnote 12 on page 18 that "The European Single
+       Procurement Document (ESPD) may not be used yet in calls for tenders of the
+       European Union Aviation Safety Agency (EASA)". Art. 138's grounds overlap
+       Art. 57's but are not the same set — (e) deficiencies in an EU-financed
+       commitment, (i) resisting an audit, and the EDES database have no Art. 57
+       equivalent — so no id is determinate and eCertis cannot map this tender.
+       This fixture is the control case for exactly that: the matrix must degrade
+       to an honest "insufficient evidence" rather than invent an equivalence.
+    5. KNOWN GAP, for the verifier to rule on, and it is the biggest one in this
+       file. Per the fixture's SOURCES.md the pack carries 20 criteria, of which
+       14 are exclusion criteria — and all 14 are enumerated in
+       `documents/Annex_2_Declaration_on_Honour_exclusion_and_selection_criteria_V1.docx`,
+       which is a .docx. The repository parser (S2.1.1) is PDF-only, so no
+       page-anchored, verifiable quote can be taken from it, and the 14 grounds are
+       therefore NOT labelled one by one here. They enter this file only through
+       the umbrella obligations quoted from Tender Specifications §3.1 (EN-012,
+       EN-013, EN-014). Per-ground exclusion recall for this fixture cannot be
+       scored until either the schema admits a non-PDF source or the pack's .docx
+       files are parsed. That is a decision for a human, not for this draft.
+    6. Scope follows SP.1 (`backend/scripts/spike_golden_de.yaml`): the base case is
+       a single bidder submitting alone. Obligations that bind only a joint tender,
+       a group leader, an identified subcontractor, or an entity on whose capacity
+       the tenderer relies are listed under `conditional_not_scored`, not scored.
+  # These two lists partition the fixture's PDFs (the pack plus the notice one level
+  # up) and are validated to do so. They name PDFs only, so the pack's three non-PDF
+  # files appear in neither: `Annex_2_Declaration_on_Honour_exclusion_and_selection_criteria_V1.docx`
+  # (all 14 exclusion grounds), `Annexes_3-8_V1.docx` (Annex 7 T3 statement, Annex 8 F1
+  # form) and `Annex_6_Model_Financial_Offer_V1.xlsx`. All three are requirement-bearing
+  # and none is labelled, because the PDF-only parser cannot page-anchor them — method
+  # step 5, and the first thing a verifier should rule on.
+  documents_scanned:
+    - Invitation_to_tender_V1.pdf
+    - Tender_Specifications_V1.pdf
+    - Annex_9_Simulation_exercise_V1.pdf
+  documents_excluded:
+    606362-2026.notice.en.pdf: "Read in full. eForms notice; §2.1.6 and §5.1.9 both answer 'Procurement Document' and it states no exclusion or selection criterion at all (ADR-0006). Its deadline and language fields restate the Invitation and Tender Specifications, labelled there."
+    Draft_Framework_Service_Contract_V1.pdf: "Read in full (50 pp). Terms binding the signed contractor throughout; it creates no bid-eligibility obligation of its own."
+    Appendix_2_to_the_Draft_Framework_Service_Contract_V1.pdf: "Read in full. Security requirements for contractors during performance; its bid-stage effect is selection criterion T3, quoted from the Tender Specifications (EN-036)."
+    Appendix_3_to_the_Draft_Framework_Service_Contract_V1.pdf: "Read in full. EASA security baseline for external connections during performance; same as Appendix 2 — reaches the bid stage only through T3."
+
+requirements:
+  # ---- Invitation to tender: how and when a tender is submitted ----
+  - id: EN-001
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Invitation_to_tender_V1.pdf
+    page: 1
+    quote: "Tenders must be submitted exclusively via the electronic submission system (eSubmission) available from the above website"
+    summary: "Tenders must be submitted through eSubmission; any other route is disregarded."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-002
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: neither
+    doc: Invitation_to_tender_V1.pdf
+    page: 1
+    quote: "Economic operators interested in this contract are invited to submit a tender in one of the official languages of the European Union, preferably in English."
+    summary: "The tender may be in any official EU language; English is preferred."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "kind=optional because the English preference is a preference. The underlying duty (an official EU language) is mandatory and is restated as an administrative-compliance check on Tender Specifications p.17. A good test that an extractor does not read 'preferably' as a rule."
+
+  - id: EN-003
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Invitation_to_tender_V1.pdf
+    page: 2
+    quote: "A tender received after this time-limit for receipt of tenders will be rejected."
+    summary: "Late tenders are rejected; the eSubmission timestamp is the proof of timeliness."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The deadline itself (2026-10-12 10:00 UTC+02:00) is in the contract notice, not here; the schema has no deadline field."
+
+  - id: EN-004
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Invitation_to_tender_V1.pdf
+    page: 2
+    quote: "Tenderers must ensure that their submitted tenders contain all the information and documents required by the contracting authority at the time of submission as set out in the procurement documents."
+    summary: "The tender must be complete at the moment of submission."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-005
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Invitation_to_tender_V1.pdf
+    page: 2
+    quote: "No more than one tender can be considered per tenderer"
+    summary: "Only one tender per tenderer is considered; if several are submitted, only the latest counts."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-006
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: neither
+    doc: Invitation_to_tender_V1.pdf
+    page: 3
+    quote: "Contacts between the contracting authority and tenderers are prohibited throughout the procedure save in exceptional circumstances and under the following conditions only:"
+    summary: "Contact with the contracting authority is prohibited except through the defined channels."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-007
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Invitation_to_tender_V1.pdf
+    page: 3
+    quote: "the tenderer must provide the full name, date of birth, nationality and ID or passport number of their representative(s)"
+    summary: "A tenderer attending the opening session must give its representatives' identity details at least two working days in advance."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "kind=optional: conditional on choosing to attend the opening session, which is not required."
+
+  - id: EN-008
+    category: formal
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Invitation_to_tender_V1.pdf
+    page: 2
+    quote: "All costs incurred for the preparation and submission of tenders as well as for attending the opening session are to be borne by the tenderers and will not be reimbursed."
+    summary: "Tendering costs are not reimbursed."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Informational: states who bears a cost, imposes no checkable obligation."
+
+  # ---- Tender Specifications §1: content obligations that reach the tender ----
+  - id: EN-009
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 32
+    quote: "the tenderer must clearly indicate in their offer whether generative AI systems/models such as Large Language Models (e.g. ChatGPT), were utilised in the preparation of their offers."
+    summary: "The tender must state whether generative AI was used to prepare it."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "§1.4.3 on page 6 sets the corresponding contract-performance duty (an explicit AI statement in every deliverable); this row is the bid-stage half."
+
+  # ---- Tender Specifications §2: who may submit ----
+  - id: EN-010
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 11
+    quote: "Tenderers must ensure that no involved entities (see Section 2.4) nor any subcontractors, including those which do not need to be identified in the tender (see Section 2.4.2), are subject to"
+    summary: "Neither the tenderer nor any involved entity or subcontractor may be subject to EU restrictive measures under TEU art. 29 / TFEU art. 215."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The quote stops before '<u>EU restrictive measures</u>' because the parser renders the link as markup. Sanctions screening has no ESPD criterion; it is a Financial Regulation rejection ground."
+
+  - id: EN-011
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 11
+    quote: "This procurement procedure is open on equal terms to any natural or legal person wishing to bid for the assignment and established in any of the European Union Member States, Norway, Iceland, Liechtenstein or Switzerland."
+    summary: "Access to the procedure requires establishment in an EU Member State, Norway, Iceland, Liechtenstein or Switzerland."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The same page states the WTO Government Procurement Agreement does NOT apply here, so GPA countries are excluded — unusual and worth checking."
+
+  - id: EN-012
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 11
+    quote: "each tenderer must indicate its country of establishment (in case of a joint tender – the country of establishment of each group member) and must present the supporting evidence normally acceptable under the law of that country."
+    summary: "The tenderer must state its country of establishment and supply the evidence normally acceptable there."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "'Normally acceptable under the law of that country' is EASA's own equivalence rule — the analogue of the French RC's §14.4.1, and the cross-border hook in this fixture."
+
+  - id: EN-013
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 12
+    quote: "Any economic operator willing to participate in this call for tenders must be registered in the <u>Participant Register</u>"
+    summary: "The tenderer must be registered in the EU Participant Register and hold a PIC."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The `<u>` markup is the parser's rendering of the hyperlink and is part of the verbatim text on this page."
+
+  - id: EN-014
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 12
+    quote: "Each participant needs to ensure that its SME status in the Participant Register is registered and kept up to date."
+    summary: "The tenderer's SME status in the Participant Register must be registered and current."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-015
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 12
+    quote: "Tenders must be drawn and submitted in complete independence and autonomously from the other tenders."
+    summary: "The tender must be prepared independently of every other tender in this procedure."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Declared in Annex 2 Part E (12)(a). One of the five further rejection grounds counted in SOURCES.md."
+
+  - id: EN-016
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 12
+    quote: "A natural or legal person cannot participate at the same time and within the same procedure either as member of two or more groups of economic operators or as a sole tenderer and member of another group of economic operators."
+    summary: "A person may not appear in this procedure both as a sole tenderer and as a group member, or in two groups."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Breach rejects every tender that person is in."
+
+  # ---- Tender Specifications §3.1: exclusion criteria ----
+  - id: EN-017
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 17
+    quote: "The objective of the exclusion criteria is to assess whether the tenderer is in any of the exclusion situations listed in Article 138(1) of the Financial Regulation."
+    summary: "The tenderer must be in none of the exclusion situations of Article 138(1) of the Financial Regulation."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "THE umbrella row for this fixture's 14 exclusion grounds. The nine lettered situations of Art. 138(1) and the five further declarations are enumerated in Annex 2 (.docx), which the PDF-only parser cannot page-anchor — see method step 5. Deliberately null on eCertis: Art. 138 is not Art. 57."
+
+  - id: EN-018
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 18
+    quote: "The documents mentioned in the Declaration on Honour as supporting evidence on non-exclusion must be provided with the tender"
+    summary: "The supporting evidence named in the Declaration on Honour must accompany the tender."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The Declaration on Honour itself (Annex 2) must be signed and submitted; page 17 states that duty, page 18 the evidence duty."
+
+  - id: EN-019
+    category: exclusion_ground
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Tender_Specifications_V1.pdf
+    page: 18
+    quote: "The initial verification of non-exclusion of tenderers will be done on the basis of the submitted declarations and consultation of the European Union's Early Detection and Exclusion System."
+    summary: "Non-exclusion is verified against the declarations and the EU Early Detection and Exclusion System (EDES)."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Informational: it describes the buyer's procedure, not a bidder duty. EDES has no Directive 2014/24/EU or eCertis analogue at all."
+
+  # ---- Tender Specifications §3.2: selection criteria ----
+  - id: EN-020
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 19
+    quote: "When submitting its tender each tenderer shall declare on honour that it fulfils the selection criteria for this call for tenders."
+    summary: "The tenderer must declare on honour that it meets the selection criteria."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-021
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 19
+    quote: "Tenderers must prove that they have the legal capacity to perform the contract and the regulatory capacity to pursue the professional activity necessary to carry out the work subject to this call for tenders."
+    summary: "Selection criterion §3.2.1: legal and regulatory capacity to perform the contract."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "category=formal because RequirementCategory has no legal/regulatory member; flagged for the verifier as the one place the enum does not fit the source."
+
+  - id: EN-022
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 19
+    quote: "a duly filled in and signed **Business Partners Form**"
+    summary: "A completed and signed Business Partners Form must be submitted as legal-capacity evidence."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The `**` is the parser's rendering of the bold run and is part of the verbatim text."
+
+  - id: EN-023
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 20
+    quote: "a copy of any official document (i.e. official gazette, register of companies etc.) showing the individual’s / contractor’s name and address and the registration number given to it by the national authorities."
+    summary: "An official registration document showing name, address and national registration number."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "For the demo German GmbH this is the Handelsregisterauszug. No ESPD criterion, because this tender does not use the ESPD."
+
+  - id: EN-024
+    category: formal
+    kind: optional
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 20
+    quote: "a copy of the VAT registration document (if applicable) should be submitted if the VAT number does not appear on the official document referred to above;"
+    summary: "A VAT registration document, if the VAT number is not on the registration document."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "kind=optional: doubly conditional ('if applicable', and only if the number is missing elsewhere)."
+
+  - id: EN-025
+    category: economic_financial
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 20
+    quote: "Average yearly turnover of the last two financial years above<br>EUR 1 500 000."
+    summary: "Selection criterion F1: average yearly turnover of the last two financial years above EUR 1 500 000."
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 1500000
+      unit: currency
+      currency: EUR
+      period: average_of_last_two_financial_years
+    notes: "The `<br>` is the parser's table-cell line break; trimming it would drop the figure, so it is kept. Strictly the text says 'above', i.e. greater than, while ThresholdComparator.AT_LEAST is >= — an off-by-a-cent the verifier should rule on. The demo GmbH (~EUR 2.8m) clears this."
+
+  - id: EN-026
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 20
+    quote: "All of the above-specified evidence of economic and financial capacity must be provided with the tender."
+    summary: "The F1 evidence (completed Annex 8) must accompany the tender."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The Annex 8 turnover table is reproduced on page 50 of this same PDF."
+
+  - id: EN-027
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 21
+    quote: "at least**two projects**involving publicly"
+    summary: "Selection criterion T1: at least two projects involving publicly accessible Drupal-based platforms."
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 2
+      unit: references
+    notes: "The `**` are the parser's bold markers inside a table cell and the words are run together in the parser output exactly as quoted; this is the clause an extractor will actually see. Sub-conditions are labelled separately as EN-028 to EN-031."
+
+  - id: EN-028
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 21
+    quote: "minimum contract value of EUR 100 000, and being comparable"
+    summary: "Each T1 reference project must have a contract value of at least EUR 100 000."
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 100000
+      unit: currency
+      currency: EUR
+      period: per_project
+    notes: "A per-reference threshold, not a company-level one — the Threshold model has no way to say that, hence the period string."
+
+  - id: EN-029
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 21
+    quote: "High traffic volume, i.e. at least 2500 pageviews per day;"
+    summary: "Each T1 reference project must show at least 2 500 pageviews per day."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "ThresholdUnit has no pageviews member. This is the row ADR-0003's `checkable` flag exists for: it is a property of a past project, not of the company, and RAG over a company corpus will very likely not find it. Marked company_property because it is still a fact about the bidder's record rather than a form to attach — the verifier should confirm that reading."
+
+  - id: EN-030
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 21
+    quote: "At least 5 Drupal content<br>types;"
+    summary: "Each T1 reference project must show at least 5 Drupal content types."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "`<br>` kept because trimming it would leave a fragment with no verb. Same checkability problem as EN-029."
+
+  - id: EN-031
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 21
+    quote: "Modern infrastructure, such as container-based hosting"
+    summary: "Each T1 reference project must run on container, PaaS/SaaS or equivalent cloud-native infrastructure."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The identical sentence appears on page 22 for T2; the two are distinct obligations and are labelled separately (EN-035)."
+
+  - id: EN-032
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 21
+    quote: "during the three years<br>preceding the deadline for submission of tenders"
+    summary: "T1 reference projects must fall in the three years before the submission deadline."
+    ecertis_criterion_id: null
+    threshold:
+      comparator: max_age
+      value: 3
+      unit: years
+    notes: "The same phrase recurs on page 22 for T2. Cited here on page 21 for T1; EN-033 carries the T2 occurrence."
+
+  - id: EN-033
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 22
+    quote: "at least one project involving a restricted-access"
+    summary: "Selection criterion T2: at least one restricted-access (login-required) Drupal platform project in the last three years."
+    ecertis_criterion_id: null
+    threshold:
+      comparator: at_least
+      value: 1
+      unit: references
+    notes: "The three-year window is stated in the same cell, quoted on page 22 as 'during the three years<br>preceding the deadline for submission of tenders'."
+
+  - id: EN-034
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 22
+    quote: "User login required with role-based access controls and"
+    summary: "The T2 reference project must show login with role-based access control and rights administration."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-035
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 22
+    quote: "Multi-step workflows (enabling specific user groups to"
+    summary: "The T2 reference project must show multi-step create/process/approve workflows."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The third T2 characteristic (modern infrastructure) is the page-22 occurrence of the sentence quoted for T1 in EN-031."
+
+  - id: EN-036
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 23
+    quote: "Compliance with Appendix 2 and Appendix 3 of the draft<br>Contract and availability of a responsible IT Security<br>Manager (including backup)."
+    summary: "Selection criterion T3: compliance with the security appendices and a named IT Security Manager with a backup."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The `<br>`s are table-cell line breaks. Evidence is the Annex 7 confirmation statement, reproduced on page 49 of this PDF. EN-037 records that T3 evidence alone is NOT filed with the tender."
+
+  - id: EN-037
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 24
+    quote: "All other (T1 and T2) of the above-specified evidence of technical and professional capacity must be provided with the tender."
+    summary: "T1 and T2 evidence must be filed with the tender; T3 evidence only on request."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The preceding sentence on the same page carves T3 out. An extractor that demands the Annex 7 statement with the tender has got this wrong."
+
+  - id: EN-038
+    category: exclusion_ground
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 24
+    quote: "must not be subject to professional conflicting interests which may negatively affect the contract performance."
+    summary: "The tenderer must be free of professional conflicting interests."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The sentence extends the duty to involved entities and all subcontractors; that extension is in conditional_not_scored. The base-case duty on the sole tenderer is scored here."
+
+  # ---- Tender Specifications §3.3 and §4: the tender itself ----
+  - id: EN-039
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 25
+    quote: "Tenderers must declare when submitting their tenders in eSubmission whether their tenders comply with the minimum requirements specified in the procurement documents."
+    summary: "The tenderer must declare compliance with the procurement documents' minimum requirements."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The same page states that non-compliant tenders are rejected and that compliance cannot be qualified by any reservation."
+
+  - id: EN-040
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 25
+    quote: "The Technical Offer shall not exceed 80 pages (A4 format, minimum font size 11, single spacing)."
+    summary: "The technical offer is capped at 80 A4 pages, font 11, single spaced."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "ThresholdUnit has no pages member, so the 80 is not typed. Pages beyond the cap are simply not evaluated."
+
+  - id: EN-041
+    category: other
+    kind: informational
+    stage: bid_eligibility
+    checkable: neither
+    doc: Tender_Specifications_V1.pdf
+    page: 25
+    quote: "Only tenders scoring **70 points or more** (of a maximum of 100 points) against the technical award criteria will have their financial offer evaluated."
+    summary: "A technical score of at least 70/100 is needed before the financial offer is opened."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "kind=informational: an award-stage gate on the evaluation, not a property of the bidder that can be checked before bidding. The `**` are parser bold markers. A 30/38 sub-threshold on the simulation exercise is stated two sentences later."
+
+  - id: EN-042
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 26
+    quote: "the tenderer shall submit a separate image file for each mockup in a standard image format (i.e. jpg, png). Links to online design tools or cloud-based design platforms shall not be accepted as a substitute for the required image files."
+    summary: "Each mock-up must be a separate jpg or png file; links to design tools are not accepted."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-043
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 32
+    quote: "A complete financial tender, including the breakdown of the price, needs to be submitted. For this purpose, the Annex 6 - Model financial offer shall be used."
+    summary: "A complete financial tender must be submitted on the Annex 6 model."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: null
+
+  - id: EN-044
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 32
+    quote: "Where a document needs to be signed, the signature must be either hand-written or, preferably, a qualified electronic signature (QES) as defined in"
+    summary: "Signed documents need a handwritten signature or, preferably, an eIDAS qualified electronic signature."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "The quote stops before the `<u>`-wrapped eIDAS link. Unlike the French tender, EASA accepts a handwritten signature outright."
+
+  - id: EN-045
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 33
+    quote: "All documents must be signed by the signatories (when they are individuals) or by their duly authorised representatives."
+    summary: "Every document must be signed by the signatory or a duly authorised representative."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Evidence of the delegation of authority to sign must accompany the Declaration on Honour (same page)."
+
+  # ---- Annex 9: the simulation exercise ----
+  - id: EN-046
+    category: other
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Annex_9_Simulation_exercise_V1.pdf
+    page: 1
+    quote: "The proposed mock-ups shall demonstrate, at a minimum, the following core functionalities:"
+    summary: "The simulation-exercise mock-ups must demonstrate the listed core functionalities (map display, table display, and the rest)."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Award-criterion content rather than a selection criterion, but a genuine mandatory submission duty, so it is scored. It is also the criterion carrying the 30/38 sub-threshold."
+
+  # ---- Obligations that only bite after award (stage discriminator, ADR-0003) ----
+  - id: EN-047
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 9
+    quote: "When performing tasks for the contracting authority in execution of the contract, the contractor and its personnel shall comply with the contracting authority's applicable security requirements."
+    summary: "During performance the contractor and its staff must meet EASA's security requirements, at the contractor's own cost."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Contract-performance by the ADR-0003 test: a bidder that never wins never does this. Its bid-stage shadow is selection criterion T3 (EN-036), which is scored."
+
+  - id: EN-048
+    category: other
+    kind: mandatory
+    stage: contract_performance
+    checkable: neither
+    doc: Tender_Specifications_V1.pdf
+    page: 9
+    quote: "The contractor must assist the contracting authority in its efforts on fraud prevention and detection."
+    summary: "The contractor must assist EASA on fraud prevention and detection and impose the same duties on its subcontractors and staff."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Contract-performance. Kept as a negative case so the stage discriminator has something to get wrong in this fixture — SP.1 over-extracted exactly this kind of clause (ADR-0003)."
+
+# Obligations that bind only a joint tender, a group leader, an identified
+# subcontractor, or an entity on whose capacity the tenderer relies. Out of scope
+# for the base case (a single bidder submitting alone), kept so a later run can
+# score them.
+conditional_not_scored:
+  - id: EN-C01
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 33
+    quote: "(in the case of a joint tender) the Agreement/Power(s) of attorney drawn up using the model attached in **_Annex 3_**"
+    summary: "A joint tender must supply the Annex 3 agreement or powers of attorney."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Joint tender only."
+
+  - id: EN-C02
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 15
+    quote: "Each tenderer shall identify such subcontractors and provide the commitment letters with its tender."
+    summary: "Identified subcontractors (those relied on for the selection criteria, or above a 15% share) must be named on Annex 4 and supply Annex 5.1 commitment letters with the tender."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Subcontracting only. The 15% trigger and the Annex 4 duty are stated in the preceding paragraphs of the same page."
+
+  - id: EN-C03
+    category: formal
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: document_submission
+    doc: Tender_Specifications_V1.pdf
+    page: 16
+    quote: "If a successful tenderer intends to rely on another entity to meet the minimum levels of economic and financial capacity, the contracting authority may require the entity to sign the contract or, alternatively, to provide a joint and several first-call financial guarantee for the performance of the contract."
+    summary: "An entity whose financial capacity is relied on may be required to sign the contract or give a first-call guarantee."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Capacity lending only."
+
+  - id: EN-C04
+    category: technical_professional
+    kind: mandatory
+    stage: bid_eligibility
+    checkable: company_property
+    doc: Tender_Specifications_V1.pdf
+    page: 16
+    quote: "With regard to technical and professional selection criteria, a tenderer may rely on the capacities of other entities only when these entities will perform the works or services for which these particular capacities are required."
+    summary: "Technical capacity may only be borrowed from an entity that will actually perform the work."
+    ecertis_criterion_id: null
+    threshold: null
+    notes: "Capacity lending only."

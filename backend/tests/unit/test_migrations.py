@@ -24,6 +24,7 @@ import scripts.migrate as migrate
 from crossbid.models import (
     BidStatus,
     Checkability,
+    CompanyProfile,
     Decision,
     DocumentKind,
     LegalForm,
@@ -35,6 +36,7 @@ from crossbid.models import (
     RowStatus,
     Tone,
 )
+from crossbid.models.company import COUNTRY_PATTERN
 from crossbid.readmodel.documents import DocumentStatus
 
 MIGRATIONS_DIR = Path(migrate.__file__).resolve().parent.parent / "migrations"
@@ -58,6 +60,10 @@ CONSTRAINT_ENUMS: dict[str, type[enum.Enum]] = {
     "reviews_decision_check": Decision,
     "documents_status_check": DocumentStatus,  # 0002 (S2.2.3)
 }
+
+
+REGEX_CHECK = re.compile(r"check\s*\(\s*(\w+)\s*~\s*'([^']+)'\s*\)")
+"""Column-level `check (col ~ 'regex')` constraints, which the enum parity above cannot see."""
 
 
 def _sql() -> str:
@@ -125,6 +131,29 @@ def test_every_enum_backed_column_is_covered_by_a_parity_check() -> None:
     assert declared <= set(CONSTRAINT_ENUMS), (
         "these check constraints use an `in (...)` value list but have no parity test: "
         f"{sorted(declared - set(CONSTRAINT_ENUMS))}"
+    )
+
+
+def test_a_regex_checked_column_is_mirrored_in_the_field_that_writes_it() -> None:
+    """A pattern the model allows and the column refuses is a 500, not a 422.
+
+    `companies.country` is the one column whose check is a regex rather than a value list, so
+    the enum parity above does not cover it: `CompanyProfile.country` bounded only the length,
+    `'DE'` passed Pydantic, and Postgres answered with a `CheckViolation` that
+    `PUT /companies/me` had no handler for. The two texts are compared rather than the two
+    behaviours because the migration is applied by a script that never imports the package.
+    """
+    # Arrange
+    declared = CompanyProfile.model_json_schema()["properties"]["country"]["pattern"]
+
+    # Act
+    checked = dict(REGEX_CHECK.findall(_sql()))
+
+    # Assert
+    assert declared == COUNTRY_PATTERN
+    assert checked == {"country": COUNTRY_PATTERN}, (
+        "a column is constrained by a regex that no Pydantic field mirrors: "
+        f"{sorted(set(checked) - {'country'})}"
     )
 
 

@@ -1,4 +1,5 @@
 import { AnalyseTenderLink, ContactLink } from './actions'
+import { BrandReveal } from './brand-reveal'
 import { ProductFrame } from './product-frame'
 
 /**
@@ -10,6 +11,12 @@ import { ProductFrame } from './product-frame'
  *
  * The headline scales with `clamp(36px, 9vw, 64px)` so it never breaks a 320 px screen, and
  * the pill is allowed to wrap there.
+ *
+ * `BrandReveal` is the one element here with no artboard behind it — added after the canvas
+ * was confirmed (ADR-0014). It is cropped to the mark alone, so the headline below is not
+ * repeated by the clip's own tagline. The pill runs **above** it rather than between it and
+ * the headline: the artboard's order put the pill first, and with the clip in front of it
+ * the two crowded each other.
  */
 export function Hero() {
   return (
@@ -25,6 +32,7 @@ export function Hero() {
           </span>
           Certificate equivalence via eCertis for all 27 member states
         </p>
+        <BrandReveal />
         <h1 className="mx-auto max-w-[820px] text-balance text-[length:clamp(36px,9vw,64px)] font-semibold leading-[1.05] tracking-tighter">
           Know if you can win before you write a word.
         </h1>

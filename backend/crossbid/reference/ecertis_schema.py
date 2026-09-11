@@ -18,17 +18,37 @@ cache. Nothing here imports anything else from `crossbid`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_serializer,
+    field_validator,
+)
 
 CACHE_SCHEMA_VERSION = 1
-"""Bumped when the `Cached*` shape changes, so a stale committed file is detectable."""
+"""Bumped when the `Cached*` shape changes, so a stale committed file is detectable.
+
+Deliberately *not* bumped by S1.1.2. The bidder-language overlay is a separate file
+(`LocalisationCache`) precisely so that `criteria.json`, `evidence_de.json` and
+`evidence_fr.json` stay byte-identical: `criteria.json` is what the generated
+`EcertisCriterionId` Literal is rendered from, and every one of the three carries a
+`content_sha256` that a schema bump would churn for text none of their readers use.
+"""
 
 ECERTIS_SPEC_VERSION = "0.6"
 
 NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
 CountryCode = Annotated[str, StringConstraints(pattern=r"^[a-z]{2}$")]
+LanguageCode = Annotated[str, StringConstraints(pattern=r"^[a-z]{2}$")]
+"""ISO 639-1. Same shape as a country code, a different thing — `de` the language is the
+bidder's words, `de` the country is whose registry issues the paper, and S1.1.2 crosses
+them (a German firm reading a French tender asks for `country=fr, language=de`)."""
 
 # --------------------------------------------------------------------------- wire
 
@@ -248,3 +268,57 @@ class EvidenceCache(CacheHeader):
 
     country: CountryCode
     criteria: tuple[CachedCriterionEvidence, ...]
+
+
+class CachedLocalisation(CacheStrict):
+    """One eCertis entity's text in a bidder language, as eCertis itself sends it.
+
+    Only the three fields a bidder reads off the answer: what the paper is called, what it
+    says it is for, and who issues it. Everything structural -- ids, type codes,
+    jurisdictions, validity, URLs -- is language-independent and already in the English
+    cache, so repeating it here would only be a second thing to keep in step.
+
+    The text is kept **verbatim**, machine-translation marker and all. eCertis appends
+    `(Automatische Übersetzung)` to strings it translated rather than sourced, and that is
+    exactly what a reviewer deciding whether to trust a term needs to see.
+    """
+
+    name: str
+    description: str
+    issuers: tuple[str, ...]
+
+
+class LocalisationCache(CacheHeader):
+    """`l10n_{lang}.json` -- one flat overlay keyed on the eCertis UUID.
+
+    Flat because all three eCertis id spaces are UUIDs and none of them collide (56 EU
+    criteria, 172 national sub-criteria and 89 evidences across DE and FR, zero overlap,
+    measured 2026-09-11), so one map serves criterion, sub-criterion and evidence alike and
+    a lookup never has to know which kind of thing it is holding.
+
+    Separate from `EvidenceCache` rather than a field on it: the English files are what the
+    generated criterion Literal and the content hashes are pinned to, and a language is
+    something you add later without reopening them.
+    """
+
+    language: LanguageCode
+    entries: Mapping[str, CachedLocalisation]
+
+    @field_validator("entries", mode="after")
+    @classmethod
+    def _freeze_entries(
+        cls, value: Mapping[str, CachedLocalisation]
+    ) -> Mapping[str, CachedLocalisation]:
+        """The loaded cache is memoised and shared, so the map has to be read-only too.
+
+        `frozen=True` only stops the *field* being reassigned; the dict behind it would
+        still be editable by anyone holding the shared instance.
+        """
+        return MappingProxyType(dict(value))
+
+    @field_serializer("entries")
+    def _dump_entries(
+        self, value: Mapping[str, CachedLocalisation]
+    ) -> dict[str, CachedLocalisation]:
+        """pydantic-core cannot serialise a `mappingproxy`; hand it the dict underneath."""
+        return dict(value)

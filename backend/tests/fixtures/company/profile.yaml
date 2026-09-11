@@ -1,0 +1,80 @@
+# Demo company profile - Story S6.3. Parses straight into `crossbid.models.company.CompanyProfile`.
+#
+# Beispiel IT Services GmbH does not exist. Every name, number and address below is invented,
+# and so is every document in `documents/`, which is rendered from these facts by
+# `scripts/build_demo_company_pack.py`. This file is the generator's *input*: the turnover and
+# headcount printed on the Eigenerklaerung pages are read from here, so the structured profile
+# and the retrievable evidence cannot drift apart.
+#
+# The figures are chosen against the DE tender fixture (tests/fixtures/tenders/de/,
+# Kriterienkatalog_Eignung), which demands at least 3.000.000 EUR turnover per year in the
+# field of the contract and at least 29 VZÄ of average staff:
+#   * turnover clears the threshold in all three years  -> that criterion is supported;
+#   * 25,0 VZÄ misses the 29 VZÄ minimum              -> one concrete, checkable gap.
+# One supported and one unsupported criterion is what makes the S7.4 no-go walkthrough legible.
+
+name: Beispiel IT Services GmbH
+country: de
+legal_form: gmbh
+registration_number: HRB 214877
+registration_court: Amtsgericht Musterstadt (fiktives Registergericht)
+
+language: de
+tone: plain
+
+# Average over the last three fiscal years, from the Eigenerklaerung page. `staff_fte_relevant`
+# is the headcount in the field of the contract, which is the number a tender actually asks for.
+staff_fte: 25.0
+staff_fte_relevant: 21.5
+
+# Oldest first, so a reader sees the trend. `field_of_activity` matters: tenders ask for
+# turnover in the field of the contract, not total revenue.
+turnover:
+  - year: 2023
+    amount: 3420000.0
+    currency: EUR
+    field_of_activity: IT-Beratungsleistungen
+  - year: 2024
+    amount: 3985000.0
+    currency: EUR
+    field_of_activity: IT-Beratungsleistungen
+  - year: 2025
+    amount: 4310000.0
+    currency: EUR
+    field_of_activity: IT-Beratungsleistungen
+
+certificates:
+  - name: ISO/IEC 27001:2022
+    issuer: Musterzert Zertifizierungsgesellschaft mbH (fiktive Zertifizierungsstelle)
+    number: MZ-ISMS-2024-0417
+    issued_on: 2024-06-14
+    expires_on: 2027-06-13
+    scope: Beratung, Planung, Aufbau und Betrieb von Netzwerk- und Informationstechnik sowie IT-Sicherheit
+
+  - name: Betriebs- und Berufshaftpflichtversicherung
+    issuer: Musterland Versicherung AG (fiktives Versicherungsunternehmen)
+    number: MV-BHV-8800-114
+    issued_on: 2026-01-01
+    expires_on: 2026-12-31
+    scope: Personen- und Sachschäden 5.000.000 EUR, Vermögensschäden 2.000.000 EUR
+
+  - name: Unbedenklichkeitsbescheinigung in Steuersachen
+    issuer: Finanzamt Musterstadt-Mitte (fiktive Finanzbehörde)
+    number: UB-2026-004711
+    issued_on: 2026-02-20
+    expires_on: 2027-02-19
+    scope: Keine Rückstände an Steuern und steuerlichen Nebenleistungen
+
+  # DELIBERATELY EXPIRED, and the only expired entry in this file. S2.4.1's second acceptance
+  # criterion is that a certificate whose expiry has passed is flagged on the profile, and no
+  # real fixture exercises it. A Freistellungsbescheinigung is the honest choice: it is issued
+  # for a fixed term and genuinely lapses, page 2 of Unbedenklichkeitsbescheinigung_Finanzamt.pdf
+  # prints the same "gültig bis 31.08.2026", and the walkthrough can open that page and see it.
+  # The ISO 27001 entry above must stay valid - it is the evidence the cross-border
+  # information-security question retrieves.
+  - name: Freistellungsbescheinigung nach § 48b EStG
+    issuer: Finanzamt Musterstadt-Mitte (fiktive Finanzbehörde)
+    number: 48b-2023-0099
+    issued_on: 2023-09-01
+    expires_on: 2026-08-31
+    scope: Steuerabzug bei Bauleistungen; abgelaufen, vor der nächsten Angebotsabgabe neu zu beantragen

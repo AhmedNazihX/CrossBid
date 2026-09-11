@@ -125,9 +125,12 @@ def _routers() -> list[APIRouter]:
     `openapi-typescript` emits components in (ADR-0009), so keep it stable.
     """
     from crossbid.routers.bids import router as bids_router
+    from crossbid.routers.companies import router as companies_router
     from crossbid.routers.documents import router as documents_router
 
-    return [documents_router, bids_router]
+    # Appended, never inserted: a new router at the front would renumber every generated
+    # component in `frontend/lib/api.ts` for no reason.
+    return [documents_router, bids_router, companies_router]
 
 
 def get_app_settings(request: Request) -> Settings:

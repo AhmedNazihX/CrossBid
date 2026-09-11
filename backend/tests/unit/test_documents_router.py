@@ -59,11 +59,11 @@ from crossbid.routers.documents import (
     validated_upload,
 )
 from crossbid.settings import Settings
-from tests.unit.test_documents_readmodel import FakeConnectionSource
-from tests.unit.test_ingestion_pipeline import (
+from tests.conftest import (
     LEAKY_MESSAGE,
     ORIGINAL_FILENAME,
     PDF_BYTES,
+    FakeConnectionSource,
     FakeParser,
     Harness,
     InMemoryRecords,

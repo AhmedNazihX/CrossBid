@@ -143,6 +143,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The calling company's profile
+         * @description The facts the matrix checks a tender against. A company with no row answers 404.
+         */
+        get: operations["get_company_profile_companies_me_get"];
+        /**
+         * Replace the calling company's profile
+         * @description Save the whole profile, then write it to the agent's memory.
+         *
+         *     The row is the source of truth and is written first, so a memory write that fails leaves
+         *     a genuinely saved profile: that answers 200 with `warning` set, not a 5xx. A company with
+         *     no row is the only 404 here.
+         *
+         *     The body is the domain model itself, so an unknown field or one outside its bounds is
+         *     FastAPI's own 422 and names the field — which is what S4.2.1 puts under the input.
+         */
+        put: operations["put_company_profile_companies_me_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -296,6 +327,79 @@ export interface components {
             kind: components["schemas"]["DocumentKind"];
         };
         /**
+         * CertificateHeld
+         * @description A certificate the company holds, with the expiry the matrix must respect.
+         *
+         *     An expired certificate is not evidence, which is why `expires_on` is not optional
+         *     decoration — the scorer reads it.
+         */
+        CertificateHeld: {
+            /**
+             * Name
+             * @description e.g. 'ISO/IEC 27001:2022'
+             */
+            name: string;
+            /** Issuer */
+            issuer?: string | null;
+            /** Number */
+            number?: string | null;
+            /** Issued On */
+            issued_on?: string | null;
+            /** Expires On */
+            expires_on?: string | null;
+            /**
+             * Scope
+             * @description What the certificate actually covers
+             */
+            scope?: string | null;
+        };
+        /**
+         * CertificateResponse
+         * @description One certificate the company holds, with the expiry flags the form shows beside it.
+         */
+        CertificateResponse: {
+            /**
+             * Name
+             * @description e.g. 'ISO/IEC 27001:2022'
+             */
+            name: string;
+            /**
+             * Issuer
+             * @description Who issued it, if recorded
+             */
+            issuer: string | null;
+            /**
+             * Number
+             * @description The certificate number, if recorded
+             */
+            number: string | null;
+            /**
+             * Issued On
+             * @description When it was issued, if recorded
+             */
+            issued_on: string | null;
+            /**
+             * Expires On
+             * @description When it expires; null when not recorded
+             */
+            expires_on: string | null;
+            /**
+             * Scope
+             * @description What the certificate actually covers
+             */
+            scope: string | null;
+            /**
+             * Is Expired
+             * @description The recorded expiry is before checked_on — this is no longer evidence
+             */
+            is_expired: boolean;
+            /**
+             * Is Valid
+             * @description Valid on checked_on. False when no expiry is recorded: without a date the profile cannot claim validity, which is not the same as being expired
+             */
+            is_valid: boolean;
+        };
+        /**
          * Checkability
          * @description Whether evidence can settle this requirement at all.
          *
@@ -306,6 +410,126 @@ export interface components {
          * @enum {string}
          */
         Checkability: "company_property" | "document_submission" | "neither";
+        /**
+         * CompanyProfile
+         * @description The bidder, as the matrix sees them.
+         */
+        CompanyProfile: {
+            /** Name */
+            name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2, lower case. The pattern is `companies.country`'s own check constraint, so the same value the column would refuse is refused here — as a 422 naming the field rather than a CheckViolation surfacing as a 500. 'DE' is rejected, not lower-cased: a PUT that rewrote its own body would answer with something the caller never sent, and the pattern reaches the generated client, so the form can say so before the request leaves the browser.
+             */
+            country: string;
+            legal_form: components["schemas"]["LegalForm"];
+            /**
+             * Registration Number
+             * @description e.g. 'HRB 84512'
+             */
+            registration_number?: string | null;
+            /** Registration Court */
+            registration_court?: string | null;
+            /**
+             * Language
+             * @description BCP 47
+             * @default de
+             */
+            language: string;
+            /** @default plain */
+            tone: components["schemas"]["Tone"];
+            /**
+             * Staff Fte
+             * @description Total full-time equivalents
+             */
+            staff_fte?: number | null;
+            /**
+             * Staff Fte Relevant
+             * @description FTE in the field of the contract, which is what tenders ask for
+             */
+            staff_fte_relevant?: number | null;
+            /**
+             * Turnover
+             * @default []
+             */
+            turnover: components["schemas"]["TurnoverYear"][];
+            /**
+             * Certificates
+             * @default []
+             */
+            certificates: components["schemas"]["CertificateHeld"][];
+        };
+        /**
+         * CompanyProfileResponse
+         * @description The calling company's profile as the form reads it back, expiry already checked.
+         */
+        CompanyProfileResponse: {
+            /**
+             * Name
+             * @description Legal name, as it appears on the register
+             */
+            name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2, lowercase — where the bidder is
+             */
+            country: string;
+            /** @description Legal form; 'other' when none of them fits */
+            legal_form: components["schemas"]["LegalForm"];
+            /**
+             * Registration Number
+             * @description e.g. 'HRB 84512'
+             */
+            registration_number: string | null;
+            /**
+             * Registration Court
+             * @description The register the number belongs to
+             */
+            registration_court: string | null;
+            /**
+             * Language
+             * @description BCP 47; requirements are explained in this language
+             */
+            language: string;
+            /** @description How explanations are written */
+            tone: components["schemas"]["Tone"];
+            /**
+             * Staff Fte
+             * @description Total full-time equivalents
+             */
+            staff_fte: number | null;
+            /**
+             * Staff Fte Relevant
+             * @description FTE in the field of the contract, which is what tenders ask for
+             */
+            staff_fte_relevant: number | null;
+            /**
+             * Turnover
+             * @description Turnover per fiscal year in the field of the contract
+             */
+            turnover: components["schemas"]["TurnoverYear"][];
+            /**
+             * Certificates
+             * @description Certificates held, each flagged against checked_on
+             */
+            certificates: components["schemas"]["CertificateResponse"][];
+            /**
+             * Has Expired Certificates
+             * @description At least one certificate has expired; the form warns about it
+             */
+            has_expired_certificates: boolean;
+            /**
+             * Checked On
+             * Format: date
+             * @description The day the expiry flags were computed for, UTC
+             */
+            checked_on: string;
+            /**
+             * Warning
+             * @description Null unless a save only partly succeeded. Set when the profile was stored but the agent's memory of it was not: the facts above are saved, and saving again repairs the rest. A read never sets it
+             */
+            warning?: string | null;
+        };
         /**
          * Decision
          * @description The recommendation, in the design system's fixed vocabulary (ADR-0013).
@@ -473,6 +697,12 @@ export interface components {
             service: string;
         };
         /**
+         * LegalForm
+         * @description Common EU legal forms. `OTHER` keeps the enum closed without losing real companies.
+         * @enum {string}
+         */
+        LegalForm: "gmbh" | "ug" | "ag" | "sarl" | "sas" | "sa" | "bv" | "sp_zoo" | "sole_trader" | "other";
+        /**
          * Requirement
          * @description One obligation, with the evidence trail back to the page it was read from.
          */
@@ -604,6 +834,32 @@ export interface components {
          * @enum {string}
          */
         ThresholdUnit: "currency" | "fte" | "headcount" | "person_days" | "references" | "years" | "percent";
+        /**
+         * Tone
+         * @description How explanations are written. Graded Easy 2 (personality / tone).
+         * @enum {string}
+         */
+        Tone: "plain" | "formal" | "brief";
+        /**
+         * TurnoverYear
+         * @description One fiscal year's turnover in the contract's field of activity.
+         *
+         *     Tenders ask for the last three years in *the field of the contract*, not total revenue,
+         *     so `field_of_activity` is part of the fact.
+         */
+        TurnoverYear: {
+            /** Year */
+            year: number;
+            /** Amount */
+            amount: number;
+            /**
+             * Currency
+             * @description ISO 4217
+             */
+            currency: string;
+            /** Field Of Activity */
+            field_of_activity?: string | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -832,6 +1088,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_profile_companies_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfileResponse"];
+                };
+            };
+        };
+    };
+    put_company_profile_companies_me_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyProfile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfileResponse"];
                 };
             };
             /** @description Validation Error */

@@ -11,9 +11,9 @@ key-shaped string and a traceback marker; the assertion is that none of it reach
 `FAILURE_REASONS` is the closed list of sentences the pipeline may write, and every failed
 row is checked against it.
 
-`InMemoryRecords` and the other fakes are imported by `test_documents_router.py`, which runs
-the same pipeline behind the HTTP layer; they live here because this is the module that
-defines what they stand in for.
+`InMemoryRecords` and the other fakes live in `conftest.py`, because `test_documents_router.py`
+runs the same pipeline behind the HTTP layer and asserts on the same transitions. One
+definition, or the two stories stop adding up.
 """
 
 from __future__ import annotations
@@ -21,16 +21,12 @@ from __future__ import annotations
 import logging
 import threading
 import uuid
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from collections.abc import Callable
 
 import pytest
 
-from crossbid.ingestion.chunker import Chunker
-from crossbid.ingestion.embeddings import ChunkStoreError, EmbeddedChunk, EmbeddingsError
-from crossbid.ingestion.parser import DocumentSource, ParsedDocument, ParsedPage, ParserError
+from crossbid.ingestion.embeddings import ChunkStoreError, EmbeddingsError
+from crossbid.ingestion.parser import ParserError
 from crossbid.ingestion.pipeline import (
     EMBED_FAILED_REASON,
     EMBEDDED_KINDS,
@@ -40,328 +36,29 @@ from crossbid.ingestion.pipeline import (
     STORE_FAILED_REASON,
     UNEXPECTED_FAILURE_REASON,
     UNREADABLE_REASON,
-    DocumentPipeline,
     Upload,
 )
 from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, StorageError, object_key
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentRecord, DocumentStatus, ReadModelError
+from tests.conftest import (
+    DIMENSIONS,
+    LEAK_MARKERS,
+    LEAKY_MESSAGE,
+    ORIGINAL_FILENAME,
+    PDF_BYTES,
+    FakeChunkWriter,
+    FakeEmbedder,
+    FakeParser,
+    FakeStore,
+    Harness,
+    InMemoryRecords,
+    harness,
+    upload,
+)
 
 COMPANY_ID = uuid.UUID("11111111-1111-4111-8111-111111111111")
 OTHER_COMPANY_ID = uuid.UUID("22222222-2222-4222-8222-222222222222")
-FIXED_START = datetime(2026, 9, 11, 9, 0, tzinfo=UTC)
-DIMENSIONS = 4
-CHUNK_TOKENS = 64
-OVERLAP_TOKENS = 8
-
-PDF_BYTES = b"%PDF-1.7\n%fake body for the parser fake\n"
-ORIGINAL_FILENAME = "Nachweis ISO 27001 (2026) Ümlaut.pdf"
-"""Spaces, brackets and an umlaut: the key must not resemble it, the row must equal it."""
-
-LEAKY_MESSAGE = (
-    "Traceback (most recent call last): https://abcdefghijklmnopqrst.supabase.co/storage/v1 "
-    "Authorization: Bearer sk-or-v1-LEAKED-OPENROUTER-KEY"
-)
-"""Everything a failure reason must never carry: a traceback marker, a URL and a key."""
-LEAK_MARKERS = ("Traceback", "https://", "sk-or-", "Bearer")
-
-
-# ---------------------------------------------------------------------------- fakes
-
-
-class CharacterEncoder:
-    """One token per character, so the real `Chunker` runs without tiktoken's download."""
-
-    def encode(self, text: str) -> list[int]:
-        return [ord(character) for character in text]
-
-    def decode(self, tokens: Sequence[int]) -> str:
-        return "".join(chr(token) for token in tokens)
-
-
-class FakeStore:
-    """`CompanyDocumentStore.upload` by shape: records the call, builds the real key."""
-
-    def __init__(self, *, error: Exception | None = None) -> None:
-        self.error = error
-        self.uploads: list[dict[str, Any]] = []
-        self.threads: list[threading.Thread] = []
-
-    def upload(
-        self,
-        *,
-        company_id: str,
-        document_id: str,
-        filename: str,
-        content: bytes,
-        content_type: str = DEFAULT_CONTENT_TYPE,
-    ) -> str:
-        self.threads.append(threading.current_thread())
-        if self.error is not None:
-            raise self.error
-        key = object_key(company_id=company_id, document_id=document_id, filename=filename)
-        self.uploads.append(
-            {
-                "company_id": company_id,
-                "document_id": document_id,
-                "filename": filename,
-                "content": content,
-                "content_type": content_type,
-                "key": key,
-            }
-        )
-        return key
-
-
-class FakeParser:
-    """A `Parser` that answers with configured page texts, or raises."""
-
-    name = "fake"
-
-    def __init__(self, pages: Sequence[str], *, error: Exception | None = None) -> None:
-        self.pages = tuple(pages)
-        self.error = error
-        self.sources: list[DocumentSource] = []
-        self.threads: list[threading.Thread] = []
-
-    def parse(self, source: DocumentSource, *, document_id: str) -> ParsedDocument:
-        self.threads.append(threading.current_thread())
-        self.sources.append(source)
-        if self.error is not None:
-            raise self.error
-        return ParsedDocument(
-            document_id=document_id,
-            parser_name=self.name,
-            pages=tuple(
-                ParsedPage(page_number=number, text=text)
-                for number, text in enumerate(self.pages, start=1)
-            ),
-        )
-
-
-class FakeEmbedder:
-    """`EmbeddingsClient` by shape. `observe` runs at call time, to catch the row mid-flight."""
-
-    def __init__(
-        self,
-        *,
-        error: Exception | None = None,
-        extra_vectors: int = 0,
-        observe: Callable[[], object] | None = None,
-    ) -> None:
-        self.error = error
-        self.extra_vectors = extra_vectors
-        self.observe = observe
-        self.calls: list[list[str]] = []
-        self.observed: list[object] = []
-        self.closed = 0
-
-    async def embed_texts(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]:
-        self.calls.append(list(texts))
-        if self.observe is not None:
-            self.observed.append(self.observe())
-        if self.error is not None:
-            raise self.error
-        count = len(texts) + self.extra_vectors
-        return tuple((float(index),) * DIMENSIONS for index in range(count))
-
-    async def aclose(self) -> None:
-        self.closed += 1
-
-
-class FakeChunkWriter:
-    """`ChunkVectorStore.insert_company_chunks` by shape."""
-
-    def __init__(self, *, error: Exception | None = None) -> None:
-        self.error = error
-        self.inserts: list[dict[str, Any]] = []
-
-    async def insert_company_chunks(
-        self, *, company_id: uuid.UUID, document_id: uuid.UUID, chunks: Sequence[EmbeddedChunk]
-    ) -> int:
-        if self.error is not None:
-            raise self.error
-        self.inserts.append(
-            {"company_id": company_id, "document_id": document_id, "chunks": tuple(chunks)}
-        )
-        return len(chunks)
-
-
-@dataclass
-class InMemoryRecords:
-    """The `documents` read model over a dict, remembering every transition in order.
-
-    Scoped like the real one: a transition on a row that is not this company's raises
-    `ReadModelError`, and `get` for another company's id is `None`. Timestamps advance one
-    second per write so `updated_at` is checkable without a real clock.
-    """
-
-    rows: dict[uuid.UUID, DocumentRecord] = field(default_factory=dict)
-    history: list[DocumentRecord] = field(default_factory=list)
-    """Every row exactly as written, in order. `rows` keeps only the latest per id."""
-    fail_on: frozenset[str] = frozenset()
-    writes: int = 0
-
-    def _now(self) -> datetime:
-        self.writes += 1
-        return FIXED_START + timedelta(seconds=self.writes)
-
-    def _write(self, record: DocumentRecord) -> DocumentRecord:
-        self.rows[record.id] = record
-        self.history.append(record)
-        return record
-
-    def _own(
-        self, method: str, company_id: uuid.UUID, document_id: uuid.UUID
-    ) -> DocumentRecord:
-        if method in self.fail_on:
-            raise ReadModelError(f"{method} refused: {LEAKY_MESSAGE}")
-        found = self.rows.get(document_id)
-        if found is None or found.company_id != company_id:
-            raise ReadModelError(f"document {document_id} does not exist for this company")
-        return found
-
-    async def insert(
-        self,
-        *,
-        company_id: uuid.UUID,
-        document_id: uuid.UUID,
-        kind: DocumentKind,
-        name: str,
-        storage_path: str,
-    ) -> DocumentRecord:
-        if "insert" in self.fail_on:
-            raise ReadModelError(f"insert refused: {LEAKY_MESSAGE}")
-        now = self._now()
-        return self._write(
-            DocumentRecord(
-                id=document_id,
-                company_id=company_id,
-                kind=kind,
-                name=name,
-                storage_path=storage_path,
-                status=DocumentStatus.UPLOADED,
-                pages=0,
-                created_at=now,
-                updated_at=now,
-            )
-        )
-
-    async def mark_parsed(
-        self,
-        *,
-        company_id: uuid.UUID,
-        document_id: uuid.UUID,
-        pages: int,
-        unread_pages: Sequence[int],
-    ) -> DocumentRecord:
-        found = self._own("mark_parsed", company_id, document_id)
-        return self._write(
-            found.model_copy(
-                update={
-                    "status": DocumentStatus.PARSED,
-                    "pages": pages,
-                    "unread_pages": tuple(unread_pages),
-                    "updated_at": self._now(),
-                }
-            )
-        )
-
-    async def mark_embedded(
-        self, *, company_id: uuid.UUID, document_id: uuid.UUID
-    ) -> DocumentRecord:
-        return self._advance("mark_embedded", company_id, document_id, DocumentStatus.EMBEDDED)
-
-    async def mark_ready(
-        self, *, company_id: uuid.UUID, document_id: uuid.UUID
-    ) -> DocumentRecord:
-        return self._advance("mark_ready", company_id, document_id, DocumentStatus.READY)
-
-    async def mark_failed(
-        self, *, company_id: uuid.UUID, document_id: uuid.UUID, reason: str
-    ) -> DocumentRecord:
-        found = self._own("mark_failed", company_id, document_id)
-        return self._write(
-            found.model_copy(
-                update={
-                    "status": DocumentStatus.FAILED,
-                    "failure_reason": reason,
-                    "updated_at": self._now(),
-                }
-            )
-        )
-
-    async def get(
-        self, *, company_id: uuid.UUID, document_id: uuid.UUID
-    ) -> DocumentRecord | None:
-        found = self.rows.get(document_id)
-        return found if found is not None and found.company_id == company_id else None
-
-    async def list(self, *, company_id: uuid.UUID) -> tuple[DocumentRecord, ...]:
-        own = [record for record in self.rows.values() if record.company_id == company_id]
-        return tuple(sorted(own, key=lambda record: record.created_at, reverse=True))
-
-    def _advance(
-        self,
-        method: str,
-        company_id: uuid.UUID,
-        document_id: uuid.UUID,
-        status: DocumentStatus,
-    ) -> DocumentRecord:
-        found = self._own(method, company_id, document_id)
-        return self._write(
-            found.model_copy(update={"status": status, "updated_at": self._now()})
-        )
-
-    def history_of(self, document_id: uuid.UUID) -> list[DocumentRecord]:
-        return [record for record in self.history if record.id == document_id]
-
-    def statuses_of(self, document_id: uuid.UUID) -> list[DocumentStatus]:
-        return [record.status for record in self.history_of(document_id)]
-
-
-@dataclass
-class Harness:
-    """One pipeline and every fake it was built from, so a test can look at any of them."""
-
-    store: FakeStore
-    parser: FakeParser
-    embedder: FakeEmbedder
-    writer: FakeChunkWriter
-    records: InMemoryRecords
-    pipeline: DocumentPipeline
-
-
-def harness(
-    *,
-    pages: Sequence[str] = ("Seite eins: ISO 27001 Zertifikat.", "Seite zwei: Umsatz 2025."),
-    store: FakeStore | None = None,
-    parser: FakeParser | None = None,
-    embedder: FakeEmbedder | None = None,
-    writer: FakeChunkWriter | None = None,
-    records: InMemoryRecords | None = None,
-) -> Harness:
-    """The pipeline over fakes. Pass a fake to make one collaborator fail or observe."""
-    store = store if store is not None else FakeStore()
-    parser = parser if parser is not None else FakeParser(pages)
-    embedder = embedder if embedder is not None else FakeEmbedder()
-    writer = writer if writer is not None else FakeChunkWriter()
-    records = records if records is not None else InMemoryRecords()
-    pipeline = DocumentPipeline(
-        store=store,
-        parser=parser,
-        chunker=Chunker(
-            chunk_tokens=CHUNK_TOKENS, overlap_tokens=OVERLAP_TOKENS, encoder=CharacterEncoder()
-        ),
-        embedder=embedder,
-        chunk_writer=writer,
-        records=records,
-    )
-    return Harness(store, parser, embedder, writer, records, pipeline)
-
-
-def upload(filename: str = ORIGINAL_FILENAME, content: bytes = PDF_BYTES) -> Upload:
-    return Upload(filename=filename, content_type=DEFAULT_CONTENT_TYPE, content=content)
 
 
 async def run(

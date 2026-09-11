@@ -1,10 +1,10 @@
 """S2.2.3 — the `documents` read model: every statement scoped, every transition returned.
 
-Offline. The read model runs over a recording connection that remembers the statement text
-and the bound parameters and answers with scripted rows, so what is asserted is exactly what
-Postgres would receive. That matters here because the API connects as a `BYPASSRLS` role
-(ADR-0009): the `company_id = %(company_id)s` written into each statement is the only tenant
-boundary there is, and asserting it is a security test rather than a style test.
+Offline. The read model runs over `conftest`'s recording connection, which remembers the
+statement text and the bound parameters and answers with scripted rows, so what is asserted
+is exactly what Postgres would receive. That matters here because the API connects as a
+`BYPASSRLS` role (ADR-0009): the `company_id = %(company_id)s` written into each statement is
+the only tenant boundary there is, and asserting it is a security test, not a style test.
 
 The migration parity test lives here rather than in `test_migrations.py` because that file's
 guard scans `0001_init.sql` only and this story does not own it. `DocumentStatus` is defined
@@ -17,7 +17,6 @@ import inspect
 import re
 import uuid
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -41,6 +40,7 @@ from crossbid.readmodel.documents import (
     DocumentStatus,
     ReadModelError,
 )
+from tests.conftest import FakeConnectionSource
 
 COMPANY_ID = uuid.UUID("11111111-1111-4111-8111-111111111111")
 OTHER_COMPANY_ID = uuid.UUID("22222222-2222-4222-8222-222222222222")
@@ -48,67 +48,6 @@ DOCUMENT_ID = uuid.UUID("44444444-4444-4444-8444-444444444444")
 FIXED_NOW = datetime(2026, 9, 11, 9, 0, tzinfo=UTC)
 
 MIGRATION = Path(__file__).resolve().parents[2] / "migrations" / "0002_documents_status.sql"
-
-
-# ----------------------------------------------------------- the recording fake database
-
-
-@dataclass(frozen=True)
-class RecordedStatement:
-    """One statement the read model sent, and what it bound to it."""
-
-    sql: str
-    params: Mapping[str, Any]
-
-
-class FakeCursor:
-    """The slice of `psycopg.AsyncCursor` the read model uses: `fetchone` and `fetchall`."""
-
-    def __init__(self, rows: Sequence[Mapping[str, Any]]) -> None:
-        self._rows = list(rows)
-
-    async def fetchone(self) -> Mapping[str, Any] | None:
-        return self._rows[0] if self._rows else None
-
-    async def fetchall(self) -> list[Mapping[str, Any]]:
-        return list(self._rows)
-
-
-class FakeConnection:
-    def __init__(self, rows: Sequence[Mapping[str, Any]], log: list[RecordedStatement]) -> None:
-        self._rows = rows
-        self._log = log
-
-    async def execute(self, sql: str, params: Mapping[str, Any]) -> FakeCursor:
-        self._log.append(RecordedStatement(sql=sql, params=dict(params)))
-        return FakeCursor(self._rows)
-
-
-class FakeConnectionSource:
-    """Satisfies `ConnectionSource`; answers every statement with the same scripted rows."""
-
-    def __init__(self, rows: Sequence[Mapping[str, Any]] = ()) -> None:
-        self.log: list[RecordedStatement] = []
-        self.borrows = 0
-        self._rows = rows
-
-    def connection(self) -> Any:
-        source = self
-
-        class _Borrow:
-            async def __aenter__(self) -> FakeConnection:
-                source.borrows += 1
-                return FakeConnection(source._rows, source.log)
-
-            async def __aexit__(self, *_exc: object) -> None:
-                return None
-
-        return _Borrow()
-
-    @property
-    def only(self) -> RecordedStatement:
-        assert len(self.log) == 1, self.log
-        return self.log[0]
 
 
 def document_row(**overrides: Any) -> dict[str, Any]:

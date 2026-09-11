@@ -6,14 +6,12 @@ objects handed that fake pool, and `setup()` is exercised against a recording co
 The acceptance criterion that needs Postgres -- state surviving a restart -- is the `live`
 test in `tests/integration/test_checkpointer_restart.py`.
 
-Fixtures are module-local: `conftest.py` is shared ground.
+The pool fakes live in `conftest.py`: the router tests build their production dependencies
+over them too, and a fake pool that meant two things would make those tests prove less.
 """
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -39,94 +37,19 @@ from crossbid.db import (
     pool_connection_kwargs,
 )
 from crossbid.settings import SettingsError
+from tests.conftest import (
+    FAKE_PASSWORD,
+    GOOD_DSN,
+    FakePoolFactory,
+    connect,
+    noop_configure,
+)
 
-# Distinctive, so a leak into an exception message is unmistakable.
-FAKE_PASSWORD = "LEAKED-DATABASE-PASSWORD"
-GOOD_DSN = f"postgresql://crossbid:{FAKE_PASSWORD}@localhost:5432/crossbid"
 TRANSACTION_POOLER_DSN = (
     f"postgresql://postgres.ref:{FAKE_PASSWORD}@aws-0-eu-central-1.pooler.supabase.com:6543/db"
 )
 
 SIGNED_64_BIT_MAX = 2**63 - 1
-
-
-# -------------------------------------------------------------------------- fakes
-
-
-@dataclass
-class RecordingConnection:
-    """Records every `execute` so a test can assert order and parameters."""
-
-    executed: list[tuple[str, Any]] = field(default_factory=list)
-
-    async def execute(self, query: str, params: Any = None) -> RecordingConnection:
-        self.executed.append((query, params))
-        return self
-
-
-@dataclass
-class FakePool:
-    """Stands in for `AsyncConnectionPool`: records how it was built and driven."""
-
-    conninfo: str
-    kwargs: dict[str, Any]
-    min_size: int
-    max_size: int
-    configure: Any
-    open_flag: bool | None
-    opened_with: dict[str, Any] | None = None
-    closed: bool = False
-    fail_open_with: Exception | None = None
-    lent: RecordingConnection = field(default_factory=RecordingConnection)
-
-    # `timeout` mirrors `AsyncConnectionPool.open`, which is the signature under test.
-    async def open(self, *, wait: bool, timeout: float) -> None:  # noqa: ASYNC109
-        if self.fail_open_with is not None:
-            raise self.fail_open_with
-        self.opened_with = {"wait": wait, "timeout": timeout}
-
-    async def close(self) -> None:
-        self.closed = True
-
-    @asynccontextmanager
-    async def connection(self) -> AsyncIterator[RecordingConnection]:
-        yield self.lent
-
-
-class FakePoolFactory:
-    """`pool_factory` seam: builds `FakePool`s and keeps the last one for assertions."""
-
-    def __init__(self, *, fail_open_with: Exception | None = None) -> None:
-        self.fail_open_with = fail_open_with
-        self.built: list[FakePool] = []
-
-    def __call__(self, conninfo: str, **kwargs: Any) -> Any:
-        pool = FakePool(
-            conninfo=conninfo,
-            kwargs=kwargs["kwargs"],
-            min_size=kwargs["min_size"],
-            max_size=kwargs["max_size"],
-            configure=kwargs["configure"],
-            open_flag=kwargs["open"],
-            fail_open_with=self.fail_open_with,
-        )
-        self.built.append(pool)
-        return pool
-
-    @property
-    def last(self) -> FakePool:
-        assert self.built, "no pool was built"
-        return self.built[-1]
-
-
-async def noop_configure(_conn: Any) -> None:
-    """Stands in for `register_vector_async`, which needs a live connection."""
-
-
-async def connect(factory: FakePoolFactory, **overrides: Any) -> Database:
-    return await Database.connect(
-        GOOD_DSN, pool_factory=factory, configure=noop_configure, **overrides
-    )
 
 
 # -------------------------------------------------------------- sizing the pool
