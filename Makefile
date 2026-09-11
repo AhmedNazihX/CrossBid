@@ -12,7 +12,7 @@ FRONTEND := frontend
 COMPOSE  := docker compose -f infra/docker-compose.yml
 
 .PHONY: help dev dev-api dev-web up down logs install test test-live lint lint-backend \
-        lint-frontend format deps deps-check migrate eval build clean
+        lint-frontend format deps deps-check migrate seed-dev eval build clean
 
 help: ## Show this help
 	@echo "Crossbid — available targets:"
@@ -86,6 +86,9 @@ migrate: ## Apply database migrations
 	@test -f $(BACKEND)/scripts/migrate.py \
 	  || { echo "Not built yet: the migration runner lands with story S0.2.1."; exit 1; }
 	cd $(BACKEND) && uv run python scripts/migrate.py
+
+seed-dev: ## Create the dev company row (idempotent) and print NEXT_PUBLIC_DEV_COMPANY_ID
+	cd $(BACKEND) && uv run python scripts/seed_dev_company.py
 
 eval: ## Run the evaluation suite and write evaluations/REPORT.md
 	@test -f $(BACKEND)/scripts/run_eval.py \

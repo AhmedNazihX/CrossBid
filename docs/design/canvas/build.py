@@ -507,16 +507,150 @@ def phone():
     return doc("Compliance matrix · phone", body)
 
 
+
+# --------------------------------------------------------------------------------- Landing
+
+MARKETING_MAX = "1160px"
+
+
+def wrap(inner, extra=""):
+    return f'<div style="max-width: {MARKETING_MAX}; margin: 0 auto; padding: 0 24px; {extra}">{inner}</div>'
+
+
+def m_eyebrow(text):
+    return f'<div style="font: 500 12px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--text-accent); margin-bottom: 14px;">{text}</div>'
+
+
+def m_h2(text):
+    return f'<h2 style="font: 600 40px/1.1 var(--font-sans); letter-spacing: -0.03em; margin: 0; text-wrap: balance;">{text}</h2>'
+
+
+def m_lead(text, center=False):
+    margin = "16px auto 0" if center else "16px 0 0"
+    return f'<p style="font: 400 17px/1.6 var(--font-sans); color: var(--text-secondary); margin: {margin}; max-width: 560px; text-wrap: pretty;">{text}</p>'
+
+
+def inverse_button(label, size="lg", icon_right=None):
+    return button(label, "primary", size, icon_right=icon_right, extra="background: var(--surface-inverse);")
+
+
+def product_frame():
+    rows = [("REQ-002", "Steuern und Sozialabgaben vollständig entrichtet", "RC p. 7 §4.2", "success", "Supported"),
+            ("REQ-009", "Durchschnittsumsatz ≥ 2 Mio. € (netto)", "RC p. 9 §5.1", "danger", "Unsupported"),
+            ("REQ-014", "ISO/IEC 27001 oder gleichwertig", "RC p. 11 §5.4", "success", "Supported"),
+            ("REQ-017", "Drei vergleichbare Referenzen aus drei Jahren", "RC p. 12 §5.5", "warning", "Partially supported")]
+    table = ""
+    for i, (rid, t, src, tone, label) in enumerate(rows):
+        table += (f'<div style="display: grid; grid-template-columns: 82px minmax(0, 1fr) 110px 150px; gap: 12px; align-items: center; padding: 11px 14px; '
+                  f'{"border-top: 1px solid var(--border-default);" if i else ""} font: 400 13px/1.3 var(--font-sans);">{tag(rid, mono=True)}'
+                  f'<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t}</span>'
+                  f'<span class="mono" style="font-size: 11px; color: var(--text-link);">{src}</span>{badge(label, tone, "sm")}</div>')
+    return f"""
+    <div style="max-width: 980px; margin: 56px auto 0; position: relative;">
+      <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border-default); background: var(--surface-sunken);">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: var(--cb-stone-300);"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: var(--cb-stone-300);"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: var(--cb-stone-300);"></span>
+          <span class="mono" style="margin-left: 12px; color: var(--text-muted);">app.crossbid.eu / tenders / 618320-2026</span>
+        </div>
+        <div style="padding: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; text-align: left;">
+          <div>
+            <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">{tag("Ministère de l'éducation nationale")}{tag("France → Germany")}{tag("25 pages · FR")}</div>
+            <div style="font: 600 20px/1.25 var(--font-sans); letter-spacing: -0.02em; margin-bottom: 18px;">Prestations de conseil en architecture d'entreprise et d'expertise technique</div>
+            <div style="border: 1px solid var(--border-default); border-radius: 10px; overflow: hidden;">{table}</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="border: 1px solid var(--border-default); border-radius: 12px; padding: 18px;"><div style="font: 400 13px/1 var(--font-sans); color: var(--text-secondary); margin-bottom: 10px;">CrossBid recommends</div>{verdict_chip("nogo", "lg")}<div style="font: 400 13px/1.5 var(--font-sans); color: var(--text-secondary); margin-top: 12px;">24 of 31 requirements supported. One selection minimum is not met and decides the verdict.</div></div>
+            <div style="border: 1px solid var(--border-default); border-radius: 12px; padding: 18px; background: var(--surface-sunken);"><div style="font: 400 13px/1 var(--font-sans); color: var(--text-secondary); margin-bottom: 10px;">Awaiting review</div>{button("Confirm verdict", "primary", "sm", extra="width: 100%;")}<div style="font: 400 12px/1.4 var(--font-sans); color: var(--text-muted); margin-top: 8px;">Nothing moves forward until a person confirms.</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="position: absolute; left: 0; right: 0; bottom: -1px; height: 140px; background: var(--protect-gradient); pointer-events: none;"></div>
+    </div>"""
+
+
+def landing():
+    nav_links = "".join(f'<a href="#" style="font: 500 14px/1 var(--font-sans); color: var(--text-secondary);">{l}</a>' for l in ("Product", "How it works", "Certificates", "Pricing", "Customers"))
+    nav = f"""
+  <header style="position: sticky; top: 0; z-index: 50; background: rgba(250, 250, 249, 0.8); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border-bottom: 1px solid var(--border-subtle);">
+    {wrap(f'<a href="#" style="display: flex; align-items: center;"><img src="logo-lockup.svg" alt="CrossBid" style="height: 30px; display: block;"></a><nav style="display: flex; gap: 28px; flex: 1; justify-content: center;">{nav_links}</nav><div style="display: flex; gap: 8px;">{button("Sign in", "secondary", "sm")}{inverse_button("Book a demo", "sm")}</div>', "height: 68px; display: flex; align-items: center; gap: 32px;")}
+  </header>"""
+    hero = f"""
+  <section style="position: relative; overflow: hidden; padding: 96px 24px 0; text-align: center;">
+    <div aria-hidden="true" style="position: absolute; inset: 0; background-image: linear-gradient(var(--cb-stone-200) 1px, transparent 1px), linear-gradient(90deg, var(--cb-stone-200) 1px, transparent 1px); background-size: 72px 72px; opacity: .35; mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, #000 30%, transparent 100%); -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, #000 30%, transparent 100%); pointer-events: none;"></div>
+    <div style="position: relative; max-width: {MARKETING_MAX}; margin: 0 auto;">
+      <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px; border: 1px solid var(--border-default); background: var(--surface-card); font: 500 13px/1 var(--font-sans); color: var(--text-secondary); margin-bottom: 28px;"><span style="padding: 3px 8px; border-radius: 999px; background: var(--cb-orange-500); color: #fff; font: 600 11px/1.2 var(--font-sans);">New</span>Certificate equivalence via eCertis for all 27 member states</div>
+      <h1 style="font: 600 64px/1.05 var(--font-sans); letter-spacing: -0.035em; margin: 0 auto; max-width: 820px; text-wrap: balance;">Know if you can win before you write a word.</h1>
+      <p style="font: 400 19px/1.55 var(--font-sans); color: var(--text-secondary); max-width: 620px; margin: 24px auto 0; text-wrap: pretty;">CrossBid reads any EU tender, maps every requirement to your evidence, and gives you a go / no-go verdict you can defend — with a citation for each line.</p>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 32px;">{inverse_button("Analyse a tender", "lg", icon_right="arrow")}{button("Book a demo", "secondary", "lg")}</div>
+      <div style="font: 400 13px/1 var(--font-sans); color: var(--text-muted); margin-top: 16px;">Advisory by design — CrossBid never submits on your behalf.</div>
+      {product_frame()}
+    </div>
+  </section>"""
+    trust = f"""
+  <section style="padding: 72px 0 0;">{wrap('<div style="font: 400 14px/1 var(--font-sans); color: var(--text-muted); margin-bottom: 24px;">Used by bid teams tendering across borders</div><div style="display: flex; justify-content: center; gap: 44px; flex-wrap: wrap; opacity: .6;">' + "".join(f'<span style="font: 600 17px/1 var(--font-sans); letter-spacing: -0.02em; color: var(--text-secondary); border: 1px dashed var(--border-strong); border-radius: 6px; padding: 6px 12px;">[Customer {i}]</span>' for i in range(1, 6)) + '</div>', "text-align: center;")}</section>"""
+    steps_data = [("Read", "Upload the tender in any EU language. CrossBid extracts every requirement — exclusion, selection, technical, formal — each with a link to its source page.", "file"),
+                  ("Translate and explain", "Each requirement is translated into your language and explained in plain terms, including what the buyer will accept as proof.", "lang"),
+                  ("Map certificates", "Requested certificates are matched to their equivalents in your home country through eCertis — Attestation URSSAF to Unbedenklichkeitsbescheinigung — with the legal basis.", "layers"),
+                  ("Check evidence", "Every requirement is checked against your company documents. Supported, partially supported, or unsupported — never assumed.", "fileCheck"),
+                  ("Verdict", "Go, No-go, Conditional, or Insufficient evidence — with the compliance matrix behind it. A person confirms before anything proceeds.", "shield")]
+    steps = ""
+    for i, (t, d, ic) in enumerate(steps_data):
+        last = i == 4
+        steps += (f'<div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 14px; padding: 22px; box-shadow: var(--shadow-xs);">'
+                  f'<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;"><span style="width: 44px; height: 44px; border-radius: 12px; background: {"var(--cb-ink)" if last else "var(--surface-accent-soft)"}; color: {"#fff" if last else "var(--text-accent)"}; display: inline-flex; align-items: center; justify-content: center;">{icon(I[ic], 22)}</span><span class="mono" style="color: var(--text-muted);">0{i + 1}</span></div>'
+                  f'<div style="font: 600 17px/1.2 var(--font-sans); letter-spacing: -0.02em; margin-bottom: 8px;">{t}</div><div style="font: 400 14px/1.55 var(--font-sans); color: var(--text-secondary);">{d}</div></div>')
+    how = f"""
+  <section style="padding: 128px 0 0;">{wrap(m_eyebrow("How it works") + m_h2("Judgement work, done before the bid is written.") + m_lead("Five steps, each one traceable to the tender and to your own documents.") + f'<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-top: 48px;">{steps}</div>')}</section>"""
+    checks = "".join(f'<div style="display: flex; gap: 12px;"><span style="width: 22px; height: 22px; border-radius: 50%; background: var(--status-success-bg); color: var(--status-success); display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">{icon(I["check"], 14)}</span><div><div style="font: 500 15px/1.3 var(--font-sans);">{t}</div><div style="font: 400 14px/1.5 var(--font-sans); color: var(--text-secondary);">{d}</div></div></div>'
+                     for t, d in [("Source-linked extraction", "Page and clause reference on every requirement."), ("Translated, not paraphrased", "The original text stays alongside the explanation."), ("Refuses when unsure", "If the documents do not support a verdict, CrossBid says so.")])
+    req_card = f"""
+      <div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-md);">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">{tag("REQ-002", mono=True)}<span style="font: 500 13px/1 var(--font-sans); color: var(--text-secondary);">Exclusion ·</span><a href="#" class="mono" style="display: inline-flex; gap: 5px; align-items: center;">RC p. 7 §4.2{icon(I["ext"], 12)}</a></div>
+        {eyebrow("Source (FR)", "margin-bottom: 6px;")}<div style="font: italic 400 14px/1.5 var(--font-sans); color: var(--text-secondary); margin-bottom: 16px;">“Le candidat doit être à jour de ses obligations fiscales et sociales au 31 décembre de l'année précédant la consultation.”</div>
+        {eyebrow("Explained (DE)", "margin-bottom: 6px;")}<div style="font: 400 14px/1.5 var(--font-sans); margin-bottom: 16px;">Steuern und Sozialabgaben sind zum 31. Dezember des Vorjahres vollständig entrichtet. In Deutschland belegt das eine Bescheinigung in Steuersachen des Finanzamts und eine Unbedenklichkeitsbescheinigung der Krankenkasse — so ordnet eCertis dieses Kriterium zu.</div>
+        <div style="display: flex; align-items: center; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border-default);">{badge("Supported", "success")}<span style="font: 400 13px/1.3 var(--font-sans); color: var(--text-secondary);">Bescheinigung in Steuersachen, 03/2026 · Krankenkasse, 02/2026</span></div>
+      </div>"""
+    features = f"""
+  <section style="padding: 128px 0 0;">{wrap(f'<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center;"><div>{m_eyebrow("Every requirement, cited")}{m_h2("No claim without a page number.")}{m_lead("Each extracted line links to the exact page and clause in the tender. Reviewers check the source, not the summary.")}<div style="display: flex; flex-direction: column; gap: 14px; margin-top: 32px;">{checks}</div></div>{req_card}</div>')}</section>"""
+    cert_rows = [("FR", "Attestation de régularité fiscale", "DE", "Bescheinigung in Steuersachen", "Dir. 2014/24 Art. 60 · eCertis"),
+                 ("FR", "Attestation URSSAF", "DE", "Unbedenklichkeitsbescheinigung", "Dir. 2014/24 Art. 60 · eCertis"),
+                 ("FR", "Extrait Kbis", "DE", "Handelsregisterauszug", "Dir. 2014/24 Ann. XI"),
+                 ("DE", "Auszug Gewerbezentralregister", "FR", "Extrait de casier judiciaire (bulletin n° 3)", "Dir. 2014/24 Art. 60 · eCertis")]
+    cert_table = ('<div style="display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 12px 18px; font: 500 12px/1 var(--font-sans); color: var(--text-secondary); background: var(--surface-sunken); border-bottom: 1px solid var(--border-default);"><span></span><span>Requested</span><span></span><span>Your equivalent</span><span>Basis</span></div>'
+                  + "".join(f'<div style="display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 13px 18px; align-items: center; {"border-top: 1px solid var(--border-default);" if i else ""} font: 400 13px/1.3 var(--font-sans); overflow-wrap: anywhere;">{tag(a, mono=True)}<span>{b}</span>{tag(c, mono=True)}<span>{d}</span><span class="mono" style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">{e}</span></div>'
+                            for i, (a, b, c, d, e) in enumerate(cert_rows)))
+    certificates = f"""
+  <section style="padding: 128px 0 0;">{wrap(f'<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 56px; align-items: center;"><div style="background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-xs); min-width: 0;">{cert_table}</div><div>{m_eyebrow("Certificate equivalence")}{m_h2("The buyer asks in their system. You answer in yours.")}{m_lead("CrossBid maps requested certificates and registrations to their equivalents in your home country through the EU's eCertis service, and cites the directive or national rule that makes the equivalence valid.")}</div></div>')}</section>"""
+    pillars = "".join(f'<div style="border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 16px 18px; background: rgba(255, 255, 255, 0.04);"><div style="font: 500 15px/1.3 var(--font-sans);">{t}</div><div style="font: 400 14px/1.5 var(--font-sans); color: var(--cb-stone-400); margin-top: 4px;">{d}</div></div>'
+                      for t, d in [("Never submits", "Every verdict is confirmed by a person before anything proceeds."), ("Never asserts without a source", "Each compliance claim points at a page in the tender and a document in your profile."), ("Refuses when unsupported", "“Insufficient evidence” is a first-class verdict, not a failure state.")])
+    advisory = f"""
+  <section style="padding: 128px 0 0;">{wrap(f'<div style="background: var(--surface-inverse); color: #fff; border-radius: 24px; padding: 72px 64px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 56px; align-items: center;"><div><div style="font: 500 12px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--cb-orange-500); margin-bottom: 14px;">Advisory by design</div><h2 style="font: 600 40px/1.1 var(--font-sans); letter-spacing: -0.03em; margin: 0; text-wrap: balance;">An agent that knows what it does not know.</h2><p style="font: 400 17px/1.6 var(--font-sans); color: var(--cb-stone-300); margin: 16px 0 0; max-width: 520px;">CrossBid never submits a bid, never asserts compliance without a source, and withholds a verdict when the documents do not support one. Every verdict is confirmed by a person.</p></div><div style="display: grid; gap: 12px;">{pillars}</div></div>')}</section>"""
+    cta = f"""
+  <section style="padding: 128px 0;">{wrap(m_h2("Bring a tender. Leave with a verdict.") + m_lead("Upload one tender and see the compliance matrix in minutes. No integration required.", center=True) + f'<div style="display: flex; gap: 10px; justify-content: center; margin-top: 32px;">{inverse_button("Analyse a tender", "lg", icon_right="arrow")}{button("Talk to the team", "secondary", "lg")}</div>', "text-align: center;")}</section>"""
+    cols = [("Product", ["How it works", "Certificate equivalence", "Compliance matrix", "Pricing"]), ("Company", ["About", "Customers", "Careers", "Contact"]), ("Resources", ["Documentation", "EU procurement guide", "Security", "Status"]), ("Legal", ["Privacy", "Terms", "Data processing", "Imprint"])]
+    footer_cols = "".join(f'<div><div style="font: 500 13px/1 var(--font-sans); margin-bottom: 14px;">{h}</div><div style="display: flex; flex-direction: column; gap: 10px;">' + "".join(f'<a href="#" style="font: 400 14px/1 var(--font-sans); color: var(--text-secondary);">{l}</a>' for l in ls) + "</div></div>" for h, ls in cols)
+    footer = f"""
+  <footer style="border-top: 1px solid var(--border-default); padding: 56px 24px 40px;">
+    <div style="max-width: {MARKETING_MAX}; margin: 0 auto; display: grid; grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr)); gap: 32px;">
+      <div><img src="logo-lockup.svg" alt="CrossBid" style="height: 28px; display: block;"><div style="font: 400 14px/1.55 var(--font-sans); color: var(--text-secondary); margin-top: 14px; max-width: 280px;">Go / no-go for EU public tenders, with a citation for every line.</div></div>
+      {footer_cols}
+    </div>
+    <div style="max-width: {MARKETING_MAX}; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid var(--border-default); display: flex; justify-content: space-between; font: 400 13px/1 var(--font-sans); color: var(--text-muted);"><span>© 2026 CrossBid</span><span>Made in the EU · Data stays in the EU</span></div>
+  </footer>"""
+    body = f'<div style="width: 1440px; min-height: 4200px; background: var(--surface-canvas);">{nav}{hero}{trust}{how}{features}{certificates}{advisory}{cta}{footer}</div>'
+    return doc("CrossBid — landing page", body)
+
 CANVAS = """{
   "artboards": [
     { "file": "Dashboard.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Dashboard" },
     { "file": "NewBid.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "Analyse tender — upload the pack" },
     { "file": "Main.dc.html", "x": 0, "y": 1080, "w": 1440, "h": 900, "title": "Compliance matrix — with the source page open" },
     { "file": "Verdict.dc.html", "x": 1560, "y": 1080, "w": 1440, "h": 900, "title": "Review verdict — override with a reason" },
-    { "file": "WorkspacePhone.dc.html", "x": 3120, "y": 1080, "w": 390, "h": 844, "title": "Compliance matrix — phone" }
+    { "file": "WorkspacePhone.dc.html", "x": 3120, "y": 1080, "w": 390, "h": 844, "title": "Compliance matrix — phone" },
+    { "file": "Landing.dc.html", "x": 0, "y": 2120, "w": 1440, "h": 4200, "title": "Landing page — website", "expand": "fill" }
   ],
   "annotations": [
-    { "id": "brief", "x": 0, "y": -300, "w": 720, "text": "S4.0.1, draft 2 — built on the CrossBid design system (project b81312f6): its shell, tokens, Geist, NavItem / Button / Badge / Tag / MetricCard / VerdictChip / Tabs / Radio / Card anatomy, and the SVG logo lockup. Static mockups. UI in English; requirements explained in German; source quotes in French (the real TED 618320-2026 fixture). Company documents and figures are sample data.\\n\\nTwo places where the system's vocabulary and the plan's contracts differ — your call:\\n1. Verdicts. The system says Go / Conditional / No-go / Insufficient evidence. The backend's Decision enum says go / go_with_open_items / no_go. Conditional ≈ go_with_open_items; Insufficient evidence has no value yet (it is the agent refusing a verdict). Adopt the system's four and add the fourth to the enum?\\n2. Row evidence. The system says Supported / Partially supported / Unsupported. The backend's RowStatus says met / unclear / unmet / not_applicable. Mapped one-to-one here; not_applicable would show as a Tag.\\n\\nThe source page (S4.5.1's PDF-beside-the-matrix) opens as a 400 px panel to the right of the matrix rather than a permanent split — that is the one screen the system did not have." },
+    { "id": "brief", "x": 0, "y": -300, "w": 720, "text": "S4.0.1, draft 2 — built on the CrossBid design system (project b81312f6): its shell, its website kit (the landing page below), tokens, Geist, NavItem / Button / Badge / Tag / MetricCard / VerdictChip / Tabs / Radio / Card anatomy, and the SVG logo lockup. Static mockups. UI in English; requirements explained in German; source quotes in French (the real TED 618320-2026 fixture). Company documents and figures are sample data.\\n\\nVocabulary: adopted from the design system on 2026-09-11 (ADR-0013). Verdicts are Go / Conditional / No-go / Insufficient evidence and rows are Supported / Partially supported / Unsupported / Not applicable in the backend enums, the SQL constraints and the generated TypeScript.\\n\\nThe source page (S4.5.1's PDF-beside-the-matrix) opens as a 400 px panel to the right of the matrix rather than a permanent split — that is the one screen the system did not have." },
     { "id": "gate", "x": 780, "y": -300, "w": 440, "text": "The gate (docs/project-plan.md S4.0.1): nothing under components/matrix, components/pdf or components/verdict is coded until you confirm this canvas. Accepted changes are recorded in an ADR, and later UI stories cite the artboard they implement." }
   ],
   "launch": { "view": "canvas" }
@@ -529,5 +663,6 @@ if __name__ == "__main__":
     (HERE / "Main.dc.html").write_text(matrix(), encoding="utf-8")
     (HERE / "Verdict.dc.html").write_text(verdict(), encoding="utf-8")
     (HERE / "WorkspacePhone.dc.html").write_text(phone(), encoding="utf-8")
+    (HERE / "Landing.dc.html").write_text(landing(), encoding="utf-8")
     (HERE / "canvas.json").write_text(CANVAS, encoding="utf-8")
     print("wrote 5 artboards + canvas.json")
