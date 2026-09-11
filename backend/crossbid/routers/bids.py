@@ -4,8 +4,10 @@ Thin on purpose. `POST /bids` checks that the company exists and that every docu
 is this company's, a tender document, unattached and `ready`; then it records a `queued`
 bid, attaches the documents, hands the row to `agent.runner.BidRunner` and answers **202**.
 The graph runs after the response has gone, and `GET /bids/{id}` is what the browser polls
-every two seconds — it reads the `bids` and `requirements` projections and never a
-checkpoint (integration point I2: this response is the shape S4.5.1's workspace consumes).
+every two seconds — it reads the `bids`, `requirements` and `matrix_rows` projections and
+never a checkpoint (integration point I2: this response is the shape S4.5.1's workspace
+consumes). The matrix arrives lane by lane while the status is `checking` (S3.3.1), so the
+poller sees it fill in rather than appear.
 
 Two rules about answers. A bid, a company or a document that is not the caller's answers
 **404**, never 403: a "forbidden" confirms the id exists (S2.2.2's reasoning, applied to
@@ -35,6 +37,7 @@ from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
 from crossbid.ingestion.storage import StorageError
 from crossbid.main import get_app_settings, get_database
+from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.tender import BidStatus, BidSummary
 from crossbid.readmodel.bids import (
@@ -52,6 +55,7 @@ from crossbid.readmodel.bids import (
     mark_bid_failed,
 )
 from crossbid.readmodel.documents import DocumentStatus
+from crossbid.readmodel.matrix import fetch_matrix_rows
 from crossbid.readmodel.requirements import fetch_requirements
 from crossbid.settings import Settings
 
@@ -131,7 +135,8 @@ class BidResponse(BaseModel):
     bidder_language: str = Field(description="What requirements are explained in")
     status: BidStatus = Field(
         description=(
-            "queued → parsing → extracting → awaiting_review; failed carries failure_reason"
+            "queued → parsing → extracting → checking → awaiting_review; failed carries "
+            "failure_reason"
         )
     )
     failure_reason: str | None = Field(
@@ -139,6 +144,12 @@ class BidResponse(BaseModel):
     )
     requirements: list[Requirement] = Field(
         description="Every extracted requirement; empty until extraction has finished"
+    )
+    matrix_rows: list[MatrixRow] = Field(
+        description=(
+            "The compliance matrix, one row per checked requirement, in the same order as "
+            "`requirements`. Fills in lane by lane while the status is `checking`."
+        )
     )
     problems: list[ExtractionProblem] = Field(
         description="What parsing and extraction could not do, for the reviewer"
@@ -154,6 +165,7 @@ class BidResponse(BaseModel):
         *,
         requirements: list[Requirement],
         documents: list[BidDocumentRow],
+        matrix_rows: list[MatrixRow] | None = None,
     ) -> BidResponse:
         return cls(
             id=uuid.UUID(bid.id),
@@ -164,6 +176,7 @@ class BidResponse(BaseModel):
             status=bid.status,
             failure_reason=bid.failure_reason,
             requirements=requirements,
+            matrix_rows=list(matrix_rows or []),
             problems=[ExtractionProblem.model_validate(problem) for problem in bid.problems],
             documents=[BidDocumentResponse.from_row(row) for row in documents],
             created_at=bid.created_at,
@@ -260,7 +273,10 @@ async def get_bid(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
     requirements = await fetch_requirements(db, company_id=company.company_id, bid_id=bid.id)
     documents = await bid_documents(db, company_id=company.company_id, bid_id=bid.id)
-    return BidResponse.assemble(bid, requirements=requirements, documents=documents)
+    matrix_rows = await fetch_matrix_rows(db, company_id=company.company_id, bid_id=bid.id)
+    return BidResponse.assemble(
+        bid, requirements=requirements, documents=documents, matrix_rows=matrix_rows
+    )
 
 
 @router.get("", response_model=BidListResponse, summary="List the company's bids")

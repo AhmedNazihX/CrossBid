@@ -24,6 +24,7 @@ from crossbid.agent.state import ExtractionProblem, ExtractionProblemReason
 from crossbid.auth import DEV_COMPANY_HEADER
 from crossbid.ingestion.storage import StorageError
 from crossbid.main import get_database
+from crossbid.models.matrix import MatrixRow, RowStatus
 from crossbid.models.requirement import (
     Checkability,
     Requirement,
@@ -63,6 +64,7 @@ READ_MODEL_FUNCTIONS = (
     "fetch_bid",
     "list_bids",
     "fetch_requirements",
+    "fetch_matrix_rows",
     "bid_documents",
 )
 
@@ -115,6 +117,7 @@ class InMemoryReadModel:
         self.documents: dict[str, tuple[str, BidDocumentRow]] = {}
         self.bids: dict[str, BidRow] = {}
         self.requirements: dict[str, list[Requirement]] = {}
+        self.matrix_rows: dict[str, list[MatrixRow]] = {}
         self.attach_error: BidStateError | None = None
         self.attached: list[tuple[str, list[str]]] = []
         self.failed: list[tuple[str, str]] = []
@@ -203,6 +206,11 @@ class InMemoryReadModel:
         self, db: Any, *, company_id: str, bid_id: str
     ) -> list[Requirement]:
         return list(self.requirements.get(bid_id, []))
+
+    async def fetch_matrix_rows(
+        self, db: Any, *, company_id: str, bid_id: str
+    ) -> list[MatrixRow]:
+        return list(self.matrix_rows.get(bid_id, []))
 
     async def bid_documents(
         self, db: Any, *, company_id: str, bid_id: str
@@ -500,6 +508,15 @@ def test_get_bid_returns_the_polling_shape(
     )
     rows = [requirement(bid.id)]
     read_model.requirements[bid.id] = rows
+    matrix = [
+        MatrixRow(
+            id=str(uuid.uuid4()),
+            requirement_id=rows[0].id,
+            status=RowStatus.PARTIALLY_SUPPORTED,
+            agent_rationale="Kein Nachweis im Bestand gefunden.",
+        )
+    ]
+    read_model.matrix_rows[bid.id] = matrix
     document = read_model.add_document(*document_row(bid_id=bid.id))
 
     # Act
@@ -512,6 +529,7 @@ def test_get_bid_returns_the_polling_shape(
     assert body["status"] == "awaiting_review"
     assert body["failure_reason"] is None
     assert body["requirements"] == [rows[0].model_dump(mode="json")]
+    assert body["matrix_rows"] == [matrix[0].model_dump(mode="json")]
     assert body["problems"] == [problem.model_dump(mode="json")]
     assert body["documents"] == [
         {"id": document.id, "name": document.name, "pages": 12, "unread_pages": [3]}

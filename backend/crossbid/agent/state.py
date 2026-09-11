@@ -3,8 +3,9 @@
 `BidState` is the LangGraph state channel set. It holds what extraction reads and writes
 plus the run lifecycle S3.1.1 added -- who the bid belongs to, where it has got to, and what
 `parse_docs` needs to find the pack -- because a channel nobody writes is a lie about the
-graph. `CheckState`, the per-requirement `Send` payload of the agentic checking loop,
-arrives with F3.3 and extends this module rather than replacing it.
+graph. S3.3.1 added the two channels checking needs, `bidder_country` and `matrix_rows`, and
+no state class of its own: a checking lane's `Send` payload is a **narrowed `BidState`**
+(see `requirements` below), which earlier notes here called `CheckState`.
 
 Three decisions are worth the reading time.
 
@@ -31,9 +32,10 @@ reviewer sees next to the quote, and `source_lang` is what makes "verbatim in th
 language, explained in the bidder's" a checkable claim. TED supplies the language
 (`official-language`, S1.2.1) and the upload supplies the name, so they travel together here.
 
-`DocumentSection` is a frozen dataclass rather than a `TypedDict`, unlike `CheckState`: it
-never crosses a `Send`. Extraction is a deterministic workflow step whose sections run under
-plain bounded concurrency, so the payload stays an ordinary in-process object.
+`DocumentSection` is a frozen dataclass rather than a `TypedDict`: it never crosses a
+`Send` and so never has to survive a checkpoint. Extraction is a deterministic workflow step
+whose sections run under plain bounded concurrency, so the payload stays an ordinary
+in-process object. A checking lane's payload is a `BidState`, which does.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ from typing import Annotated, Final, TypedDict
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from crossbid.ingestion.parser import ParsedDocument, ParsedPage
+from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.tender import BidStatus
 
@@ -65,6 +68,23 @@ LanguageTag = Annotated[
 """Mirrors `Requirement.document_name` and `Requirement.source_lang`. Validating here means
 a document that cannot fill a citation in fails once, on arrival, rather than one row at a
 time in the middle of extraction."""
+
+
+def latest_status(_current: BidStatus, incoming: BidStatus) -> BidStatus:
+    """The reducer on the `status` channel: the most recent write wins.
+
+    A plain channel refuses two writes in one superstep (`InvalidUpdateError`), and S3.3.1's
+    checking fan-out produces exactly that — every lane runs in one superstep and every stage
+    wrapper merges its `status` into the node's update. The answer is a reducer rather than a
+    lane that writes no status, because the concurrent writers are *always the same stage*:
+    only a fan-out can produce them, a fan-out is one node, and every lane of it writes the
+    same value. "The most recent write" is therefore not a race between two answers, it is
+    the one answer arriving several times.
+
+    Named rather than a lambda: `BinaryOperatorAggregate.__eq__` treats any lambda as equal
+    to any other, so a lambda here would make two differently-reduced channels compare equal.
+    """
+    return incoming
 
 
 class ExtractionProblemReason(StrEnum):
@@ -233,10 +253,10 @@ class BidState(TypedDict, total=False):
     `awaiting_review` while the run is parked -- that is the value the poller reads, and
     the pair is what S3.4.3's consistency test compares. Timing and cost are *not*
     channels: the runner measures them around the whole invocation, and a value the graph
-    cannot see is not state. F3.3 adds `CheckState`, the per-requirement `Send`
-    payload of the agentic checking loop, and the `matrix_rows` channel it accumulates
-    into. Neither is declared here: a channel no node writes misrepresents the graph, and
-    the plan's build order gives each story its own.
+    cannot see is not state. `bidder_country` and `matrix_rows` arrived with S3.3.1's
+    checking fan-out and are written by `plan_checks` and by every `check_reqs` lane; the
+    verdict channels of F3.4 are not declared here, because a channel no node writes
+    misrepresents the graph.
     """
 
     bid_id: str
@@ -252,10 +272,10 @@ class BidState(TypedDict, total=False):
     """The tender's own language, BCP 47. `parse_docs` stamps it on every `TenderDocument`
     so a citation can say what language its quote is in."""
 
-    status: BidStatus
+    status: Annotated[BidStatus, latest_status]
     """The stage whose output this checkpoint holds, over the `BidStatus` values. Merged into
     every node's update by the stage wrapper; see the class docstring for how it relates to
-    `bids.status`."""
+    `bids.status`, and `latest_status` for why it carries a reducer at all."""
 
     documents: list[TenderDocument]
     """The parsed pack, written by `parse_docs` (S3.1.1) and read by extraction."""
@@ -264,10 +284,28 @@ class BidState(TypedDict, total=False):
     """What requirements are explained in. Absent or blank means `DEFAULT_BIDDER_LANGUAGE`."""
 
     requirements: Annotated[list[Requirement], operator.add]
-    """Every requirement found, appended per contributing node — see the module docstring."""
+    """Every requirement found, appended per contributing node — see the module docstring.
+
+    Also the `Send` payload of a checking lane, narrowed to that lane's share (S3.3.1). A
+    lane is handed a `BidState` rather than a `CheckState` of its own: LangGraph passes a
+    `Send` payload to the node verbatim, so a second TypedDict would buy a different name
+    for the same keys and cost every wrapper in `graph.py` a type parameter. A lane writes
+    only `matrix_rows`, so the reducer never sees a lane's own copy come back."""
 
     extraction_problems: Annotated[list[ExtractionProblem], operator.add]
     """What could not be extracted. Never a silent drop; the reviewer sees this list."""
+
+    bidder_country: str
+    """Where the bidder is established, ISO 3166-1 alpha-2 lower case, written by
+    `plan_checks` from the company profile (S3.3.1). Empty means it could not be read, and
+    eCertis then answers for the unknown country `zz`. It is a channel rather than a lookup
+    each lane repeats because it is also what explains the answer: a reviewer asking why the
+    matrix names a German paper against a French tender reads it off the checkpoint."""
+
+    matrix_rows: Annotated[list[MatrixRow], operator.add]
+    """One row per requirement, appended per checking lane (S3.3.1). Appending because the
+    lanes run in one superstep and each returns only its own share; the row id is a `uuid5`
+    over the requirement id, so a resumed run updates rather than doubles."""
 
 
 class ExtractionUpdate(TypedDict, total=False):
@@ -275,6 +313,18 @@ class ExtractionUpdate(TypedDict, total=False):
 
     requirements: list[Requirement]
     extraction_problems: list[ExtractionProblem]
+
+
+class CheckPlanUpdate(TypedDict, total=False):
+    """The partial state `plan_checks` returns: who is bidding, and nothing else."""
+
+    bidder_country: str
+
+
+class CheckUpdate(TypedDict, total=False):
+    """The partial state one `check_reqs` lane returns: its share of the matrix."""
+
+    matrix_rows: list[MatrixRow]
 
 
 class ParseUpdate(TypedDict, total=False):

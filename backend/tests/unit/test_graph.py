@@ -8,6 +8,7 @@ them depend on what the nodes compute; the `live` restart test covers the Postgr
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import Sequence
 from typing import Any
@@ -20,17 +21,20 @@ from langgraph.types import Command
 from crossbid.agent import graph as graph_module
 from crossbid.agent.graph import (
     AWAIT_REVIEW,
+    CHECK_REQS,
     INTERRUPT_BID_ID,
     INTERRUPT_PROBLEMS,
     INTERRUPT_REQUIREMENTS,
     ReadModelProjection,
     StageError,
     build_graph,
+    fan_out_checks,
     initial_state,
     stage,
 )
 from crossbid.agent.state import BidState, ExtractionProblem, ExtractionProblemReason
 from crossbid.ingestion.storage import StorageError
+from crossbid.models.matrix import MatrixRow, RowStatus
 from crossbid.models.requirement import (
     Checkability,
     Requirement,
@@ -85,6 +89,9 @@ def problem(reason: ExtractionProblemReason) -> ExtractionProblem:
     return ExtractionProblem(reason=reason, document_name=DOCUMENT)
 
 
+WAIT_TIMEOUT_S = 5.0
+"""How long a lane waits for its siblings before the fan-out is declared broken."""
+
 PARSE_PROBLEM = problem(ExtractionProblemReason.UNPARSEABLE_DOCUMENT)
 EXTRACT_PROBLEM = problem(ExtractionProblemReason.NO_VERBATIM_QUOTE)
 ROWS = (requirement("Umsatz mindestens 3.000.000 EUR"), requirement("29 VZAE", page=2))
@@ -112,6 +119,10 @@ class RecordingProjection:
     def written_rows(self) -> list[Sequence[Requirement]]:
         return [value for kind, value in self.events if kind == "requirements"]
 
+    @property
+    def written_matrix(self) -> list[Sequence[MatrixRow]]:
+        return [value for kind, value in self.events if kind == "matrix"]
+
     async def set_status(self, *, company_id: str, bid_id: str, status: BidStatus) -> None:
         assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
         if self._fail_on_status:
@@ -127,6 +138,13 @@ class RecordingProjection:
     async def write_requirements(self, *, company_id: str, rows: Sequence[Requirement]) -> int:
         assert company_id == COMPANY_ID
         self.events.append(("requirements", list(rows)))
+        return len(rows)
+
+    async def write_matrix_rows(
+        self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
+    ) -> int:
+        assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
+        self.events.append(("matrix", list(rows)))
         return len(rows)
 
 
@@ -158,6 +176,64 @@ def extract_node(
     return extract_reqs
 
 
+def plan_node(country: str = "de") -> Any:
+    async def plan_checks(state: BidState, config: RunnableConfig | None = None) -> Any:
+        return {"bidder_country": country}
+
+    return plan_checks
+
+
+def check_node(lanes: list[BidState]) -> Any:
+    """A lane, recording the payload it was sent and answering one row per requirement."""
+
+    async def check_reqs(state: BidState, config: RunnableConfig | None = None) -> Any:
+        lanes.append(state)
+        return {
+            "matrix_rows": [
+                MatrixRow(
+                    id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"matrix:{row.id}")),
+                    requirement_id=row.id,
+                    status=RowStatus.PARTIALLY_SUPPORTED,
+                    agent_rationale="checked by a fake",
+                )
+                for row in state.get("requirements", [])
+            ]
+        }
+
+    return check_reqs
+
+
+class InFlightCounter:
+    """A checking lane that records how many lanes were running at the same moment.
+
+    Every lane waits for the last one to start before any of them returns, so the peak is
+    the real parallelism and not an artefact of a fast fake finishing first.
+    """
+
+    def __init__(self, expected: int) -> None:
+        self.lanes = 0
+        self.peak = 0
+        self.checked = 0
+        self._expected = expected
+        self._in_flight = 0
+        self._all_started = asyncio.Event()
+
+    async def node(self, state: BidState, config: RunnableConfig | None = None) -> Any:
+        self.lanes += 1
+        self.checked += len(state.get("requirements", []))
+        self._in_flight += 1
+        self.peak = max(self.peak, self._in_flight)
+        if self._in_flight >= self._expected:
+            self._all_started.set()
+        # A lane that returned before its siblings started would make the peak an artefact
+        # of how fast a fake is, so every lane waits until all of them have arrived. It is
+        # also the failure mode the assertion needs: a run that opens fewer lanes than
+        # `expected` deadlocks here rather than passing quietly.
+        await asyncio.wait_for(self._all_started.wait(), timeout=WAIT_TIMEOUT_S)
+        self._in_flight -= 1
+        return {"matrix_rows": []}
+
+
 async def crashing(state: BidState, config: RunnableConfig | None = None) -> Any:
     raise RuntimeError("Der Bieter muss ... (text quoted from the tender)")
 
@@ -169,6 +245,8 @@ def compile_graph(
     projection: RecordingProjection,
     parse: Any | None = None,
     extract: Any | None = None,
+    plan: Any | None = None,
+    check: Any | None = None,
 ) -> Any:
     return build_graph(
         settings,
@@ -177,6 +255,8 @@ def compile_graph(
         extract_reqs=(
             extract if extract is not None else extract_node(ROWS, problems=[EXTRACT_PROBLEM])
         ),
+        plan_checks=plan if plan is not None else plan_node(),
+        check_reqs=check if check is not None else check_node([]),
         projection=projection,
         checkpointer=saver,
     )
@@ -191,6 +271,8 @@ CONFIG = bid_run_config(BID_ID, thread_id=thread_id_of(BID_ID))
 async def test_the_status_sequence_is_written_to_the_read_model_in_order(
     offline_settings: Settings,
 ) -> None:
+    """`checking` appears once per stage entered, so once for the plan and once per lane —
+    two rows over five lanes is two. The poller reads the same word either way."""
     # Arrange
     projection = RecordingProjection()
     graph = compile_graph(offline_settings, saver=MemorySaver(), projection=projection)
@@ -202,6 +284,9 @@ async def test_the_status_sequence_is_written_to_the_read_model_in_order(
     assert projection.statuses == [
         BidStatus.PARSING,
         BidStatus.EXTRACTING,
+        BidStatus.CHECKING,
+        BidStatus.CHECKING,
+        BidStatus.CHECKING,
         BidStatus.AWAITING_REVIEW,
     ]
 
@@ -215,9 +300,12 @@ async def test_problems_are_projected_cumulatively_after_every_node(
 
     await graph.ainvoke(initial_state(bid_row()), CONFIG)
 
-    # After parse: its one problem. After extract: both. The interrupt node writes nothing
-    # on its first pass -- `interrupt()` raises before the stage reaches its exit projection.
-    assert projection.problem_counts == [1, 2]
+    # After parse: its one problem. After extract: both. Then `plan_checks` and each lane
+    # write the same accumulated two, which is why a lane's `Send` payload carries the list
+    # (`check_reqs.lane_state`): arriving without it would write an empty one over them. The
+    # interrupt node writes nothing on its first pass -- `interrupt()` raises before the
+    # stage reaches its exit projection.
+    assert projection.problem_counts == [1, 2, 2, 2, 2]
 
 
 async def test_requirements_are_written_once_when_extraction_finishes(
@@ -240,7 +328,9 @@ async def test_a_parse_node_that_reports_nothing_still_writes_the_empty_list(
     offline_settings: Settings,
 ) -> None:
     """`set_problems` runs whether or not there is anything in it, and no rows means no
-    `write_requirements` call -- the empty-list branch of `_project`."""
+    `write_requirements` call -- the empty-list branch of `_project`. No requirements also
+    means no lane: the third write is `plan_checks`, and the fan-out goes straight to the
+    interrupt."""
     projection = RecordingProjection()
     graph = compile_graph(
         offline_settings,
@@ -252,7 +342,7 @@ async def test_a_parse_node_that_reports_nothing_still_writes_the_empty_list(
 
     await graph.ainvoke(initial_state(bid_row()), CONFIG)
 
-    assert projection.problem_counts == [0, 0]
+    assert projection.problem_counts == [0, 0, 0]
     assert projection.written_rows == []
 
 
@@ -277,8 +367,8 @@ async def test_the_graph_parks_at_the_interrupt_with_awaiting_review(
         INTERRUPT_PROBLEMS: 2,
     }
     assert projection.statuses[-1] is BidStatus.AWAITING_REVIEW
-    # The checkpoint holds extraction's output; its `status` names the stage that produced it.
-    assert snapshot.values["status"] is BidStatus.EXTRACTING
+    # The checkpoint holds checking's output; its `status` names the stage that produced it.
+    assert snapshot.values["status"] is BidStatus.CHECKING
     assert [row.id for row in snapshot.values["requirements"]] == [row.id for row in ROWS]
 
 
@@ -318,6 +408,126 @@ async def test_resuming_the_parked_graph_runs_it_to_the_end(offline_settings: Se
     # The documented caveat: the interrupt node re-runs on resume, so its status is written
     # twice with the same value.
     assert projection.statuses.count(BidStatus.AWAITING_REVIEW) == 2
+
+
+# ----------------------------------------------------------------------- the checking fan-out
+
+
+async def test_every_requirement_is_checked_and_the_matrix_is_projected_lane_by_lane(
+    offline_settings: Settings,
+) -> None:
+    """Each lane's stage writes its own share, so the poller watches the matrix fill in."""
+    # Arrange
+    lanes: list[BidState] = []
+    projection = RecordingProjection()
+    graph = compile_graph(
+        offline_settings, saver=MemorySaver(), projection=projection, check=check_node(lanes)
+    )
+
+    # Act
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+
+    # Assert -- two requirements, two lanes, one row each, written separately
+    assert len(lanes) == 2
+    assert [len(written) for written in projection.written_matrix] == [1, 1]
+    checked = {row.requirement_id for written in projection.written_matrix for row in written}
+    assert checked == {row.id for row in ROWS}
+
+
+async def test_no_more_lanes_run_at_once_than_the_settings_allow(
+    offline_settings: Settings,
+) -> None:
+    """The story's concurrency limit. It is the number of `Send`s, so counting the lanes in
+    flight counts exactly the thing the setting bounds."""
+    # Arrange -- more requirements than lanes, each lane held until every lane has started
+    limit = offline_settings.runtime.agent.check_concurrency
+    rows = [requirement(f"Klausel {index}", page=index + 1) for index in range(limit * 3)]
+    projection = RecordingProjection()
+    counter = InFlightCounter(limit)
+    graph = compile_graph(
+        offline_settings,
+        saver=MemorySaver(),
+        projection=projection,
+        extract=extract_node(rows),
+        check=counter.node,
+    )
+
+    # Act
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+
+    # Assert
+    assert counter.lanes == limit
+    assert counter.peak == limit
+    assert counter.checked == len(rows)
+
+
+async def test_a_bid_with_no_requirements_parks_without_checking_anything(
+    offline_settings: Settings,
+) -> None:
+    """An empty fan-out returns a node name, not an empty list of `Send`s: an empty list
+    leaves the superstep with no successor and the run would finish unreviewed."""
+    # Arrange
+    lanes: list[BidState] = []
+    projection = RecordingProjection()
+    graph = compile_graph(
+        offline_settings,
+        saver=MemorySaver(),
+        projection=projection,
+        extract=extract_node([]),
+        check=check_node(lanes),
+    )
+
+    # Act
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+    snapshot = await graph.aget_state(CONFIG)
+
+    # Assert
+    assert lanes == []
+    assert projection.written_matrix == []
+    assert snapshot.next == (AWAIT_REVIEW,)
+
+
+def test_the_fan_out_sends_to_the_checking_node_and_carries_the_bidder(
+    offline_settings: Settings,
+) -> None:
+    # Arrange
+    state: BidState = {
+        "bid_id": BID_ID,
+        "company_id": COMPANY_ID,
+        "bidder_country": "de",
+        "requirements": list(ROWS),
+        "extraction_problems": [EXTRACT_PROBLEM],
+    }
+
+    # Act
+    sends = fan_out_checks(state, concurrency=5)
+
+    # Assert
+    assert isinstance(sends, list)
+    assert {send.node for send in sends} == {CHECK_REQS}
+    assert all(send.arg["bidder_country"] == "de" for send in sends)
+    assert all(send.arg["extraction_problems"] == [EXTRACT_PROBLEM] for send in sends)
+
+
+def test_the_fan_out_names_the_interrupt_when_there_is_nothing_to_check() -> None:
+    assert fan_out_checks({"requirements": []}, concurrency=5) == AWAIT_REVIEW
+
+
+async def test_every_lane_is_sent_the_country_the_planner_resolved(
+    offline_settings: Settings,
+) -> None:
+    lanes: list[BidState] = []
+    graph = compile_graph(
+        offline_settings,
+        saver=MemorySaver(),
+        projection=RecordingProjection(),
+        plan=plan_node("fr"),
+        check=check_node(lanes),
+    )
+
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+
+    assert [lane["bidder_country"] for lane in lanes] == ["fr", "fr"]
 
 
 # ------------------------------------------------------------------------------- failures
@@ -385,7 +595,13 @@ async def test_the_checkpoint_after_a_crash_resumes_at_the_failed_node(
     await repaired.ainvoke(None, CONFIG)
 
     # Assert
-    assert projection.statuses == [BidStatus.EXTRACTING, BidStatus.AWAITING_REVIEW]
+    assert projection.statuses == [
+        BidStatus.EXTRACTING,
+        BidStatus.CHECKING,
+        BidStatus.CHECKING,
+        BidStatus.CHECKING,
+        BidStatus.AWAITING_REVIEW,
+    ]
     assert (await repaired.aget_state(CONFIG)).next == (AWAIT_REVIEW,)
 
 
@@ -435,9 +651,14 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
         calls.append(("requirements", kwargs))
         return len(kwargs["rows"])
 
+    async def write_matrix_rows(db: Any, **kwargs: Any) -> int:
+        calls.append(("matrix", kwargs))
+        return len(kwargs["rows"])
+
     monkeypatch.setattr(graph_module, "set_bid_status", set_bid_status)
     monkeypatch.setattr(graph_module, "set_bid_problems", set_bid_problems)
     monkeypatch.setattr(graph_module, "write_requirements", write_requirements)
+    monkeypatch.setattr(graph_module, "write_matrix_rows", write_matrix_rows)
     projection = ReadModelProjection(FakeDatabase())
 
     # Act
@@ -446,9 +667,22 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
         company_id=COMPANY_ID, bid_id=BID_ID, problems=[PARSE_PROBLEM]
     )
     written = await projection.write_requirements(company_id=COMPANY_ID, rows=list(ROWS))
+    matrix = [
+        MatrixRow(
+            id=str(uuid.uuid4()),
+            requirement_id=ROWS[0].id,
+            status=RowStatus.PARTIALLY_SUPPORTED,
+            agent_rationale="Kein Nachweis gefunden.",
+        )
+    ]
+    checked = await projection.write_matrix_rows(
+        company_id=COMPANY_ID, bid_id=BID_ID, rows=matrix
+    )
 
     # Assert -- every call carries the tenant, and problems go out as plain JSON
     assert written == 2
+    assert checked == 1
+    assert calls[-1] == ("matrix", {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix})
     assert all(kwargs["company_id"] == COMPANY_ID for _, kwargs in calls)
     assert calls[0][1]["status"] is BidStatus.PARSING
     assert calls[1][1]["problems"] == [PARSE_PROBLEM.model_dump(mode="json")]
@@ -471,6 +705,8 @@ def test_initial_state_fills_every_channel_from_the_row() -> None:
         "documents": [],
         "requirements": [],
         "extraction_problems": [],
+        "bidder_country": "",
+        "matrix_rows": [],
     }
 
 

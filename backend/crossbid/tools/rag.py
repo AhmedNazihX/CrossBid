@@ -306,5 +306,9 @@ def scope_uuid(value: str, *, field: str, tool: str) -> uuid.UUID:
 def embeddings_client(
     context: ToolContext, embedder: EmbeddingsClient | None
 ) -> EmbeddingsClient:
-    """The caller's client, or one built from the context. See the module docstring."""
-    return embedder if embedder is not None else EmbeddingsClient(context.settings)
+    """The caller's client, then the run's, then a fresh one. See the module docstring."""
+    if embedder is not None:
+        return embedder
+    if context.embedder is not None:
+        return context.embedder
+    return EmbeddingsClient(context.settings)

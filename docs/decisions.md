@@ -1436,3 +1436,84 @@ real role check with the environment gate staying underneath.
   `EmbeddingsClient`. `rag.py` wants one client per run; that needs either a widened
   `ToolContext` or a registry parameter, and S3.3.1 is the story that knows which.
 - 2346 tests, 100% coverage.
+
+---
+
+## ADR-0017 — `check_reqs`: the agentic core, and what it is not allowed to invent
+
+**Date:** 2026-09-12 · **Stories:** S3.3.1 · **Status:** accepted
+
+### Context
+
+This is the product. Everything before it prepares evidence; this is the node that decides what
+a bidder can prove. It is also the brief's **Hard 1 (agentic RAG)**: the outer graph stays a
+deterministic workflow with a human interrupt, and the agentic part is a small ReAct loop *per
+requirement* inside this node. The plan's story text predates ADR-0013 and names five statuses;
+only the four in `RowStatus` exist.
+
+### Decisions
+
+**Evidence is an index, never a sentence.** The model does not write quotes — it returns
+`EvidenceRef(search, passage)`, two integers naming which tool call and which `[n]` within its
+result. The loop keeps each call's `RagSearchResult.hits` in call order and resolves through
+`RagHit.as_evidence()`, so the quote, document name and page in a matrix row are bytes the
+store returned. This is the product's central promise made structural rather than trusted: a
+test scripts a model whose rationale *contradicts* the passage it cites and asserts the row
+carries the passage. An out-of-range reference resolves to nothing, and a `supported` verdict
+left with no resolvable citation is **downgraded to `partially_supported`** with a note — the
+honest outcome, and it keeps `MatrixRow`'s validator from having to raise.
+
+**Two things happen without the model at all.**
+- eCertis is looked up **in code** when the requirement carries a criterion id. The story's
+  guarantee then does not depend on the model choosing to call a tool, and it costs no tool
+  call from the budget. The register's answer is also stated in the prompt.
+- A requirement whose `checkable` is not `COMPANY_PROPERTY` returns `partially_supported`
+  with **no model call**. ADR-0003 measured this: SP.1 answered `unclear` for all eight
+  submission duties. This branch is what makes checking fit the $2.50 run budget.
+
+**The tool budget is a counter that cannot be cheated.** `searches` is both the count and the
+record, and it grows for refused and failed calls too. Calls past the budget in a turn still get
+a `ToolMessage` ("not run, budget spent") because a dangling tool call makes the provider reject
+the next request; the loop then stops asking and the closing ask says the budget is gone.
+
+**Concurrency is structural, not a semaphore.** A conditional edge emits
+`min(check_concurrency, n)` `Send`s and each lane checks its share sequentially. Two
+consequences: the bound survives a resume with nothing to re-establish, and the Postgres
+checkpointer — which serialises on one lock (CLAUDE.md) — writes once per lane instead of once
+per requirement.
+
+**`status` needed a reducer.** Concurrent lanes all merge `status` in one superstep and a plain
+channel raises `InvalidUpdateError`. The concurrent writers are always the same stage, so "last
+write wins" is one answer arriving several times rather than a race. It is a **named function**,
+not a lambda: `BinaryOperatorAggregate.__eq__` treats any lambda as equal to any other.
+
+**Every failure is a row, never an exception.** A tool that raises, an unbound tool name, a tool
+returning the wrong type, a spent budget, a failed verdict call, a `DataWrapError` — each
+produces a row, and the message naming a tool failure carries the exception *type* only, because
+a tool error can quote a URL or a database row. A database outage still fails the run.
+
+**One `EmbeddingsClient` per lane.** `ToolContext` gained `embedder`, because it *is* the scope
+object the registry hands every tool; a parameter on `build_enabled_tools` would put one pair of
+tools' resource into the registry's signature for every future tool to ignore. Per lane rather
+than per run (a run-scoped client has no close point after the fan-out) or per requirement (258
+pools). A test monkeypatches `rag.EmbeddingsClient` to raise, so a tool building its own is a
+failure and not merely a cost.
+
+**The matrix row id is `uuid5` over the requirement id**, so a resumed run updates rather than
+doubles. The table has a unique index on `requirement_id`: a random id would not conflict on
+`id` and the insert would then be *refused*. The `do update set` list deliberately omits
+`reviewer_status`, `override_reason`, `attached_doc_ids` and `reviewed_at` — a re-run must never
+overwrite a human's decision.
+
+### Consequences
+
+- The graph is `parse_docs → extract_reqs → plan_checks -[Send × lanes]→ check_reqs →
+  await_review`. With no requirements the edge returns the node name rather than an empty `Send`
+  list, which would leave the superstep with no successor and finish the run unreviewed.
+- `GET /bids/{id}` now returns `matrix_rows`, ordered to line up index-for-index with
+  `requirements`, filled in **lane by lane** — so it is non-empty *while* `status` is `checking`
+  and grows between polls. S4.5.1 must render partial.
+- `not_applicable` and `unsupported` are model-chosen only; no code path produces them, so
+  S3.3.2's deterministic tests for those must script the verdict.
+- 2427 tests, 100% coverage. The live test (`test_check_reqs_live.py`, $0.25 tripwire) is
+  written and **not run**.

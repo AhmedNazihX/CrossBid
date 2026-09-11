@@ -288,7 +288,7 @@ export interface components {
              * @description What requirements are explained in
              */
             bidder_language: string;
-            /** @description queued → parsing → extracting → awaiting_review; failed carries failure_reason */
+            /** @description queued → parsing → extracting → checking → awaiting_review; failed carries failure_reason */
             status: components["schemas"]["BidStatus"];
             /**
              * Failure Reason
@@ -300,6 +300,11 @@ export interface components {
              * @description Every extracted requirement; empty until extraction has finished
              */
             requirements: components["schemas"]["Requirement"][];
+            /**
+             * Matrix Rows
+             * @description The compliance matrix, one row per checked requirement, in the same order as `requirements`. Fills in lane by lane while the status is `checking`.
+             */
+            matrix_rows: components["schemas"]["MatrixRow"][];
             /**
              * Problems
              * @description What parsing and extraction could not do, for the reviewer
@@ -723,6 +728,61 @@ export interface components {
             expires_at: string;
         };
         /**
+         * EcertisEvidence
+         * @description Which national document proves an EU criterion, per eCertis.
+         *
+         *     This is the cross-border wedge in one object: the same `criterion_id` yields
+         *     `Freistellungsbescheinigung` for DE and `Cerfa n. 3666` for FR.
+         *
+         *     A country with no national entry is normal, not an error — France has none for 17 of the
+         *     56 criteria (ADR-0007). `evidence_names` is then empty and `found` is False.
+         */
+        EcertisEvidence: {
+            /**
+             * Criterion Id
+             * @enum {string}
+             */
+            criterion_id: "005eb9ed-1347-4ca3-bb29-9bc0db64e1ab" | "07301031-2270-41af-8e7e-66fe0c777107" | "074f6031-55f9-4e99-b9a4-c4363e8bc315" | "166536e2-77f7-455c-b018-70582474e4f6" | "1f49b3f0-d50f-43f6-8b30-4bafab108b9b" | "297d2323-3ede-424e-94bc-a91561e6f320" | "3293e92b-7f3e-42f1-bee6-a7641bb04251" | "396f288a-e267-4c20-851a-ed4f7498f137" | "3a18a175-1863-4b1d-baef-588ce61960ca" | "3aaca389-4a7b-406b-a4b9-080845d127e7" | "47112079-6fec-47a3-988f-e561668c3aef" | "499efc97-2ac1-4af2-9e84-323c2ca67747" | "4bf996d9-439c-40c6-9ab9-980a48cb55a1" | "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3" | "56d13e3d-76e8-4f23-8af6-13e60a2ee356" | "5e506c16-26ab-4e32-bb78-b27f87dc0565" | "612a1625-118d-4ea4-a6db-413184e7c0a8" | "61874050-5130-4f1c-a174-720939c7b483" | "6346959b-e097-4ea1-89cd-d1b4c131ea4d" | "63adb07d-db1b-4ef0-a14e-a99785cf8cf6" | "68918c7a-f5bc-4a1a-a62f-ad8983600d48" | "696a75b2-6107-428f-8b74-82affb67e184" | "6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f" | "73f10e36-ed7a-412e-995c-aa76463e3776" | "7604bd40-4462-4086-8763-a50da51a869c" | "7662b7a9-bcb8-4763-a0a7-7505d8e8470d" | "77f481ce-ffb6-483f-8e2b-c78db5e68292" | "7d85e333-bbab-49c0-be8d-c36d71a72f5e" | "87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7" | "8ed65e48-fd0d-444f-97bd-4f58da632999" | "8fda202a-0c37-41bb-9d7d-de3f49edbfcb" | "90a2e100-44cc-45d3-9970-69d6714f1596" | "9460457e-b43d-48a9-acd1-615de6ddd33e" | "9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4" | "a261a395-ed17-4939-9c75-b9ff1109ca6e" | "a34b70d6-c43d-4726-9a88-8e2b438424bf" | "a7669d7d-9297-43e1-9d10-691a1660187c" | "a80ddb62-d25b-4e4e-ae22-3968460dc0a9" | "ab0e7f2e-6418-40e2-8870-6713123e41ad" | "b16cb9fc-6cb7-4585-9302-9533b415cf48" | "b1b5ac18-f393-4280-9659-1367943c1a2e" | "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4" | "bdf0601d-2480-4250-b870-658d0ee95be6" | "c27b7c4e-c837-4529-b867-ed55ce639db5" | "c599c130-b29f-461e-a187-4e16c7d40db7" | "c8809aa1-29b6-4f27-ae2f-27e612e394db" | "cc18c023-211d-484d-a32e-52f3f970285f" | "cdd3bb3e-34a5-43d5-b668-2aab86a73822" | "d3732c09-7d62-4edc-a172-241da6636e7c" | "d3dfb714-f558-4512-bbc5-e456fa2339de" | "d486fb70-86b3-4e75-97f2-0d71b5697c7d" | "d726bac9-e153-4e75-bfca-c5385587766d" | "d789d01a-fe03-4ccd-9898-73f9cfa080d1" | "daffa2a9-9f8f-4568-8be8-7b8bf306d096" | "dc12a151-7fdf-4733-a8f0-30f667292e66" | "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46";
+            /** Criterion Name */
+            criterion_name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2, lowercase
+             */
+            country: string;
+            /**
+             * Found
+             * @description False means this country records no evidence
+             */
+            found: boolean;
+            /**
+             * Evidence Names
+             * @default []
+             */
+            evidence_names: string[];
+            /**
+             * Issuers
+             * @default []
+             */
+            issuers: string[];
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * Evidence
+         * @description A pointer into the bidder's own documents. Never a summary — a locatable quote.
+         */
+        Evidence: {
+            /** Document Id */
+            document_id: string;
+            /** Document Name */
+            document_name: string;
+            /** Page */
+            page: number;
+            /** Quote */
+            quote: string;
+        };
+        /**
          * ExtractionProblem
          * @description One thing extraction could not do, addressed to the reviewer.
          *
@@ -777,6 +837,39 @@ export interface components {
          * @enum {string}
          */
         LegalForm: "gmbh" | "ug" | "ag" | "sarl" | "sas" | "sa" | "bv" | "sp_zoo" | "sole_trader" | "other";
+        /**
+         * MatrixRow
+         * @description The agent's verdict on one requirement, plus the reviewer's disposition.
+         */
+        MatrixRow: {
+            /** Id */
+            id: string;
+            /** Requirement Id */
+            requirement_id: string;
+            status: components["schemas"]["RowStatus"];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["Evidence"][];
+            ecertis_evidence?: components["schemas"]["EcertisEvidence"] | null;
+            /**
+             * Agent Rationale
+             * @description Why the agent chose this status, in one or two sentences
+             */
+            agent_rationale: string;
+            /** @default pending */
+            reviewer_status: components["schemas"]["ReviewerStatus"];
+            /** Override Reason */
+            override_reason?: string | null;
+            /**
+             * Attached Doc Ids
+             * @default []
+             */
+            attached_doc_ids: string[];
+            /** Reviewed At */
+            reviewed_at?: string | null;
+        };
         /**
          * ModelSlugs
          * @description Role -> OpenRouter slug. Every slug was confirmed with a live call (ADR-0004/0005).
@@ -861,6 +954,21 @@ export interface components {
          * @enum {string}
          */
         RequirementStage: "bid_eligibility" | "contract_performance";
+        /**
+         * ReviewerStatus
+         * @description What the human did with the agent's finding. The review step is the safety boundary.
+         * @enum {string}
+         */
+        ReviewerStatus: "pending" | "confirmed" | "overridden";
+        /**
+         * RowStatus
+         * @description The agent's finding for one requirement, in the design system's words (ADR-0013).
+         *
+         *     `supported` is cited evidence; `partially_supported` is the honest answer when the
+         *     documents do not settle it and the reviewer must; `unsupported` is evidence *against*.
+         * @enum {string}
+         */
+        RowStatus: "supported" | "partially_supported" | "unsupported" | "not_applicable";
         /**
          * StartBidRequest
          * @description What it takes to start a bid: the notice, the tender's language, and the pack.

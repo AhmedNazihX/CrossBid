@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Annotated
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle only matters to the type checker
+    from crossbid.ingestion.embeddings import EmbeddingsClient
     from crossbid.readmodel.bids import ConnectionSource
     from crossbid.settings import Settings
 
@@ -54,9 +55,19 @@ class ToolContext:
     conversion); a tool that needs it says so by raising when it is absent rather than
     quietly searching every bid. `db` is `None` in the same spirit: a tool that reads
     Postgres cannot be built without a connection source.
+
+    `embedder` is the odd one out: it is not scope but a *resource*, and it is here because
+    the scope object is the only thing `registry.build_enabled_tools` hands a tool. Both RAG
+    tools embed their query and both take an injectable client (S2.4.2); without this field
+    each would build its own and open its own `httpx` pool, closed by garbage collection.
+    The alternative -- a parameter on `build_enabled_tools` -- would put one pair of tools'
+    resource into the registry's signature for every future tool to ignore. `None` keeps the
+    old behaviour, so nothing that builds a context for a single call has to change. The
+    consumer that fills it is `check_reqs` (S3.3.1), which opens one client per lane.
     """
 
     settings: Settings
     company_id: str
     bid_id: str | None = None
     db: ConnectionSource | None = None
+    embedder: EmbeddingsClient | None = None

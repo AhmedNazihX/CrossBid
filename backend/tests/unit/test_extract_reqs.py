@@ -1302,11 +1302,27 @@ def test_a_value_that_contains_braces_is_substituted_rather_than_refused() -> No
     assert "the same obligation in de {and nothing else}" in text
 
 
-def test_every_prompt_file_renders_with_the_values_the_node_passes() -> None:
-    """A prompt added later with a marker nobody fills would fail in the middle of a bid."""
+PROMPT_VALUES: Mapping[str, Mapping[str, str]] = {
+    "extract": {"bidder_language": "de"},
+    "check": {"bidder_language": "de", "bidder_country": "de", "tool_budget": "4"},
+}
+"""What each node passes its prompt: `extract_reqs` here, `check_loop` for `check.md`.
+
+Written out rather than derived, because a table built from the templates themselves would
+say only that a file renders with its own markers — which is true of every file — and the
+property worth holding is that the values the *node* passes cover them."""
+
+
+def test_every_prompt_file_renders_with_the_values_its_node_passes() -> None:
+    """A prompt added later with a marker nobody fills would fail in the middle of a bid.
+
+    Both directions, which is the point: a `.md` with no entry here is a prompt no node was
+    shown to fill, and an entry with no file is a node rendering something that is not
+    shipped."""
     # Arrange
     names = sorted(path.stem for path in PROMPTS_DIR.glob("*.md"))
 
     # Assert
-    assert names == ["extract"]
-    assert render("extract", {"bidder_language": "de"})
+    assert names == sorted(PROMPT_VALUES)
+    for name, values in PROMPT_VALUES.items():
+        assert render(name, values), name

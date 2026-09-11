@@ -167,7 +167,8 @@ def test_the_state_documents_where_the_later_stories_extend_it() -> None:
     # Assert
     assert BidState.__doc__ is not None
     assert "S3.1.1" in BidState.__doc__
-    assert "CheckState" in BidState.__doc__
+    assert "S3.3.1" in BidState.__doc__
+    assert "F3.4" in BidState.__doc__
 
 
 # --------------------------------------------------------------------- tender documents

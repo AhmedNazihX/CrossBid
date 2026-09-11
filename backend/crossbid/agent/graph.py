@@ -1,15 +1,15 @@
-"""S3.1.1 — the outer graph: `parse_docs → extract_reqs → await_review`, checkpointed.
+"""S3.1.1 — the outer graph: parse, extract, check, then stop for a human. Checkpointed.
 
 **The outer graph is a deterministic workflow with a human interrupt, not an agent.** Every
-edge below is fixed: parse the pack, extract the requirements, stop for the reviewer. No
-model decides what runs next, and nothing here calls a tool. The *agentic* part of Crossbid
-— a small ReAct loop per requirement with a bounded tool budget — lives inside `check_reqs`
-(F3.3), which later stories add between `extract_reqs` and the interrupt along with
-`score_verdict`, `apply_review` and `finalize`. Extraction fans out for latency and nothing
-else (ADR-0011). Describing the graph this way is a CLAUDE.md convention, and this module is
-where the description has to be true.
+edge below is fixed: parse the pack, extract the requirements, check them, stop for the
+reviewer. No model decides what runs next, and nothing here calls a tool. The *agentic* part
+of Crossbid — a small ReAct loop per requirement with a bounded tool budget — lives inside
+`check_reqs` (S3.3.1), the node this graph fans out to; `score_verdict`, `apply_review` and
+`finalize` are later stories. Extraction fans out for latency and nothing else (ADR-0011).
+Describing the graph this way is a CLAUDE.md convention, and this module is where the
+description has to be true.
 
-Three decisions.
+Four decisions.
 
 **1. Every node runs inside a stage, and the stage keeps the read model current.** The
 browser polls `GET /bids/{id}`, which reads `bids.status` and never a checkpoint. So each
@@ -31,7 +31,17 @@ typed, with no `aupdate_state` on channels. One documented caveat: on resume the
 from its top, so the `awaiting_review` write happens twice; the value is the same both times
 and `apply_review`'s stage overwrites it at once.
 
-**3. A failure names the stage, never the document.** An exception out of a node is
+**3. Checking fans out by lane, and the number of lanes is the concurrency limit.**
+`plan_checks` resolves who the bidder is and a conditional edge then emits one `Send` per
+lane of requirements — `min(agent.check_concurrency, len(requirements))` of them, dealt
+round-robin by `check_reqs.lanes_of`. The bound is therefore structural: there is no
+semaphore to re-establish after a resume, and the Postgres checkpointer writes once per lane
+instead of once per requirement, which matters because it serialises every operation on one
+lock (CLAUDE.md). A bid whose extraction found nothing skips the fan-out and goes straight to
+the interrupt; a lane's rows are projected by its own stage, so the matrix fills in lane by
+lane rather than all at the end. The reasoning is in `nodes/check_reqs.py`.
+
+**4. A failure names the stage, never the document.** An exception out of a node is
 re-raised as `StageError`, whose message is `"<stage> failed: <ExceptionType>"` — what the
 runner stores as `failure_reason` and the dashboard shows. The exception's own message is
 deliberately dropped: a parser or a validator quotes its input, and that input is a tender
@@ -51,12 +61,19 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.errors import GraphBubbleUp
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import interrupt
+from langgraph.types import Send, interrupt
 
+from crossbid.agent.nodes.check_reqs import (
+    build_check_reqs,
+    build_plan_checks,
+    lane_state,
+    lanes_of,
+)
 from crossbid.agent.nodes.extract_reqs import build_extract_reqs
 from crossbid.agent.nodes.parse_docs import build_parse_docs
 from crossbid.agent.state import BidState, ExtractionProblem
 from crossbid.db import Database
+from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.tender import BidStatus
 from crossbid.readmodel.bids import (
@@ -65,6 +82,7 @@ from crossbid.readmodel.bids import (
     set_bid_problems,
     set_bid_status,
 )
+from crossbid.readmodel.matrix import write_matrix_rows
 from crossbid.readmodel.requirements import write_requirements
 from crossbid.settings import Settings
 
@@ -72,6 +90,8 @@ logger = logging.getLogger(__name__)
 
 PARSE_DOCS: Final = "parse_docs"
 EXTRACT_REQS: Final = "extract_reqs"
+PLAN_CHECKS: Final = "plan_checks"
+CHECK_REQS: Final = "check_reqs"
 AWAIT_REVIEW: Final = "await_review"
 """Node names. `AWAIT_REVIEW` is what `aget_state().next` reports while a bid is parked,
 and S3.4.2 resumes by that name."""
@@ -123,6 +143,10 @@ class RunProjection(Protocol):
         self, *, company_id: str, rows: Sequence[Requirement]
     ) -> int: ...
 
+    async def write_matrix_rows(
+        self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
+    ) -> int: ...
+
 
 class StageError(RuntimeError):
     """A node failed. `stage` says which; the message names the exception's type only."""
@@ -153,6 +177,13 @@ class ReadModelProjection:
 
     async def write_requirements(self, *, company_id: str, rows: Sequence[Requirement]) -> int:
         return await write_requirements(self._db, company_id=company_id, rows=rows)
+
+    async def write_matrix_rows(
+        self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
+    ) -> int:
+        return await write_matrix_rows(
+            self._db, company_id=company_id, bid_id=bid_id, rows=rows
+        )
 
 
 # ------------------------------------------------------------------------------- stages
@@ -199,7 +230,12 @@ async def _project(
     """What the poller may read the moment the node is done: problems always, rows if any.
 
     The problem list is the *accumulated* one — the state's plus the node's — because the
-    read model holds the whole list and `extraction_problems` is an appending channel.
+    read model holds the whole list and `extraction_problems` is an appending channel. A
+    checking lane therefore carries the list into its `Send` payload although it adds none
+    (`check_reqs.lane_state`): arriving without it would write an empty list over the one
+    extraction reported. Requirements and matrix rows are written only when the node
+    produced some, so the five lanes of a fan-out write five slices of the matrix and
+    nothing else.
     """
     problems = [*state.get("extraction_problems", []), *update.get("extraction_problems", [])]
     await projection.set_problems(company_id=company_id, bid_id=bid_id, problems=problems)
@@ -207,6 +243,12 @@ async def _project(
     if rows:
         written = await projection.write_requirements(company_id=company_id, rows=rows)
         logger.info("Bid %s: %d requirement(s) written to the read model", bid_id, written)
+    matrix: Sequence[MatrixRow] = update.get("matrix_rows", [])
+    if matrix:
+        written = await projection.write_matrix_rows(
+            company_id=company_id, bid_id=bid_id, rows=matrix
+        )
+        logger.info("Bid %s: %d matrix row(s) written to the read model", bid_id, written)
 
 
 async def _request_review(
@@ -248,38 +290,66 @@ def _identity_of(state: BidState) -> tuple[str, str]:
 # ------------------------------------------------------------------------------- building
 
 
+def fan_out_checks(state: BidState, *, concurrency: int) -> list[Send] | str:
+    """One `Send` per checking lane, or the interrupt when there is nothing to check.
+
+    The conditional edge out of `plan_checks`, and the only place the story's concurrency
+    limit is decided — see decision 3. It returns a node *name* rather than an empty list
+    for the empty case: an empty list of `Send`s leaves the superstep with no successor at
+    all, and the run would finish without ever parking for its reviewer.
+    """
+    lanes = lanes_of(state.get("requirements", []), concurrency)
+    if not lanes:
+        return AWAIT_REVIEW
+    return [Send(CHECK_REQS, lane_state(state, lane)) for lane in lanes]
+
+
 def build_graph(
     settings: Settings,
     db: Database,
     *,
     parse_docs: BidNode | None = None,
     extract_reqs: BidNode | None = None,
+    plan_checks: BidNode | None = None,
+    check_reqs: BidNode | None = None,
     projection: RunProjection | None = None,
     checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """The compiled outer graph — a deterministic workflow with a human interrupt.
 
-    `START → parse_docs → extract_reqs → await_review → END`, compiled on the process
-    checkpointer so that a run interrupted by a restart continues from its last completed
-    node (`runner.resume_unfinished_runs`). The four keyword seams exist for tests, which run
-    the real wiring over fake nodes, a recording projection and a `MemorySaver`; production
+    `START → parse_docs → extract_reqs → plan_checks →` a lane of `check_reqs` per
+    `agent.check_concurrency` `→ await_review → END`, compiled on the process checkpointer
+    so that a run interrupted by a restart continues from its last completed node
+    (`runner.resume_unfinished_runs`). The six keyword seams exist for tests, which run the
+    real wiring over fake nodes, a recording projection and a `MemorySaver`; production
     passes none of them. Building the real `parse_docs` raises `StorageError` when Storage
     is not configured — see `build_parse_docs` — and that is left to the caller to answer.
     """
     parse = parse_docs if parse_docs is not None else build_parse_docs(settings, db)
     extract = extract_reqs if extract_reqs is not None else build_extract_reqs(settings)
+    plan = plan_checks if plan_checks is not None else build_plan_checks(db)
+    check = check_reqs if check_reqs is not None else build_check_reqs(settings, db)
     project = projection if projection is not None else ReadModelProjection(db)
     saver = checkpointer if checkpointer is not None else db.checkpointer
+    concurrency = settings.runtime.agent.check_concurrency
 
     builder: StateGraph[BidState] = StateGraph(BidState)
-    # Workflow nodes: fixed order, no model chooses the next step. The agentic loop of
-    # F3.3 slots in after `extract_reqs`; the interrupt stays last before the review nodes.
+    # Workflow nodes: fixed order, no model chooses the next step. `check_reqs` is the one
+    # agentic node, reached by a `Send` per lane; the interrupt stays last before F3.4.
     builder.add_node(PARSE_DOCS, stage(BidStatus.PARSING, parse, project))
     builder.add_node(EXTRACT_REQS, stage(BidStatus.EXTRACTING, extract, project))
+    builder.add_node(PLAN_CHECKS, stage(BidStatus.CHECKING, plan, project))
+    builder.add_node(CHECK_REQS, stage(BidStatus.CHECKING, check, project))
     builder.add_node(AWAIT_REVIEW, stage(BidStatus.AWAITING_REVIEW, _request_review, project))
     builder.add_edge(START, PARSE_DOCS)
     builder.add_edge(PARSE_DOCS, EXTRACT_REQS)
-    builder.add_edge(EXTRACT_REQS, AWAIT_REVIEW)
+    builder.add_edge(EXTRACT_REQS, PLAN_CHECKS)
+    builder.add_conditional_edges(
+        PLAN_CHECKS,
+        lambda state: fan_out_checks(state, concurrency=concurrency),
+        [CHECK_REQS, AWAIT_REVIEW],
+    )
+    builder.add_edge(CHECK_REQS, AWAIT_REVIEW)
     builder.add_edge(AWAIT_REVIEW, END)
     return builder.compile(checkpointer=saver)
 
@@ -301,4 +371,6 @@ def initial_state(bid: BidRow) -> BidState:
         "documents": [],
         "requirements": [],
         "extraction_problems": [],
+        "bidder_country": "",
+        "matrix_rows": [],
     }

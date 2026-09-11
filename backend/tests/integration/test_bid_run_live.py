@@ -1,4 +1,4 @@
-"""S3.1.1's budget criterion: the DE pack parks at `awaiting_review` in time and on budget.
+"""S3.1.1's budget criterion: the DE pack reaches the interrupt in time and on budget.
 
 Marked `live`: it calls OpenRouter on the default models for every section of the 28-file,
 191-page pack (ADR-0001), which costs real money and minutes. It is **not** run by
@@ -7,10 +7,14 @@ Marked `live`: it calls OpenRouter on the default models for every section of th
 
 What is real here and what is not, stated so the number means something. Real: the
 extraction node built from the committed settings, the model calls, the graph wiring, the
-interrupt. Not real: Storage and Postgres. The pack is read from the fixture directory
-through the node's fetcher seam, the read model is a recorder and the checkpointer a
-`MemorySaver` -- the Postgres saver has its own `live` restart test and would only add its
-own latency to a measurement that is about the model. Cost is what OpenRouter *reports*
+interrupt. Not real: Storage, Postgres, and **checking**. The pack is read from the fixture
+directory through the node's fetcher seam, the read model is a recorder and the checkpointer
+a `MemorySaver` -- the Postgres saver has its own `live` restart test and would only add its
+own latency to a measurement that is about the model. `plan_checks` and `check_reqs` are
+stubbed out, so this test keeps measuring exactly what it measured on 2026-09-11 (ADR-0012)
+and stays comparable with that recorded figure; S3.3.1's own live test
+(`test_check_reqs_live.py`) measures the agentic loop, whose retrieval tools need a database
+this test deliberately does not open. Cost is what OpenRouter *reports*
 (`usage.cost`, requested by `llm.USAGE_ACCOUNTING_EXTRA_BODY`), summed over every call by a
 callback handler, so a run that reported no cost at all fails rather than passing at $0.
 
@@ -83,6 +87,11 @@ class RecordingProjection:
         self.rows.extend(rows)
         return len(rows)
 
+    async def write_matrix_rows(
+        self, *, company_id: str, bid_id: str, rows: Sequence[Any]
+    ) -> int:
+        return len(rows)
+
 
 class FakeDatabase:
     checkpointer = MemorySaver()
@@ -125,6 +134,17 @@ def fixture_rows() -> list[BidDocumentRow]:
     ]
 
 
+async def skip_planning(state: Any, config: Any = None) -> Any:
+    """Stands in for `plan_checks`, which would read the companies table."""
+    return {"bidder_country": "de"}
+
+
+async def skip_checking(state: Any, config: Any = None) -> Any:
+    """Stands in for `check_reqs`. Never reached -- with requirements present the fan-out
+    does send to it, so it is a real stub and not a decoration."""
+    return {"matrix_rows": []}
+
+
 def fixture_parser() -> DocumentParser:
     rows = fixture_rows()
 
@@ -152,6 +172,8 @@ async def test_the_de_pack_reaches_awaiting_review_within_the_time_and_cost_budg
         SETTINGS,
         FakeDatabase(),  # type: ignore[arg-type]
         parse_docs=fixture_parser(),
+        plan_checks=skip_planning,
+        check_reqs=skip_checking,
         projection=projection,
         checkpointer=MemorySaver(),
     )
@@ -176,11 +198,9 @@ async def test_the_de_pack_reaches_awaiting_review_within_the_time_and_cost_budg
 
     # Assert -- parked for a human, with rows, inside both limits
     assert snapshot.next == (AWAIT_REVIEW,)
-    assert projection.statuses == [
-        BidStatus.PARSING,
-        BidStatus.EXTRACTING,
-        BidStatus.AWAITING_REVIEW,
-    ]
+    assert projection.statuses[:2] == [BidStatus.PARSING, BidStatus.EXTRACTING]
+    assert projection.statuses[-1] is BidStatus.AWAITING_REVIEW
+    assert set(projection.statuses[2:-1]) == {BidStatus.CHECKING}
     assert projection.rows, "extraction wrote no requirements"
     assert elapsed < budget.seconds, (
         f"{elapsed:.0f}s to awaiting_review, budget {budget.seconds}s"

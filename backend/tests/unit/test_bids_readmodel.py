@@ -1,4 +1,4 @@
-"""S3.1.1 — the `bids` and `requirements` projections, against a scripted connection.
+"""S3.1.1/S3.3.1 — the `bids`, `requirements` and `matrix_rows` projections, scripted.
 
 Offline. The statements are asserted as text (every tenant-scoped one carries the predicate,
 the one unscoped one is named and known) and every writer and reader runs against a fake
@@ -19,6 +19,14 @@ from typing import Any
 import pytest
 from psycopg.types.json import Jsonb
 
+from crossbid.models.ecertis_criteria import CRITERION_IDS
+from crossbid.models.matrix import (
+    EcertisEvidence,
+    Evidence,
+    MatrixRow,
+    ReviewerStatus,
+    RowStatus,
+)
 from crossbid.models.requirement import (
     Checkability,
     Requirement,
@@ -30,7 +38,7 @@ from crossbid.models.requirement import (
     ThresholdUnit,
 )
 from crossbid.models.tender import BidStatus, DocumentKind
-from crossbid.readmodel import bids, requirements
+from crossbid.readmodel import bids, matrix, requirements
 from crossbid.readmodel.bids import (
     MAX_BIDS_LISTED,
     UNFINISHED_STATUSES,
@@ -53,6 +61,7 @@ from crossbid.readmodel.bids import (
     unfinished_bids,
 )
 from crossbid.readmodel.documents import DocumentStatus
+from crossbid.readmodel.matrix import fetch_matrix_rows, write_matrix_rows
 from crossbid.readmodel.requirements import fetch_requirements, write_requirements
 
 pytestmark = pytest.mark.anyio
@@ -194,6 +203,11 @@ def test_every_scoped_bid_statement_binds_the_company(statement: str) -> None:
 
 @pytest.mark.parametrize("statement", requirements.SCOPED_STATEMENTS)
 def test_every_requirement_statement_binds_the_company(statement: str) -> None:
+    assert TENANT_PREDICATE in statement
+
+
+@pytest.mark.parametrize("statement", matrix.SCOPED_STATEMENTS)
+def test_every_matrix_statement_binds_the_company(statement: str) -> None:
     assert TENANT_PREDICATE in statement
 
 
@@ -557,3 +571,149 @@ async def test_fetch_requirements_turns_a_criterion_uuid_back_into_a_string() ->
 
     assert found.ecertis_criterion_id == CRITERION_IDS[0]
     assert found.threshold is None
+
+
+# ------------------------------------------------------------------------- matrix rows
+
+
+def matrix_row(**overrides: Any) -> MatrixRow:
+    values: dict[str, Any] = {
+        "id": str(uuid.uuid4()),
+        "requirement_id": str(uuid.uuid4()),
+        "status": RowStatus.SUPPORTED,
+        "evidence": (
+            Evidence(
+                document_id=str(uuid.uuid4()),
+                document_name="Jahresabschluss_2025.pdf",
+                page=2,
+                quote="Der Jahresumsatz 2025 betrug 7.400.000,00 EUR.",
+            ),
+        ),
+        "agent_rationale": "Der Jahresabschluss weist 7,4 Mio. EUR aus.",
+    }
+    return MatrixRow(**(values | overrides))
+
+
+async def test_write_matrix_rows_with_nothing_to_write_borrows_no_connection() -> None:
+    db = FakeDatabase()
+
+    written = await write_matrix_rows(
+        db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), rows=[]
+    )
+
+    assert written == 0
+    assert db.borrowed == 0
+
+
+async def test_write_matrix_rows_upserts_every_row_in_one_executemany() -> None:
+    """One lane is dozens of rows; a statement each is dozens of round trips to Frankfurt."""
+    # Arrange
+    criterion = EcertisEvidence(
+        criterion_id=CRITERION_IDS[0],
+        criterion_name="Payment of taxes",
+        country="de",
+        found=True,
+        evidence_names=("Freistellungsbescheinigung",),
+    )
+    rows = [
+        matrix_row(ecertis_evidence=criterion),
+        matrix_row(status=RowStatus.PARTIALLY_SUPPORTED, evidence=()),
+    ]
+    db = FakeDatabase()
+
+    # Act
+    written = await write_matrix_rows(
+        db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), rows=rows
+    )
+
+    # Assert
+    assert written == 2
+    [(sql, params)] = db.conn.executed
+    assert sql is matrix.UPSERT_MATRIX_ROW
+    first, second = params
+    assert first["company_id"] == str(COMPANY_ID)
+    assert first["bid_id"] == str(BID_ID)
+    assert first["status"] == "supported"
+    assert isinstance(first["evidence"], Jsonb)
+    assert first["evidence"].obj[0]["quote"].startswith("Der Jahresumsatz")
+    assert isinstance(first["ecertis_evidence"], Jsonb)
+    assert first["ecertis_evidence"].obj["country"] == "de"
+    assert second["ecertis_evidence"] is None
+    assert second["evidence"].obj == []
+
+
+def test_the_upsert_leaves_the_reviewers_own_columns_alone() -> None:
+    """A re-check refreshes the agent's finding; a human's disposition is not the agent's
+    to overwrite, and S3.4.x writes those columns through its own statement."""
+    # Assert
+    updated = matrix.UPSERT_MATRIX_ROW.split("do update set")[1]
+    for column in ("reviewer_status", "override_reason", "attached_doc_ids", "reviewed_at"):
+        assert column not in updated
+
+
+async def test_fetch_matrix_rows_revalidates_rows_from_the_table() -> None:
+    # Arrange
+    document_id = uuid.uuid4()
+    attached = uuid.uuid4()
+    record = {
+        "id": uuid.uuid4(),
+        "requirement_id": uuid.uuid4(),
+        "status": "partially_supported",
+        "evidence": [
+            {
+                "document_id": str(document_id),
+                "document_name": "Police.pdf",
+                "page": 3,
+                "quote": "Deckungssumme 5.000.000 EUR.",
+            }
+        ],
+        "ecertis_evidence": None,
+        "agent_rationale": "Die Police deckt weniger als gefordert.",
+        "reviewer_status": "confirmed",
+        "override_reason": None,
+        "attached_doc_ids": [attached],
+        "reviewed_at": NOW,
+    }
+    db = FakeDatabase(Scripted([record]))
+
+    # Act
+    [found] = await fetch_matrix_rows(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
+
+    # Assert -- psycopg hands back UUIDs and datetimes; the row model speaks strings
+    assert db.params() == {"company_id": str(COMPANY_ID), "bid_id": str(BID_ID)}
+    assert found.status is RowStatus.PARTIALLY_SUPPORTED
+    assert found.evidence[0].document_id == str(document_id)
+    assert found.reviewer_status is ReviewerStatus.CONFIRMED
+    assert found.attached_doc_ids == (str(attached),)
+    assert found.reviewed_at == NOW
+
+
+async def test_fetch_matrix_rows_reads_an_ecertis_mapping_back() -> None:
+    record = {
+        "id": uuid.uuid4(),
+        "requirement_id": uuid.uuid4(),
+        "status": "not_applicable",
+        "evidence": None,
+        "ecertis_evidence": {
+            "criterion_id": CRITERION_IDS[0],
+            "criterion_name": "Payment of taxes",
+            "country": "de",
+            "found": True,
+            "evidence_names": ["Freistellungsbescheinigung"],
+            "issuers": ["Finanzamt"],
+            "description": "Zahlung von Steuern",
+        },
+        "agent_rationale": "Betrifft nur Bietergemeinschaften.",
+        "reviewer_status": "pending",
+        "override_reason": None,
+        "attached_doc_ids": None,
+        "reviewed_at": None,
+    }
+    db = FakeDatabase(Scripted([record]))
+
+    [found] = await fetch_matrix_rows(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
+
+    assert found.evidence == ()
+    assert found.ecertis_evidence is not None
+    assert found.ecertis_evidence.issuers == ("Finanzamt",)
+    assert found.attached_doc_ids == ()

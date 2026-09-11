@@ -72,6 +72,9 @@ class RecordingProjection:
     async def write_requirements(self, *, company_id: str, rows: Any) -> int:
         return len(rows)
 
+    async def write_matrix_rows(self, *, company_id: str, bid_id: str, rows: Any) -> int:
+        return len(rows)
+
 
 class FakeDatabase:
     def __init__(self) -> None:
@@ -83,6 +86,11 @@ class FakeDatabase:
 
 async def quiet_parse(state: BidState, config: RunnableConfig | None = None) -> Any:
     return {"documents": [], "extraction_problems": []}
+
+
+async def quiet_plan(state: BidState, config: RunnableConfig | None = None) -> Any:
+    """Stands in for `plan_checks`, which would otherwise read the companies table."""
+    return {"bidder_country": "de"}
 
 
 async def quiet_extract(state: BidState, config: RunnableConfig | None = None) -> Any:
@@ -101,6 +109,10 @@ def hanging_node(started: asyncio.Event) -> Any:
     return hang
 
 
+async def quiet_check(state: BidState, config: RunnableConfig | None = None) -> Any:
+    return {"matrix_rows": []}
+
+
 def graph_over(
     settings: Settings,
     saver: MemorySaver,
@@ -109,11 +121,19 @@ def graph_over(
     parse: Any = quiet_parse,
     extract: Any = quiet_extract,
 ) -> Any:
+    """The real wiring, with every node that would reach a database or a model replaced.
+
+    `quiet_extract` finds no requirements, so the checking fan-out emits no `Send` and
+    `check_reqs` is never reached; it is injected anyway so that a future change to that
+    edge cannot quietly build the real, model-calling node in a unit test.
+    """
     return build_graph(
         settings,
         FakeDatabase(),  # type: ignore[arg-type]
         parse_docs=parse,
         extract_reqs=extract,
+        plan_checks=quiet_plan,
+        check_reqs=quiet_check,
         projection=projection,
         checkpointer=saver,
     )
@@ -166,6 +186,7 @@ async def test_start_runs_the_graph_in_the_background_and_tracks_the_task(
     assert projection.statuses == [
         BidStatus.PARSING,
         BidStatus.EXTRACTING,
+        BidStatus.CHECKING,
         BidStatus.AWAITING_REVIEW,
     ]
     snapshot = await runner.graph.aget_state(bid_run_config(bid.id, thread_id=bid.thread_id))
@@ -268,7 +289,11 @@ async def test_resume_continues_from_the_checkpoint_after_a_crash(
         await repaired.resume(bid_row(bid.id, status=BidStatus.EXTRACTING))
 
     # Assert
-    assert projection.statuses == [BidStatus.EXTRACTING, BidStatus.AWAITING_REVIEW]
+    assert projection.statuses == [
+        BidStatus.EXTRACTING,
+        BidStatus.CHECKING,
+        BidStatus.AWAITING_REVIEW,
+    ]
     assert any("resuming from checkpoint" in r.getMessage() for r in caplog.records)
 
 
