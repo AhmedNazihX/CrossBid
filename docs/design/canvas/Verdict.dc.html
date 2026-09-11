@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <title>Verdict panel</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+    body { margin: 0; background: oklch(1 0 0); color: oklch(0.145 0 0); font-family: Geist, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.145 0 0); text-decoration: none; } a:hover { color: oklch(0.556 0 0); }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .muted { color: oklch(0.556 0 0); }
+    .pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex: none; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 10px; border: 1px solid transparent; font-size: 14px; font-weight: 500; white-space: nowrap; background: oklch(0.205 0 0); color: oklch(0.985 0 0); }
+    .btn.lg { height: 36px; }
+    .btn.outline { background: oklch(1 0 0); color: oklch(0.145 0 0); border-color: oklch(0.922 0 0); }
+    .btn.ghost { background: transparent; color: oklch(0.145 0 0); }
+    .btn.destructive { background: oklch(0.965 0.03 27); color: oklch(0.577 0.245 27.325); }
+    .card { background: oklch(1 0 0); border: 1px solid oklch(0.922 0 0); border-radius: 10px; }
+    .label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; color: oklch(0.556 0 0); }
+    .th { font-size: 12px; font-weight: 500; color: oklch(0.556 0 0); text-align: left; padding: 8px 12px; border-bottom: 1px solid oklch(0.922 0 0); white-space: nowrap; }
+    .td { padding: 12px; border-bottom: 1px solid oklch(0.922 0 0); vertical-align: top; }
+    table { border-collapse: collapse; width: 100%; }
+    .quote { font-style: normal; color: oklch(0.145 0 0); border-left: 2px solid oklch(0.922 0 0); padding-left: 10px; }
+    input, textarea, select { font: inherit; }
+</style>
+</helmet>
+
+<div style="width: 640px; min-height: 900px; padding: 24px; background: oklch(0.97 0 0); display: flex; flex-direction: column;">
+  <section class="card" style="display: flex; flex-direction: column; overflow: hidden;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid oklch(0.922 0 0); display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span class="label">The agent's verdict · for you to confirm</span>
+        <span class="muted" style="font-size: 12px;">Checked 11 Sep 2026, 14:32</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; background: oklch(0.965 0.03 27); color: oklch(0.577 0.245 27.325); font-size: 16px; font-weight: 600;"><span class="dot"></span>No-go</span>
+        <span style="font-size: 14px;"><strong>24</strong><span class="muted"> / 31 mandatory met</span> · <span style="color: oklch(0.577 0.245 27.325);">3 blocking</span> · <span style="color: oklch(0.55 0.14 70);">4 open items</span></span>
+      </div>
+      <p style="margin: 0; font-size: 14px;">Der Mindestumsatz von 2 Mio. € wird mit 1,45 Mio. € nicht erreicht. Das ist eine Mindestanforderung an die Eignung, die der Auftraggeber nicht ermessensabhängig prüft; ohne einen Nachweis über einen höheren Umsatz oder eine Bietergemeinschaft ist das Angebot nicht zulässig.</p>
+      <p class="muted" style="margin: 0; font-size: 13px;">Rules, not a guess: one unmet mandatory requirement is a no-go. All three not-met rows are listed below; the four unclear rows are open items in the matrix.</p>
+    </div>
+
+    <div style="padding: 8px 24px 12px; display: flex; flex-direction: column;">
+      <span class="label" style="padding: 8px 0;">What stands in the way</span>
+      
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.577 0.245 27.325); background: oklch(0.965 0.03 27);"><span class="dot"></span>Blocking</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 9</a></div>
+          <span style="font-weight: 500;">Durchschnittlicher Jahresumsatz von mindestens 2 000 000 € HT</span>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 13px;">
+              <div><span class="label">Required</span><div>€ 2 000 000 average, last 3 years</div></div>
+              <div><span class="label">Found in your documents</span><div>€ 1 450 000 (Jahresabschluss 2025, p. 3)</div></div>
+            </div>
+        </div>
+      
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.577 0.245 27.325); background: oklch(0.965 0.03 27);"><span class="dot"></span>Blocking</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 4</a></div>
+          <span style="font-weight: 500;">Angebot ausschließlich über die Plattform PLACE bis 9. Okt. 2026, 16:00 Uhr einreichen</span>
+          
+        </div>
+      
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.577 0.245 27.325); background: oklch(0.965 0.03 27);"><span class="dot"></span>Blocking</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 5</a></div>
+          <span style="font-weight: 500;">Qualifizierte elektronische Signatur durch eine vertretungsberechtigte Person</span>
+          
+        </div>
+      
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Open item</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 9</a></div>
+          <span style="font-weight: 500;">Berufshaftpflichtversicherung mit nachgewiesener Deckungssumme</span>
+          
+        </div>
+      
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid oklch(0.922 0 0);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span class="pill" style="color: oklch(0.55 0.14 70); background: oklch(0.965 0.04 80);"><span class="dot"></span>Open item</span><a href="#" class="muted" style="font-size: 12px;">RC v1 · p. 12</a></div>
+          <span style="font-weight: 500;">Drei Referenzen vergleichbarer Leistungen aus den letzten drei Jahren</span>
+          
+        </div>
+      <a href="#" class="muted" style="padding: 10px 0; font-size: 13px; border-top: 1px solid oklch(0.922 0 0);">2 more open items in the matrix →</a>
+    </div>
+
+    <div style="padding: 20px 24px; border-top: 1px solid oklch(0.922 0 0); background: oklch(0.97 0 0); display: flex; flex-direction: column; gap: 14px;">
+      <span style="font-weight: 600;">Your decision</span>
+      <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid oklch(0.922 0 0); border-radius: 10px; background: oklch(1 0 0);">
+        <span style="width: 18px; height: 18px; border-radius: 999px; border: 1px solid oklch(0.556 0 0); flex: none; margin-top: 2px;"></span>
+        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Confirm the verdict — No-go</span><span class="muted" style="font-size: 13px;">Record the agent's verdict as your own.</span></span>
+      </label>
+      <label style="display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; border: 1px solid oklch(0.205 0 0); border-radius: 10px; background: oklch(1 0 0);">
+        <span style="display: flex; gap: 12px; align-items: flex-start;">
+          <span style="width: 18px; height: 18px; border-radius: 999px; border: 6px solid oklch(0.205 0 0); background: oklch(1 0 0); flex: none; margin-top: 2px;"></span>
+          <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Override with a different decision</span><span class="muted" style="font-size: 13px;">Your decision is recorded next to the agent's; both stay visible.</span></span>
+        </span>
+        <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; padding-left: 30px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span class="label">New decision</span>
+            <span style="display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border: 1px solid oklch(0.922 0 0); border-radius: 10px;">Go, with open items <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg></span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span class="label">Reason <span style="color: oklch(0.577 0.245 27.325);">*</span></span>
+            <div style="min-height: 84px; padding: 8px 12px; border: 1px solid oklch(0.922 0 0); border-radius: 10px; font-size: 13px; line-height: 1.5;">Wir bieten als Bietergemeinschaft mit der Muster Consulting GmbH an; der gemeinsame Umsatz 2023–2025 liegt bei 3,1 Mio. €. Nachweis folgt mit dem Konsortialvertrag.</div>
+          </div>
+        </div>
+      </label>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px;">
+        <span class="muted" style="font-size: 12px; max-width: 340px;">Submitted once. 2 rows you changed and 1 document you attached are submitted with it.</span>
+        <a class="btn lg" href="#">Submit review</a>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+</body>
+</html>

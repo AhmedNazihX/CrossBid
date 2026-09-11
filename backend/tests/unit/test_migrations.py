@@ -35,9 +35,11 @@ from crossbid.models import (
     RowStatus,
     Tone,
 )
+from crossbid.readmodel.documents import DocumentStatus
 
 MIGRATIONS_DIR = Path(migrate.__file__).resolve().parent.parent / "migrations"
 INIT_SQL = MIGRATIONS_DIR / "0001_init.sql"
+"""Read by the tests about 0001's own shape (tables, indexes, column types)."""
 
 # Constraint name -> the StrEnum whose values it must mirror exactly.
 CONSTRAINT_ENUMS: dict[str, type[enum.Enum]] = {
@@ -54,11 +56,18 @@ CONSTRAINT_ENUMS: dict[str, type[enum.Enum]] = {
     "matrix_rows_status_check": RowStatus,
     "matrix_rows_reviewer_status_check": ReviewerStatus,
     "reviews_decision_check": Decision,
+    "documents_status_check": DocumentStatus,  # 0002 (S2.2.3)
 }
 
 
 def _sql() -> str:
-    return INIT_SQL.read_text(encoding="utf-8")
+    """Every migration, in order, as one text: a constraint may be added by any of them.
+
+    Later files add enum columns too (0002's `documents.status`), and a parity guard that
+    scanned only 0001 would let those drift unnoticed -- which is what happened to the first
+    draft of this test when S2.2.3 landed.
+    """
+    return "\n".join(m.sql for m in migrate.discover(MIGRATIONS_DIR))
 
 
 def _sql_without_comments() -> str:
@@ -78,7 +87,7 @@ def _constraint_values(sql: str, constraint: str) -> set[str]:
     )
     match = pattern.search(sql)
     if match is None:
-        raise AssertionError(f"constraint {constraint} not found in {INIT_SQL.name}")
+        raise AssertionError(f"constraint {constraint} not found in any migration")
     return set(re.findall(r"'([^']+)'", match.group(1)))
 
 
@@ -97,7 +106,7 @@ def test_check_constraint_matches_its_pydantic_enum(constraint: str) -> None:
     # Assert
     assert actual == expected, (
         f"{constraint} allows {sorted(actual)} but the enum defines {sorted(expected)}; "
-        "add a new migration rather than editing 0001_init.sql"
+        "add a new migration rather than editing an applied one"
     )
 
 

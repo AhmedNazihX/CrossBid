@@ -978,3 +978,91 @@ gains the `make migrate` step, which the API does not do for itself.
 - Increment 1 has three stories left: S2.2.3 (upload-to-ready flow, now unblocked), S3.1.1 (the
   graph and `/bids`, now unblocked), and S4.0.1 — the design canvas the user must confirm before
   S4.5.1 and every matrix component. S4.2.2 waits on S2.2.3.
+
+## ADR-0012 — Upload-to-ready, the bid run, the dev-auth bridge, and the first design draft
+
+**Date:** 2026-09-11 · **Stories:** S2.2.3, S3.1.1, S0.3.1 (dev-mode bridge only), S4.0.1 (draft) · **Status:** accepted; S4.0.1 awaits the user's confirmation
+
+### Who is calling, before sign-in exists
+
+`crossbid/auth.py` is S0.3.1's Notes made concrete: with `AUTH_MODE=dev` the `X-Dev-Company` header
+(a UUID) names the tenant and is believed — absent or malformed is 401 — and `AUTH_MODE=supabase`
+answers **501** until token verification lands, so a deployment configured for real auth cannot
+*look* authenticated. `settings.py` already refuses `dev` together with `ENV=production`. Every
+router takes `CompanyContext` and every read-model statement is scoped by it; `main.get_app_settings`
+serves the `Settings` the app was created with, so injected settings reach every dependency and the
+`app_settings` row override (S4.6.2) has one place to land.
+
+### Tender documents are not embedded at upload
+
+S2.2.3's first draft embedded every upload. The concurrent S3.1.1 work made that wrong: documents
+are uploaded *before* a bid exists (S4.3.1 disables Start until one is ready), and
+`tender_chunks.bid_id` is `NOT NULL`, so there is nowhere to put a tender's vectors at upload time.
+The pipeline therefore runs `uploaded → parsed → embedded → ready` for **company evidence** (into
+`company_chunks`) and `uploaded → parsed → ready` for **tender kinds** — stored, page-counted, a
+scanned PDF refused with a readable reason — leaving tender vectors to the graph under the bid.
+`EMBEDDED_KINDS` is the one-line switch if that changes. Migration `0002` adds `documents.status`,
+`failure_reason` and `updated_at`, with "failed iff there is a reason" enforced in SQL as well as
+Pydantic; the parity guard in `tests/unit/test_migrations.py` now scans **every** migration file,
+because its first draft scanned only `0001` and would have let `0002`'s status list drift.
+
+Blocking work runs under `asyncio.to_thread`: pymupdf on a 191-page pack would otherwise stall
+every `GET /documents/{id}` poll on the event loop.
+
+### The review interrupt is an explicit node, measured against the alternative
+
+Two ways to park a graph at `awaiting_review` were tried on langgraph 1.2.11 before choosing.
+`interrupt_after=["extract_reqs"]` on the graph's **last** node leaves `aget_state().next == ()`
+and no `interrupts` — indistinguishable from a finished run, and `ainvoke(None)` on it is a no-op.
+An explicit `await_review` node calling `interrupt(payload)` parks with `next == ("await_review",)`
+and a payload `{bid_id, requirements, problems}`; S3.4.2 resumes with `Command(resume=review)` and
+receives the review as the node's return value. Known and tested: on resume the node re-runs, so
+`awaiting_review` is written twice with the same value. Also measured: `ainvoke(None)` on a thread
+with no checkpoint raises `EmptyInputError`, so the resume path checks `snapshot.created_at` and
+starts from the row when nothing was checkpointed yet.
+
+The graph is `START → parse_docs → extract_reqs → await_review → END`; each node runs inside a
+`stage()` wrapper that writes `bids.status` to the read model on entry and problems/requirements on
+exit — the dashboard reads rows, never checkpoints. Node failures become `StageError("<stage>
+failed: <ExceptionType>")`, type only (ADR-0008). Migration `0003` adds `bids.failure_reason` and
+`bids.problems`. The story's `finalizing`/`done` wording differs from `BidStatus`'s
+`applying_review`/`complete`, which is what the `0001` constraint enforces; the model was kept and
+the plan text is the thing to amend.
+
+`BidRunner` owns the background tasks (tracked; shutdown awaits or cancels them **before** the pool
+closes; a crash logs the traceback and marks the bid `failed`). `resume_unfinished_runs` at startup
+re-invokes every non-terminal bid — the restart criterion — and refuses to start when there is
+something to resume and Storage is unconfigured, rather than failing the bids. The two limits live
+in settings as `agent.run_budget_seconds = 600` and `agent.run_budget_usd = 2.50`; the `live`
+DE-pack test asserts them and fails if OpenRouter reports no cost rather than passing at $0. **It
+has not been run** — it costs real money; the user decides when.
+
+### Two migrations, one number
+
+Both agents added a `0002`. `scripts/migrate.py` refuses duplicate versions, which is exactly the
+failure it exists to catch; S3.1.1's became `0003`. Both were applied to Frankfurt in one run.
+
+### The design canvas is a draft, and the gate is still closed
+
+S4.0.1's canvas was drafted from the shipped shell's tokens (Geist, the shadcn neutral scale, 10 px
+radius, 56 px header, 32 px controls) with the real FR fixture as content: dashboard, new-bid step
+2 of 3, workspace at desktop and phone width, verdict confirm/override. Static mockups. Three
+proposals the app had no answer for are called out on the canvas for the user's reaction: a status
+colour set (met green, not met = the theme's destructive red, unclear amber, running blue, one
+lightness and chroma), a 520 px PDF pane left of the matrix with one row expanded at a time, and the
+PDF behind a *Document* tab on the phone. A second-pass review found real defects before handover —
+verdict counts that contradicted the workspace header, a citation to a page the same screen called
+unreadable, phone controls under 44 px, the wrong active nav — all fixed in version 2. The working
+files are `docs/design/canvas/` (regenerated by `build.py`); the artifact is
+https://claude.ai/code/artifact/2c3a373f-69f0-4d80-896a-53715377862f. **Nothing under
+`components/matrix`, `components/pdf` or `components/verdict` exists**; that stays true until the
+user confirms.
+
+### Consequences
+
+- 957 tests, 100% line and branch coverage, all offline; 7 `live` tests, of which the bid-run one
+  is unrun. `frontend/lib/api.ts` regenerated for `/documents` and `/bids`.
+- Increment 1's backend is complete. Remaining: the user's decision on the canvas (S4.0.1), then
+  S4.2.2 (upload table) and S4.5.1 (workspace polling + requirement list).
+- Open: `MAX_UPLOAD_BYTES` (50 MB) is a router constant that should become
+  `ingestion.max_upload_bytes`; the plan's status wording should be aligned to `BidStatus`.

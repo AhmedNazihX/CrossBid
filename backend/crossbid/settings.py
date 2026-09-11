@@ -161,6 +161,10 @@ class AgentSettings(_Frozen):
     extract_concurrency: int = Field(gt=0)
     check_concurrency: int = Field(gt=0)
     max_tool_calls_per_requirement: int = Field(gt=0)
+    run_budget_seconds: float = Field(gt=0)
+    """S3.1.1: the wall-clock a run may take before the live test fails it (600)."""
+    run_budget_usd: float = Field(gt=0)
+    """S3.1.1: the OpenRouter-reported cost one bid may incur (2.50)."""
 
 
 class RuntimeSettings(_Frozen):

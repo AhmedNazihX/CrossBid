@@ -1,0 +1,511 @@
+"""S2.2.3 — `POST /documents` answers 202 and the row becomes `ready` while the browser polls.
+
+Offline, end to end through HTTP: the app is the real `create_app`, the router is the real
+one, and behind `get_pipeline` runs the real `DocumentPipeline` over the fakes
+`test_ingestion_pipeline.py` defines. `TestClient` runs Starlette's background task before it
+hands the response back, so the test that polls `GET /documents/{id}` right after the 202
+sees the finished row — the same two requests the browser makes, minus the wait.
+
+Two production dependencies are exercised for real rather than overridden: `get_pipeline`
+against settings with and without Storage wiring (a 503 that names the problem, a pipeline
+that opens no socket), and `get_document_records` over a recording fake database, which is
+how the router's 404 for another company's id is shown to come from a scoped statement.
+"""
+
+from __future__ import annotations
+
+import uuid
+from collections.abc import Callable, Iterator
+from typing import Any
+
+import pytest
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
+from starlette.datastructures import Headers, UploadFile
+
+from crossbid.auth import DEV_COMPANY_HEADER
+from crossbid.ingestion.parser import ParserError
+from crossbid.ingestion.pipeline import UNREADABLE_REASON, DocumentPipeline
+from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, object_key
+from crossbid.main import create_app, get_database
+from crossbid.readmodel.documents import DocumentsReadModel, DocumentStatus, ReadModelError
+from crossbid.routers.documents import (
+    EMPTY_FILE_DETAIL,
+    MAX_UPLOAD_BYTES,
+    NO_FILENAME_DETAIL,
+    NO_SUCH_DOCUMENT_DETAIL,
+    NOT_PDF_CONTENT_DETAIL,
+    NOT_PDF_SUFFIX_DETAIL,
+    NOT_PDF_TYPE_DETAIL,
+    STORAGE_NOT_CONFIGURED_DETAIL,
+    TOO_LARGE_DETAIL,
+    DocumentListResponse,
+    DocumentResponse,
+    get_document_records,
+    get_pipeline,
+    router,
+    validated_upload,
+)
+from crossbid.settings import Settings
+from tests.unit.test_documents_readmodel import FakeConnectionSource
+from tests.unit.test_ingestion_pipeline import (
+    LEAKY_MESSAGE,
+    ORIGINAL_FILENAME,
+    PDF_BYTES,
+    FakeParser,
+    Harness,
+    InMemoryRecords,
+    harness,
+)
+
+COMPANY = "11111111-1111-4111-8111-111111111111"
+OTHER_COMPANY = "22222222-2222-4222-8222-222222222222"
+AS_COMPANY = {DEV_COMPANY_HEADER: COMPANY}
+AS_OTHER_COMPANY = {DEV_COMPANY_HEADER: OTHER_COMPANY}
+
+FAKE_SUPABASE_URL = "https://abcdefghijklmnopqrst.supabase.co"
+FAKE_SERVICE_KEY = "sb_secret_LEAKED-SERVICE-ROLE-KEY"
+
+Overrides = dict[Callable[..., Any], Callable[..., Any]]
+
+
+# ---------------------------------------------------------------------------- fixtures
+
+
+@pytest.fixture
+def pipeline() -> Harness:
+    return harness()
+
+
+def build_app(settings: Settings, overrides: Overrides) -> FastAPI:
+    """The real app with the real router; only the named dependencies are replaced."""
+    app = create_app(settings)
+    app.include_router(router)
+    app.dependency_overrides.update(overrides)
+    return app
+
+
+@pytest.fixture
+def api(offline_settings: Settings, pipeline: Harness) -> Iterator[TestClient]:
+    """The router over the fake pipeline and its in-memory `documents` table."""
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+    }
+    with TestClient(build_app(offline_settings, overrides)) as client:
+        yield client
+
+
+def pdf_part(
+    filename: str = ORIGINAL_FILENAME,
+    content: bytes = PDF_BYTES,
+    content_type: str | None = DEFAULT_CONTENT_TYPE,
+) -> dict[str, tuple[str, bytes, str | None]]:
+    return {"file": (filename, content, content_type)}
+
+
+def post_pdf(api: TestClient, **part: Any) -> Any:
+    return api.post(
+        "/documents",
+        files=pdf_part(**part),
+        data={"kind": "company_evidence"},
+        headers=AS_COMPANY,
+    )
+
+
+def with_storage(settings: Settings) -> Settings:
+    """Settings whose env layer carries Storage wiring; the original is untouched."""
+    env = settings.env.model_copy(
+        update={
+            "supabase_url": FAKE_SUPABASE_URL,
+            "supabase_service_role_key": SecretStr(FAKE_SERVICE_KEY),
+        }
+    )
+    return Settings(env=env, runtime=settings.runtime)
+
+
+# ------------------------------------------------------------------------- the 202
+
+
+def test_an_upload_is_accepted_with_an_id_and_the_uploaded_status(api: TestClient) -> None:
+    # Act
+    response = post_pdf(api)
+
+    # Assert
+    assert response.status_code == 202
+    body = response.json()
+    uuid.UUID(body["id"])
+    assert body["status"] == "uploaded"
+    assert body["kind"] == "company_evidence"
+    assert body["name"] == ORIGINAL_FILENAME
+    assert body["bid_id"] is None
+    assert body["failure_reason"] is None
+    assert body["pages"] == 0
+    assert body["unread_pages"] == [] and body["unread_page_count"] == 0
+    assert body["created_at"] == body["updated_at"]
+
+
+def test_the_response_carries_nothing_the_browser_has_no_use_for(api: TestClient) -> None:
+    """`storage_path` is a key into a private bucket and `company_id` is the caller's own."""
+    body = post_pdf(api).json()
+
+    assert set(body) == set(DocumentResponse.model_fields)
+    assert "storage_path" not in body and "company_id" not in body
+
+
+def test_every_response_field_is_described_for_the_generated_client() -> None:
+    """`frontend/lib/api.ts` is generated from this schema; a bare field is a bare type."""
+    for model in (DocumentResponse, DocumentListResponse):
+        for name, info in model.model_fields.items():
+            assert info.description, f"{model.__name__}.{name} has no description"
+
+
+# ------------------------------------------------------------ upload → ready, polled
+
+
+def test_polling_after_the_202_shows_the_document_ready_with_its_pages(
+    api: TestClient, pipeline: Harness
+) -> None:
+    # Arrange
+    document_id = post_pdf(api).json()["id"]
+
+    # Act
+    response = api.get(f"/documents/{document_id}", headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["pages"] == 2 and body["unread_pages"] == [] and body["unread_page_count"] == 0
+    assert body["updated_at"] > body["created_at"]
+    assert pipeline.records.statuses_of(uuid.UUID(document_id)) == [
+        DocumentStatus.UPLOADED,
+        DocumentStatus.PARSED,
+        DocumentStatus.EMBEDDED,
+        DocumentStatus.READY,
+    ]
+
+
+def test_unread_pages_are_listed_and_counted_on_the_document(
+    offline_settings: Settings,
+) -> None:
+    # Arrange
+    h = harness(pages=("Seite eins.", "", "Seite drei.", ""))
+    overrides: Overrides = {
+        get_pipeline: lambda: h.pipeline,
+        get_document_records: lambda: h.records,
+    }
+
+    # Act
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        document_id = post_pdf(api).json()["id"]
+        body = api.get(f"/documents/{document_id}", headers=AS_COMPANY).json()
+
+    # Assert
+    assert body["status"] == "ready"
+    assert body["pages"] == 4
+    assert body["unread_pages"] == [2, 4]
+    assert body["unread_page_count"] == 2
+
+
+def test_a_failed_document_shows_a_reason_the_bidder_can_act_on(
+    offline_settings: Settings,
+) -> None:
+    # Arrange
+    h = harness(parser=FakeParser((), error=ParserError(LEAKY_MESSAGE)))
+    overrides: Overrides = {
+        get_pipeline: lambda: h.pipeline,
+        get_document_records: lambda: h.records,
+    }
+
+    # Act
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        document_id = post_pdf(api).json()["id"]
+        body = api.get(f"/documents/{document_id}", headers=AS_COMPANY).json()
+
+    # Assert
+    assert body["status"] == "failed"
+    assert body["failure_reason"] == UNREADABLE_REASON
+    assert "https://" not in body["failure_reason"]
+    assert h.embedder.closed == 1, "the background task released the embeddings client"
+
+
+def test_the_original_filename_is_kept_and_the_storage_key_is_sanitised(
+    api: TestClient, pipeline: Harness
+) -> None:
+    # Act
+    body = post_pdf(api).json()
+
+    # Assert
+    record = pipeline.records.rows[uuid.UUID(body["id"])]
+    assert body["name"] == ORIGINAL_FILENAME
+    assert record.name == ORIGINAL_FILENAME
+    assert record.storage_path == object_key(
+        company_id=COMPANY, document_id=body["id"], filename=ORIGINAL_FILENAME
+    )
+    assert " " not in record.storage_path and "Ü" not in record.storage_path
+    (uploaded,) = pipeline.store.uploads
+    assert uploaded["key"] == record.storage_path
+    assert uploaded["content"] == PDF_BYTES
+
+
+def test_a_tender_document_is_accepted_and_becomes_ready_without_vectors(
+    api: TestClient, pipeline: Harness
+) -> None:
+    # Act
+    response = api.post(
+        "/documents", files=pdf_part(), data={"kind": "tender_document"}, headers=AS_COMPANY
+    )
+
+    # Assert
+    assert response.status_code == 202
+    body = api.get(f"/documents/{response.json()['id']}", headers=AS_COMPANY).json()
+    assert body["kind"] == "tender_document" and body["status"] == "ready"
+    assert pipeline.writer.inserts == []
+
+
+def test_the_embeddings_client_is_released_after_the_background_task(
+    api: TestClient, pipeline: Harness
+) -> None:
+    post_pdf(api)
+
+    assert pipeline.embedder.closed == 1
+
+
+# --------------------------------------------------------------------- tenant scope
+
+
+def test_another_company_polling_the_id_gets_404_not_403(
+    api: TestClient, pipeline: Harness
+) -> None:
+    # Arrange
+    document_id = post_pdf(api).json()["id"]
+    assert uuid.UUID(document_id) in pipeline.records.rows
+
+    # Act
+    response = api.get(f"/documents/{document_id}", headers=AS_OTHER_COMPANY)
+
+    # Assert
+    assert response.status_code == 404
+    assert response.json() == {"detail": NO_SUCH_DOCUMENT_DETAIL}
+
+
+def test_an_unknown_id_is_the_same_404(api: TestClient) -> None:
+    response = api.get(f"/documents/{uuid.uuid4()}", headers=AS_COMPANY)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": NO_SUCH_DOCUMENT_DETAIL}
+
+
+def test_a_malformed_id_is_422_from_the_path_validator(api: TestClient) -> None:
+    assert api.get("/documents/not-a-uuid", headers=AS_COMPANY).status_code == 422
+
+
+def test_the_list_holds_only_the_calling_company_s_documents_newest_first(
+    api: TestClient,
+) -> None:
+    # Arrange
+    first = post_pdf(api, filename="erste.pdf").json()["id"]
+    second = post_pdf(api, filename="zweite.pdf").json()["id"]
+    api.post(
+        "/documents",
+        files=pdf_part(filename="fremd.pdf"),
+        data={"kind": "company_evidence"},
+        headers=AS_OTHER_COMPANY,
+    )
+
+    # Act
+    mine = api.get("/documents", headers=AS_COMPANY).json()
+    theirs = api.get("/documents", headers=AS_OTHER_COMPANY).json()
+
+    # Assert
+    assert [document["id"] for document in mine["documents"]] == [second, first]
+    assert [document["name"] for document in mine["documents"]] == ["zweite.pdf", "erste.pdf"]
+    assert [document["name"] for document in theirs["documents"]] == ["fremd.pdf"]
+
+
+def test_every_route_requires_the_caller_s_company(api: TestClient) -> None:
+    """The dev bridge answers 401 without the header; no route is reachable anonymously."""
+    assert api.post("/documents", files=pdf_part(), data={"kind": "x"}).status_code == 401
+    assert api.get("/documents").status_code == 401
+    assert api.get(f"/documents/{uuid.uuid4()}").status_code == 401
+
+
+# ---------------------------------------------------------------------- validation
+
+
+@pytest.mark.parametrize(
+    ("part", "status", "detail"),
+    [
+        ({"filename": "angebot.docx"}, 415, NOT_PDF_SUFFIX_DETAIL),
+        ({"filename": "angebot.pdf.exe"}, 415, NOT_PDF_SUFFIX_DETAIL),
+        ({"content_type": "application/msword"}, 415, NOT_PDF_TYPE_DETAIL),
+        ({"content": b"MZ\x90\x00 not a pdf at all"}, 415, NOT_PDF_CONTENT_DETAIL),
+        ({"content": b""}, 422, EMPTY_FILE_DETAIL),
+        ({"content": b"%PDF-" + b"\0" * MAX_UPLOAD_BYTES}, 413, TOO_LARGE_DETAIL),
+    ],
+    ids=["docx-suffix", "double-suffix", "declared-type", "magic-bytes", "empty", "oversized"],
+)
+def test_a_refused_upload_names_the_problem_and_writes_nothing(
+    api: TestClient, pipeline: Harness, part: dict[str, Any], status: int, detail: str
+) -> None:
+    # Act
+    response = post_pdf(api, **part)
+
+    # Assert
+    assert response.status_code == status
+    assert response.json() == {"detail": detail}
+    assert pipeline.records.rows == {} and pipeline.store.uploads == []
+
+
+@pytest.mark.parametrize("content_type", ["application/octet-stream", "", "application/x-pdf"])
+def test_a_browser_that_does_not_know_the_type_is_still_accepted(
+    api: TestClient, content_type: str
+) -> None:
+    """The magic bytes decide; browsers send `octet-stream` for genuine PDFs often enough."""
+    assert post_pdf(api, content_type=content_type).status_code == 202
+
+
+def test_a_pdf_exactly_at_the_cap_is_accepted(api: TestClient) -> None:
+    content = b"%PDF-" + b"\0" * (MAX_UPLOAD_BYTES - len(b"%PDF-"))
+    assert len(content) == MAX_UPLOAD_BYTES
+    assert post_pdf(api, content=content).status_code == 202
+
+
+def test_the_suffix_check_is_case_insensitive(api: TestClient) -> None:
+    assert post_pdf(api, filename="ANGEBOT.PDF").status_code == 202
+
+
+def test_an_unknown_kind_is_422(api: TestClient, pipeline: Harness) -> None:
+    response = api.post(
+        "/documents", files=pdf_part(), data={"kind": "invoice"}, headers=AS_COMPANY
+    )
+
+    assert response.status_code == 422
+    assert pipeline.records.rows == {}
+
+
+def test_a_missing_file_part_is_422(api: TestClient) -> None:
+    response = api.post("/documents", data={"kind": "company_evidence"}, headers=AS_COMPANY)
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("filename", [None, "", "   "])
+async def test_a_part_without_a_filename_is_refused(filename: str | None) -> None:
+    """Reached directly: multipart clients drop a nameless part before the router sees it."""
+    part = UploadFile(
+        _Bytes(PDF_BYTES),
+        filename=filename,
+        headers=Headers({"content-type": "application/pdf"}),
+    )
+
+    with pytest.raises(HTTPException) as caught:
+        await validated_upload(part)
+    assert caught.value.status_code == 422
+    assert caught.value.detail == NO_FILENAME_DETAIL
+
+
+class _Bytes:
+    """The slice of a `SpooledTemporaryFile` that `UploadFile.read` uses."""
+
+    def __init__(self, content: bytes) -> None:
+        self._content = content
+        self._position = 0
+
+    def read(self, size: int = -1) -> bytes:
+        end = len(self._content) if size < 0 else self._position + size
+        chunk = self._content[self._position : end]
+        self._position = end
+        return chunk
+
+    def seek(self, position: int) -> int:
+        self._position = position
+        return position
+
+
+# ------------------------------------------------------------- the production wiring
+
+
+def test_uploads_are_503_when_storage_is_not_configured(offline_settings: Settings) -> None:
+    """`offline_settings` has no Supabase wiring; the detail names the problem, not the vars."""
+    # Arrange -- the real `get_pipeline`, a fake pool behind `get_database`
+    source = FakeConnectionSource()
+    overrides: Overrides = {get_database: lambda: source}
+
+    # Act
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        response = post_pdf(api)
+
+    # Assert
+    assert response.status_code == 503
+    assert response.json() == {"detail": STORAGE_NOT_CONFIGURED_DETAIL}
+    assert "SUPABASE" not in response.text
+    assert source.log == [], "nothing was written for a document that was never accepted"
+
+
+@pytest.mark.anyio
+async def test_get_pipeline_wires_the_real_collaborators_without_opening_a_socket(
+    offline_settings: Settings,
+) -> None:
+    # Arrange
+    settings = with_storage(offline_settings)
+    source = FakeConnectionSource()
+    records = InMemoryRecords()
+
+    # Act
+    built = get_pipeline(settings=settings, db=source, records=records)  # type: ignore[arg-type]
+
+    # Assert
+    assert isinstance(built, DocumentPipeline)
+    assert source.borrows == 0
+    await built.aclose()
+
+
+def test_get_document_records_reads_through_the_pool_with_the_caller_s_scope(
+    offline_settings: Settings,
+) -> None:
+    """The real read model over a recording fake database: the 404 comes from a scoped query."""
+    # Arrange
+    source = FakeConnectionSource(rows=[])
+    overrides: Overrides = {get_database: lambda: source}
+    document_id = uuid.uuid4()
+
+    # Act
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        response = api.get(f"/documents/{document_id}", headers=AS_OTHER_COMPANY)
+
+    # Assert
+    assert response.status_code == 404
+    assert source.only.params == {
+        "document_id": document_id,
+        "company_id": uuid.UUID(OTHER_COMPANY),
+    }
+    assert "company_id = %(company_id)s" in source.only.sql
+
+
+def test_get_document_records_builds_the_read_model_on_the_pool() -> None:
+    source = FakeConnectionSource()
+    assert isinstance(get_document_records(source), DocumentsReadModel)  # type: ignore[arg-type]
+
+
+def test_a_failing_insert_releases_the_pipeline_and_surfaces_the_error(
+    offline_settings: Settings,
+) -> None:
+    """Nothing is swallowed: the request fails loudly and the embeddings client is closed."""
+    # Arrange
+    h = harness(records=InMemoryRecords(fail_on=frozenset({"insert"})))
+    overrides: Overrides = {
+        get_pipeline: lambda: h.pipeline,
+        get_document_records: lambda: h.records,
+    }
+
+    # Act / Assert
+    with (
+        TestClient(build_app(offline_settings, overrides)) as api,
+        pytest.raises(ReadModelError, match="insert refused"),
+    ):
+        post_pdf(api)
+    assert h.embedder.closed == 1
+    assert h.store.uploads == []

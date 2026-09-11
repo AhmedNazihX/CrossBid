@@ -24,16 +24,553 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the company's documents
+         * @description Every document of the calling company, newest first.
+         */
+        get: operations["list_documents_documents_get"];
+        put?: never;
+        /**
+         * Upload a PDF
+         * @description Accept a PDF and answer 202 at once; poll `GET /documents/{id}` until it is done.
+         *
+         *     The status moves `uploaded → parsed → embedded → ready`. A failure carries a
+         *     `failure_reason` the bidder can act on.
+         */
+        post: operations["upload_document_documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll one document
+         * @description One document of the calling company. Another company's id answers 404.
+         */
+        get: operations["get_document_documents__document_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the company's bids
+         * @description Every bid of the calling company, newest first, from the read model only.
+         */
+        get: operations["list_company_bids_bids_get"];
+        put?: never;
+        /**
+         * Start a bid
+         * @description Record a `queued` bid, attach its documents and start the graph in the background.
+         *
+         *     Answers 202 at once; poll `GET /bids/{id}` until the status is `awaiting_review` or
+         *     `failed`. Every document must be this company's, a tender document, unattached and
+         *     `ready`, or the answer names the one that is not.
+         */
+        post: operations["start_bid_bids_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bids/{bid_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll one bid
+         * @description One bid of the calling company with its requirements so far. Another's id is 404.
+         */
+        get: operations["get_bid_bids__bid_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * BidDocumentResponse
+         * @description One document of the bid, as the workspace lists it beside the matrix.
+         */
+        BidDocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The document id; `GET /documents/{id}` polls it
+             */
+            id: string;
+            /**
+             * Name
+             * @description The filename the bidder uploaded
+             */
+            name: string;
+            /**
+             * Pages
+             * @description Total pages once parsed
+             */
+            pages: number;
+            /**
+             * Unread Pages
+             * @description Pages with no text layer, never read
+             */
+            unread_pages: number[];
+        };
+        /**
+         * BidListResponse
+         * @description The calling company's bids, newest first.
+         */
+        BidListResponse: {
+            /**
+             * Bids
+             * @description Newest first, at most 200
+             */
+            bids: components["schemas"]["BidSummary"][];
+        };
+        /**
+         * BidResponse
+         * @description One bid and how far its run has got. `GET /bids/{id}` is polled for it.
+         */
+        BidResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The bid id; poll `GET /bids/{id}` with it
+             */
+            id: string;
+            /**
+             * Notice Number
+             * @description TED publication number
+             */
+            notice_number: string | null;
+            /**
+             * Title
+             * @description What the dashboard calls this bid
+             */
+            title: string;
+            /**
+             * Source Language
+             * @description The tender's language, BCP 47
+             */
+            source_language: string | null;
+            /**
+             * Bidder Language
+             * @description What requirements are explained in
+             */
+            bidder_language: string;
+            /** @description queued → parsing → extracting → awaiting_review; failed carries failure_reason */
+            status: components["schemas"]["BidStatus"];
+            /**
+             * Failure Reason
+             * @description Why a failed run stopped: the stage and the error type, no more
+             */
+            failure_reason: string | null;
+            /**
+             * Requirements
+             * @description Every extracted requirement; empty until extraction has finished
+             */
+            requirements: components["schemas"]["Requirement"][];
+            /**
+             * Problems
+             * @description What parsing and extraction could not do, for the reviewer
+             */
+            problems: components["schemas"]["ExtractionProblem"][];
+            /**
+             * Documents
+             * @description The pack this bid parses
+             */
+            documents: components["schemas"]["BidDocumentResponse"][];
+            /**
+             * Created At
+             * @description When the bid was started
+             */
+            created_at: string | null;
+            /**
+             * Updated At
+             * @description When the status last changed
+             */
+            updated_at: string | null;
+        };
+        /**
+         * BidStatus
+         * @description Where a bid has got to.
+         *
+         *     The browser polls `GET /bids/{id}` every 2s and renders the stage, so these names are
+         *     user-visible. `AWAITING_REVIEW` is the interrupt: the graph stops and waits for a human.
+         * @enum {string}
+         */
+        BidStatus: "queued" | "parsing" | "extracting" | "checking" | "scoring" | "awaiting_review" | "applying_review" | "complete" | "failed";
+        /**
+         * BidSummary
+         * @description A bid as the dashboard lists it. Read from the read-model tables, never a checkpoint.
+         */
+        BidSummary: {
+            /** Id */
+            id: string;
+            /** Company Id */
+            company_id: string;
+            /** Ted Publication Number */
+            ted_publication_number?: string | null;
+            /** Title */
+            title: string;
+            /** Buyer */
+            buyer?: string | null;
+            /** Source Language */
+            source_language?: string | null;
+            /** Deadline */
+            deadline?: string | null;
+            status: components["schemas"]["BidStatus"];
+            /** @description Final decision once reviewed; None while in flight */
+            decision?: components["schemas"]["Decision"] | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** Body_upload_document_documents_post */
+        Body_upload_document_documents_post: {
+            /**
+             * File
+             * @description The PDF, at most 50 MB
+             */
+            file: string;
+            /** @description What the document is */
+            kind: components["schemas"]["DocumentKind"];
+        };
+        /**
+         * Checkability
+         * @description Whether evidence can settle this requirement at all.
+         *
+         *     SP.1's first checking round returned `unclear` for all eight rows it tried, because they
+         *     were all document-submission duties and no corpus of company facts can establish "we
+         *     submitted form X". Only `COMPANY_PROPERTY` rows are worth spending tool calls on;
+         *     `DOCUMENT_SUBMISSION` rows go to the reviewer as "attach this" (ADR-0003).
+         * @enum {string}
+         */
+        Checkability: "company_property" | "document_submission" | "neither";
+        /**
+         * Decision
+         * @description The recommendation. Advisory only — a human confirms before it is final.
+         * @enum {string}
+         */
+        Decision: "go" | "go_with_open_items" | "no_go";
+        /**
+         * DocumentKind
+         * @description What a stored PDF is.
+         *
+         *     A company's evidence pack outlives any single bid; a tender's documents belong to one bid
+         *     and are deleted with it. The notice is kept apart from the procurement documents because
+         *     it comes from TED's documented API while the rest is uploaded by the bidder.
+         * @enum {string}
+         */
+        DocumentKind: "company_evidence" | "tender_document" | "tender_notice";
+        /**
+         * DocumentListResponse
+         * @description Every document of the calling company, newest first.
+         */
+        DocumentListResponse: {
+            /**
+             * Documents
+             * @description Newest first
+             */
+            documents: components["schemas"]["DocumentResponse"][];
+        };
+        /**
+         * DocumentResponse
+         * @description One uploaded document and how far it has got. `GET /documents/{id}` is polled for it.
+         */
+        DocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The document id; use it to poll and to start a bid
+             */
+            id: string;
+            /** @description Company evidence, tender document or tender notice */
+            kind: components["schemas"]["DocumentKind"];
+            /**
+             * Name
+             * @description The filename as uploaded
+             */
+            name: string;
+            /**
+             * Bid Id
+             * @description The bid this document is attached to; null until a bid is started with it
+             */
+            bid_id: string | null;
+            /** @description uploaded → parsed → embedded → ready, or failed with failure_reason */
+            status: components["schemas"]["DocumentStatus"];
+            /**
+             * Failure Reason
+             * @description Why the document failed, in a sentence to act on; null otherwise
+             */
+            failure_reason: string | null;
+            /**
+             * Pages
+             * @description Total pages, known once the document is parsed
+             */
+            pages: number;
+            /**
+             * Unread Pages
+             * @description Pages with no text layer; the agent cannot read them and says so
+             */
+            unread_pages: number[];
+            /**
+             * Unread Page Count
+             * @description len(unread_pages), for a badge
+             */
+            unread_page_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When the upload was accepted
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description When the status last changed
+             */
+            updated_at: string;
+        };
+        /**
+         * DocumentStatus
+         * @description How far an upload has got. The browser polls it, so the names are user-visible.
+         *
+         *     Linear on the happy path: `UPLOADED` (the row exists; the bytes may still be on their way
+         *     to Storage) → `PARSED` (every page is accounted for, unread ones listed) → `EMBEDDED`
+         *     (chunks and vectors are in the chunk table) → `READY` (the agent may use it). `FAILED` is
+         *     terminal and always carries a `failure_reason`.
+         * @enum {string}
+         */
+        DocumentStatus: "uploaded" | "parsed" | "embedded" | "ready" | "failed";
+        /**
+         * ExtractionProblem
+         * @description One thing extraction could not do, addressed to the reviewer.
+         *
+         *     Frozen, and carries no document text: `document_name`, the pages, and a closed reason
+         *     are enough to open the paragraph and see for yourself.
+         */
+        ExtractionProblem: {
+            reason: components["schemas"]["ExtractionProblemReason"];
+            /**
+             * Document Name
+             * @description File the trouble was in, as a reviewer sees it
+             */
+            document_name: string;
+            /**
+             * Pages
+             * @description Pages involved; empty when the document had no pages to involve
+             * @default []
+             */
+            pages: number[];
+            /**
+             * Fields
+             * @description Field names that failed validation — locations only, never values
+             * @default []
+             */
+            fields: string[];
+        };
+        /**
+         * ExtractionProblemReason
+         * @description Why a row, a section or a document produced less than it should have.
+         *
+         *     Closed, and stated as a reason rather than a message, because the natural message would
+         *     be built from model output — which is derived from an untrusted document, and an error
+         *     built from untrusted input is how untrusted input escapes (ADR-0008).
+         * @enum {string}
+         */
+        ExtractionProblemReason: "no_verbatim_quote" | "invalid_row" | "invalid_criterion_id" | "missing_translation" | "model_error" | "section_failed" | "unwrappable_section" | "unreadable_document" | "unparseable_document";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** Health */
         Health: {
             /** Status */
             status: string;
             /** Service */
             service: string;
+        };
+        /**
+         * Requirement
+         * @description One obligation, with the evidence trail back to the page it was read from.
+         */
+        Requirement: {
+            /** Id */
+            id: string;
+            /** Bid Id */
+            bid_id: string;
+            category: components["schemas"]["RequirementCategory"];
+            kind: components["schemas"]["RequirementKind"];
+            stage: components["schemas"]["RequirementStage"];
+            checkable: components["schemas"]["Checkability"];
+            /**
+             * Source Text
+             * @description Verbatim quote in the tender's own language. Never paraphrased.
+             */
+            source_text: string;
+            /**
+             * Source Lang
+             * @description BCP 47, e.g. 'de'
+             */
+            source_lang: string;
+            /**
+             * Document Name
+             * @description File the quote came from, for the citation
+             */
+            document_name: string;
+            /**
+             * Page
+             * @description 1-indexed, so it matches what the PDF viewer shows
+             */
+            page: number;
+            /**
+             * Translation
+             * @description Bidder-language rendering; None until translated
+             */
+            translation?: string | null;
+            /** Ecertis Criterion Id */
+            ecertis_criterion_id?: ("005eb9ed-1347-4ca3-bb29-9bc0db64e1ab" | "07301031-2270-41af-8e7e-66fe0c777107" | "074f6031-55f9-4e99-b9a4-c4363e8bc315" | "166536e2-77f7-455c-b018-70582474e4f6" | "1f49b3f0-d50f-43f6-8b30-4bafab108b9b" | "297d2323-3ede-424e-94bc-a91561e6f320" | "3293e92b-7f3e-42f1-bee6-a7641bb04251" | "396f288a-e267-4c20-851a-ed4f7498f137" | "3a18a175-1863-4b1d-baef-588ce61960ca" | "3aaca389-4a7b-406b-a4b9-080845d127e7" | "47112079-6fec-47a3-988f-e561668c3aef" | "499efc97-2ac1-4af2-9e84-323c2ca67747" | "4bf996d9-439c-40c6-9ab9-980a48cb55a1" | "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3" | "56d13e3d-76e8-4f23-8af6-13e60a2ee356" | "5e506c16-26ab-4e32-bb78-b27f87dc0565" | "612a1625-118d-4ea4-a6db-413184e7c0a8" | "61874050-5130-4f1c-a174-720939c7b483" | "6346959b-e097-4ea1-89cd-d1b4c131ea4d" | "63adb07d-db1b-4ef0-a14e-a99785cf8cf6" | "68918c7a-f5bc-4a1a-a62f-ad8983600d48" | "696a75b2-6107-428f-8b74-82affb67e184" | "6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f" | "73f10e36-ed7a-412e-995c-aa76463e3776" | "7604bd40-4462-4086-8763-a50da51a869c" | "7662b7a9-bcb8-4763-a0a7-7505d8e8470d" | "77f481ce-ffb6-483f-8e2b-c78db5e68292" | "7d85e333-bbab-49c0-be8d-c36d71a72f5e" | "87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7" | "8ed65e48-fd0d-444f-97bd-4f58da632999" | "8fda202a-0c37-41bb-9d7d-de3f49edbfcb" | "90a2e100-44cc-45d3-9970-69d6714f1596" | "9460457e-b43d-48a9-acd1-615de6ddd33e" | "9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4" | "a261a395-ed17-4939-9c75-b9ff1109ca6e" | "a34b70d6-c43d-4726-9a88-8e2b438424bf" | "a7669d7d-9297-43e1-9d10-691a1660187c" | "a80ddb62-d25b-4e4e-ae22-3968460dc0a9" | "ab0e7f2e-6418-40e2-8870-6713123e41ad" | "b16cb9fc-6cb7-4585-9302-9533b415cf48" | "b1b5ac18-f393-4280-9659-1367943c1a2e" | "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4" | "bdf0601d-2480-4250-b870-658d0ee95be6" | "c27b7c4e-c837-4529-b867-ed55ce639db5" | "c599c130-b29f-461e-a187-4e16c7d40db7" | "c8809aa1-29b6-4f27-ae2f-27e612e394db" | "cc18c023-211d-484d-a32e-52f3f970285f" | "cdd3bb3e-34a5-43d5-b668-2aab86a73822" | "d3732c09-7d62-4edc-a172-241da6636e7c" | "d3dfb714-f558-4512-bbc5-e456fa2339de" | "d486fb70-86b3-4e75-97f2-0d71b5697c7d" | "d726bac9-e153-4e75-bfca-c5385587766d" | "d789d01a-fe03-4ccd-9898-73f9cfa080d1" | "daffa2a9-9f8f-4568-8be8-7b8bf306d096" | "dc12a151-7fdf-4733-a8f0-30f667292e66" | "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46") | null;
+            threshold?: components["schemas"]["Threshold"] | null;
+            /** Deadline */
+            deadline?: string | null;
+        };
+        /**
+         * RequirementCategory
+         * @description Which part of the qualification decision this requirement belongs to.
+         * @enum {string}
+         */
+        RequirementCategory: "formal" | "economic_financial" | "technical_professional" | "exclusion_ground" | "other";
+        /**
+         * RequirementKind
+         * @description How badly non-compliance hurts.
+         * @enum {string}
+         */
+        RequirementKind: "mandatory" | "optional" | "informational";
+        /**
+         * RequirementStage
+         * @description When the obligation bites.
+         *
+         *     The test is: *would the company still have to do this if it never won the contract?*
+         *     If no, it is `CONTRACT_PERFORMANCE` and it does not belong in a go/no-go matrix.
+         *
+         *     Without this discriminator the SP.1 spike extracted 579 "mandatory" requirements from one
+         *     tender, because the AGB, EVB-IT, VOL/B, framework agreement and data-processing agreement
+         *     are all genuinely phrased as obligations. Adding it cut the set to 238 with no loss of
+         *     recall (ADR-0003).
+         * @enum {string}
+         */
+        RequirementStage: "bid_eligibility" | "contract_performance";
+        /**
+         * StartBidRequest
+         * @description What it takes to start a bid: the notice, the tender's language, and the pack.
+         */
+        StartBidRequest: {
+            /**
+             * Notice Number
+             * @description TED publication number the bid is opened against
+             */
+            notice_number: string;
+            /**
+             * Document Ids
+             * @description Ready tender documents to parse; at least one
+             */
+            document_ids: string[];
+            /**
+             * Source Language
+             * @description The tender's own language, BCP 47; S1.2.1 takes it from TED later
+             */
+            source_language: string;
+            /**
+             * Title
+             * @description Dashboard title; defaults to the notice number
+             */
+            title?: string | null;
+        };
+        /**
+         * Threshold
+         * @description A number the bidder must clear.
+         *
+         *     Every quantified requirement in the German fixture reduced to one of these — turnover
+         *     >= EUR 3,000,000 per year, >= 29 FTE, >= 25 person-days, references no older than 3 years.
+         *     Keeping it typed is what lets the scorer compare rather than ask a model to judge.
+         */
+        Threshold: {
+            comparator: components["schemas"]["ThresholdComparator"];
+            /** Value */
+            value: number;
+            unit: components["schemas"]["ThresholdUnit"];
+            /**
+             * Currency
+             * @description ISO 4217 code, set only when unit is CURRENCY
+             */
+            currency?: string | null;
+            /**
+             * Period
+             * @description e.g. 'per_year', 'last_three_fiscal_years'
+             */
+            period?: string | null;
+        };
+        /**
+         * ThresholdComparator
+         * @description How a measured value is compared with the required one.
+         * @enum {string}
+         */
+        ThresholdComparator: "at_least" | "at_most" | "max_age" | "equals";
+        /**
+         * ThresholdUnit
+         * @description What is being measured. Closed, because a free-text unit cannot be compared.
+         * @enum {string}
+         */
+        ThresholdUnit: "currency" | "fte" | "headcount" | "person_days" | "references" | "years" | "percent";
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -60,6 +597,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    list_documents_documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentListResponse"];
+                };
+            };
+        };
+    };
+    upload_document_documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_document_documents_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_document_documents__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_company_bids_bids_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidListResponse"];
+                };
+            };
+        };
+    };
+    start_bid_bids_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartBidRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bid_bids__bid_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

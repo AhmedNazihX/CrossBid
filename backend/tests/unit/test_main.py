@@ -36,6 +36,16 @@ class FakeDatabase:
         self.events.append("close")
 
 
+class FakeRunner:
+    """What the lifespan needs of `BidRunner`: `shutdown`."""
+
+    def __init__(self, events: list[str]) -> None:
+        self.events = events
+
+    async def shutdown(self) -> None:
+        self.events.append("runner.shutdown")
+
+
 def with_database_url(settings: Settings, dsn: str) -> Settings:
     """A new `Settings` whose env layer carries `dsn`; the original is untouched."""
     env = settings.env.model_copy(update={"database_url": SecretStr(dsn)})
@@ -58,6 +68,7 @@ def test_the_api_starts_without_a_database_and_says_so_once(
     # Assert
     assert response.status_code == 200
     assert client.app.state.db is None  # type: ignore[attr-defined]
+    assert client.app.state.bid_runner is None  # type: ignore[attr-defined]
     assert client.app.state.settings is offline_settings  # type: ignore[attr-defined]
     assert [r.getMessage() for r in caplog.records].count(NO_DATABASE_MESSAGE) == 1
 
@@ -95,7 +106,13 @@ def test_the_lifespan_opens_sets_up_and_closes_the_database(
         seen.append(dsn)
         return fake
 
+    async def fake_resume(db: Any, settings: Settings) -> FakeRunner:
+        assert db is fake, "runs resume on the pool that was just opened"
+        fake.events.append("resume")
+        return FakeRunner(fake.events)
+
     monkeypatch.setattr(Database, "connect", staticmethod(fake_connect))
+    monkeypatch.setattr(main_module, "resume_unfinished_runs", fake_resume)
     settings = with_database_url(offline_settings, GOOD_DSN)
     app = create_app(settings)
 
@@ -106,12 +123,13 @@ def test_the_lifespan_opens_sets_up_and_closes_the_database(
     # Act
     with TestClient(app) as client:
         response = client.get("/needs-db")
-        assert fake.events == ["setup"], "the pool is ready before the first request"
+        assert fake.events == ["setup", "resume"], "pool and runner are ready before requests"
+        assert isinstance(client.app.state.bid_runner, FakeRunner)  # type: ignore[attr-defined]
 
-    # Assert
+    # Assert -- runs stop before the pool they borrow from closes
     assert seen == [GOOD_DSN]
     assert response.json() == {"max_size": 10}
-    assert fake.events == ["setup", "close"]
+    assert fake.events == ["setup", "resume", "runner.shutdown", "close"]
 
 
 @pytest.mark.anyio
@@ -141,3 +159,16 @@ def test_the_module_level_app_is_built_lazily_enough_to_import(
     """`uvicorn crossbid.main:app` imports the module; nothing may connect at import time."""
     assert isinstance(main_module.app, FastAPI)
     assert "db" not in vars(main_module.app.state)
+
+
+def test_the_documents_routes_are_registered(client: TestClient) -> None:
+    """S2.2.3 is wired; the OpenAPI schema is what `frontend/lib/api.ts` is generated from."""
+    paths = client.get("/openapi.json").json()["paths"]
+    assert "/documents" in paths
+    assert "/documents/{document_id}" in paths
+
+
+def test_the_bids_routes_are_registered(client: TestClient) -> None:
+    paths = client.get("/openapi.json").json()["paths"]
+    assert "/bids" in paths
+    assert "/bids/{bid_id}" in paths

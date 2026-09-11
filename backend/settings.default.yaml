@@ -54,6 +54,8 @@ agent:
   extract_concurrency: 5   # sections of extract_reqs in flight at once (S3.2.1)
   check_concurrency: 5     # per-requirement ReAct agents in flight at once (F3.3)
   max_tool_calls_per_requirement: 4
+  run_budget_seconds: 600      # S3.1.1: a bid reaches awaiting_review within 10 minutes
+  run_budget_usd: 2.50         # S3.1.1: OpenRouter-reported cost per bid stays under this
 
 enabled_tools:
   - company_rag_search

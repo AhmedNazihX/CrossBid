@@ -1,10 +1,10 @@
 """S3.2.1 — the graph's shared state, and the section payload extraction fans out over.
 
-`BidState` is the LangGraph state channel set. It holds **only what extraction reads and
-writes**, because a channel nobody writes is a lie about the graph: the run lifecycle
-(`status`, the stage the poller shows) arrives with S3.1.1, and `CheckState`, the
-per-requirement `Send` payload of the agentic checking loop, arrives with F3.3. Both extend
-this module rather than replacing it.
+`BidState` is the LangGraph state channel set. It holds what extraction reads and writes
+plus the run lifecycle S3.1.1 added -- who the bid belongs to, where it has got to, and what
+`parse_docs` needs to find the pack -- because a channel nobody writes is a lie about the
+graph. `CheckState`, the per-requirement `Send` payload of the agentic checking loop,
+arrives with F3.3 and extends this module rather than replacing it.
 
 Three decisions are worth the reading time.
 
@@ -47,6 +47,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from crossbid.ingestion.parser import ParsedDocument, ParsedPage
 from crossbid.models.requirement import Requirement
+from crossbid.models.tender import BidStatus
 
 DEFAULT_BIDDER_LANGUAGE: Final = "de"
 """The language requirements are explained in when the bid does not say otherwise.
@@ -104,6 +105,11 @@ class ExtractionProblemReason(StrEnum):
     UNREADABLE_DOCUMENT = "unreadable_document"
     """No page of the document had a text layer, so it was never sent to the model. OCR is
     out of scope, so this is a terminal state a human has to see."""
+
+    UNPARSEABLE_DOCUMENT = "unparseable_document"
+    """The file could not be opened as a PDF at all (S3.1.1, `parse_docs`). Distinct from
+    `UNREADABLE_DOCUMENT`: there the pages exist and are blank, here there are no pages. The
+    run continues without the file, and the reviewer sees that it did."""
 
 
 class ExtractionProblem(BaseModel):
@@ -218,21 +224,41 @@ def sections_of(document: TenderDocument, *, section_pages: int) -> tuple[Docume
 
 
 class BidState(TypedDict, total=False):
-    """The graph's state channels, as far as extraction is concerned.
+    """The graph's state channels: the run lifecycle (S3.1.1) and extraction (S3.2.1).
 
-    S3.1.1 extends this with the run-lifecycle fields the poller reads — `status` over
-    `queued, parsing, extracting, checking, scoring, awaiting_review, finalizing, done,
-    failed`, and the timing and cost the 10-minute budget is asserted against. F3.3 adds
-    `CheckState`, the per-requirement `Send` payload of the agentic checking loop, and the
-    `matrix_rows` channel it accumulates into. Neither is declared here: a channel no node
-    writes misrepresents the graph, and the plan's build order gives each story its own.
+    `status` names the stage whose output a checkpoint holds: each stage wrapper in
+    `agent/graph.py` merges its own status into the node's update, so a checkpoint written
+    after `extract_reqs` says `extracting`. The read model's `bids.status` is written by the
+    same wrapper on *entry*, so it runs one step ahead while a node is working and says
+    `awaiting_review` while the run is parked -- that is the value the poller reads, and
+    the pair is what S3.4.3's consistency test compares. Timing and cost are *not*
+    channels: the runner measures them around the whole invocation, and a value the graph
+    cannot see is not state. F3.3 adds `CheckState`, the per-requirement `Send`
+    payload of the agentic checking loop, and the `matrix_rows` channel it accumulates
+    into. Neither is declared here: a channel no node writes misrepresents the graph, and
+    the plan's build order gives each story its own.
     """
 
     bid_id: str
     """Identifies the run. Every requirement carries it, and so does every trace (S0.3.3)."""
 
+    company_id: str
+    """The tenant. Every read-model write a node makes is scoped by it (ADR-0009)."""
+
+    notice_number: str
+    """The TED publication number the bid was opened against, e.g. `614251-2026`."""
+
+    source_language: str
+    """The tender's own language, BCP 47. `parse_docs` stamps it on every `TenderDocument`
+    so a citation can say what language its quote is in."""
+
+    status: BidStatus
+    """The stage whose output this checkpoint holds, over the `BidStatus` values. Merged into
+    every node's update by the stage wrapper; see the class docstring for how it relates to
+    `bids.status`."""
+
     documents: list[TenderDocument]
-    """The parsed pack, written by `parse_docs` (F2.1) and read by extraction."""
+    """The parsed pack, written by `parse_docs` (S3.1.1) and read by extraction."""
 
     bidder_language: str
     """What requirements are explained in. Absent or blank means `DEFAULT_BIDDER_LANGUAGE`."""
@@ -249,6 +275,19 @@ class ExtractionUpdate(TypedDict, total=False):
 
     requirements: list[Requirement]
     extraction_problems: list[ExtractionProblem]
+
+
+class ParseUpdate(TypedDict, total=False):
+    """The partial state `parse_docs` returns: the pack, and what could not be read."""
+
+    documents: list[TenderDocument]
+    extraction_problems: list[ExtractionProblem]
+
+
+class LifecycleUpdate(TypedDict, total=False):
+    """The partial state `agent/graph.py`'s stage wrapper adds to every node's update."""
+
+    status: BidStatus
 
 
 def bidder_language_of(state: BidState) -> str:

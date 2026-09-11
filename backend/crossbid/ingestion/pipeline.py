@@ -1,0 +1,310 @@
+"""S2.2.3 — an upload becomes `uploaded → parsed → embedded → ready`, or `failed` with a reason.
+
+The pipeline is a deterministic state machine, not an agent: there is no decision about what
+to do next, only a fixed run of steps with a status written after each one. That is what lets
+the browser poll `GET /documents/{id}` and show progress rather than a spinner — every
+transition is committed as it happens (`autocommit=True` on the pool), so a poller sees
+`parsed` while the embeddings request is still in flight.
+
+Two calls, because the HTTP layer needs them at different moments:
+
+* **`accept`** runs inside the request. It mints the id, records the `uploaded` row and
+  returns it, which is what the 202 answer carries. Nothing here touches the network: the
+  row's `storage_path` is computed with `ingestion.storage.object_key`, the same function the
+  store will use, so the key is known before a byte is stored and the two cannot disagree.
+* **`process`** runs as a background task. Storage, parse, chunk, embed, write, and the
+  status writes in between. Anything that raises is caught once, logged in full on the
+  server, and written to the row as one of the `*_REASON` sentences — never the exception's
+  own text. A pymupdf message quotes the input, a Storage message could quote a key, an httpx
+  message quotes a URL; the bidder gets a sentence they can act on and nothing else.
+
+Every collaborator is a constructor argument typed as a `Protocol`, so the unit suite runs
+the real state machine over fakes and never opens a socket or a database. The concrete wiring
+(`CompanyDocumentStore`, `PyMuPDFParser`, `Chunker`, `EmbeddingsClient`, `ChunkVectorStore`,
+`DocumentsReadModel`) lives in `routers/documents.py`, the one place that has `Settings`.
+
+**Only company evidence is embedded at upload.** A company's evidence pack outlives any bid
+and is what `company_rag_search` reads, so its vectors go into `company_chunks` here. A
+tender document is uploaded *before* its bid exists — S4.3.1's flow uploads the pack and then
+presses Start, and S3.1.1's `POST /bids` attaches the documents — and `tender_chunks.bid_id`
+is `NOT NULL`, so there is nowhere to put its vectors yet. It is stored, parsed (the page
+counts and the scanned-PDF refusal below apply to every kind) and goes `parsed → ready`; the
+graph reads the file back from Storage and owns its vectors under the bid. `EMBEDDED_KINDS`
+is the one place that rule is written.
+
+**A document with no readable page fails, deliberately.** The parser lists an image-only page
+instead of dropping it (S2.1.1), so a scanned PDF parses cleanly to N unread pages and zero
+chunks. Marking that `ready` would be a lie the agent later pays for — and for a tender
+document it would let Start be pressed on nothing — so the row keeps its page counts from
+`parsed` and fails with a reason that says what to do.
+
+**The synchronous steps run in a worker thread.** pymupdf and the Storage client block, and
+the DE pack is 191 pages; holding the event loop for that long would stall every poll of
+`GET /documents/{id}` from the browser that is waiting on exactly this run.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Final, Protocol
+
+from crossbid.ingestion.chunker import Chunk
+from crossbid.ingestion.embeddings import ChunkStoreError, EmbeddedChunk, EmbeddingsError
+from crossbid.ingestion.parser import ParsedDocument, Parser, ParserError
+from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, StorageError, object_key
+from crossbid.models import DocumentKind
+from crossbid.readmodel.documents import DocumentRecord
+
+logger = logging.getLogger(__name__)
+
+EMBEDDED_KINDS: Final = frozenset({DocumentKind.COMPANY_EVIDENCE})
+"""The kinds whose vectors are written at upload; see the module docstring for the rest."""
+
+STORE_FAILED_REASON: Final = "The file could not be stored. Please upload it again."
+UNREADABLE_REASON: Final = (
+    "The file could not be read as a PDF. Re-export it as a PDF and upload it again."
+)
+NO_READABLE_TEXT_REASON: Final = (
+    "No page of this PDF has readable text, so it looks scanned. Text recognition is not "
+    "supported; re-export the document with a text layer and upload it again."
+)
+EMBED_FAILED_REASON: Final = (
+    "The document text could not be indexed because the embeddings service did not answer. "
+    "Try again later."
+)
+SAVE_FAILED_REASON: Final = "The document text could not be saved. Try again later."
+UNEXPECTED_FAILURE_REASON: Final = "Processing failed unexpectedly. Try again later."
+
+FAILURE_REASONS: Final[tuple[str, ...]] = (
+    STORE_FAILED_REASON,
+    UNREADABLE_REASON,
+    NO_READABLE_TEXT_REASON,
+    EMBED_FAILED_REASON,
+    SAVE_FAILED_REASON,
+    UNEXPECTED_FAILURE_REASON,
+)
+"""Every sentence `process` can write to `failure_reason`. Closed on purpose: a test asserts
+the row never carries anything outside this list, which is how "no stack trace, no key, no
+URL" is proven rather than hoped."""
+
+
+class NoReadableTextError(RuntimeError):
+    """Every page parsed as unread, so there is nothing to chunk or embed."""
+
+
+# --------------------------------------------------------------------------- collaborators
+
+
+class DocumentStore(Protocol):
+    """The one call the pipeline makes on `ingestion.storage.CompanyDocumentStore`."""
+
+    def upload(
+        self,
+        *,
+        company_id: str,
+        document_id: str,
+        filename: str,
+        content: bytes,
+        content_type: str = DEFAULT_CONTENT_TYPE,
+    ) -> str: ...
+
+
+class Chunking(Protocol):
+    """`ingestion.chunker.Chunker`, by shape."""
+
+    def chunk(self, document: ParsedDocument) -> tuple[Chunk, ...]: ...
+
+
+class Embedder(Protocol):
+    """`ingestion.embeddings.EmbeddingsClient`, by shape. `aclose` because the client owns an
+    HTTP connection pool and the pipeline is the last to use it in a background task."""
+
+    async def embed_texts(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]: ...
+
+    async def aclose(self) -> None: ...
+
+
+class ChunkWriter(Protocol):
+    """`ingestion.embeddings.ChunkVectorStore`, the one insert the pipeline needs."""
+
+    async def insert_company_chunks(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID, chunks: Sequence[EmbeddedChunk]
+    ) -> int: ...
+
+
+class DocumentRecords(Protocol):
+    """`readmodel.documents.DocumentsReadModel`, the writers only."""
+
+    async def insert(
+        self,
+        *,
+        company_id: uuid.UUID,
+        document_id: uuid.UUID,
+        kind: DocumentKind,
+        name: str,
+        storage_path: str,
+    ) -> DocumentRecord: ...
+
+    async def mark_parsed(
+        self,
+        *,
+        company_id: uuid.UUID,
+        document_id: uuid.UUID,
+        pages: int,
+        unread_pages: Sequence[int],
+    ) -> DocumentRecord: ...
+
+    async def mark_embedded(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID
+    ) -> DocumentRecord: ...
+
+    async def mark_ready(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID
+    ) -> DocumentRecord: ...
+
+    async def mark_failed(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID, reason: str
+    ) -> DocumentRecord: ...
+
+
+@dataclass(frozen=True, slots=True)
+class Upload:
+    """What the multipart part carried, already validated by the router."""
+
+    filename: str
+    content_type: str
+    content: bytes
+
+
+# -------------------------------------------------------------------------------- pipeline
+
+
+class DocumentPipeline:
+    """Runs one upload through the state machine. Holds no per-document state."""
+
+    def __init__(
+        self,
+        *,
+        store: DocumentStore,
+        parser: Parser,
+        chunker: Chunking,
+        embedder: Embedder,
+        chunk_writer: ChunkWriter,
+        records: DocumentRecords,
+    ) -> None:
+        self._store = store
+        self._parser = parser
+        self._chunker = chunker
+        self._embedder = embedder
+        self._chunk_writer = chunk_writer
+        self._records = records
+
+    async def accept(
+        self, *, company_id: uuid.UUID, kind: DocumentKind, upload: Upload
+    ) -> DocumentRecord:
+        """Record the `uploaded` row and return it. No network; safe inside the request."""
+        document_id = uuid.uuid4()
+        # The key the store will write to, computed before anything is stored, so the row
+        # and the object agree from the first status on. The original filename goes into
+        # `name`; the key's filename is sanitised and may not resemble it (S2.2.2).
+        key = object_key(
+            company_id=str(company_id), document_id=str(document_id), filename=upload.filename
+        )
+        return await self._records.insert(
+            company_id=company_id,
+            document_id=document_id,
+            kind=kind,
+            name=upload.filename,
+            storage_path=key,
+        )
+
+    async def process(self, record: DocumentRecord, upload: Upload) -> DocumentRecord:
+        """Everything after the 202: store, parse, embed, and the status writes between.
+
+        Returns the final row (`ready` or `failed`). The exception behind a failure is logged
+        with its traceback here and nowhere else; the row gets a `*_REASON` sentence. Only
+        the `failed` write itself may raise out of here, and then it should: a database that
+        cannot record the failure is not something to hide from the task's log.
+        """
+        try:
+            return await self._run(record, upload)
+        except Exception as exc:
+            reason = _reason_for(exc)
+            logger.exception(
+                "document %s failed (%s): %s", record.id, type(exc).__name__, reason
+            )
+            return await self._records.mark_failed(
+                company_id=record.company_id, document_id=record.id, reason=reason
+            )
+
+    async def aclose(self) -> None:
+        """Release the embedder's connection pool. Called once, after `process`."""
+        await self._embedder.aclose()
+
+    async def _run(self, record: DocumentRecord, upload: Upload) -> DocumentRecord:
+        await asyncio.to_thread(
+            self._store.upload,
+            company_id=str(record.company_id),
+            document_id=str(record.id),
+            filename=upload.filename,
+            content=upload.content,
+            content_type=upload.content_type,
+        )
+        parsed = await asyncio.to_thread(
+            self._parser.parse, upload.content, document_id=str(record.id)
+        )
+        record = await self._records.mark_parsed(
+            company_id=record.company_id,
+            document_id=record.id,
+            pages=parsed.page_count,
+            unread_pages=parsed.unread_pages,
+        )
+        # After `parsed`, so the row says how many pages were looked at before it failed.
+        if not parsed.readable_pages:
+            raise NoReadableTextError(f"document {record.id}: no page has a text layer")
+        if record.kind in EMBEDDED_KINDS:
+            record = await self._embed_and_write(record, parsed)
+        return await self._records.mark_ready(
+            company_id=record.company_id, document_id=record.id
+        )
+
+    async def _embed_and_write(
+        self, record: DocumentRecord, parsed: ParsedDocument
+    ) -> DocumentRecord:
+        chunks = await asyncio.to_thread(self._chunker.chunk, parsed)
+        await self._chunk_writer.insert_company_chunks(
+            company_id=record.company_id,
+            document_id=record.id,
+            chunks=await self._embed(chunks),
+        )
+        return await self._records.mark_embedded(
+            company_id=record.company_id, document_id=record.id
+        )
+
+    async def _embed(self, chunks: Sequence[Chunk]) -> tuple[EmbeddedChunk, ...]:
+        """`strict=True` is the assertion: a vector count that differs from the chunk count
+        must fail here, not pair the shorter of the two (see `embeddings.embed_chunks`)."""
+        vectors = await self._embedder.embed_texts([chunk.text for chunk in chunks])
+        return tuple(
+            EmbeddedChunk(chunk=chunk, embedding=vector)
+            for chunk, vector in zip(chunks, vectors, strict=True)
+        )
+
+
+def _reason_for(exc: Exception) -> str:
+    """The sentence the bidder sees. Chosen by exception type, never built from its text."""
+    if isinstance(exc, StorageError):
+        return STORE_FAILED_REASON
+    if isinstance(exc, ParserError):
+        return UNREADABLE_REASON
+    if isinstance(exc, NoReadableTextError):
+        return NO_READABLE_TEXT_REASON
+    if isinstance(exc, EmbeddingsError):
+        return EMBED_FAILED_REASON
+    if isinstance(exc, ChunkStoreError):
+        return SAVE_FAILED_REASON
+    return UNEXPECTED_FAILURE_REASON

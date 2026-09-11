@@ -4,7 +4,8 @@ Startup order, in `lifespan`:
 
 1. Settings are loaded (or refused, S0.3.2) and tracing is switched on or off (S0.3.3).
 2. If `DATABASE_URL` is set, the pool is opened and LangGraph's tables are created with
-   `.setup()` (S0.2.2). If it is **unset**, the API starts without a database and says so
+   `.setup()` (S0.2.2), then every bid a previous process left mid-run is resumed from its
+   checkpoint (S3.1.1). If it is **unset**, the API starts without a database and says so
    once in the log: the `/health` route, the OpenAPI schema and `npm run gen:api` (which
    CI runs against a booted API with no Postgres) must work with nothing behind them. An
    unreachable database, by contrast, is a startup failure -- silently running without
@@ -21,9 +22,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Final
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import APIRouter, FastAPI, HTTPException, Request, status
 from pydantic import BaseModel
 
+from crossbid.agent.runner import BidRunner, resume_unfinished_runs
 from crossbid.db import Database
 from crossbid.settings import Settings, configure_tracing, get_settings
 
@@ -51,6 +53,17 @@ async def open_database(settings: Settings) -> Database | None:
     return db
 
 
+async def start_runner(db: Database | None, settings: Settings) -> BidRunner | None:
+    """Resume every bid a previous process left mid-run (S3.1.1), or nothing without a pool.
+
+    The checkpointer holds each run's state, so resuming is re-invoking the graph on the
+    bid's thread; the runner also owns the tasks new `POST /bids` calls start.
+    """
+    if db is None:
+        return None
+    return await resume_unfinished_runs(db, settings)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the API. `settings` is injectable so tests never read a developer's `.env`."""
 
@@ -59,11 +72,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         resolved = settings if settings is not None else get_settings()
         configure_tracing(resolved)
         db = await open_database(resolved)
+        runner = await start_runner(db, resolved)
         app.state.settings = resolved
         app.state.db = db
+        app.state.bid_runner = runner
         try:
             yield
         finally:
+            # Runs are awaited or cancelled before the pool they borrow from closes.
+            if runner is not None:
+                await runner.shutdown()
             if db is not None:
                 await db.close()
 
@@ -79,7 +97,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Liveness probe. Used by Compose and by the smoke test."""
         return Health(status="ok", service="crossbid-api")
 
+    for router in _routers():
+        app.include_router(router)
     return app
+
+
+def _routers() -> list[APIRouter]:
+    """The routers, imported here because they depend on this module's dependencies.
+
+    `routers/*.py` import `get_database` and `get_app_settings` from `crossbid.main`, so a
+    top-of-module import here would be circular. Registration order is also the order
+    `openapi-typescript` emits components in (ADR-0009), so keep it stable.
+    """
+    from crossbid.routers.bids import router as bids_router
+    from crossbid.routers.documents import router as documents_router
+
+    return [documents_router, bids_router]
+
+
+def get_app_settings(request: Request) -> Settings:
+    """FastAPI dependency: the `Settings` this app was created with.
+
+    Routers take this rather than `get_settings()` so that a test's injected settings reach
+    every dependency, and so the `app_settings` row override (S4.6.2) has one place to land.
+    """
+    settings: Settings = request.app.state.settings
+    return settings
 
 
 def get_database(request: Request) -> Database:

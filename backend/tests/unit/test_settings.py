@@ -106,6 +106,8 @@ def test_yaml_defaults_load(valid_env: None) -> None:
     assert settings.runtime.ingestion.embed_dimensions == 1536
     assert settings.runtime.agent.extract_concurrency == 5
     assert settings.runtime.agent.check_concurrency == 5
+    assert settings.runtime.agent.run_budget_seconds == 600
+    assert settings.runtime.agent.run_budget_usd == 2.50
     assert settings.runtime.agent.max_tool_calls_per_requirement == 4
     assert "company_rag_search" in settings.runtime.enabled_tools
     assert "openai/gpt-5.6-terra" in settings.runtime.available_models
