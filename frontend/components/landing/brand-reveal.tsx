@@ -13,11 +13,19 @@ import Image from 'next/image'
  * there is no sound to suppress and none to restore. Everything else here follows from
  * measuring the file frame by frame through a canvas rather than guessing at it.
  *
- * **It is a band, not a box.** The mark occupies only x 18.80–81.15 % and y 36.67–63.15 %
- * of the frame; the rest is ground at `#FAFAFA`, within one value of `--surface-canvas`.
- * Rendered whole and framed, it read as a large empty card with the mark lost in the
- * middle. Cropped to the mark and dropped straight onto the canvas it reads as part of the
- * page, which is what "seamless" costs: no border, no card, no radius, no backdrop.
+ * **It is a band, not a box — and it is masked, not clipped.** The mark occupies only
+ * x 18.80–81.15 % and y 36.67–63.15 % of the frame; the rest is ground at `#FAFAFA`, within
+ * one value of `--surface-canvas`. Rendered whole and framed it read as a large empty card
+ * with the mark lost in the middle, so the band is sized to the mark.
+ *
+ * But the clip's concentric rings run the **full height of the source frame** (measured
+ * 0.000–0.998 from 1.5 s to 6.5 s, i.e. the source already clips them at its own edges), so
+ * a hard crop sliced them with a straight edge mid-animation. Opening the band to fit them
+ * would make it 537 px tall instead of 216 and drop the mark to ~595 px, under the
+ * headline's 678 px. Instead the video overflows the band and a radial mask fades it out:
+ * the rings dissolve into the canvas rather than ending at a line, the layout box stays the
+ * size of the mark, and nothing below it moves. The hero section's own `overflow-hidden`
+ * contains the horizontal spill, so no viewport gains a scrollbar.
  *
  * **It stops the instant before the mark starts fading.** The clip ends by dissolving the
  * mark and then the frame, so running it out would leave a blank strip on the page — the
@@ -110,6 +118,18 @@ const VIDEO_TOP = `${(-100 * (CROP_TOP / CROP_HEIGHT)).toFixed(3)}%`
  * underneath untouched. Measured: the ground is 250/255, and 255 / 250 = 1.02.
  */
 const GROUND_TO_WHITE = 255 / 250
+
+/**
+ * The mask that dissolves the overflowing rings.
+ *
+ * Stops are in the *video's* own box, not the band's: the band occupies its middle 34–66 %
+ * vertically (the crop window), so the mask is fully opaque across exactly that span and
+ * fades over the 14 % either side — about 95 px at the rendered size, which lands the rings
+ * at nothing before they reach the pill or the headline. Horizontally it holds to 80 %,
+ * since the frame has more dead margin on the sides than the rings need.
+ */
+const RING_FADE =
+  'radial-gradient(ellipse 80% 66% at 50% 50%, #000 40%, rgba(0,0,0,0.45) 70%, transparent 100%)'
 
 /** `HTMLMediaElement.HAVE_METADATA`, named so the `readyState` check reads as English. */
 const HAVE_METADATA = 1
@@ -240,7 +260,7 @@ export function BrandReveal() {
       // its own, so there is nothing for a screen reader to miss.
       ref={bandRef}
       aria-hidden="true"
-      className="relative mx-auto mb-8 w-full overflow-hidden"
+      className="relative mx-auto mb-8 w-full"
       style={{ aspectRatio: BAND_ASPECT, maxWidth: BAND_MAX_WIDTH }}
     >
       {/* Poster and fallback both. It must fade out once the clip starts: `multiply`
@@ -282,6 +302,11 @@ export function BrandReveal() {
             // The mark's own ink brightens by the same 2 %, which is below perception.
             filter: `brightness(${GROUND_TO_WHITE})`,
             mixBlendMode: 'multiply',
+            // Fades the overflow instead of cutting it. Opaque across the mark, then out
+            // to nothing well before the pill above and the headline below — so the rings
+            // read as dissolving into the page rather than as a cropped rectangle.
+            maskImage: RING_FADE,
+            WebkitMaskImage: RING_FADE,
           }}
           className={`absolute max-w-none transition-opacity duration-300 ${
             hasStarted ? 'opacity-100' : 'opacity-0'

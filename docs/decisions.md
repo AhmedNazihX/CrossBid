@@ -1340,7 +1340,14 @@ canvas rather than assumed:
   identity. After: inside and outside the band both read `(250,250,249)`.
 - The frame is cropped on both axes to the mark (x 15–85 %, y 34–66 %), which renders it at
   ~748 px against the headline's 678 px — a little larger, as asked — without the band
-  swallowing the fold. The `IntersectionObserver` therefore watches the **band**, not the video:
+  swallowing the fold. The crop is a **mask, not a clip** (2026-09-12): the clip's concentric
+  rings run the full height of the source frame (0.000–0.998 from 1.5 s to 6.5 s — the source
+  already cuts them at its own edges), so a hard crop sliced them with a straight line
+  mid-animation. Opening the band to fit them would have made it 537 px tall instead of 216
+  and dropped the mark to ~595 px, under the headline. Instead the video overflows its box
+  behind a radial mask: the rings dissolve into the canvas, the layout box stays the size of
+  the mark, and the CTA does not move. Verified no horizontal overflow at 390 / 768 / 1440 /
+  1920 px — the hero section's own `overflow-hidden` contains the sideways spill. The `IntersectionObserver` therefore watches the **band**, not the video:
   the video is 312 % of the band tall and all but 22.4 % of it is clipped, below the threshold.
 - `prefers-reduced-motion: reduce` gets the static lockup and **zero network requests** for the
   clip: the preference is resolved before the element is ever rendered, since a default of
