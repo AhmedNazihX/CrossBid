@@ -5,12 +5,12 @@ import { FOOTER_COLUMNS } from './links'
 
 /**
  * The footer of `Landing.dc.html` (`Footer.jsx`): a 1 px rule, 56 px above and 40 px below;
- * the lockup at 28 px with a 14 px line under it, then four link columns (13 px medium
- * heads, 14 px links 10 px apart) in a 1.4fr + 4 × 1fr grid; a second rule and the © line
- * with "Made in the EU · Data stays in the EU". Two columns on the phone, four at `sm`,
- * the five-track row at `lg`; links are 44 px tall below `lg`.
+ * the lockup at 28 px with a 14 px line under it, then the link columns (13 px medium
+ * heads, 14 px links 10 px apart) beside a 1.4fr lead column; a second rule and the © line
+ * with "Made in the EU · Data stays in the EU". Two columns on the phone, the three-track
+ * row at `lg`; links are 44 px tall below `lg`.
  *
- * Columns whose destinations are not built render the label as text (see `links.ts`).
+ * The kit's four columns are two here: only sections that exist are linked (`links.ts`).
  */
 const FOOTER_LINK_CLASSES =
   'inline-flex min-h-11 items-center text-base leading-none text-text-secondary lg:min-h-0'
@@ -18,8 +18,8 @@ const FOOTER_LINK_CLASSES =
 export function LandingFooter() {
   return (
     <footer className="border-t border-border-default px-6 pt-14 pb-10">
-      <div className="mx-auto grid w-full max-w-[var(--marketing-max)] grid-cols-2 gap-8 sm:grid-cols-4 lg:grid-cols-[1.4fr_repeat(4,minmax(0,1fr))]">
-        <div className="col-span-2 sm:col-span-4 lg:col-span-1">
+      <div className="mx-auto grid w-full max-w-[var(--marketing-max)] grid-cols-2 gap-8 lg:grid-cols-[1.4fr_repeat(2,minmax(0,1fr))]">
+        <div className="col-span-2 lg:col-span-1">
           <Image
             src="/logo-lockup.svg"
             alt="CrossBid"
@@ -37,13 +37,9 @@ export function LandingFooter() {
             <ul className="flex flex-col gap-2.5">
               {column.links.map((link) => (
                 <li key={link.label}>
-                  {link.href === undefined ? (
-                    <span className={FOOTER_LINK_CLASSES}>{link.label}</span>
-                  ) : (
-                    <Link href={link.href} className={FOOTER_LINK_CLASSES}>
-                      {link.label}
-                    </Link>
-                  )}
+                  <Link href={link.href} className={FOOTER_LINK_CLASSES}>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>

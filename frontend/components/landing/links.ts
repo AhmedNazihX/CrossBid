@@ -1,9 +1,9 @@
 /**
  * Every destination the landing page links to, in one place (`Landing.dc.html`, the nav,
  * the hero and CTA buttons, the footer columns). The artboard's links are all `href="#"`;
- * here each one points at a real route or an in-page anchor, and the ones with no
- * destination yet are listed without an `href` so the footer renders them as plain text
- * instead of a dead link.
+ * here each one points at a real route or an in-page anchor, and nothing else is listed:
+ * pages that do not exist are not linked (docs/project-plan.md S8.2 adds the imprint and
+ * privacy notice, and a real demo address, if the site is ever deployed).
  */
 
 /** The start step of the bid flow (`NewBid.dc.html`). */
@@ -33,20 +33,17 @@ export const SECTION_IDS = {
 
 export interface LandingLink {
   readonly label: string
-  /** Absent while the destination is not built; the footer shows the label as text. */
-  readonly href?: string
+  readonly href: string
 }
 
 /**
- * The five nav items of `Nav.jsx`, in the artboard's order. The artboard has no pricing
- * section, so "Pricing" scrolls to the call to action, where "Talk to the team" is the
- * pricing conversation for now.
+ * The nav items of `Nav.jsx`, in the artboard's order, minus "Pricing": there is no pricing
+ * to show, and a link that scrolls somewhere else pretends otherwise.
  */
-export const NAV_LINKS: readonly Required<LandingLink>[] = [
+export const NAV_LINKS: readonly LandingLink[] = [
   { label: 'Product', href: `#${SECTION_IDS.product}` },
   { label: 'How it works', href: `#${SECTION_IDS.howItWorks}` },
   { label: 'Certificates', href: `#${SECTION_IDS.certificates}` },
-  { label: 'Pricing', href: `#${SECTION_IDS.getStarted}` },
   { label: 'Customers', href: `#${SECTION_IDS.customers}` },
 ]
 
@@ -55,7 +52,10 @@ export interface FooterColumn {
   readonly links: readonly LandingLink[]
 }
 
-/** The four link columns of `Footer.jsx`. */
+/**
+ * The footer columns of `Footer.jsx`, kept to sections that exist. The kit's Resources
+ * and Legal columns are omitted until S8.2 gives them pages.
+ */
 export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     heading: 'Product',
@@ -63,7 +63,6 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       { label: 'How it works', href: `#${SECTION_IDS.howItWorks}` },
       { label: 'Certificate equivalence', href: `#${SECTION_IDS.certificates}` },
       { label: 'Compliance matrix', href: `#${SECTION_IDS.product}` },
-      { label: 'Pricing', href: `#${SECTION_IDS.getStarted}` },
     ],
   },
   {
@@ -71,26 +70,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       { label: 'About', href: `#${SECTION_IDS.advisory}` },
       { label: 'Customers', href: `#${SECTION_IDS.customers}` },
-      { label: 'Careers' },
       { label: 'Contact', href: CONTACT_HREF },
-    ],
-  },
-  {
-    heading: 'Resources',
-    links: [
-      { label: 'Documentation' },
-      { label: 'EU procurement guide' },
-      { label: 'Security' },
-      { label: 'Status' },
-    ],
-  },
-  {
-    heading: 'Legal',
-    links: [
-      { label: 'Privacy' },
-      { label: 'Terms' },
-      { label: 'Data processing' },
-      { label: 'Imprint' },
     ],
   },
 ]

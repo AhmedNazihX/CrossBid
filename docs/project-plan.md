@@ -595,6 +595,10 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
   - Given the public URL, when the S7.7 smoke test runs against it, then it passes.
   - Given the API, then its DSN uses the session pooler and every service runs in an EU region.
   - Given the deployment, then no secret is in the repository; all are set in the host's environment.
+- **S8.2** (S, **Optional**) *As a visitor to the public site, I want an imprint, a privacy notice, and a way to ask for a demo, so that the site is lawful to publish and I can reach the team.* `needs S8.1` *(added 2026-09-11: the landing page was built from the design system's website kit, ADR-0014, and its footer would otherwise link to pages that do not exist)*
+  - Given a public deployment from Germany, then `/imprint` states the operator per §5 DDG and `/privacy` states the processing per GDPR Art. 13, both linked from the landing footer.
+  - Given "Book a demo" or "Talk to the team", then it reaches a real address (a `mailto:` is enough), not an in-page anchor.
+  - Given the site is not deployed, then none of this is built: the landing footer lists only sections that exist.
 
 ---
 
@@ -630,7 +634,7 @@ Lanes A–E survive only as tags on stories in the roadmap's story board; they d
 | 4 | Every graded requirement covered | S0.3.1, S4.1.1, S4.2.1, S1.2.1, S1.2.2, S3.2.2, S4.3.1, S4.4.1, S1.3.1, S2.3.1, S5.3, S2.3.3, S3.5.1, S4.6.1, S5.1, S5.2, S4.6.2, S4.6.3 | S7.2 |
 | 5 | **Submission-ready** | S7.1, S7.7, S7.4, S7.5, S7.6 | S7.2 |
 | 6 | Stretch | S5.4, S5.5, S5.6, S4.6.4, S2.1.2 | S7.2 |
-| 7 | Optional | S8.1 | S7.2 |
+| 7 | Optional | S8.1, S8.2 | S7.2 |
 
 **Integration points.**
 - I1  S1.4.1 registry + S2.4.2 RAG tools → S3.3.1 `check_reqs` uses real tools (Increment 2).
