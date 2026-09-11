@@ -1,0 +1,129 @@
+'use client'
+
+import { useId, useRef, type KeyboardEvent } from 'react'
+import { cn } from 'cn'
+
+/**
+ * Tabs — `components/core/Tabs.jsx`: the segmented control (ink fill on the selected
+ * segment, 38 px, or 44 px `size="lg"` for the phone's Matrix / Source / Verdict switch) and
+ * the underline variant (2 px ink rule, muted count after the label). Controlled only. The
+ * tablist is keyboard-complete: arrows move between tabs, Home/End jump, and each tab names
+ * the panel it controls via `panelId`.
+ */
+export interface TabItem<V extends string> {
+  readonly value: V
+  readonly label: string
+  readonly count?: number
+}
+
+export interface TabsProps<V extends string> {
+  readonly items: readonly TabItem<V>[]
+  readonly value: V
+  readonly onChange: (value: V) => void
+  readonly variant?: 'segmented' | 'underline'
+  readonly size?: 'md' | 'lg'
+  readonly fullWidth?: boolean
+  /** Accessible name of the tablist, e.g. "Workspace sections". */
+  readonly 'aria-label': string
+  /** Returns the `id` of the panel a tab controls; the caller renders that panel. */
+  readonly panelId: (value: V) => string
+  readonly className?: string
+}
+
+export function tabId(prefix: string, value: string): string {
+  return `${prefix}-tab-${value}`
+}
+
+export function Tabs<V extends string>({
+  items,
+  value,
+  onChange,
+  variant = 'segmented',
+  size = 'md',
+  fullWidth = false,
+  panelId,
+  className,
+  ...rest
+}: TabsProps<V>) {
+  const prefix = useId()
+  const listRef = useRef<HTMLDivElement>(null)
+
+  function focusTab(index: number) {
+    const tabs = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    const target = tabs?.[(index + items.length) % items.length]
+    target?.focus()
+    const item = items[(index + items.length) % items.length]
+    if (item !== undefined) {
+      onChange(item.value)
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const keys: Record<string, () => void> = {
+      ArrowRight: () => focusTab(index + 1),
+      ArrowLeft: () => focusTab(index - 1),
+      Home: () => focusTab(0),
+      End: () => focusTab(items.length - 1),
+    }
+    const handler = keys[event.key]
+    if (handler !== undefined) {
+      event.preventDefault()
+      handler()
+    }
+  }
+
+  const isUnderline = variant === 'underline'
+  return (
+    <div
+      ref={listRef}
+      role="tablist"
+      aria-label={rest['aria-label']}
+      className={cn(
+        isUnderline
+          ? 'flex gap-6 border-b border-border-default'
+          : 'inline-flex overflow-hidden rounded-md border border-border-default bg-surface-card',
+        fullWidth && 'flex w-full',
+        className
+      )}
+    >
+      {items.map((item, index) => {
+        const isSelected = item.value === value
+        return (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            id={tabId(prefix, item.value)}
+            aria-selected={isSelected}
+            aria-controls={panelId(item.value)}
+            tabIndex={isSelected ? 0 : -1}
+            onClick={() => onChange(item.value)}
+            onKeyDown={(event) => handleKeyDown(event, index)}
+            className={cn(
+              'text-base font-medium leading-none transition-colors [transition-duration:var(--duration-fast)] focus-visible:relative focus-visible:z-10',
+              isUnderline
+                ? cn(
+                    '-mb-px border-b-2 py-2.5',
+                    isSelected
+                      ? 'border-blue-500 text-text-primary'
+                      : 'border-transparent text-text-muted hover:text-text-primary'
+                  )
+                : cn(
+                    size === 'lg' ? 'h-11' : 'h-[38px]',
+                    fullWidth ? 'flex-1 px-2' : 'px-[18px]',
+                    isSelected
+                      ? 'bg-surface-brand text-white'
+                      : 'bg-transparent text-text-primary hover:bg-surface-hover'
+                  )
+            )}
+          >
+            {item.label}
+            {item.count !== undefined && (
+              <span className="ml-1.5 font-normal text-text-muted">{item.count}</span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}

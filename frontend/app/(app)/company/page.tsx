@@ -4,7 +4,7 @@ import { DocumentsPanel } from '@/components/documents/documents-panel'
 import { PageHeader } from '@/components/layout/page-header'
 
 export const metadata: Metadata = {
-  title: 'Company · Crossbid',
+  title: 'Company · CrossBid',
 }
 
 /**

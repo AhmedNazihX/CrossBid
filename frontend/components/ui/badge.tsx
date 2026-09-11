@@ -1,45 +1,59 @@
-import * as React from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
+import type * as React from 'react'
 import { cn } from 'cn'
-import { Slot } from 'radix-ui'
 
-const badgeVariants = cva(
-  'group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!',
-  {
-    variants: {
-      variant: {
-        default: 'bg-primary text-primary-foreground [a]:hover:bg-primary/80',
-        secondary: 'bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80',
-        destructive:
-          'bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20',
-        outline:
-          'border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground',
-        ghost: 'hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50',
-        link: 'text-primary underline-offset-4 hover:underline',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-    },
-  }
-)
+/**
+ * Badge — `components/core/Badge.jsx`: a status chip with a 7 px dot, 11/12 px medium text,
+ * the tone's 50-tint background and 700 text. Pill by default; `pill={false}` gives the
+ * 6 px radius the dashboard's phase column uses. Tones are the status pairs only — orange
+ * is never a status colour, and the verdict words live in `VerdictChip`.
+ */
+export type BadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'brand'
+export type BadgeSize = 'sm' | 'md'
 
-function Badge({
-  className,
-  variant = 'default',
-  asChild = false,
-  ...props
-}: React.ComponentProps<'span'> & VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot.Root : 'span'
-
-  return (
-    <Comp
-      data-slot="badge"
-      data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
-      {...props}
-    />
-  )
+const TONE_CLASSES: Readonly<Record<BadgeTone, { chip: string; dot: string }>> = {
+  success: { chip: 'bg-status-success-bg text-status-success-text', dot: 'bg-status-success' },
+  warning: { chip: 'bg-status-warning-bg text-status-warning-text', dot: 'bg-status-warning' },
+  danger: { chip: 'bg-status-danger-bg text-status-danger-text', dot: 'bg-status-danger' },
+  info: { chip: 'bg-status-info-bg text-status-info-text', dot: 'bg-status-info' },
+  neutral: { chip: 'bg-status-neutral-bg text-status-neutral-text', dot: 'bg-status-neutral' },
+  brand: { chip: 'bg-stone-50 text-stone-700', dot: 'bg-blue-500' },
 }
 
-export { Badge, badgeVariants }
+export interface BadgeProps extends React.ComponentProps<'span'> {
+  readonly tone?: BadgeTone
+  readonly size?: BadgeSize
+  readonly dot?: boolean
+  readonly pill?: boolean
+}
+
+export function Badge({
+  tone = 'neutral',
+  size = 'md',
+  dot = true,
+  pill = true,
+  className,
+  children,
+  ...rest
+}: BadgeProps) {
+  const classes = TONE_CLASSES[tone]
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 font-medium leading-[1.2] whitespace-nowrap',
+        size === 'sm' ? 'px-2 py-[3px] text-xs' : 'px-2.5 py-[5px] text-sm',
+        pill ? 'rounded-[var(--radius-pill)]' : 'rounded-sm',
+        classes.chip,
+        className
+      )}
+      {...rest}
+    >
+      {dot && (
+        <span
+          aria-hidden="true"
+          className={cn('size-[7px] shrink-0 rounded-full', classes.dot)}
+        />
+      )}
+      {children}
+    </span>
+  )
+}

@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/common/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 
 export const metadata: Metadata = {
-  title: 'Dashboard · Crossbid',
+  title: 'Dashboard · CrossBid',
 }
 
 /**
@@ -23,7 +23,7 @@ export default function DashboardPage() {
       />
       <EmptyState
         title="No bids yet"
-        description="A bid is one tender you are deciding whether to enter. Crossbid reads the tender's documents, lists what the buyer requires, and matches each requirement to your own evidence — then you confirm or overrule its verdict."
+        description="A bid is one tender you are deciding whether to enter. CrossBid reads the tender's documents, lists what the buyer requires, and matches each requirement to your own evidence — then you confirm or overrule its verdict."
         steps={[
           'Fill in your company details, so checks run against your own facts.',
           'Start a new bid: find the tender on TED and upload the procurement documents the buyer published.',

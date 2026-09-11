@@ -12,6 +12,13 @@ import { apiRequest } from './api-client'
 export type DocumentResponse = components['schemas']['DocumentResponse']
 export type DocumentKind = components['schemas']['DocumentKind']
 export type DocumentStatus = components['schemas']['DocumentStatus']
+export type DocumentUrlResponse = components['schemas']['DocumentUrlResponse']
+
+/** The kinds `POST /bids` accepts as a tender pack; company evidence is refused with 422. */
+export const TENDER_DOCUMENT_KINDS: ReadonlySet<DocumentKind> = new Set([
+  'tender_document',
+  'tender_notice',
+])
 
 export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   'company_evidence',
@@ -94,4 +101,18 @@ export function uploadDocument(file: File, kind: DocumentKind): Promise<Document
   formData.append('file', file, file.name)
   formData.append('kind', kind)
   return apiRequest('post', '/documents', { formData })
+}
+
+/**
+ * A short-lived URL for the document's file, for the browser's own PDF viewer (S4.5.1's
+ * source panel). `expires_at` says when to ask again; the caller appends `#page=N`.
+ */
+export function getDocumentUrl(
+  documentId: string,
+  signal?: AbortSignal
+): Promise<DocumentUrlResponse> {
+  return apiRequest('get', '/documents/{document_id}/url', {
+    path: { document_id: documentId },
+    signal,
+  })
 }

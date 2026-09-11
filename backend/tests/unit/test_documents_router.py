@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable, Iterator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -27,7 +28,14 @@ from starlette.datastructures import Headers, UploadFile
 from crossbid.auth import DEV_COMPANY_HEADER
 from crossbid.ingestion.parser import ParserError
 from crossbid.ingestion.pipeline import UNREADABLE_REASON, DocumentPipeline
-from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, object_key
+from crossbid.ingestion.storage import (
+    DEFAULT_CONTENT_TYPE,
+    CompanyDocumentStore,
+    ObjectNotFoundError,
+    SignedUrl,
+    StorageError,
+    object_key,
+)
 from crossbid.main import create_app, get_database
 from crossbid.readmodel.documents import DocumentsReadModel, DocumentStatus, ReadModelError
 from crossbid.routers.documents import (
@@ -40,9 +48,12 @@ from crossbid.routers.documents import (
     NOT_PDF_TYPE_DETAIL,
     STORAGE_NOT_CONFIGURED_DETAIL,
     TOO_LARGE_DETAIL,
+    URL_NOT_SIGNED_DETAIL,
     DocumentListResponse,
     DocumentResponse,
+    DocumentUrlResponse,
     get_document_records,
+    get_document_store,
     get_pipeline,
     router,
     validated_upload,
@@ -156,7 +167,7 @@ def test_the_response_carries_nothing_the_browser_has_no_use_for(api: TestClient
 
 def test_every_response_field_is_described_for_the_generated_client() -> None:
     """`frontend/lib/api.ts` is generated from this schema; a bare field is a bare type."""
-    for model in (DocumentResponse, DocumentListResponse):
+    for model in (DocumentResponse, DocumentListResponse, DocumentUrlResponse):
         for name, info in model.model_fields.items():
             assert info.description, f"{model.__name__}.{name} has no description"
 
@@ -509,3 +520,169 @@ def test_a_failing_insert_releases_the_pipeline_and_surfaces_the_error(
         post_pdf(api)
     assert h.embedder.closed == 1
     assert h.store.uploads == []
+
+
+# ------------------------------------------------------------ the viewer's signed URL
+
+SIGNED_URL = "https://abcdefghijklmnopqrst.supabase.co/storage/v1/object/sign/x?token=T"
+FROZEN_NOW = datetime(2026, 9, 11, 12, 0, tzinfo=UTC)
+TTL_SECONDS = 600
+
+
+class FakeSigningStore:
+    """`CompanyDocumentStore.signed_url` by shape: records the call, answers or raises."""
+
+    def __init__(self, *, error: Exception | None = None) -> None:
+        self.error = error
+        self.calls: list[dict[str, str]] = []
+
+    def signed_url(self, *, company_id: str, key: str) -> SignedUrl:
+        self.calls.append({"company_id": company_id, "key": key})
+        if self.error is not None:
+            raise self.error
+        return SignedUrl(
+            url=SIGNED_URL,
+            expires_in=TTL_SECONDS,
+            expires_at=FROZEN_NOW + timedelta(seconds=TTL_SECONDS),
+        )
+
+
+@pytest.fixture
+def signing() -> FakeSigningStore:
+    return FakeSigningStore()
+
+
+@pytest.fixture
+def url_api(
+    offline_settings: Settings, pipeline: Harness, signing: FakeSigningStore
+) -> Iterator[TestClient]:
+    """The router with a fake signing store beside the fake pipeline."""
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+        get_document_store: lambda: signing,
+    }
+    with TestClient(build_app(offline_settings, overrides)) as client:
+        yield client
+
+
+def test_the_url_route_signs_the_document_s_own_key_for_the_calling_company(
+    url_api: TestClient, pipeline: Harness, signing: FakeSigningStore
+) -> None:
+    # Arrange
+    document_id = post_pdf(url_api).json()["id"]
+    record = pipeline.records.rows[uuid.UUID(document_id)]
+
+    # Act
+    response = url_api.get(f"/documents/{document_id}/url", headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == set(DocumentUrlResponse.model_fields) == {"url", "expires_at"}
+    assert body["url"] == SIGNED_URL
+    assert datetime.fromisoformat(body["expires_at"]) == FROZEN_NOW + timedelta(
+        seconds=TTL_SECONDS
+    )
+    assert signing.calls == [{"company_id": COMPANY, "key": record.storage_path}]
+
+
+def test_another_company_asking_for_the_url_gets_404_and_nothing_is_signed(
+    url_api: TestClient, signing: FakeSigningStore
+) -> None:
+    document_id = post_pdf(url_api).json()["id"]
+
+    response = url_api.get(f"/documents/{document_id}/url", headers=AS_OTHER_COMPANY)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": NO_SUCH_DOCUMENT_DETAIL}
+    assert signing.calls == []
+
+
+def test_an_unknown_document_s_url_is_the_same_404(
+    url_api: TestClient, signing: FakeSigningStore
+) -> None:
+    response = url_api.get(f"/documents/{uuid.uuid4()}/url", headers=AS_COMPANY)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": NO_SUCH_DOCUMENT_DETAIL}
+    assert signing.calls == []
+
+
+def test_a_key_storage_no_longer_has_is_404_not_500(
+    offline_settings: Settings, pipeline: Harness
+) -> None:
+    """Storage's own "gone" arrives as `ObjectNotFoundError`; the browser sees the usual 404."""
+    # Arrange
+    signing = FakeSigningStore(error=ObjectNotFoundError("no such document for this company"))
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+        get_document_store: lambda: signing,
+    }
+
+    # Act
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        document_id = post_pdf(api).json()["id"]
+        response = api.get(f"/documents/{document_id}/url", headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 404
+    assert response.json() == {"detail": NO_SUCH_DOCUMENT_DETAIL}
+
+
+def test_a_signing_failure_is_502_with_a_detail_that_names_no_key(
+    offline_settings: Settings, pipeline: Harness
+) -> None:
+    # Arrange
+    signing = FakeSigningStore(error=StorageError("the document URL could not be signed"))
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+        get_document_store: lambda: signing,
+    }
+
+    # Act
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        document_id = post_pdf(api).json()["id"]
+        record = pipeline.records.rows[uuid.UUID(document_id)]
+        response = api.get(f"/documents/{document_id}/url", headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 502
+    assert response.json() == {"detail": URL_NOT_SIGNED_DETAIL}
+    assert record.storage_path not in response.text
+    assert COMPANY not in response.text
+
+
+def test_the_url_route_requires_the_caller_s_company(url_api: TestClient) -> None:
+    assert url_api.get(f"/documents/{uuid.uuid4()}/url").status_code == 401
+
+
+def test_the_url_route_is_503_when_storage_is_not_configured(
+    offline_settings: Settings, pipeline: Harness
+) -> None:
+    """The real `get_document_store` over settings with no Supabase wiring."""
+    # Arrange -- the fake pipeline so a document exists; the store dependency is real
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+    }
+
+    # Act
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        document_id = post_pdf(api).json()["id"]
+        response = api.get(f"/documents/{document_id}/url", headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 503
+    assert response.json() == {"detail": STORAGE_NOT_CONFIGURED_DETAIL}
+    assert "SUPABASE" not in response.text
+
+
+def test_get_document_store_builds_the_real_store_without_opening_a_socket(
+    offline_settings: Settings,
+) -> None:
+    built = get_document_store(settings=with_storage(offline_settings))
+
+    assert isinstance(built, CompanyDocumentStore)

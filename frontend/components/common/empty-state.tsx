@@ -1,14 +1,8 @@
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
+import { Eyebrow } from '@/components/ui/eyebrow'
 
 export interface EmptyStateAction {
   readonly href: string
@@ -29,12 +23,12 @@ export interface EmptyStateProps {
 }
 
 /**
- * The shell's empty state (story S4.1.2: "empty states explain the next step").
+ * The shell's empty state (story S4.1.2: "empty states explain the next step"), on the design
+ * system's `Card`, `Eyebrow` and `Button` — the readme's rule that an empty state explains
+ * why, then what to do.
  *
- * A screen with nothing on it is the first thing a new bidder sees, so it has to
- * carry the instructions rather than report an absence. Stock shadcn/ui `Card`
- * and `Button` only — no bespoke visual language, which stays gated behind
- * S4.0.1's design confirmation.
+ * A screen with nothing on it is the first thing a new bidder sees, so it carries the
+ * instructions rather than reporting an absence.
  */
 export function EmptyState({
   title,
@@ -44,43 +38,35 @@ export function EmptyState({
   secondaryAction,
 }: EmptyStateProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {/* A real heading, so heading-by-heading navigation reaches it: stock
-              `CardTitle` renders a `div`, and Tailwind's preflight strips the
-              `h2` defaults, so this changes semantics only. */}
-          <h2>{title}</h2>
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
+    <Card title={title}>
+      <p className="m-0 max-w-[720px] [font:var(--type-body)] text-text-secondary">
+        {description}
+      </p>
 
       {steps !== undefined && steps.length > 0 && (
-        <CardContent>
-          <p className="text-muted-foreground mb-2 text-xs font-medium uppercase">
-            What to do next
-          </p>
-          <ol className="text-muted-foreground list-decimal space-y-1.5 pl-5">
+        <div className="mt-4">
+          <Eyebrow className="mb-2">What to do next</Eyebrow>
+          <ol className="m-0 flex list-decimal flex-col gap-1.5 pl-5 text-text-secondary">
             {steps.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
-        </CardContent>
+        </div>
       )}
 
       {(action !== undefined || secondaryAction !== undefined) && (
-        <CardFooter className="flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           {action !== undefined && (
             <Button asChild size="lg">
               <Link href={action.href}>{action.label}</Link>
             </Button>
           )}
           {secondaryAction !== undefined && (
-            <Button asChild size="lg" variant="outline">
+            <Button asChild size="lg" variant="secondary">
               <Link href={secondaryAction.href}>{secondaryAction.label}</Link>
             </Button>
           )}
-        </CardFooter>
+        </div>
       )}
     </Card>
   )

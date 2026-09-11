@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 import { Badge } from '@/components/ui/badge'
-import { TableCell, TableHead, TableRow } from '@/components/ui/table'
+import { Td, Tr } from '@/components/ui/data-table'
 import { describeApiError } from '@/lib/api-client'
 import { getDocument, isDocumentSettled, type DocumentResponse } from '@/lib/documents'
+import { formatPageList } from '@/lib/format'
 import { usePolling } from '@/lib/use-polling'
 import {
   DOCUMENT_KIND_LABELS,
   DOCUMENT_STATUS_LABELS,
-  statusBadgeVariant,
+  statusBadgeTone,
 } from './document-labels'
 
 export interface DocumentRowProps {
@@ -20,7 +21,8 @@ export interface DocumentRowProps {
 }
 
 /**
- * One table row that keeps itself current.
+ * One table row that keeps itself current (story S4.2.2), in the row shape of
+ * `NewBid.dc.html`'s procurement-documents list: name and meta, then a status `Badge`.
  *
  * Each in-progress row runs its own `usePolling` — a hook cannot run inside the table's
  * `map`, and a row stops on its own the moment it is `ready` or `failed`, so a table of
@@ -49,37 +51,38 @@ export function DocumentRow({ document, onChange }: DocumentRowProps) {
   }, [value, onChange])
 
   const isParsed = value.status !== 'uploaded'
-  const statusLabel = DOCUMENT_STATUS_LABELS[value.status]
 
   return (
-    <TableRow>
-      <TableHead
+    <Tr>
+      <th
         scope="row"
-        className="h-auto max-w-[16rem] py-3 font-medium break-words whitespace-normal"
+        className="min-w-[220px] max-w-[20rem] px-5 py-3.5 text-left align-middle font-medium [overflow-wrap:anywhere]"
       >
         {value.name}
-      </TableHead>
-      <TableCell className="py-3">{DOCUMENT_KIND_LABELS[value.kind].label}</TableCell>
-      <TableCell className="max-w-[20rem] py-3 whitespace-normal">
-        <div className="flex flex-col gap-1">
-          <Badge variant={statusBadgeVariant(value.status)}>{statusLabel}</Badge>
+      </th>
+      <Td className="text-text-secondary">{DOCUMENT_KIND_LABELS[value.kind].label}</Td>
+      <Td className="max-w-[22rem]">
+        <div className="flex flex-col items-start gap-1">
+          <Badge tone={statusBadgeTone(value.status)}>
+            {DOCUMENT_STATUS_LABELS[value.status]}
+          </Badge>
           {value.status === 'failed' && value.failure_reason !== null && (
-            <p className="text-destructive text-sm">{value.failure_reason}</p>
+            <p className="m-0 [font:var(--type-body-sm)] text-status-danger-text">
+              {value.failure_reason}
+            </p>
           )}
           {error !== undefined && (
-            <p className="text-muted-foreground text-xs">
+            <p className="m-0 [font:var(--type-body-sm)] text-text-muted">
               Could not refresh: {describeApiError(error)}
             </p>
           )}
         </div>
-      </TableCell>
-      <TableCell className="py-3 text-right tabular-nums">
-        {isParsed ? value.pages : '—'}
-      </TableCell>
-      <TableCell className="py-3 text-right tabular-nums">
+      </Td>
+      <Td className="text-right tabular-nums">{isParsed ? value.pages : '—'}</Td>
+      <Td className="text-right tabular-nums">
         <UnreadPages document={value} isParsed={isParsed} />
-      </TableCell>
-    </TableRow>
+      </Td>
+    </Tr>
   )
 }
 
@@ -100,11 +103,11 @@ function UnreadPages({
   if (document.unread_page_count === 0) {
     return <>0</>
   }
-  const pageList = document.unread_pages.join(', ')
+  const pageList = formatPageList(document.unread_pages)
   return (
-    <span title={`Pages ${pageList}`}>
+    <span title={pageList}>
       {document.unread_page_count}
-      <span className="sr-only"> unread: pages {pageList}</span>
+      <span className="sr-only"> unread: {pageList}</span>
     </span>
   )
 }

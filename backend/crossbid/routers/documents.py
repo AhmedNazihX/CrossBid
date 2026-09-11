@@ -1,4 +1,5 @@
-"""S2.2.3 — `POST /documents`, `GET /documents/{id}`, `GET /documents`.
+"""S2.2.3 — `POST /documents`, `GET /documents/{id}`, `GET /documents`; S4.5.1 adds
+`GET /documents/{id}/url`.
 
 The HTTP layer is thin on purpose: validate the multipart part, hand it to
 `ingestion.pipeline.DocumentPipeline`, answer **202** with the `uploaded` row, and let the
@@ -23,10 +24,18 @@ S3.1.1's `POST /bids` attaches it (see `ingestion.pipeline`).
 Response shapes are the frontend's contract — `frontend/lib/api.ts` is generated from this
 schema — so they are plain Pydantic models with a description on every field and no
 server-side detail (`storage_path`, `company_id`) the browser has no use for.
+
+`GET /documents/{id}/url` (S4.5.1) is what the workspace's source panel calls: the browser's
+own PDF viewer needs a URL it can load in an `<iframe>`, and the file sits in a private
+bucket. The answer is `CompanyDocumentStore.signed_url` for the record's own key -- the store
+re-checks that the key belongs to the calling company and raises `ObjectNotFoundError`
+otherwise, which is the same 404 as an unknown id. The response carries `expires_at` so the
+panel can refresh the URL before the ten-minute TTL runs out, and never the key itself.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime
@@ -52,6 +61,8 @@ from crossbid.ingestion.pipeline import DocumentPipeline, Upload
 from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
 from crossbid.ingestion.storage import (
     DEFAULT_CONTENT_TYPE,
+    CompanyDocumentStore,
+    ObjectNotFoundError,
     StorageError,
     company_document_store,
 )
@@ -92,6 +103,7 @@ NO_SUCH_DOCUMENT_DETAIL: Final = "No such document."
 STORAGE_NOT_CONFIGURED_DETAIL: Final = (
     "Document storage is not configured on this server, so uploads are unavailable."
 )
+URL_NOT_SIGNED_DETAIL: Final = "The document could not be opened right now. Try again."
 
 
 # ------------------------------------------------------------------------ response models
@@ -147,6 +159,15 @@ class DocumentListResponse(BaseModel):
     documents: list[DocumentResponse] = Field(description="Newest first")
 
 
+class DocumentUrlResponse(BaseModel):
+    """A short-lived URL the browser's PDF viewer can load; ask again once it has expired."""
+
+    model_config = ConfigDict(frozen=True)
+
+    url: str = Field(description="Signed download URL; append #page=N to open a page")
+    expires_at: datetime = Field(description="When the URL stops working, UTC")
+
+
 # ------------------------------------------------------------------------- dependencies
 
 
@@ -155,10 +176,28 @@ def get_document_records(db: Database = Depends(get_database)) -> DocumentsReadM
     return DocumentsReadModel(db)
 
 
+def get_document_store(
+    settings: Settings = Depends(get_app_settings),
+) -> CompanyDocumentStore:
+    """The configured Storage bucket behind the company prefix, or 503 when there is none.
+
+    The message from `storage_bucket` names the missing variables; that is for the
+    operator's log, not the bidder's screen, hence the fixed detail.
+    """
+    try:
+        return company_document_store(settings)
+    except StorageError as exc:
+        logger.error("document storage unavailable: %s", exc)
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_NOT_CONFIGURED_DETAIL
+        ) from exc
+
+
 def get_pipeline(
     settings: Settings = Depends(get_app_settings),
     db: Database = Depends(get_database),
     records: DocumentsReadModel = Depends(get_document_records),
+    store: CompanyDocumentStore = Depends(get_document_store),
 ) -> DocumentPipeline:
     """The production wiring: real Storage, parser, chunker, embeddings and vector store.
 
@@ -166,16 +205,6 @@ def get_pipeline(
     task must be able to close. The chunker's encoder is left to its lazy default, so the
     BPE table is loaded in the background task and never inside a request.
     """
-    try:
-        store = company_document_store(settings)
-    except StorageError as exc:
-        # The message names the missing variables; that is for the operator's log, not the
-        # bidder's screen.
-        logger.error("uploads unavailable: %s", exc)
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, detail=STORAGE_NOT_CONFIGURED_DETAIL
-        ) from exc
-
     ingestion = settings.runtime.ingestion
     return DocumentPipeline(
         store=store,
@@ -236,6 +265,41 @@ async def get_document(
     if record is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_DOCUMENT_DETAIL)
     return DocumentResponse.from_record(record)
+
+
+@router.get(
+    "/{document_id}/url",
+    response_model=DocumentUrlResponse,
+    summary="A short-lived URL for the document's file",
+)
+async def get_document_url(
+    document_id: uuid.UUID,
+    company: CompanyContext = Depends(current_company),
+    records: DocumentsReadModel = Depends(get_document_records),
+    store: CompanyDocumentStore = Depends(get_document_store),
+) -> DocumentUrlResponse:
+    """Sign the document's file for the browser's PDF viewer (S4.5.1's source panel).
+
+    The URL lives for the configured TTL, ten minutes at most; `expires_at` says when to
+    ask again. Another company's id, an unknown id and a file Storage no longer holds are
+    the same 404.
+    """
+    record = await records.get(company_id=_company_uuid(company), document_id=document_id)
+    if record is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_DOCUMENT_DETAIL)
+    try:
+        # The Storage client is synchronous; keep the request loop free while it signs.
+        signed = await asyncio.to_thread(
+            store.signed_url, company_id=company.company_id, key=record.storage_path
+        )
+    except ObjectNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_DOCUMENT_DETAIL) from exc
+    except StorageError as exc:
+        # The exception never carries the key or a token (storage.py); the log gets the
+        # document id, the screen a sentence to act on.
+        logger.error("document %s could not be signed: %s", document_id, exc)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=URL_NOT_SIGNED_DETAIL) from exc
+    return DocumentUrlResponse(url=signed.url, expires_at=signed.expires_at)
 
 
 @router.get("", response_model=DocumentListResponse, summary="List the company's documents")

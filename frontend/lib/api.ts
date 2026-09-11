@@ -71,6 +71,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/{document_id}/url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A short-lived URL for the document's file
+         * @description Sign the document's file for the browser's PDF viewer (S4.5.1's source panel).
+         *
+         *     The URL lives for the configured TTL, ten minutes at most; `expires_at` says when to
+         *     ask again. Another company's id, an unknown id and a file Storage no longer holds are
+         *     the same 404.
+         */
+        get: operations["get_document_url_documents__document_id__url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bids": {
         parameters: {
             query?: never;
@@ -383,6 +407,23 @@ export interface components {
          */
         DocumentStatus: "uploaded" | "parsed" | "embedded" | "ready" | "failed";
         /**
+         * DocumentUrlResponse
+         * @description A short-lived URL the browser's PDF viewer can load; ask again once it has expired.
+         */
+        DocumentUrlResponse: {
+            /**
+             * Url
+             * @description Signed download URL; append #page=N to open a page
+             */
+            url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             * @description When the URL stops working, UTC
+             */
+            expires_at: string;
+        };
+        /**
          * ExtractionProblem
          * @description One thing extraction could not do, addressed to the reviewer.
          *
@@ -676,6 +717,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_document_url_documents__document_id__url_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentUrlResponse"];
                 };
             };
             /** @description Validation Error */

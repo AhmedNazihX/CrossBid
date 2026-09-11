@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { EmptyState } from '@/components/common/empty-state'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
+import { Icon } from '@/components/ui/icons'
+import { Notice } from '@/components/ui/notice'
 import { describeApiError } from '@/lib/api-client'
 import {
   listDocuments,
@@ -23,7 +24,7 @@ type ListState =
 
 /**
  * The upload form, the documents table and the one live region that ties them together
- * (story S4.2.2).
+ * (story S4.2.2), on the design system's `Card` and `Notice` (ADR-0014).
  *
  * This is the only component on the page that talks to the API for the list: it loads
  * `GET /documents` once on mount, prepends each 202 row the form produces, and merges the
@@ -73,20 +74,12 @@ export function DocumentsPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Upload a document</h2>
-          </CardTitle>
-          <CardDescription>
-            Crossbid reads each PDF page by page and indexes it, so the agent can quote it as
-            evidence. Processing takes a moment; the table below shows how far each file has
-            got.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <UploadForm onUpload={handleUpload} />
-        </CardContent>
+      <Card title="Upload a document" icon={<Icon name="upload" size={20} />}>
+        <p className="m-0 mb-4 max-w-[720px] text-text-secondary">
+          CrossBid reads each PDF page by page and indexes it, so the agent can quote it as
+          evidence. Processing takes a moment; the table below shows how far each file has got.
+        </p>
+        <UploadForm onUpload={handleUpload} />
       </Card>
 
       <p role="status" aria-live="polite" className="sr-only">
@@ -113,20 +106,23 @@ function DocumentsSection({
 }) {
   if (listState.phase === 'failed' && documents.length === 0) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Your documents could not be loaded</AlertTitle>
-        <AlertDescription>{listState.message}</AlertDescription>
-      </Alert>
+      <Notice tone="danger" title="Your documents could not be loaded">
+        {listState.message}
+      </Notice>
     )
   }
   if (listState.phase === 'loading') {
-    return <p className="text-muted-foreground text-sm">Loading your documents…</p>
+    return (
+      <p role="status" className="m-0 [font:var(--type-body-sm)] text-text-muted">
+        Loading your documents…
+      </p>
+    )
   }
   if (documents.length === 0) {
     return (
       <EmptyState
         title="No documents yet"
-        description="The agent can only claim what your documents prove. Upload the certificates, accounts, insurance and references you normally attach to a bid, and Crossbid will match each tender requirement to a page in them."
+        description="The agent can only claim what your documents prove. Upload the certificates, accounts, insurance and references you normally attach to a bid, and CrossBid will match each tender requirement to a page in them."
         steps={[
           'Choose a PDF above and pick “Company evidence” as its type.',
           'Watch its status until it reads Ready — or Failed, with the reason to fix.',

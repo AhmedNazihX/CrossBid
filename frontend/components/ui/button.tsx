@@ -1,66 +1,86 @@
 import * as React from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from 'cn'
 import { Slot } from 'radix-ui'
 
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-        outline:
-          'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
-        secondary:
-          'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
-        ghost:
-          'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
-        destructive:
-          'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
-        link: 'text-primary underline-offset-4 hover:underline',
-      },
-      size: {
-        default:
-          'h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: 'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-        icon: 'size-8',
-        'icon-xs':
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        'icon-sm':
-          'size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg',
-        'icon-lg': 'size-9',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
-  }
-)
+/**
+ * Button — `components/core/Button.jsx`: five variants, three heights (32/40/48 px),
+ * 8 px radius, medium weight, 16 px icon slots, 50 % opacity when disabled. Hover darkens
+ * one step; the focus ring is the sheet's `--shadow-[var(--shadow-focus)]`. `asChild` lets a Next `Link`
+ * carry the styling, so a navigation action is still an anchor.
+ */
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'inverse' | 'danger'
+export type ButtonSize = 'sm' | 'md' | 'lg'
 
-function Button({
-  className,
-  variant = 'default',
-  size = 'default',
+const VARIANT_CLASSES: Readonly<Record<ButtonVariant, string>> = {
+  primary:
+    'border-transparent bg-surface-brand text-text-inverse not-disabled:hover:bg-blue-600',
+  secondary:
+    'border-border-default bg-surface-card text-text-primary shadow-xs not-disabled:hover:bg-surface-hover',
+  ghost:
+    'border-transparent bg-transparent text-text-primary not-disabled:hover:bg-surface-hover',
+  inverse:
+    'border-transparent bg-surface-inverse text-text-inverse not-disabled:hover:bg-stone-800',
+  danger:
+    'border-transparent bg-status-danger text-text-inverse not-disabled:hover:bg-status-danger-text',
+}
+
+const SIZE_CLASSES: Readonly<Record<ButtonSize, string>> = {
+  sm: 'h-8 gap-1.5 px-3 text-[13px]',
+  md: 'h-10 gap-2 px-4 text-base',
+  lg: 'h-12 gap-2 px-5 text-[length:var(--text-md)]',
+}
+
+export interface ButtonProps extends React.ComponentProps<'button'> {
+  readonly variant?: ButtonVariant
+  readonly size?: ButtonSize
+  /** 16 px glyph before the label. */
+  readonly icon?: React.ReactNode
+  /** 16 px glyph after the label. */
+  readonly iconRight?: React.ReactNode
+  readonly fullWidth?: boolean
+  /** Render the child element (e.g. a `Link`) with the button's classes instead of a `<button>`. */
+  readonly asChild?: boolean
+}
+
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  icon,
+  iconRight,
+  fullWidth = false,
   asChild = false,
-  ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot.Root : 'button'
+  className,
+  children,
+  type,
+  ...rest
+}: ButtonProps) {
+  const classes = cn(
+    'inline-flex shrink-0 items-center justify-center rounded-md border font-medium leading-none whitespace-nowrap',
+    'transition-colors [transition-duration:var(--duration-fast)] [transition-timing-function:var(--ease-standard)]',
+    'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
+    VARIANT_CLASSES[variant],
+    SIZE_CLASSES[size],
+    fullWidth && 'flex w-full',
+    className
+  )
+
+  if (asChild) {
+    return (
+      <Slot.Root className={classes} {...rest}>
+        {children}
+      </Slot.Root>
+    )
+  }
 
   return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+    <button type={type ?? 'button'} className={classes} {...rest}>
+      {icon !== undefined && <IconSlot>{icon}</IconSlot>}
+      {children}
+      {iconRight !== undefined && <IconSlot>{iconRight}</IconSlot>}
+    </button>
   )
 }
 
-export { Button, buttonVariants }
+function IconSlot({ children }: { readonly children: React.ReactNode }) {
+  return <span className="inline-flex size-4 [&_svg]:size-4">{children}</span>
+}

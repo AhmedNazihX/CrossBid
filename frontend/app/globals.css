@@ -1,130 +1,332 @@
+/*
+ * The CrossBid design system's token sheet, in the one file the app reads it from.
+ *
+ * Values are copied verbatim from `.claude/skills/CrossBid Design System/tokens/*.css`
+ * (colors, typography, spacing, effects, base) — never rounded, never substituted. The
+ * `@theme inline` block below maps the colours onto Tailwind's namespace so utilities such as
+ * `bg-surface-card` and `text-text-muted` resolve to the same variables; the other
+ * namespaces already share Tailwind's variable names (see the note inside the block).
+ *
+ * Fonts: Geist and Geist Mono are self-hosted by `next/font/google` in `app/layout.tsx`,
+ * which sets `--font-geist-sans` and `--font-geist-mono` on `<html>`; the design system's
+ * `--font-sans` and `--font-mono` point at them with the system's own fallback stacks.
+ */
 @import 'tailwindcss';
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
-
-@custom-variant dark (&:is(.dark *));
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* ------------------------------------------------------------- tokens/colors.css */
+  /* Base palette */
+  --cb-white: #ffffff;
+  --cb-canvas: #fafaf9;
+  --cb-stone-50: #f5f5f4;
+  --cb-stone-100: #eeedeb;
+  --cb-stone-200: #e7e5e4;
+  --cb-stone-300: #d6d3d1;
+  --cb-stone-400: #a8a29e;
+  --cb-stone-500: #78716c;
+  --cb-stone-600: #57534e;
+  --cb-stone-700: #44403c;
+  --cb-stone-800: #292524;
+  --cb-ink: #111111;
+  --cb-blue-50: #f5f5f4;
+  --cb-blue-100: #e7e5e4;
+  --cb-blue-200: #d6d3d1;
+  --cb-blue-300: #a8a29e;
+  --cb-blue-500: #111111;
+  --cb-blue-600: #292524;
+  --cb-blue-700: #44403c;
+  --cb-blue-900: #000000;
+  --cb-green-50: #eafaf0;
+  --cb-green-100: #d3f4df;
+  --cb-green-500: #1f9d55;
+  --cb-green-700: #166b3b;
+  --cb-amber-50: #fdf7e5;
+  --cb-amber-100: #fbeec2;
+  --cb-amber-500: #d9a400;
+  --cb-amber-700: #8a6600;
+  --cb-orange-50: #fff3ea;
+  --cb-orange-100: #ffe1cc;
+  --cb-orange-500: #f97316;
+  --cb-orange-600: #ea6209;
+  --cb-orange-700: #c24d05;
+  --cb-red-50: #fdeeee;
+  --cb-red-100: #fbd9d9;
+  --cb-red-500: #d93636;
+  --cb-red-700: #9c2323;
+  /* Semantic: surfaces */
+  --surface-canvas: var(--cb-canvas);
+  --surface-card: var(--cb-white);
+  --surface-sunken: var(--cb-stone-50);
+  --surface-hover: var(--cb-stone-100);
+  --surface-inverse: var(--cb-ink);
+  --surface-brand: var(--cb-blue-500);
+  --surface-brand-soft: var(--cb-blue-50);
+  --surface-accent: var(--cb-orange-500);
+  --surface-accent-soft: var(--cb-orange-50);
+  /* Semantic: text */
+  --text-primary: var(--cb-ink);
+  --text-secondary: var(--cb-stone-600);
+  --text-muted: var(--cb-stone-500);
+  --text-placeholder: var(--cb-stone-400);
+  --text-inverse: var(--cb-white);
+  --text-brand: var(--cb-blue-500);
+  --text-accent: var(--cb-orange-600);
+  --text-link: var(--cb-ink);
+  /* Semantic: borders */
+  --border-default: var(--cb-stone-200);
+  --border-strong: var(--cb-stone-300);
+  --border-subtle: var(--cb-stone-100);
+  --border-brand: var(--cb-blue-500);
+  --border-focus: var(--cb-blue-500);
+  /* Status (run + requirement states) */
+  --status-success: var(--cb-green-500);
+  --status-success-bg: var(--cb-green-50);
+  --status-success-text: var(--cb-green-700);
+  --status-warning: var(--cb-amber-500);
+  --status-warning-bg: var(--cb-amber-50);
+  --status-warning-text: var(--cb-amber-700);
+  --status-danger: var(--cb-red-500);
+  --status-danger-bg: var(--cb-red-50);
+  --status-danger-text: var(--cb-red-700);
+  --status-info: #2f6fdb;
+  --status-info-bg: #eef3fc;
+  --status-info-text: #1f4fa8;
+  --status-neutral: var(--cb-stone-400);
+  --status-neutral-bg: var(--cb-stone-100);
+  --status-neutral-text: var(--cb-stone-600);
+  /* Verdicts (CrossBid domain) */
+  --verdict-go: var(--cb-green-500);
+  --verdict-go-bg: var(--cb-green-50);
+  --verdict-go-text: var(--cb-green-700);
+  --verdict-nogo: var(--cb-red-500);
+  --verdict-nogo-bg: var(--cb-red-50);
+  --verdict-nogo-text: var(--cb-red-700);
+  --verdict-conditional: var(--cb-amber-500);
+  --verdict-conditional-bg: var(--cb-amber-50);
+  --verdict-conditional-text: var(--cb-amber-700);
+  --verdict-insufficient: var(--cb-stone-400);
+  --verdict-insufficient-bg: var(--cb-stone-100);
+  --verdict-insufficient-text: var(--cb-stone-600);
+  /* Chart series */
+  --chart-1: var(--status-info);
+  --chart-2: var(--cb-green-500);
+  --chart-3: var(--cb-amber-500);
+  --chart-4: var(--cb-red-500);
+  --chart-grid: var(--cb-stone-200);
+
+  /* --------------------------------------------------------- tokens/typography.css */
+  --font-sans: var(--font-geist-sans), 'Geist', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    var(--font-geist-mono), 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Type scale (px) */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+  --text-4xl: 44px;
+  --text-5xl: 60px;
+  /* Line heights */
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.6;
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  /* Tracking */
+  --tracking-tight: -0.025em;
+  --tracking-tighter: -0.035em;
+  --tracking-wide: 0.06em;
+  /* Semantic type roles */
+  --type-display: var(--weight-semibold) var(--text-5xl) / var(--leading-tight) var(--font-sans);
+  --type-h1: var(--weight-semibold) var(--text-4xl) / var(--leading-tight) var(--font-sans);
+  --type-h2: var(--weight-semibold) var(--text-3xl) / var(--leading-snug) var(--font-sans);
+  --type-h3: var(--weight-semibold) var(--text-2xl) / var(--leading-snug) var(--font-sans);
+  --type-h4: var(--weight-semibold) var(--text-lg) / var(--leading-snug) var(--font-sans);
+  --type-body-lg: var(--weight-regular) var(--text-lg) / var(--leading-relaxed) var(--font-sans);
+  --type-body: var(--weight-regular) var(--text-base) / var(--leading-normal) var(--font-sans);
+  --type-body-sm: var(--weight-regular) var(--text-sm) / var(--leading-normal) var(--font-sans);
+  --type-label: var(--weight-medium) var(--text-base) / 1 var(--font-sans);
+  --type-eyebrow: var(--weight-medium) var(--text-sm) / 1 var(--font-sans);
+  --type-mono: var(--weight-regular) var(--text-sm) / var(--leading-normal) var(--font-mono);
+
+  /* ------------------------------------------------------------ tokens/spacing.css */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  /* Layout */
+  --sidebar-width: 260px;
+  --content-max: 1200px;
+  --marketing-max: 1160px;
+  --page-pad: 32px;
+  --card-pad: 24px;
+  /* Control heights */
+  --control-sm: 32px;
+  --control-md: 40px;
+  --control-lg: 48px;
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+
+  /* ------------------------------------------------------------ tokens/effects.css */
+  --shadow-xs: 0 1px 2px rgba(17, 17, 17, 0.04);
+  --shadow-sm: 0 1px 3px rgba(17, 17, 17, 0.06), 0 1px 2px rgba(17, 17, 17, 0.04);
+  --shadow-md: 0 4px 12px rgba(17, 17, 17, 0.08), 0 1px 3px rgba(17, 17, 17, 0.05);
+  --shadow-lg: 0 12px 32px rgba(17, 17, 17, 0.12), 0 2px 6px rgba(17, 17, 17, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(17, 17, 17, 0.2);
+  --shadow-active-nav: 0 1px 2px rgba(17, 17, 17, 0.06);
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  /* Overlays */
+  --overlay-scrim: rgba(17, 17, 17, 0.4);
+  --protect-gradient: linear-gradient(
+    180deg,
+    rgba(250, 250, 249, 0) 0%,
+    rgba(250, 250, 249, 1) 100%
+  );
+  --blur-glass: blur(12px);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/*
+ * Tailwind's colour namespace → design tokens. Names mirror the semantic tokens one for one
+ * so a class is grep-able back to the sheet: `bg-surface-sunken`, `text-text-secondary`,
+ * `border-border-strong`, `text-status-danger-text`, `bg-verdict-go-bg`.
+ */
+@theme inline {
+  --color-*: initial;
+  --color-white: var(--cb-white);
+  --color-transparent: transparent;
+  --color-stone-50: var(--cb-stone-50);
+  --color-stone-100: var(--cb-stone-100);
+  --color-stone-200: var(--cb-stone-200);
+  --color-stone-300: var(--cb-stone-300);
+  --color-stone-400: var(--cb-stone-400);
+  --color-stone-500: var(--cb-stone-500);
+  --color-stone-600: var(--cb-stone-600);
+  --color-stone-700: var(--cb-stone-700);
+  --color-stone-800: var(--cb-stone-800);
+  --color-ink: var(--cb-ink);
+  --color-blue-100: var(--cb-blue-100);
+  --color-blue-500: var(--cb-blue-500);
+  --color-blue-600: var(--cb-blue-600);
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-card: var(--surface-card);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-brand: var(--surface-brand);
+  --color-surface-brand-soft: var(--surface-brand-soft);
+  --color-surface-accent: var(--surface-accent);
+  --color-surface-accent-soft: var(--surface-accent-soft);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-placeholder: var(--text-placeholder);
+  --color-text-inverse: var(--text-inverse);
+  --color-text-brand: var(--text-brand);
+  --color-text-accent: var(--text-accent);
+  --color-text-link: var(--text-link);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-brand: var(--border-brand);
+  --color-border-focus: var(--border-focus);
+  --color-status-success: var(--status-success);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-danger-text: var(--status-danger-text);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-text: var(--status-info-text);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-bg: var(--status-neutral-bg);
+  --color-status-neutral-text: var(--status-neutral-text);
+  --color-verdict-go: var(--verdict-go);
+  --color-verdict-go-bg: var(--verdict-go-bg);
+  --color-verdict-go-text: var(--verdict-go-text);
+  --color-verdict-nogo: var(--verdict-nogo);
+  --color-verdict-nogo-bg: var(--verdict-nogo-bg);
+  --color-verdict-nogo-text: var(--verdict-nogo-text);
+  --color-verdict-conditional: var(--verdict-conditional);
+  --color-verdict-conditional-bg: var(--verdict-conditional-bg);
+  --color-verdict-conditional-text: var(--verdict-conditional-text);
+  --color-verdict-insufficient: var(--verdict-insufficient);
+  --color-verdict-insufficient-bg: var(--verdict-insufficient-bg);
+  --color-verdict-insufficient-text: var(--verdict-insufficient-text);
+
+  /*
+   * Fonts, type scale, tracking, radii and shadows are NOT re-declared here: the sheet's
+   * variables carry Tailwind's own names (`--font-sans`, `--text-sm`, `--radius-md`,
+   * `--shadow-xs`, `--tracking-tight`), so the unlayered `:root` block above overrides the
+   * defaults Tailwind emits in `@layer theme`, and `rounded-md`, `shadow-xs`, `text-sm` read
+   * the design system's values. Tokens Tailwind has no utility for are used as arbitrary
+   * values: `rounded-[var(--radius-pill)]`, `shadow-[var(--shadow-focus)]`,
+   * `text-[length:var(--text-md)]`, `[font:var(--type-mono)]`.
+   */
+
+  /* The shell switches from the phone header to the 260px sidebar here (ADR-0014). */
+  --breakpoint-shell: 900px;
 }
 
+/* ---------------------------------------------------------------- tokens/base.css */
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+  html {
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    background: var(--surface-canvas);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-background text-foreground;
+    margin: 0;
+    font: var(--type-body);
   }
-  html {
-    @apply font-sans;
+  a {
+    color: var(--text-link);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--cb-stone-600);
+    text-decoration: underline;
+  }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  /* Focus: the system's 3px ink-at-20% ring on every keyboard-focused control. */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
   }
 }

@@ -1,6 +1,6 @@
 # Crossbid web app
 
-Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui.
+Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · the CrossBid design system.
 Self-contained: nothing here needs the backend's toolchain (no Python, no `uv`).
 
 ## Quick start
@@ -15,15 +15,16 @@ from `backend/` (`uv run uvicorn crossbid.main:app --reload`, port 8000). The we
 app talks to it over HTTP only; it never reaches the database, the LLM provider,
 or any secret.
 
-Today the app is the authenticated shell (S4.1.2), a public landing page, and
-the Company screen's document upload table (S4.2.2): upload a PDF by type and
-watch its row move through `uploaded → parsed → embedded → ready`, or `failed`
-with the reason and the count of pages that could not be read. Navigation
-reaches Dashboard, Company, Settings and New bid; the other screens show an
-empty state that explains the next step. Sign-in, the company profile form, TED
-search, the bid workspace, chat, and the developer console arrive with stories
-S4.1.1–S4.6.4. There is no authentication yet: `(app)` renders for anyone, and
-the redirect for a signed-out visitor lands with S4.1.1. Until then the S0.3.1
+Today the app is the design-system shell (ADR-0014: 260 px sidebar, one white content
+frame, Geist), the Company screen's document upload table (S4.2.2), and the first
+Increment-1 slice of the bid workspace (S4.5.1): the Tenders list over `GET /bids`, the
+start step (`/bids/new` — notice number, tender language, the company's ready tender
+documents, Start analysis → `POST /bids`), and the workspace itself at `/bids/[id]`, which
+polls `GET /bids/{id}` every two seconds until the run reaches `awaiting_review`, `complete`
+or `failed`, lists requirements as soon as they exist, and opens the cited page of the PDF
+in the Source panel from every citation. Certificates, Verdicts and Agent runs are
+placeholders that name their stories. There is no authentication yet: `(app)` renders for
+anyone, and the redirect for a signed-out visitor lands with S4.1.1. Until then the S0.3.1
 dev bridge names the company — see Configuration.
 
 ## Tasks
@@ -35,6 +36,7 @@ dev bridge names the company — see Configuration.
 | `npm run build`     | Production build (`output: "standalone"`)                 |
 | `npm start`         | Serve the production build                                |
 | `npm run lint`      | ESLint (`next/core-web-vitals`, `next/typescript`)        |
+| `npm run format`    | Prettier, in place; `format:check` is what CI runs        |
 | `npm run typecheck` | `tsc --noEmit` — the check repo CI runs                   |
 | `npm run gen:api`   | Regenerate `lib/api.ts` from the backend's OpenAPI schema |
 
@@ -56,11 +58,11 @@ npm run gen:api
 > (S0.1.4 / S0.4.2). The backend's Pydantic models are the single schema source;
 > this file is the only thing the two apps share.
 
-The backend currently exposes only `GET /health`, so the file describes exactly
-that one operation and the `Health` model. It grows with every router story; the
-pipeline itself is done and the file is committed, which is what CI diffs
+The file grows with every router story and is committed, which is what CI diffs
 against. Generation is deterministic — two consecutive runs against the same
-schema produce a byte-identical file.
+schema produce a byte-identical file. To regenerate without a database, boot the
+API with `DATABASE_URL` unset (see the backend README) and point the generator at
+its port.
 
 ### Calling the API
 
@@ -92,8 +94,11 @@ set at build time — the one place the header is written. Unset, nothing is sen
 and the API's 401 `detail` is shown as-is.
 
 Feature-level helpers sit beside it: `lib/documents.ts` (typed `/documents`
-calls, the PDF / 50 MB / non-empty client-side check that mirrors the router) and
-`lib/use-polling.ts`, the reusable hook:
+calls, `getDocumentUrl` for the viewer, the PDF / 50 MB / non-empty client-side
+check that mirrors the router), `lib/bids.ts` (typed `/bids` calls and
+`isBidSettled`), `lib/use-signed-url.ts` (keeps a document's signed URL fresh
+until `expires_at`), `lib/format.ts` (dates, language pairs, page lists, citation
+names) and `lib/use-polling.ts`, the reusable hook:
 
 ```ts
 const { value, error, isPolling } = usePolling({
@@ -106,77 +111,84 @@ const { value, error, isPolling } = usePolling({
 
 It chains timeouts rather than `setInterval`, so a slow answer never overlaps the
 next request; it keeps polling through transport errors and 5xx but stops for good
-on 401/403/404. S4.5.1 reuses it for `GET /bids/{id}`. The Supabase session and
-caching still belong to S4.1 and E4, so callers pass the token in explicitly.
+on 401/403/404. The workspace uses it for `GET /bids/{id}`, settling on
+`awaiting_review`, `complete` or `failed`. The Supabase session and caching still
+belong to S4.1 and E4, so callers pass the token in explicitly.
 
 ## Layout
 
 Folders appear as the stories that need them land (see `docs/project-plan.md` →
-Repository layout). Today only these exist:
+Repository layout). Today these exist:
 
 ```
 app/
-  layout.tsx           root layout, fonts, metadata
+  layout.tsx           root layout, Geist + Geist Mono via next/font, metadata
   page.tsx             public landing page
-  globals.css          Tailwind v4 + shadcn theme tokens
-  (app)/               authenticated shell — header, nav, advisory-only footer
+  globals.css          the design system's token sheet + Tailwind mapping (see below)
+  (app)/               the shell — sidebar (≥ 900 px) or phone header + drawer
     layout.tsx
-    dashboard/         first-run empty state (the bid list is S4.4.1)
+    dashboard/         first-run empty state (the bid list with verdicts is S4.4.1)
+    bids/              Tenders: the company's bids over GET /bids
+    bids/new/          the start step (NewBid.dc.html, third card); TED search is S4.3.1
+    bids/[id]/         the workspace (Main.dc.html / WorkspacePhone.dc.html)
     company/           document upload form + table (S4.2.2); profile form is S4.2.1
+    certificates/ verdicts/ runs/   placeholders that name their stories
     settings/          placeholder (language and tone S4.2.1, BYOK S4.6.4)
-    bids/new/          placeholder (TED search to start is S4.3.1)
 components/
-  layout/              app header, main nav, mobile nav, footer, page header,
-                       skip link, and NAV_ITEMS — the one nav definition
+  layout/              sidebar, nav groups + NavItemLink, mobile header (drawer),
+                       page header, breadcrumb, skip link, advisory note, NAV_ITEMS
   common/              EmptyState
-  documents/           DocumentsPanel (loads the list, owns the live region),
-                       UploadForm, DocumentsTable, DocumentRow (polls itself),
-                       document-labels (kind/status words, badge variant)
-  ui/                  shadcn/ui primitives (alert, badge, button, card, input,
-                       label, native-select, sheet, table)
-lib/           api.ts (generated), api-client.ts (typed fetch wrapper, dev header),
-               documents.ts (typed /documents calls + upload validation),
-               use-polling.ts (the 2 s poll hook), utils.ts (shadcn `cn` re-export)
-public/        static assets
+  documents/           DocumentsPanel, UploadForm, DocumentsTable, DocumentRow, labels
+  bids/                BidWorkspace (polling, citations, phone tabs), StartBidForm,
+                       BidsTable, bid-status (stage words and tones)
+  matrix/              RequirementList (table), RequirementCards (phone), CitationLink,
+                       category/kind labels, problems footer — Increment 1: no evidence states
+  pdf/                 SourcePanel — the browser's PDF viewer in an iframe on a signed URL
+  ui/                  the design-system primitives (see below)
+lib/           api.ts (generated), api-client.ts, documents.ts, bids.ts, format.ts,
+               use-polling.ts, use-signed-url.ts, use-media-query.ts, utils.ts
+public/        logo-lockup.svg and static assets
 ```
 
 The `(app)` route group adds no URL segment: `app/(app)/dashboard/page.tsx`
 serves `/dashboard`.
 
-Planned: `components/matrix/`, `components/pdf/`, `components/verdict/`,
-`app/(auth)/login/`, `app/(app)/bids/[id]/`, `app/dev/` gated by
-`is_developer`, and `lib/supabase.ts`. None of them exist yet — creating them
-ahead of their stories would be speculative, and the three `components/` folders
-are additionally gated on the S4.0.1 design confirmation.
-
 ### Adding a section to the navigation
 
-`components/layout/nav-items.ts` holds `NAV_ITEMS`. Both the desktop bar and the
-mobile sheet iterate it, so a new section is one entry there plus the route
-folder — the two can never drift. `isSectionActive` decides which entry gets
-`aria-current="page"` and the tinted background.
+`components/layout/nav-items.ts` holds `NAV_ITEMS` in two eyebrow groups (Workflow,
+Platform). The sidebar and the phone drawer iterate it, so a new section is one entry
+there plus the route folder — the two can never drift. `isNavItemActive` decides which
+entry gets `aria-current="page"` and the white active card; Compliance resolves to the
+bid last opened in this tab (`sessionStorage`).
 
-## Adding shadcn/ui components
+## The design system in the app
 
-`components.json` is configured (style `radix-nova`, base colour neutral, Lucide
-icons, CSS variables). Add a component when a story needs it:
+The confirmed canvas (ADR-0014) is built on the CrossBid design system synced at
+`.claude/skills/CrossBid Design System/`. Its token sheet is copied verbatim into
+`app/globals.css` — the single place a colour, size, radius, weight or shadow is
+written — and mapped onto Tailwind: colours under their semantic names
+(`bg-surface-card`, `text-text-muted`, `border-border-default`,
+`text-status-danger-text`), while fonts, the type scale, radii and shadows already
+share Tailwind's variable names, so `rounded-md` is 8 px, `rounded-lg` 12 px,
+`shadow-xs` the sheet's, `text-sm` 12 px and `text-base` 14 px. Tokens without a
+utility are used as arbitrary values (`rounded-[var(--radius-pill)]`,
+`[font:var(--type-mono)]`). Icons are inline SVG from the kit's `Icons.jsx`
+(`components/ui/icons.tsx`); no icon package is loaded.
 
-```bash
-npx shadcn@latest add button
-```
+`components/ui/` holds one file per primitive, each with a docblock naming the
+`.jsx` it implements: `button` (Button.jsx), `badge`, `tag`, `card`, `tabs`
+(Tabs.jsx, segmented and underline), `metric-card`, `verdict-chip` (the four verdict
+words), `input`, `select` (native `<select>` in the kit's trigger), `checkbox`,
+`field` (the shared label/hint column), `notice` (the advisory box of the verdict
+artboard), `eyebrow`, `data-table` (the table shape over a semantic `<table>`) and
+`sheet` (Radix dialog, the phone drawer). The shadcn/ui files the shell started
+with were replaced; `components.json` is kept only so that `shadcn add` still works
+if a later story wants a stock primitive as a starting point.
 
-`components/ui/` currently holds `button`, `card` and `sheet` — the shell's
-primitives — plus `table`, `badge`, `input`, `label`, `native-select` and
-`alert` for the upload screen. They are ordinary source files (that is the point
-of shadcn/ui) and are formatted to this repo's Prettier config, so re-adding one
-with `--overwrite` produces a formatting diff until you run `npm run format`.
-The repo's own CLI (`./node_modules/.bin/shadcn add …`) adds no npm dependency
-for these; `package-lock.json` stays byte-identical.
-
-Note the S4.0.1 design gate in `docs/project-plan.md`: nothing under
-`components/matrix/`, `components/pdf/` or `components/verdict/` may be coded
-before the user confirms the design canvas. The shell, login and upload screens
-are exempt because they are stock shadcn/ui.
+Design-system content rules apply to every string: sentence case, no exclamation
+marks or emoji, verb + object buttons of at most three words, the fixed verdict and
+row vocabulary (ADR-0013), orange at most once per region and never as a status
+colour.
 
 ## Configuration
 

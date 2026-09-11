@@ -1,4 +1,4 @@
-import type { Badge } from '@/components/ui/badge'
+import type { BadgeTone } from '@/components/ui/badge'
 import type { DocumentKind, DocumentStatus } from '@/lib/documents'
 
 export interface DocumentKindLabel {
@@ -39,15 +39,16 @@ export const DOCUMENT_STATUS_LABELS: Readonly<Record<DocumentStatus, string>> = 
   failed: 'Failed',
 }
 
-type BadgeVariant = NonNullable<React.ComponentProps<typeof Badge>['variant']>
-
-/** Stock shadcn/ui badge variants only — no new colours before the S4.0.1 design gate. */
-export function statusBadgeVariant(status: DocumentStatus): BadgeVariant {
+/**
+ * The design system's status pairing: green for done, red for failed, and the one blue in
+ * the system for "in progress" (`colors-status`). Never orange — that is not a status colour.
+ */
+export function statusBadgeTone(status: DocumentStatus): BadgeTone {
   if (status === 'ready') {
-    return 'default'
+    return 'success'
   }
   if (status === 'failed') {
-    return 'destructive'
+    return 'danger'
   }
-  return 'secondary'
+  return 'info'
 }
