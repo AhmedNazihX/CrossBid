@@ -25,7 +25,8 @@ type is not an authorisation to check against.
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, Final
 
 import pytest
 from fastapi.testclient import TestClient
@@ -235,3 +236,64 @@ def test_it_needs_no_tenant_header(client: TestClient) -> None:
     # Act & Assert
     assert client.get(PATH).status_code == 200
     assert client.get(PATH, headers={DEV_COMPANY_HEADER: "not-a-uuid"}).status_code == 200
+
+
+# ------------------------------------------------- what the route is allowed to publish
+
+PUBLISHED_SHAPE: Final[Mapping[str, frozenset[str]]] = {
+    "": frozenset(
+        {
+            "models",
+            "available_models",
+            "temperature",
+            "max_tokens",
+            "system_prompt_set",
+            "agent",
+            "tools",
+            "unbuilt_tools",
+        }
+    ),
+    "models": frozenset({"extract", "cheap", "embed", "judge"}),
+    "agent": frozenset(
+        {
+            "extract_concurrency",
+            "check_concurrency",
+            "max_tool_calls_per_requirement",
+            "run_budget_seconds",
+            "run_budget_usd",
+        }
+    ),
+    "tools[]": frozenset({"name", "description", "external", "default_enabled", "enabled"}),
+}
+"""Every key this route may put on the wire, pinned so growth is a decision and not a drift.
+
+`DevSettingsResponse` names its eight fields one by one, so nothing reaches a caller by
+accident today. Two of those eight are a different matter: `models` and `agent` embed
+`ModelSlugs` and `AgentSettings` *whole*, and a field added to either would be published the
+moment it was added, reviewed by nobody. `test_the_response_carries_no_secret_and_no_prompt`
+would not catch it either — that test can only look for secrets whose value it already knows.
+
+So the contract is pinned by shape instead. Adding a knob to `AgentSettings` fails this test
+until someone writes it down here, which is the point at which they have to ask whether an
+unauthenticated route should carry it.
+"""
+
+
+def _key_paths(body: Mapping[str, object]) -> dict[str, frozenset[str]]:
+    """The response's own shape, in the same form as `PUBLISHED_SHAPE`."""
+    found = {"": frozenset(body)}
+    for key, value in body.items():
+        if isinstance(value, dict):
+            found[key] = frozenset(value)
+        elif isinstance(value, list) and value and isinstance(value[0], dict):
+            found[f"{key}[]"] = frozenset().union(*(frozenset(row) for row in value))
+    return found
+
+
+def test_the_route_publishes_exactly_the_pinned_shape(client: TestClient) -> None:
+    """A field added to an embedded settings model must not reach the wire unreviewed."""
+    # Act
+    body = client.get(PATH).json()
+
+    # Assert
+    assert _key_paths(body) == dict(PUBLISHED_SHAPE)
