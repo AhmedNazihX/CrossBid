@@ -123,7 +123,7 @@ Repository layout). Today these exist:
 ```
 app/
   layout.tsx           root layout, Geist + Geist Mono via next/font, metadata
-  page.tsx             public landing page
+  page.tsx             public landing page (Landing.dc.html), assembled from components/landing
   globals.css          the design system's token sheet + Tailwind mapping (see below)
   (app)/               the shell — sidebar (≥ 900 px) or phone header + drawer
     layout.tsx
@@ -135,6 +135,10 @@ app/
     certificates/ verdicts/ runs/   placeholders that name their stories
     settings/          placeholder (language and tone S4.2.1, BYOK S4.6.4)
 components/
+  landing/             the public page, one file per section of Landing.dc.html: nav
+                       (sticky glass bar, phone drawer), hero + product frame, trust line,
+                       how-it-works, cited requirements, certificate equivalence, advisory
+                       band, call to action, footer; links.ts names every destination
   layout/              sidebar, nav groups + NavItemLink, mobile header (drawer),
                        page header, breadcrumb, skip link, advisory note, NAV_ITEMS
   common/              EmptyState
@@ -182,8 +186,8 @@ words), `input`, `select` (native `<select>` in the kit's trigger), `checkbox`,
 `field` (the shared label/hint column), `notice` (the advisory box of the verdict
 artboard), `eyebrow`, `data-table` (the table shape over a semantic `<table>`) and
 `sheet` (Radix dialog, the phone drawer). The shadcn/ui files the shell started
-with were replaced; `components.json` is kept only so that `shadcn add` still works
-if a later story wants a stock primitive as a starting point.
+with were replaced and the shadcn tooling removed (ADR-0014); if a later story wants
+a behavioural primitive, build on `radix-ui` and skin it with the tokens.
 
 Design-system content rules apply to every string: sentence case, no exclamation
 marks or emoji, verb + object buttons of at most three words, the fixed verdict and
