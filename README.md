@@ -8,7 +8,7 @@ financière*, and the company has no idea which German document answers which Fr
 requirement. Crossbid reads the tender in its source language, extracts the requirements,
 checks each one against the company's own documents, maps required proofs to their German
 equivalents through the EU's eCertis database, and produces a compliance matrix with a
-go/no-go recommendation — where **every cell carries a citation or is marked unclear**.
+go/no-go recommendation — where **every cell carries a citation or is marked partially supported**.
 
 It is **advisory only**. It never submits a bid, and a human reviews and confirms every
 verdict before it is final.
@@ -31,6 +31,7 @@ cp infra/.env.example .env      # then set OPENROUTER_API_KEY and APP_ENCRYPTION
 make install                    # uv sync in backend/, npm install in frontend/
 make dev                        # db + api + web in Docker
 DATABASE_URL=postgresql://crossbid:crossbid@localhost:5432/crossbid make migrate
+DATABASE_URL=postgresql://crossbid:crossbid@localhost:5432/crossbid make seed-dev  # prints the NEXT_PUBLIC_DEV_COMPANY_ID line to paste into .env
 ```
 
 `make migrate` applies the schema in `backend/migrations/` from the host, so it needs the
@@ -61,6 +62,7 @@ Run `make help` for the full list.
 | `make lint` | ruff, pyright, eslint, `tsc --noEmit`, and the dependency-manifest check |
 | `make deps` | Regenerate `dependencies.txt` from both lock files |
 | `make migrate` | Apply `backend/migrations/*.sql` to `DATABASE_URL`; idempotent, refuses edited applied files |
+| `make seed-dev` | Create the one dev `companies` row (idempotent, refused when `ENV=production`) and print the `NEXT_PUBLIC_DEV_COMPANY_ID` line to paste |
 | `make eval` | Write `evaluations/REPORT.md` *(lands with S7.1)* |
 
 `make eval` is wired and documented, and reports which story delivers it until it lands.
@@ -95,7 +97,7 @@ The **agentic** part is inside `check_reqs`: it fans out one ReAct agent per req
 each free to choose among five tools — company document search, tender search, TED lookup,
 eCertis evidence lookup, and currency conversion — to gather the evidence for its own row.
 The verdict itself is rules-based, not model-generated: an unmet mandatory requirement or a
-live exclusion ground yields `no_go` with the gap listed.
+live exclusion ground yields `no_go` with the gap listed; `conditional` when open items remain, and `insufficient_evidence` when the documents do not settle enough rows to judge.
 
 Data sources are public documented APIs only — TED, eCertis, and ECB rates via Frankfurter.
 **Nothing is scraped.** Procurement documents live on national platforms behind portal pages,

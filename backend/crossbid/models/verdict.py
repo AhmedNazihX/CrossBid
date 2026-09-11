@@ -20,11 +20,17 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Decision(StrEnum):
-    """The recommendation. Advisory only — a human confirms before it is final."""
+    """The recommendation, in the design system's fixed vocabulary (ADR-0013).
+
+    Advisory only -- a human confirms before it is final. `insufficient_evidence` is the
+    agent declining to judge: nothing blocks the bid, but the documents do not settle enough
+    rows for a recommendation either way.
+    """
 
     GO = "go"
-    GO_WITH_OPEN_ITEMS = "go_with_open_items"
+    CONDITIONAL = "conditional"
     NO_GO = "no_go"
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
 
 
 class GapSeverity(StrEnum):
@@ -83,8 +89,8 @@ class Verdict(BaseModel):
 
     rationale: str = Field(description="Plain-language explanation, in the bidder's language")
     mandatory_total: int = Field(ge=0)
-    mandatory_met: int = Field(ge=0)
-    unclear_rows: int = Field(ge=0)
+    mandatory_supported: int = Field(ge=0)
+    partially_supported_rows: int = Field(ge=0)
 
     @model_validator(mode="after")
     def _decision_matches_the_gaps(self) -> Self:
@@ -93,8 +99,8 @@ class Verdict(BaseModel):
         `readmodel/` is a projection and may disagree with a checkpoint, but a verdict that
         contradicts its own gap list is never legitimate.
         """
-        if self.mandatory_met > self.mandatory_total:
-            raise ValueError("mandatory_met cannot exceed mandatory_total")
+        if self.mandatory_supported > self.mandatory_total:
+            raise ValueError("mandatory_supported cannot exceed mandatory_total")
 
         blocking = [g for g in self.gaps if g.severity is GapSeverity.BLOCKING]
         if blocking and self.decision is not Decision.NO_GO:
@@ -104,10 +110,16 @@ class Verdict(BaseModel):
             )
         if self.decision is Decision.NO_GO and not blocking:
             raise ValueError("decision is 'no_go' but no blocking gap explains why")
-        if self.decision is Decision.GO and (self.gaps or self.unclear_rows):
+        if self.decision is Decision.GO and (self.gaps or self.partially_supported_rows):
             raise ValueError(
-                "decision is 'go' but open items or unclear rows remain; "
-                "use 'go_with_open_items'"
+                "decision is 'go' but open items or partially supported rows remain; "
+                "use 'conditional'"
+            )
+        is_declining = self.decision is Decision.INSUFFICIENT_EVIDENCE
+        if is_declining and not self.partially_supported_rows:
+            raise ValueError(
+                "decision is 'insufficient_evidence' but every row is settled; nothing is "
+                "insufficient -- use 'go', 'conditional' or 'no_go'"
             )
         if self.score is not None and not self.score.clears_threshold and blocking == []:
             raise ValueError(

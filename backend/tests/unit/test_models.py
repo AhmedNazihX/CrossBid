@@ -196,18 +196,18 @@ def test_models_package_imports_nothing_from_crossbid() -> None:
 # --------------------------------------------------------------- invariants that carry weight
 
 
-def test_a_met_row_cannot_be_uncited() -> None:
-    """The product's central promise: every cell carries a citation or is marked unclear."""
+def test_a_supported_row_cannot_be_uncited() -> None:
+    """The product's central promise: every cell is cited or marked partially supported."""
     with pytest.raises(ValidationError, match="citation"):
         MatrixRow(
             id="row-1",
             requirement_id="req-1",
-            status=RowStatus.MET,
+            status=RowStatus.SUPPORTED,
             agent_rationale="the company looks fine",
         )
 
 
-def test_a_met_row_is_accepted_with_evidence() -> None:
+def test_a_supported_row_is_accepted_with_evidence() -> None:
     # Arrange
     evidence = Evidence(
         document_id="doc-1",
@@ -220,22 +220,22 @@ def test_a_met_row_is_accepted_with_evidence() -> None:
     row = MatrixRow(
         id="row-1",
         requirement_id="req-1",
-        status=RowStatus.MET,
+        status=RowStatus.SUPPORTED,
         evidence=(evidence,),
         agent_rationale="Certificate on page 1 covers the required scope.",
     )
 
     # Assert
-    assert row.status is RowStatus.MET
+    assert row.status is RowStatus.SUPPORTED
     assert row.evidence[0].page == 1
 
 
-def test_an_unclear_row_needs_no_evidence() -> None:
-    """`unclear` is the honest answer when nothing can be cited, so it stays cheap to use."""
+def test_a_partially_supported_row_needs_no_evidence() -> None:
+    """`partially_supported` is the honest answer when nothing can be cited; keep it cheap."""
     row = MatrixRow(
         id="row-1",
         requirement_id="req-1",
-        status=RowStatus.UNCLEAR,
+        status=RowStatus.PARTIALLY_SUPPORTED,
         agent_rationale="No document addresses the required staff count.",
     )
     assert not row.evidence
@@ -246,7 +246,7 @@ def test_an_overridden_row_must_record_a_reason() -> None:
         MatrixRow(
             id="row-1",
             requirement_id="req-1",
-            status=RowStatus.UNMET,
+            status=RowStatus.UNSUPPORTED,
             agent_rationale="x",
             reviewer_status=ReviewerStatus.OVERRIDDEN,
         )
@@ -255,10 +255,13 @@ def test_an_overridden_row_must_record_a_reason() -> None:
 def test_models_are_immutable() -> None:
     """The coding style forbids mutation; frozen models make a violation fail loudly."""
     row = MatrixRow(
-        id="row-1", requirement_id="req-1", status=RowStatus.UNCLEAR, agent_rationale="x"
+        id="row-1",
+        requirement_id="req-1",
+        status=RowStatus.PARTIALLY_SUPPORTED,
+        agent_rationale="x",
     )
     with pytest.raises(ValidationError):
-        row.status = RowStatus.MET  # type: ignore[misc]
+        row.status = RowStatus.SUPPORTED  # type: ignore[misc]
 
 
 def test_unknown_fields_are_rejected() -> None:
@@ -282,8 +285,8 @@ def test_no_go_requires_a_blocking_gap() -> None:
             decision=Decision.NO_GO,
             rationale="x",
             mandatory_total=1,
-            mandatory_met=1,
-            unclear_rows=0,
+            mandatory_supported=1,
+            partially_supported_rows=0,
         )
 
 
@@ -299,8 +302,8 @@ def test_a_blocking_gap_forces_no_go() -> None:
             gaps=(gap,),
             rationale="x",
             mandatory_total=1,
-            mandatory_met=0,
-            unclear_rows=0,
+            mandatory_supported=0,
+            partially_supported_rows=0,
         )
 
 
@@ -327,8 +330,8 @@ def test_the_german_fixtures_real_outcome_is_expressible() -> None:
         ),
         rationale="Zwei Mindestanforderungen sind nicht erfuellt.",
         mandatory_total=21,
-        mandatory_met=19,
-        unclear_rows=0,
+        mandatory_supported=19,
+        partially_supported_rows=0,
     )
 
     # Assert
@@ -337,26 +340,65 @@ def test_the_german_fixtures_real_outcome_is_expressible() -> None:
 
 
 def test_go_must_be_clean() -> None:
-    """`go` means nothing outstanding; anything else is `go_with_open_items`."""
-    with pytest.raises(ValidationError, match="go_with_open_items"):
+    """`go` means nothing outstanding; anything else is `conditional`."""
+    with pytest.raises(ValidationError, match="conditional"):
         Verdict(
             decision=Decision.GO,
             rationale="x",
             mandatory_total=2,
-            mandatory_met=2,
-            unclear_rows=1,
+            mandatory_supported=2,
+            partially_supported_rows=1,
         )
 
 
-def test_mandatory_met_cannot_exceed_the_total() -> None:
+def test_mandatory_supported_cannot_exceed_the_total() -> None:
     with pytest.raises(ValidationError, match="cannot exceed"):
         Verdict(
             decision=Decision.GO,
             rationale="x",
             mandatory_total=1,
-            mandatory_met=2,
-            unclear_rows=0,
+            mandatory_supported=2,
+            partially_supported_rows=0,
         )
+
+
+def test_insufficient_evidence_needs_something_unsettled() -> None:
+    """The agent may decline to judge, but only when some row is genuinely unsettled."""
+    with pytest.raises(ValidationError, match="nothing is insufficient"):
+        Verdict(
+            decision=Decision.INSUFFICIENT_EVIDENCE,
+            rationale="x",
+            mandatory_total=2,
+            mandatory_supported=2,
+            partially_supported_rows=0,
+        )
+
+
+def test_insufficient_evidence_is_expressible_when_rows_are_unsettled() -> None:
+    verdict = Verdict(
+        decision=Decision.INSUFFICIENT_EVIDENCE,
+        rationale="Die Auswahlkriterien (S. 14-17) sind nicht maschinenlesbar.",
+        mandatory_total=5,
+        mandatory_supported=1,
+        partially_supported_rows=4,
+    )
+    assert verdict.decision is Decision.INSUFFICIENT_EVIDENCE
+
+
+def test_the_vocabulary_is_the_design_systems() -> None:
+    """ADR-0013: the design system fixes these words; the enums must not drift from them."""
+    assert {d.value for d in Decision} == {
+        "go",
+        "conditional",
+        "no_go",
+        "insufficient_evidence",
+    }
+    assert {r.value for r in RowStatus} == {
+        "supported",
+        "partially_supported",
+        "unsupported",
+        "not_applicable",
+    }
 
 
 # --------------------------------------------------------------- weighted scoring (ADR-0006)
@@ -389,12 +431,12 @@ def test_a_failing_score_must_be_recorded_as_a_blocking_gap() -> None:
     """Otherwise a bid could be recommended while sitting below the buyer's own cut-off."""
     with pytest.raises(ValidationError, match="below the buyer's threshold"):
         Verdict(
-            decision=Decision.GO_WITH_OPEN_ITEMS,
+            decision=Decision.CONDITIONAL,
             score=WeightedScore(points=4, points_available=10, threshold=5),
             rationale="x",
             mandatory_total=1,
-            mandatory_met=1,
-            unclear_rows=0,
+            mandatory_supported=1,
+            partially_supported_rows=0,
         )
 
 
@@ -617,7 +659,7 @@ def test_changing_a_row_status_requires_a_reason() -> None:
     from crossbid.models import RowEdit
 
     with pytest.raises(ValidationError, match="override_reason"):
-        RowEdit(matrix_row_id="row-1", status=RowStatus.MET)
+        RowEdit(matrix_row_id="row-1", status=RowStatus.SUPPORTED)
 
 
 def test_a_row_edit_must_change_something() -> None:
@@ -642,10 +684,10 @@ def test_a_row_edit_with_a_status_and_a_reason_is_accepted() -> None:
 
     edit = RowEdit(
         matrix_row_id="row-1",
-        status=RowStatus.MET,
+        status=RowStatus.SUPPORTED,
         override_reason="Certificate attached; the agent missed page 4.",
     )
-    assert edit.status is RowStatus.MET
+    assert edit.status is RowStatus.SUPPORTED
 
 
 def test_duplicate_row_edits_are_rejected() -> None:
@@ -671,7 +713,7 @@ def test_a_review_submission_round_trips() -> None:
         row_edits=(
             RowEdit(
                 matrix_row_id="row-1",
-                status=RowStatus.UNMET,
+                status=RowStatus.UNSUPPORTED,
                 override_reason="Wir haben nur 21 VZAE.",
             ),
         ),

@@ -85,10 +85,12 @@ def _constraint_values(sql: str, constraint: str) -> set[str]:
         rf"constraint\s+{re.escape(constraint)}\s+check\s*\((.*?)\)\s*\)",
         re.IGNORECASE | re.DOTALL,
     )
-    match = pattern.search(sql)
-    if match is None:
+    matches = pattern.findall(sql)
+    if not matches:
         raise AssertionError(f"constraint {constraint} not found in any migration")
-    return set(re.findall(r"'([^']+)'", match.group(1)))
+    # The *last* definition wins: a later migration re-adds a constraint to change its list
+    # (0004 did, for the design-system vocabulary), and the files are concatenated in order.
+    return set(re.findall(r"'([^']+)'", matches[-1]))
 
 
 # --------------------------------------------------------------- schema / contract parity
@@ -196,13 +198,17 @@ def test_money_is_numeric_not_float() -> None:
     assert re.search(r"cost_usd\s+numeric", _sql_without_comments())
 
 
-def test_the_met_row_invariant_is_enforced_in_the_database_too() -> None:
+def test_the_supported_row_invariant_is_enforced_in_the_database_too() -> None:
     """The Pydantic model enforces it, but a direct SQL write would bypass that.
 
-    "Every cell carries a citation or is marked unclear" is the product's central promise, so
-    it is worth having in both places.
+    "Every cell carries a citation or is marked partially supported" is the product's central
+    promise, so it is worth having in both places. 0004 renamed the constraint with the
+    vocabulary; the new definition must guard `supported`, and the old name must be dropped.
     """
-    assert "matrix_rows_met_needs_evidence_check" in _sql()
+    sql = _sql()
+    definition = sql[sql.rindex("matrix_rows_supported_needs_evidence_check check") :]
+    assert "status <> 'supported'" in definition
+    assert "drop constraint if exists matrix_rows_met_needs_evidence_check" in sql
 
 
 def test_the_override_reason_invariant_is_enforced_in_the_database_too() -> None:

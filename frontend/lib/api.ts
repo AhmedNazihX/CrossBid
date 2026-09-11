@@ -284,10 +284,14 @@ export interface components {
         Checkability: "company_property" | "document_submission" | "neither";
         /**
          * Decision
-         * @description The recommendation. Advisory only — a human confirms before it is final.
+         * @description The recommendation, in the design system's fixed vocabulary (ADR-0013).
+         *
+         *     Advisory only -- a human confirms before it is final. `insufficient_evidence` is the
+         *     agent declining to judge: nothing blocks the bid, but the documents do not settle enough
+         *     rows for a recommendation either way.
          * @enum {string}
          */
-        Decision: "go" | "go_with_open_items" | "no_go";
+        Decision: "go" | "conditional" | "no_go" | "insufficient_evidence";
         /**
          * DocumentKind
          * @description What a stored PDF is.

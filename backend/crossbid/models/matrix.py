@@ -19,11 +19,15 @@ MAX_QUOTE_CHARS = 2000
 
 
 class RowStatus(StrEnum):
-    """The agent's finding for one requirement."""
+    """The agent's finding for one requirement, in the design system's words (ADR-0013).
 
-    MET = "met"
-    UNMET = "unmet"
-    UNCLEAR = "unclear"
+    `supported` is cited evidence; `partially_supported` is the honest answer when the
+    documents do not settle it and the reviewer must; `unsupported` is evidence *against*.
+    """
+
+    SUPPORTED = "supported"
+    PARTIALLY_SUPPORTED = "partially_supported"
+    UNSUPPORTED = "unsupported"
     NOT_APPLICABLE = "not_applicable"
 
 
@@ -90,16 +94,20 @@ class MatrixRow(BaseModel):
     reviewed_at: datetime | None = None
 
     @model_validator(mode="after")
-    def _met_requires_evidence(self) -> Self:
-        """No uncited `met`. This is the product's central promise, so it is a hard invariant.
+    def _supported_requires_evidence(self) -> Self:
+        """No uncited `supported`. The product's central promise, so a hard invariant.
 
-        A row the agent believes is satisfied but cannot cite is `UNCLEAR`, which sends it to
-        the reviewer instead of quietly counting towards a `go`.
+        A row the agent believes is satisfied but cannot cite is `PARTIALLY_SUPPORTED`, which
+        sends it to the reviewer instead of quietly counting towards a `go`.
         """
-        if self.status is RowStatus.MET and not self.evidence and not self.attached_doc_ids:
+        if (
+            self.status is RowStatus.SUPPORTED
+            and not self.evidence
+            and not self.attached_doc_ids
+        ):
             raise ValueError(
-                "a row with status 'met' must carry at least one evidence citation or an "
-                "attached document; use 'unclear' when nothing can be cited"
+                "a row with status 'supported' must carry at least one evidence citation or "
+                "an attached document; use 'partially_supported' when nothing can be cited"
             )
         return self
 

@@ -1071,10 +1071,56 @@ variable declared in the Dockerfile and forwarded by Compose.
 
 ### Consequences
 
-- 960 tests, 100% line and branch coverage, all offline; 7 `live` tests, of which the bid-run one
-  is unrun. `frontend/lib/api.ts` regenerated for `/documents` and `/bids`.
+- 960 tests, 100% line and branch coverage, all offline; 7 `live` tests. **The bid-run test was run
+  once on 2026-09-11 and passed**: the 28-file, 191-page DE pack reached `awaiting_review` in
+  **290 s** at an OpenRouter-reported **$1.38** (limits 600 s / $2.50) — 258 requirements before the
+  reviewer, 13 problems, 49 model calls (47 sections plus two re-asks). Consistent with ADR-0003's
+  238 after dedupe and its 4.4× fan-out estimate (~18 min sequential → under 5). Two limits of
+  that number, for the next run: the test prints the 13 problems only as a count (the per-kind
+  breakdown and any retry warnings are captured by pytest and shown only on failure), and the
+  cost is the sum of whatever `usage.cost` values OpenRouter returned — a call that reported none
+  is silently left out, and only an all-empty run fails. Both are one-line test improvements. `frontend/lib/api.ts` regenerated for `/documents` and `/bids`.
 - Increment 1's backend is complete and the upload table is in. Remaining: the user's decision
   on the canvas (S4.0.1), then S4.5.1 (workspace polling + requirement list), and a `companies`
   row for the demo tenant, which nothing creates yet.
 - Open: `MAX_UPLOAD_BYTES` (50 MB) is a router constant that should become
   `ingestion.max_upload_bytes`; the plan's status wording should be aligned to `BidStatus`.
+
+
+## ADR-0013 — The design system's vocabulary becomes the contract's
+
+**Date:** 2026-09-11 · **Stories:** S4.0.1, S0.4.1 · **Status:** accepted (user decision)
+
+### Context
+
+The user rejected the first canvas and supplied a design system (Claude Design project
+`b81312f6`, synced under `.claude/skills/CrossBid Design System/`). Its content rules fix the
+product's words: verdicts are **Go / Conditional / No-go / Insufficient evidence** ("never
+Pass/Fail, never Approved"), and evidence is **Supported / Partially supported / Unsupported**.
+The backend's contracts said `go / go_with_open_items / no_go` and `met / unmet / unclear /
+not_applicable`. Two vocabularies for one thing would have leaked into the generated
+TypeScript, the read model and every screen. The user chose to adopt the design system's.
+
+### Decision
+
+- `Decision` is `go`, `conditional`, `no_go`, `insufficient_evidence`. The fourth is new: the
+  agent **declining** to judge -- nothing blocks the bid, but the documents do not settle
+  enough rows for a recommendation. Its validator rule: at least one partially supported row,
+  else "nothing is insufficient". `conditional` takes `go_with_open_items`'s place and rule.
+- `RowStatus` is `supported`, `partially_supported`, `unsupported`, `not_applicable`. The
+  central invariant survives the rename: a `supported` row must cite evidence or an attached
+  document, in Pydantic **and** in SQL.
+- `Verdict.mandatory_met` → `mandatory_supported`, `unclear_rows` → `partially_supported_rows`,
+  so the old words do not linger in the API contract.
+- Migration `0004` re-adds the three check constraints with the new lists (0001 is immutable,
+  ADR-0009), renames the evidence constraint to say what it guards, and maps any existing rows
+  first. The parity guard now reads the **last** definition of a constraint across all
+  migration files -- its first draft read the first and would have failed on exactly this
+  change.
+
+### Consequences
+
+- 963 tests, 100% coverage; `0004` applied to Frankfurt; `frontend/lib/api.ts` regenerated.
+- The plan's F3.3/F3.4 story text is amended in place with a dated pointer here; F3.3's
+  `met_via_equivalent` becomes `supported_via_equivalent` when that story adds it.
+- The S4.0.1 canvas uses these words, and its open question about them is closed.
