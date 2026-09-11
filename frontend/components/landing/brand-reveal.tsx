@@ -23,7 +23,7 @@ import Image from 'next/image'
  * WCAG 2.2.2's five seconds, and running it would rest the hero on an empty band.
  *
  * **It is a band, not a box — and it is masked, not clipped.** The mark occupies only
- * x 18.12–81.87 % and y 36.39–63.52 % of the frame; the rest is ground at `#FAFAFA`, within
+ * x 18.85–81.15 % and y 36.67–63.24 % of the frame; the rest is ground at `#FAFAFA`, within
  * one value of `--surface-canvas`. Rendered whole and framed it read as a large empty card
  * with the mark lost in the middle, so the band is sized to the mark.
  *
@@ -98,17 +98,18 @@ const PLAYBACK_RATE = 2.0
 /**
  * The slice of the frame that is kept, as fractions of its width and height.
  *
- * Measured on the held frame: the mark's own ink runs x 18.12 %–81.87 % and y 36.39 %–
- * 63.52 %, so it is 63.75 % of the frame wide and 27.13 % tall — the rest is ground and a
- * few very faint concentric rings. Cropping both axes rather than only the vertical is what
- * lets the mark render large without the band swallowing the fold: inside this window the
- * mark fills 91 % of the width, against 64 % of the raw frame.
+ * Measured on the plateau the hold sits on (sampled at 10.76 s): the mark's own ink runs
+ * x 18.85 %–81.15 % and y 36.67 %–63.24 %, so it is 62.30 % of the frame wide and 26.57 %
+ * tall — the rest is ground and a few very faint concentric rings. Cropping both axes rather
+ * than only the vertical is what lets the mark render large without the band swallowing the
+ * fold: inside this window the mark fills 89 % of the width, against 62 % of the raw frame.
  *
- * The bounds keep about 3.1 % of air on each side and 2.4 % above and below, so it does not
+ * The bounds keep about 3.9 % of air on each side and 2.7 % above and below, so it does not
  * read as trimmed, and the lower one stays clear of the tagline — which is the `<h1>` word
- * for word. The window is unchanged from the first encode: the re-cut moved the held frame
- * but not the mark's geometry (the reveal's own last clean frame, 10.76 s, measures
- * 18.85–81.15 % × 36.67–63.24 %, within a few tenths of a percent of the original).
+ * for word. **The window is unchanged from the first encode**: the re-cut lengthened the clip
+ * and added the reverse, but moved the mark's geometry by under a tenth of a percent, so
+ * nothing below needed re-deriving. (Mid-reveal the mark is fractionally larger — 18.12 %–
+ * 81.87 % × 36.39 %–63.52 % at 6.82 s — which the window also clears.)
  */
 const CROP_LEFT = 0.15
 const CROP_RIGHT = 0.85
