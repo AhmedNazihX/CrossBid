@@ -1740,6 +1740,53 @@ key now covers 18 documents, and a harder denominator is most of the difference.
 The DE golden file's own header still reads `verified_by: pending`, so **S6.4, S3.2.1 and
 Milestone 1 all remain open** — correctly.
 
+### The answer key was the problem, and fixing it did **not** fix the score
+
+The 173 candidates were adjudicated against the PDFs: **154 accepted** (149 labels, four
+extractor-split sentences merged), **19 rejected** — restatements already labelled, a
+`Rechtsbehelfsbelehrung` that grants a right rather than imposing a duty, cross-references with
+no obligation of their own, section headings whose requirements are the bullets beneath, and one
+matcher artefact. The key went from 162 entries to **346**, and its scored denominator from 105
+to **219**.
+
+**The control is the number that matters.** Accepting the candidates and stopping there would
+have reported **0.875** — a 0.125 rise bought entirely with rows the extractor had already
+produced. So an independent sweep was run over the highest-yield documents, looking for
+requirements **neither** the key **nor** the extractor had. It found **35**, of which 27 are
+scored and **25 land as fresh misses**. That removed 0.108 of the 0.125.
+
+Measured recall is therefore **0.77 (168 of 219)**, against 0.75 before. Essentially none of
+that +0.02 is evidence that extraction improved: the numerator moved by exactly the rows the
+extractor had already found. **Recall is ~0.75–0.77 and still far below 0.90.** What changed is
+that the denominator is now three times harder and defensible.
+
+Two findings worth more than the score:
+
+- **The `Leistungsbeschreibung` was read by neither.** Its entire *Externe Hardware* personnel
+  section (4.2.2/4.2.3) and the *Netzwerk* minimum requirements (4.1.2) were absent from the key
+  *and* from the extraction — 16 labels the sweep had to write from scratch. By contrast the
+  `Allgemeine Bewerbungsbedingungen` yielded **one** optional clause in nine pages: that document
+  was labelled well. The gap is concentrated, not diffuse.
+- **`Information_in_English.pdf` was excluded for a wrong reason.** Its stated reason — "adds no
+  obligation of its own" — is false: the file states the German-language obligation itself, and
+  by the matcher's own rule a restatement in another document is its own citation. It moves to
+  `documents_scanned`. The other ten exclusions were re-checked and stand.
+
+The sweep also exposed a real weakness in the matcher: two sweep labels (DE-485, DE-540) are
+**falsely credited** to a near-identical sentence one page away — the ±1-page window and the 0.6
+overlap rule together cannot separate a clause from its own restatement on the facing page. Noted
+on both entries rather than papered over.
+
+### A red measurement is allowed to be committed
+
+`test_recall_script.py` asserted that *every* shipped extraction result is synthetic and scores
+green. That was true until a real one was committed, and would then have had to be deleted to
+keep the evidence — the classic case of a test that enforces a habit rather than a rule. It is
+now split by artefact: a **synthetic** fixture must declare itself synthetic and score green
+(they are built to), while **every** shipped result must declare its provenance, and the live
+result is pinned to exit **non-zero** because it is below the threshold. When extraction
+improves enough to pass, that test fails and is the reminder to record it in an ADR.
+
 ### Consequence for the layering rule
 
 `eval/` sits **beside** `routers/`, not under it: it imports the agent, and nothing in a request
