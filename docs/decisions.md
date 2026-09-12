@@ -1320,8 +1320,20 @@ canvas rather than assumed:
   honest signal there is not the pixel *count* — which drifts up to the very end — but their
   mean darkness: 23 flat from 7.40 s through **7.56 s**, then 25 at 7.58, 30 at 7.62, 56 at
   7.68, 114 at 7.74, and gone by 7.84. The dissolve begins at 7.58.
-- **The whole clip now plays, reverse included, at natural speed (2026-09-12, user
-  instruction).** Two things follow and neither is optional. The reverse **ends on nothing**
+- **Final shape (2026-09-12): the forward reveal only, split-rate, no control.** Playing the
+  reverse was tried and rejected — it deconstructs the mark to nothing (0 mark pixels from
+  14.6 s), so the page rested on an empty band. The hold went back to **10.70 s**, the last
+  frame on which the mark is whole. That leaves a 9.44 s window, which at natural speed is
+  over WCAG 2.2.2's five seconds and obliges a visible pause control; the user rejected the
+  control *and* the ~1.9× flat rate that would remove it. The way out is that **only half the
+  window is animation**: the mark draws in between 1.26 s and ~4.2 s and is then flat at
+  ~31 200 pixels and mean darkness 23 all the way to the hold, with the remaining 6.5 s being
+  two passes of rings settling behind a mark that does not change. So the draw-in plays at
+  1.0× and the settle at 3.5×, measured at **4 812 ms of motion end to end** — under the line,
+  with the one part anybody watches at true speed. `BUILD_END_SECONDS` later, `SETTLE_RATE`
+  lower or `REVEAL_HOLD_SECONDS` later each push it back over five seconds and silently re-owe
+  a control.
+- *(Superseded)* **The whole clip played, reverse included, at natural speed.** Two things follow and neither is optional. The reverse **ends on nothing**
   — mark pixels run 31 200 at 11.5 s, 8 117 at 13.0, 166 at 14.0 and **0 from 14.6 on** — so
   resting there would leave the hero with an empty band for as long as a visitor stays. On
   `ended` the component cross-fades to the static lockup instead, the same asset a
