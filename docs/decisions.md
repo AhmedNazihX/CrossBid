@@ -1320,7 +1320,23 @@ canvas rather than assumed:
   honest signal there is not the pixel *count* — which drifts up to the very end — but their
   mean darkness: 23 flat from 7.40 s through **7.56 s**, then 25 at 7.58, 30 at 7.62, 56 at
   7.68, 114 at 7.74, and gone by 7.84. The dissolve begins at 7.58.
-- **The clip was re-cut again to 14.8 s (2026-09-12), and the hold moved to its end.** The new
+- **The whole clip now plays, reverse included, at natural speed (2026-09-12, user
+  instruction).** Two things follow and neither is optional. The reverse **ends on nothing**
+  — mark pixels run 31 200 at 11.5 s, 8 117 at 13.0, 166 at 14.0 and **0 from 14.6 on** — so
+  resting there would leave the hero with an empty band for as long as a visitor stays. On
+  `ended` the component cross-fades to the static lockup instead, the same asset a
+  reduced-motion visitor gets, so a logo stays on the page. And 14.8 s at 1.0× is far past
+  WCAG 2.2.2's five seconds with no rate short of a visible fast-forward bringing it back, so
+  **a pause control is now a requirement of the length, not a style choice**. It is revealed
+  on hover and on keyboard focus — the most it can be hidden and still be a mechanism.
+  `visibility: hidden` was the first attempt and was wrong: it takes the button out of the tab
+  order, so `:focus-visible` can never fire and a keyboard user has no mechanism at all
+  (measured — `btn.focus()` left `document.activeElement` elsewhere). `opacity-0` keeps it
+  focusable; `pointer-events-none` stops an invisible target swallowing clicks. Verified by
+  tabbing to it for real: reached in 9 presses, `:focus-visible` matches, opacity resolves to
+  1, Space pauses the clip and the label flips to "Play animation".
+- *(Superseded by the above, kept for the reasoning)* **The clip was re-cut to 14.8 s, and the
+  hold moved to its end.** The new
   file is a full cycle: a dot, the mark drawing in by 4.0 s, a long hold while *two* passes of
   rings come and go, then the whole thing disassembling back to a dot and looping. An
   intermediate pass had held at 6.82 s — the floor of the **first** ring pass — because it fit

@@ -14,13 +14,24 @@ import Image from 'next/image'
  * sound to suppress and none to restore. Everything else here follows from measuring the
  * file frame by frame through a canvas rather than guessing at it.
  *
- * **The clip is a palindrome, and only its first half is played.** The re-cut reveals the
- * mark over 0–10.8 s and then *reverses itself* back to an empty frame by 14.5 s — the
- * plateaus mirror exactly (47 005 mark px at 2.5–3.25 s against 47 008 at 11.75–12.5 s; the
- * single 622 px dot at 0.75–1.25 s against 624 px at 13.75–14.0 s). That tail is built for
- * seamless looping, and it is deliberately **not** played: see `REVEAL_HOLD_SECONDS` for the
- * arithmetic, but the short version is that no window containing the reverse fits inside
- * WCAG 2.2.2's five seconds, and running it would rest the hero on an empty band.
+ * **The whole clip plays, reverse included.** It reveals the mark over 0–10.8 s and then
+ * *reverses itself* back to an empty frame by 14.6 s — the plateaus mirror exactly (47 005
+ * mark px at 2.5–3.25 s against 47 008 at 11.75–12.5 s; the single 622 px dot at 0.75–1.25 s
+ * against 624 px at 13.75–14.0 s), so it is built for seamless looping. The user asked for
+ * all of it, at natural speed.
+ *
+ * Two consequences follow, and neither is optional:
+ *
+ * - **The reverse ends on nothing.** Mark pixels run 31 200 at 11.5 s, 8 117 at 13.0, 166 at
+ *   14.0 and **0 from 14.6 on** — only faint rings remain. Resting there would leave the hero
+ *   with an empty band for as long as a visitor stays, which is far longer than it plays. So
+ *   when the clip ends the component cross-fades to the static lockup, and a logo stays on
+ *   the page. That still is the same asset a reduced-motion visitor gets.
+ * - **A pause control is now required.** WCAG 2.2.2 governs motion that plays automatically
+ *   for more than five seconds; 14.8 s at 1.0× is far past it, and no rate that is not a
+ *   visible fast-forward brings it back under. The control is therefore a requirement of the
+ *   length, not a style choice. It is revealed on hover and on keyboard focus so the hero
+ *   stays clean, which is the most it can be hidden and still be a mechanism.
  *
  * **It is a band, not a box — and it is masked, not clipped.** The mark occupies only
  * x 18.85–81.15 % and y 36.67–63.24 % of the frame; the rest is ground at `#FAFAFA`, within
@@ -36,64 +47,30 @@ import Image from 'next/image'
  * size of the mark, and nothing below it moves. The hero section's own `overflow-hidden`
  * contains the horizontal spill, so no viewport gains a scrollbar.
  *
- * **It stops on the first frame at which the mark is solid and the rings are gone.** Running
- * the clip out would reverse the reveal and leave a blank strip on the page — the state it
- * would rest in for far longer than it played. `REVEAL_HOLD_SECONDS` is measured, not
- * guessed.
- *
- * **There is no pause control, and none is required — but only just.** WCAG 2.2.2 governs
- * motion that plays automatically for *more than five seconds*. The window is 5.56 s of
- * source, which would cross that line; `PLAYBACK_RATE` is what keeps it on the right side,
- * at 4.28 s of wall clock. That is a real constraint and not a preference: slowing the rate,
- * starting earlier or holding later re-crosses five seconds and silently reintroduces the
- * requirement for a visible pause control. Changing any of the three means checking the
- * product again.
  */
 const REVEAL_SRC = '/logo-reveal.mp4'
 const LOCKUP_SRC = '/logo-lockup.svg'
 
 /**
- * The played window, in seconds of source time.
+ * Where playback starts, in seconds of source time.
  *
- * Measured on the shipped encode by sampling frames through a canvas at full 1920 × 1080,
- * separating the mark (grayscale under 200) from the clip's faint rings (200–248).
- *
- * The 14.8 s clip is a full cycle: a dot, the mark drawing in, a long hold while two passes
- * of rings come and go, then the whole thing **disassembling** back to a dot and looping.
- * Only the forward half is wanted.
- *
- * **The start** skips dead time: one unchanging dot from 0.5 s through 1.26 s, with real
- * motion from 1.28 s.
- *
- * **The hold is the end of the reveal, not a trough in its middle.** An earlier pass held at
- * 6.82 s — the floor of the *first* ring pass — because it fits five seconds at a gentler
- * rate. It was wrong twice over: a *second* ring pass climbs away straight after it (peaking
- * near 7.75 s), so the page rested mid-animation with rings still to come; and the user's
- * instruction is explicit that it stops at the end.
- *
- * So the hold is the last frame on which the mark is still solid. The signal is not the
- * pixel *count*, which is flat either side of the dissolve's first frames (≈123 580 at both
- * 10.70 s and 10.82 s), but their mean darkness: 20.2 at 10.64, 20.5 at 10.68–10.70, then
- * 21.2 at 10.72, 21.8 at 10.74, 23.2 at 10.78, 24.9 at 10.82, 27.2 at 10.84 and 34.3 by
- * 10.92. **10.70 s is the last frame of the plateau**, and the rings have long since settled.
+ * Only dead time is skipped: one unchanging 622 px dot from 0.5 s through 1.26 s, with real
+ * motion from 1.28 s. Everything after it plays, through the reverse, to the clip's own end
+ * — there is no hold frame any more, because the end of the clip *is* the end of the
+ * animation and `onEnded` is what hands over to the still.
  */
 const REVEAL_START_SECONDS = 1.26
-const REVEAL_HOLD_SECONDS = 10.7
 
 /**
- * Played fast, for one reason: **WCAG 2.2.2**.
+ * Natural speed. The clip was re-cut to be watched, not hurried.
  *
- * The window is 9.44 s of source. Anything over five seconds of automatic motion obliges a
- * visible pause control on the hero, and the measured options are 1.3× → 7.26 s,
- * 1.6× → 5.90 s, 1.9× → 4.97 s (too close to the line to defend) and 2.0× → **4.72 s**.
- * Only the last leaves real margin, so the whole reveal plays and no control is owed.
- *
- * It is less brisk than the number sounds: the mark draws in over about 1.4 s of wall clock
- * and the remaining ~3.3 s is rings settling behind a mark that no longer changes — the part
- * where speed costs nothing. If it ever reads as rushed the fix is a slower rate **plus** a
- * pause control; the two travel together, and neither is compliant without the other.
+ * An earlier pass ran at 2.0× to keep the played window under WCAG 2.2.2's five seconds and
+ * so avoid owing a pause control. Playing the reverse makes that arithmetic impossible —
+ * 13.5 s of source would need better than 2.7× — so the trade is settled the other way: full
+ * speed, and the control the length obliges. Changing this back to a rate that fits five
+ * seconds is the only way to drop the control, and it would mean cutting the reverse again.
  */
-const PLAYBACK_RATE = 2.0
+const PLAYBACK_RATE = 1.0
 
 /**
  * The slice of the frame that is kept, as fractions of its width and height.
@@ -188,8 +165,9 @@ function usePrefersReducedMotion(): boolean | null {
 export function BrandReveal() {
   const bandRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const holdFrameRef = useRef<number | null>(null)
   const [hasStarted, setHasStarted] = useState(false)
+  const [hasEnded, setHasEnded] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const prefersReducedMotion = usePrefersReducedMotion()
 
   useEffect(() => {
@@ -198,53 +176,41 @@ export function BrandReveal() {
     if (prefersReducedMotion !== false || video === null || band === null) return
 
     /**
-     * Hold on the last drawn frame.
-     *
-     * Watched with `requestAnimationFrame`, not the `timeupdate` event: `timeupdate` fires
-     * about four times a second, so on the earlier full-length window the first tick past
-     * the hold point measured 7.93 s — a quarter-second late, with the mark already
-     * dissolving. A frame loop checks every ~16 ms, and the seek afterwards lands the
-     * paused frame exactly on the hold point whatever the jitter.
-     */
-    const watchForHold = () => {
-      if (video.currentTime >= REVEAL_HOLD_SECONDS) {
-        video.pause()
-        video.currentTime = REVEAL_HOLD_SECONDS
-        return
-      }
-      holdFrameRef.current = requestAnimationFrame(watchForHold)
-    }
-
-    /**
-     * Both the cross-fade and the hold loop hang off `playing`, never off the call.
+     * Both the cross-fade and the playing state hang off `playing`, never off the call.
      *
      * Flipping them when `play()` is *called* is wrong in the one case that matters — iOS
      * Low Power Mode, `media.autoplay.default=5`, any "never autoplay" setting. There the
-     * promise rejects, and a component that had already faded the lockup out would leave
-     * an empty band: the start frame carries 17 px of ink, which is to say nothing. Hung
-     * off the event instead, a refusal simply never fires it, so the lockup stays up and
-     * the reveal degrades to the same still a reduced-motion visitor gets.
-     *
-     * It also keeps the frame loop honest. Started at call time, a refused `play()` left
-     * `currentTime` at the window's start forever and `watchForHold` recursing at 60 fps
-     * for the life of the page, waiting for a hold point that could never arrive.
+     * promise rejects, and a component that had already faded the lockup out would leave an
+     * empty band: the start frame carries one dot, which is to say nothing. Hung off the
+     * event instead, a refusal simply never fires it, so the lockup stays up and the reveal
+     * degrades to the same still a reduced-motion visitor gets.
      */
     const onPlaying = () => {
       setHasStarted(true)
-      holdFrameRef.current = requestAnimationFrame(watchForHold)
+      setHasEnded(false)
+      setIsPlaying(true)
     }
+    const onPause = () => setIsPlaying(false)
+    /** The reverse ends on an empty frame, so the still takes over rather than showing it. */
+    const onEnded = () => {
+      setIsPlaying(false)
+      setHasEnded(true)
+    }
+
     video.addEventListener('playing', onPlaying)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('ended', onEnded)
 
     const start = () => {
       video.playbackRate = PLAYBACK_RATE
       video.currentTime = REVEAL_START_SECONDS
-      // A refusal needs no handling beyond not throwing: `playing` does not fire, so
-      // nothing above runs and the static lockup is what stays on screen.
+      // A refusal needs no handling beyond not throwing: `playing` does not fire, so nothing
+      // above runs and the static lockup is what stays on screen.
       void video.play().catch(() => undefined)
     }
 
     // Seeking before metadata exists is dropped silently, which would start the clip at 0
-    // and play the blank opening the window is there to skip.
+    // and play the dead opening the start is there to skip.
     const startWhenSeekable = () => {
       if (video.readyState >= HAVE_METADATA) {
         start()
@@ -253,12 +219,12 @@ export function BrandReveal() {
       video.addEventListener('loadedmetadata', start, { once: true })
     }
 
-    // Observes the *band*, not the video. The video is 312 % of the band tall and 143 %
-    // wide, so all but 22.4 % of it is clipped away — below this threshold, and the
-    // observer would never fire at all. The band is what the visitor actually sees.
+    // Observes the *band*, not the video. The video is 312 % of the band tall and 143 % wide,
+    // so all but 22.4 % of it is clipped away — below this threshold, and the observer would
+    // never fire at all. The band is what the visitor actually sees.
     //
-    // The hero is above the fold, so this fires at once on a normal visit; it earns its
-    // keep when someone lands deep in the page on an anchor and scrolls back up.
+    // The hero is above the fold, so this fires at once on a normal visit; it earns its keep
+    // when someone lands deep in the page on an anchor and scrolls back up.
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry === undefined || !entry.isIntersecting) return
@@ -273,34 +239,42 @@ export function BrandReveal() {
       observer.disconnect()
       video.removeEventListener('loadedmetadata', start)
       video.removeEventListener('playing', onPlaying)
-      if (holdFrameRef.current !== null) cancelAnimationFrame(holdFrameRef.current)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('ended', onEnded)
     }
   }, [prefersReducedMotion])
 
+  const togglePlayback = () => {
+    const video = videoRef.current
+    if (video === null) return
+    if (video.paused) {
+      void video.play().catch(() => undefined)
+      return
+    }
+    video.pause()
+  }
+
+  /** Only while there is motion to stop. Once the clip has ended there is nothing to pause. */
+  const showsControl = hasStarted && !hasEnded
+
   return (
     <div
-      // Decorative: the brand name is already text in the nav, and the tagline the clip
-      // builds towards is the `<h1>` immediately below. Nothing here is information of
-      // its own, so there is nothing for a screen reader to miss.
       ref={bandRef}
-      aria-hidden="true"
-      className="relative mx-auto mb-8 w-full"
+      className="group relative mx-auto mb-8 w-full"
       style={{ aspectRatio: BAND_ASPECT, maxWidth: BAND_MAX_WIDTH }}
     >
-      {/* Poster and fallback both. It must fade out once the clip starts: `multiply`
-          makes the video's ground transparent, so anything left underneath shows straight
-          through the mark — two offset lockups at once. */}
+      {/* Poster, fallback, and the still the clip hands over to. It must fade out while the
+          video plays: `multiply` makes the video's ground transparent, so anything left
+          underneath shows straight through the mark — two offset lockups at once. */}
       <Image
         src={LOCKUP_SRC}
         alt=""
+        aria-hidden="true"
         fill
         sizes="840px"
         priority
-        // The side padding matches the air the crop leaves around the moving mark, so
-        // the fallback lands at the same size rather than jumping when one replaces
-        // the other.
         className={`object-contain px-[5.5%] transition-opacity duration-300 ${
-          hasStarted ? 'opacity-0' : 'opacity-100'
+          hasStarted && !hasEnded ? 'opacity-0' : 'opacity-100'
         }`}
       />
       {prefersReducedMotion === false && (
@@ -310,6 +284,10 @@ export function BrandReveal() {
           muted
           playsInline
           preload="metadata"
+          // Decorative: the brand name is already text in the nav, and the tagline the clip
+          // builds towards is the `<h1>` immediately below. The control beside it is not
+          // decorative, which is why `aria-hidden` sits here and not on the band.
+          aria-hidden="true"
           style={{
             width: VIDEO_WIDTH,
             height: VIDEO_HEIGHT,
@@ -333,9 +311,25 @@ export function BrandReveal() {
             WebkitMaskImage: RING_FADE,
           }}
           className={`absolute max-w-none transition-opacity duration-300 ${
-            hasStarted ? 'opacity-100' : 'opacity-0'
+            hasStarted && !hasEnded ? 'opacity-100' : 'opacity-0'
           }`}
         />
+      )}
+      {showsControl && (
+        <button
+          type="button"
+          onClick={togglePlayback}
+          // Hidden until wanted, but never hidden from a keyboard.
+          //
+          // `visibility: hidden` was the first attempt and it is wrong: it takes the button
+          // out of the tab order, so `focus-visible` can never fire and a keyboard user has
+          // no mechanism at all — measured, `btn.focus()` left `document.activeElement`
+          // elsewhere. `opacity-0` keeps it focusable, and `pointer-events-none` stops the
+          // invisible target from swallowing clicks meant for the page underneath.
+          className="pointer-events-none absolute right-0 -bottom-2 rounded-md border border-border-default bg-surface-card px-2.5 py-1 text-xs font-medium text-text-secondary opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+        >
+          {isPlaying ? 'Pause animation' : 'Play animation'}
+        </button>
       )}
     </div>
   )
