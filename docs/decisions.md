@@ -1545,3 +1545,80 @@ overwrite a human's decision.
   S3.3.2's deterministic tests for those must script the verdict.
 - 2427 tests, 100% coverage. The live test (`test_check_reqs_live.py`, $0.25 tripwire) is
   written and **not run**.
+
+---
+
+## ADR-0018 — Increment 2 closes: every status pinned, the matrix on screen
+
+**Date:** 2026-09-12 · **Stories:** S3.3.2, S4.5.1 (matrix-row criterion) · **Status:** accepted
+
+### S3.3.2 — the tests found a real bug, which is the point of the story
+
+**The downgrade path blew the rationale cap.** `_verdict_row` trimmed the model's rationale to
+`MAX_RATIONALE_CHARS` (600) and *then* appended the 131-character "uncited support" notice, so
+an uncited-`supported` row could reach the matrix with a **732-character** `agent_rationale` —
+in the one column the module's own docstring promises is bounded. The per-branch "rationale
+within its cap" assertion is what caught it. The fix trims the *model's* half so the notice
+survives whole: the notice is the reason the row is not `supported`, and half of it tells the
+reviewer nothing.
+
+A frozen `Branch` table drives every sweep, one route per status plus each
+`partially_supported` **code** path separately — the model's own answer (0 calls, 1 turn), the
+requirement that never reached the model at all (`checkable != COMPANY_PROPERTY`, **0 calls, 0
+turns**), and the downgrade (1 call, 2 turns). Per branch: the row field by field, exact tool
+calls and model turns, the cap re-tested with a model that never stops searching, and
+concurrency through the real checker. Evidence is compared against `Evidence(...)` **literals**
+rather than values derived from the fake hit, so a model that retyped a quote is
+distinguishable from one that cited it.
+
+Two guards matter beyond this story. `{branch.status} == set(RowStatus)` is the line that fires
+if the plan's "five statuses" ever comes back against ADR-0013's four. And every guard was
+**mutation-verified** — reverting the rationale fix, renaming a status in `check.md`, dropping
+`evidence=`, `asyncio.gather`-ing the lane, and binding `dict` instead of `CheckedRequirement`
+each make the intended test fail. A test that has never failed is a test nobody has checked.
+
+### S4.5.1 — matrix rows, read-only
+
+Rows render from `Main.dc.html`, with `WorkspacePhone.dc.html`'s card and tally at 390 px.
+`ecertis_evidence.found === false` renders on the **neutral** card, never a danger tint, with
+the sentence "That is an entry France does not publish, not a gap in your bid" — ADR-0007's
+fact stated as product copy rather than as a failure. The four statuses carry the design
+system's words verbatim and the word always renders beside the dot, so colour is never
+load-bearing.
+
+**Partial results are stated, not implied.** Rows arrive lane by lane, so a requirement with no
+row yet reads "Checking…" while the run is in flight and "Not checked" once it settles — never
+a blank cell — and the summary appends "· 6 of 7 checked so far" so a partial tally cannot be
+mistaken for a finished matrix.
+
+One thing the API cannot yet support: evidence may name a **company** file that is not in
+`bid.documents`, because the check searches both corpora. `citableDocuments()` appends those
+with `pages: 0`, which the source panel already renders as `p. N / ?`.
+
+Deviations from the artboard, deliberate: the desktop metric band still shows Requirements /
+Pages / Problems rather than the artboard's four matrix counts (that band is not matrix-row
+rendering); the phone artboard's "4 partial" is written "4 partially supported" because
+ADR-0013 forbids paraphrasing the vocabulary; Confirm / Change status / Add evidence are S4.5.2;
+and citations read `doc p. N` without the artboard's `§4.1` because the API carries no section
+marker.
+
+### The landing clip, settled
+
+The hold is **4.20 s** — the frame where the reveal finishes and before the rings begin to
+move, found by tracking two signals at once: the mark's mean darkness reaches its solid plateau
+(~20.25) by 4.20, and the outer ring's radius holds at **889 px through 4.20** then shrinks
+continuously (888 at 4.22, 887 at 4.42, 886 at 4.52, collapsing to 331 by 6.4). Stopping there
+makes the window 2.94 s, which is inside WCAG 2.2.2's five seconds — so for the first time the
+component needs **neither a fast playback rate nor a pause control**. Every earlier version had
+to trade one for the other.
+
+The served file is now cut from the master with `ffmpeg -t 4.24 -c copy`: **2.43 MB → 0.48 MB,
+80 % smaller**, on the page that matters most. **A re-encode was tried and rejected**, and the
+reason is worth keeping: CRF 18 reached 0.30 MB and was indistinguishable in every still, but
+measured in the browser its ground decoded to **231 where the master decodes to 250**. Chrome
+reads these files as full range whatever the container claims — `color_range=pc`, x264
+`fullrange=1`, `-vf scale=in_range=…:out_range=…` and a `tv` tag were each tried and each still
+decoded to 231 — so any encoder that writes limited-range values shifts the ground permanently.
+Under the `multiply` blend that paints a visibly darker rectangle across the hero: the exact
+seam the mask and brightness lift exist to remove. A stream copy cannot introduce it, and the
+held frame is byte-identical to the master's.

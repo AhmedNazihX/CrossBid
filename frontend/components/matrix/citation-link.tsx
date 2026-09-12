@@ -12,6 +12,8 @@ interface CitationLinkProps {
   readonly onCite: (citation: Citation) => void
   /** Omit the document name when the pack has one document — the page alone identifies it. */
   readonly showDocument?: boolean
+  /** How much of the filename fits: the Source column is narrow, an evidence line is not. */
+  readonly nameChars?: number
   readonly className?: string
 }
 
@@ -25,6 +27,7 @@ export function CitationLink({
   isActive,
   onCite,
   showDocument = true,
+  nameChars = CITATION_NAME_CHARS,
   className,
 }: CitationLinkProps) {
   return (
@@ -41,9 +44,7 @@ export function CitationLink({
       )}
     >
       <span className="whitespace-nowrap">
-        {showDocument
-          ? `${shortDocumentName(citation.documentName, CITATION_NAME_CHARS)} `
-          : ''}
+        {showDocument ? `${shortDocumentName(citation.documentName, nameChars)} ` : ''}
         p. {citation.page}
       </span>
       <Icon name="ext" size={12} />

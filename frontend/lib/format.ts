@@ -70,3 +70,37 @@ export function requirementLabel(index: number): string {
 export function plural(count: number, unit: string, pluralUnit = `${unit}s`): string {
   return `${count} ${count === 1 ? unit : pluralUnit}`
 }
+
+const REGION_NAMES = safeRegionNames()
+
+function safeRegionNames(): Intl.DisplayNames | undefined {
+  try {
+    return new Intl.DisplayNames(['en-GB'], { type: 'region' })
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * "de" → "Germany", for the eCertis card's sentence. Falls back to the uppercase code when
+ * the runtime cannot name the region, so the card never renders an empty country.
+ */
+export function formatCountry(code: string | null | undefined): string {
+  if (code === null || code === undefined || code.length !== 2) {
+    return formatLanguage(code)
+  }
+  const upper = code.toUpperCase()
+  try {
+    return REGION_NAMES?.of(upper) ?? upper
+  } catch {
+    return upper
+  }
+}
+
+/** "a, b and c" — the list form the evidence and issuer lines use. */
+export function formatList(items: readonly string[]): string {
+  if (items.length <= 1) {
+    return items[0] ?? ''
+  }
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}

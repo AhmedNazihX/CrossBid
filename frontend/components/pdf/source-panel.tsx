@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
-import type { BidDocument } from '@/lib/bids'
 import { formatPageList, shortDocumentName } from '@/lib/format'
 import { useSignedUrl } from '@/lib/use-signed-url'
 
@@ -15,8 +14,20 @@ export interface SourceSelection {
   readonly page: number
 }
 
+/**
+ * A document the panel can open. `BidDocumentResponse` satisfies it; so does a file the
+ * check cited from the company's own documents, which is not part of the bid and whose page
+ * count is unknown (`pages: 0`, shown as `p. N / ?`).
+ */
+export interface SourceDocument {
+  readonly id: string
+  readonly name: string
+  readonly pages: number
+  readonly unread_pages: readonly number[]
+}
+
 export interface SourcePanelProps {
-  readonly documents: readonly BidDocument[]
+  readonly documents: readonly SourceDocument[]
   readonly selection: SourceSelection | undefined
   readonly onSelect: (selection: SourceSelection) => void
   /** `phone` fills the Source tab; `panel` is the 400 px card beside the matrix. */

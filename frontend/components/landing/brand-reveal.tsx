@@ -14,19 +14,35 @@ import Image from 'next/image'
  * sound to suppress and none to restore. Everything else here follows from measuring the
  * file frame by frame through a canvas rather than guessing at it.
  *
- * **The forward reveal plays; the reverse does not.** The clip reveals the mark over
- * 0–10.8 s and then *reverses itself* back to an empty frame by 14.6 s — the plateaus mirror
- * exactly (47 005 mark px at 2.5–3.25 s against 47 008 at 11.75–12.5 s; the single 622 px dot
- * at 0.75–1.25 s against 624 px at 13.75–14.0 s), so the file is built for seamless looping.
- * Playing the reverse was tried and rejected: it deconstructs the logo to nothing (mark
- * pixels 31 200 at 11.5 s, 8 117 at 13.0, 166 at 14.0, **0 from 14.6 on**), so the page ended
- * up resting on an empty band. Playback now stops at `REVEAL_HOLD_SECONDS`, the last frame on
- * which the mark is whole.
+ * **The served file is the reveal alone, and it is a derivative.** The canvas master is the
+ * full 14.8 s cycle: the mark draws in, the rings then shrink through two passes, and the
+ * whole thing reverses back to an empty frame (the plateaus mirror exactly — 47 005 mark px
+ * at 2.5–3.25 s against 47 008 at 11.75–12.5 s — so it is built for seamless looping). None
+ * of that after the reveal is wanted, and every byte of it was being downloaded and thrown
+ * away. `public/logo-reveal.mp4` is therefore cut from the master with
+ *
+ *     ffmpeg -i "docs/design/canvas/CrossBid Logo Reveal.mp4" -t 4.24 \
+ *       -c copy -movflags +faststart frontend/public/logo-reveal.mp4
+ *
+ * which takes it from **2.43 MB to 0.48 MB, 80 % smaller**, on the page that matters most.
+ * Re-run it if the master ever changes.
+ *
+ * **`-c copy`, not a re-encode, and that is not laziness.** Re-encoding at CRF 18 reached
+ * 0.30 MB and was indistinguishable in every still — but measured in the browser the ground
+ * came back **231 where the master decodes to 250**. Chrome reads this file as full range
+ * whatever the container says (`color_range=pc`, x264 `fullrange=1`, `-vf scale=in_range=…:
+ * out_range=…`, and a `tv` tag were each tried; every one still decoded to 231), so an
+ * encoder that writes limited-range values shifts the ground permanently. With the
+ * `multiply` blend below, a ground of 231 against a 250 canvas paints a visibly darker
+ * rectangle across the hero — the exact seam the mask and the brightness lift exist to
+ * remove. A stream copy cannot introduce it: the held frame is byte-identical to the
+ * master's, same SHA-256.
  *
  * **There is no pause control, and none is required.** WCAG 2.2.2 governs motion that plays
- * automatically for more than five seconds. The window is 9.44 s of source, which would cross
- * that line at natural speed — and a flat rate fast enough to duck under it (≈1.9×) reads as
- * a fast-forward. `SETTLE_RATE` is how both are avoided; see its docstring.
+ * automatically for more than five seconds; this window is 2.94 s at natural speed. Earlier
+ * cuts of this component ran to 7.56 s, 10.70 s and the full 14.8 s, and each needed either a
+ * rate fast enough to read as a fast-forward or a visible control. Stopping where the reveal
+ * actually ends removes the dilemma rather than trading one horn for the other.
  *
  * **It is a band, not a box — and it is masked, not clipped.** The mark occupies only
  * x 18.85–81.15 % and y 36.67–63.24 % of the frame; the rest is ground at `#FAFAFA`, within
@@ -52,37 +68,29 @@ const LOCKUP_SRC = '/logo-lockup.svg'
  * **The start** skips dead time only: one unchanging 622 px dot from 0.5 s through 1.26 s,
  * with real motion from 1.28 s.
  *
- * **The hold** is the last frame on which the mark is still whole, measured at full
- * 1920 × 1080. The signal is not the pixel *count*, which is flat either side of the
- * deconstruction's first frames (≈123 580 at both 10.70 s and 10.82 s), but their mean
- * darkness: 20.2 at 10.64, 20.5 at 10.68–10.70, then 21.2 at 10.72, 21.8 at 10.74, 23.2 at
- * 10.78, 24.9 at 10.82, 27.2 at 10.84 and 34.3 by 10.92. **10.70 s is the last frame of the
- * plateau**, and the rings have long since settled — so the held frame is the mark alone.
+ * **The hold is where the reveal finishes and before the rings begin to move** — measured at
+ * full 1920 × 1080, tracking two things at once. The mark's mean darkness falls 53.2 at 3.4 s,
+ * 27.4 at 4.0, 24.5 at 4.1 and reaches its solid plateau of ~20.25 by **4.20 s**. The outer
+ * ring's radius holds at **889 px through 4.20 s** and then shrinks continuously — 888 at
+ * 4.22, 887 at 4.42, 886 at 4.52, collapsing to 331 by 6.4 s. 4.20 s is the last frame that
+ * is both: logo complete, rings untouched.
+ *
+ * (The half-resolution pass that preceded this read the radius as a flat 445 px from 3.4 s to
+ * 4.3 s and suggested 4.3. That plateau was quantisation, not the animation — at full
+ * resolution the shrink starts one frame after 4.20.)
  */
 const REVEAL_START_SECONDS = 1.26
-const REVEAL_HOLD_SECONDS = 10.7
+const REVEAL_HOLD_SECONDS = 4.2
 
 /**
- * Two rates, because only half the window is animation.
+ * Natural speed, which the window is finally short enough to allow.
  *
- * The mark draws in between 1.26 s and about 4.2 s. **After that it does not change at all**
- * — measured flat at ~31 200 mark pixels and mean darkness 23 from 4.2 s right through to the
- * hold — and the remaining 6.5 s is two passes of rings settling behind it. So the part worth
- * watching is 2.94 s long and the part that merely has to finish is 6.5 s long.
- *
- * Playing both at 1.0× is 9.44 s, over WCAG 2.2.2's five seconds, which obliges a visible
- * pause control on the hero. Playing both at the ~1.9× that fits reads as a fast-forward and
- * rushes the one part anybody looks at. Splitting the rate avoids both: the draw-in runs at
- * true speed, the settle at 3.5×, and the total is 4.80 s — under the line, so no control is
- * owed, with 0.2 s of margin.
- *
- * This is the constraint to check before touching any of the three numbers: `BUILD_END` later,
- * `SETTLE_RATE` lower, or `REVEAL_HOLD_SECONDS` later all push the total back over five
- * seconds and silently re-owe a pause control.
+ * 1.26 s → 4.20 s is 2.94 s of motion, inside WCAG 2.2.2's five seconds with room to spare —
+ * so nothing is hurried and no pause control is owed. Every earlier version of this file
+ * traded one of those away; this one does not have to. Moving `REVEAL_HOLD_SECONDS` later is
+ * what would bring the dilemma back.
  */
-const BUILD_RATE = 1.0
-const BUILD_END_SECONDS = 4.2
-const SETTLE_RATE = 3.5
+const PLAYBACK_RATE = 1.0
 
 /**
  * The slice of the frame that is kept, as fractions of its width and height.
@@ -201,10 +209,6 @@ export function BrandReveal() {
         video.currentTime = REVEAL_HOLD_SECONDS
         return
       }
-      // The mark stops changing here; everything after is rings finishing their pass.
-      if (video.currentTime >= BUILD_END_SECONDS && video.playbackRate !== SETTLE_RATE) {
-        video.playbackRate = SETTLE_RATE
-      }
       holdFrameRef.current = requestAnimationFrame(watchForHold)
     }
 
@@ -225,7 +229,7 @@ export function BrandReveal() {
     video.addEventListener('playing', onPlaying)
 
     const start = () => {
-      video.playbackRate = BUILD_RATE
+      video.playbackRate = PLAYBACK_RATE
       video.currentTime = REVEAL_START_SECONDS
       // A refusal needs no handling beyond not throwing: `playing` does not fire, so nothing
       // above runs and the static lockup is what stays on screen.

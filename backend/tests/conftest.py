@@ -14,6 +14,7 @@ free to reshape it for its own story, silently changing what somebody else's tes
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 import sys
@@ -29,7 +30,16 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.tools import BaseTool, StructuredTool
+from pydantic import BaseModel
 
+from crossbid.agent.nodes.check_loop import (
+    Bidder,
+    CheckContext,
+    CheckedRequirement,
+    EvidenceRef,
+)
 from crossbid.db import Database
 from crossbid.ingestion.chunker import Chunker
 from crossbid.ingestion.embeddings import EmbeddedChunk
@@ -45,10 +55,20 @@ from crossbid.models import (
     Tone,
     TurnoverYear,
 )
+from crossbid.models.ecertis_criteria import CRITERION_IDS
+from crossbid.models.matrix import RowStatus
+from crossbid.models.requirement import (
+    Checkability,
+    Requirement,
+    RequirementCategory,
+    RequirementKind,
+    RequirementStage,
+)
 from crossbid.readmodel.companies import profile_document
 from crossbid.readmodel.documents import DocumentRecord, DocumentStatus, ReadModelError
 from crossbid.reference import ecertis_client
 from crossbid.settings import Settings, load_settings
+from crossbid.tools.rag import RagHit, RagSearchResult
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 ECERTIS_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "ecertis"
@@ -717,3 +737,221 @@ def harness(
 
 def upload(filename: str = ORIGINAL_FILENAME, content: bytes = PDF_BYTES) -> Upload:
     return Upload(filename=filename, content_type=DEFAULT_CONTENT_TYPE, content=content)
+
+
+# ------------------------------------------------------- the checking loop's scripted model
+
+# `CheckContext` is two async callables and a dict of tools (S3.3.1), which is the whole
+# reason every checking branch can be driven with no provider and no socket. Shared because
+# two modules drive it and must drive the *same* one: `test_check_reqs.py` proves the loop
+# itself -- the citation resolution, the tool budget, the fan-out -- and
+# `test_check_statuses.py` (S3.3.2) pins one row shape per `RowStatus` so that an edit to
+# `prompts/check.md` or a swapped model slug cannot quietly change the matrix. A second copy
+# of `ScriptedModel` would let one of those stories reshape the fake the other one's
+# regression guard is written against, which is the failure this file exists to prevent.
+
+COMPANY_ID = str(DEMO_COMPANY_ID)
+BID_ID = str(uuid.UUID("33333333-3333-4333-8333-333333333333"))
+DOCUMENT_ID = str(uuid.UUID("44444444-4444-4444-8444-444444444444"))
+
+TURNOVER = "Der Umsatz muss mindestens 3.000.000,00 EUR pro Jahr betragen."
+SUBMIT = "Das Formblatt 124 ist mit dem Angebot einzureichen."
+QUOTE = "Der Jahresumsatz 2025 betrug 7.400.000,00 EUR im Bereich IT-Dienstleistungen."
+DOCUMENT_NAME = "Bewerbungsbedingungen_VV2_V1.pdf"
+EVIDENCE_NAME = "Jahresabschluss_2025.pdf"
+REAL_CRITERION_ID = CRITERION_IDS[0]
+
+BIDDER = Bidder(country="de", language="de")
+
+
+def requirement(
+    source_text: str = TURNOVER,
+    *,
+    page: int = 4,
+    checkable: Checkability = Checkability.COMPANY_PROPERTY,
+    criterion_id: str | None = None,
+    identifier: str | None = None,
+) -> Requirement:
+    """One extracted requirement, defaulting to the kind a company document can settle."""
+    return Requirement(
+        id=identifier or str(uuid.uuid5(uuid.NAMESPACE_URL, source_text)),
+        bid_id=BID_ID,
+        category=RequirementCategory.ECONOMIC_FINANCIAL,
+        kind=RequirementKind.MANDATORY,
+        stage=RequirementStage.BID_ELIGIBILITY,
+        checkable=checkable,
+        source_text=source_text,
+        source_lang="de",
+        document_name=DOCUMENT_NAME,
+        page=page,
+        ecertis_criterion_id=criterion_id,  # type: ignore[arg-type]
+    )
+
+
+def hit(*, quote: str = QUOTE, page: int = 2, name: str = EVIDENCE_NAME) -> RagHit:
+    """One retrieved passage, as `RagSearchResult` carries it on a tool's artifact."""
+    return RagHit(
+        document_id=DOCUMENT_ID,
+        document_name=name,
+        page=page,
+        pages=(page,),
+        quote=quote,
+        score=0.81,
+    )
+
+
+def rag_result(*hits: RagHit, query: str = "Jahresumsatz") -> RagSearchResult:
+    return RagSearchResult(query=query, corpus="the company's own documents", hits=hits)
+
+
+def verdict(
+    status: RowStatus = RowStatus.SUPPORTED,
+    *,
+    rationale: str = "Der Jahresabschluss weist 7,4 Mio. EUR aus.",
+    evidence: Sequence[tuple[int, int]] = ((1, 1),),
+) -> CheckedRequirement:
+    """What the model answers, before anything about it is believed."""
+    return CheckedRequirement(
+        status=status,
+        rationale=rationale,
+        evidence=[EvidenceRef(search=search, passage=passage) for search, passage in evidence],
+    )
+
+
+class ScriptedModel:
+    """A `CheckContext`'s two seams, scripted, recording every prompt it was handed.
+
+    The recording is what makes the data-block postcondition assertable: the promise is
+    about the bytes the model receives, and nothing short of holding those bytes checks it.
+    `in_flight` is the other half -- a lane that ran two requirements at once would be
+    invisible to a row assertion and obvious here.
+    """
+
+    def __init__(
+        self,
+        turns: Sequence[AIMessage | Exception],
+        answer: CheckedRequirement | Exception = verdict(),
+    ) -> None:
+        self._turns = list(turns)
+        self._answer = answer
+        self.prompts: list[list[BaseMessage]] = []
+        self.verdict_prompts: list[list[BaseMessage]] = []
+        self.in_flight = 0
+        self.peak_in_flight = 0
+
+    async def turn(self, messages: Sequence[BaseMessage]) -> AIMessage:
+        self.prompts.append(list(messages))
+        self.in_flight += 1
+        self.peak_in_flight = max(self.peak_in_flight, self.in_flight)
+        try:
+            await asyncio.sleep(0)
+            result = self._turns[min(len(self.prompts) - 1, len(self._turns) - 1)]
+            if isinstance(result, Exception):
+                raise result
+            return result
+        finally:
+            self.in_flight -= 1
+
+    async def verdict(self, messages: Sequence[BaseMessage]) -> CheckedRequirement:
+        self.verdict_prompts.append(list(messages))
+        if isinstance(self._answer, Exception):
+            raise self._answer
+        return self._answer
+
+    @property
+    def turns_taken(self) -> int:
+        return len(self.prompts)
+
+
+def answers(text: str = "Nichts mehr zu suchen.") -> AIMessage:
+    """A turn with no tool calls: the model is ready to answer."""
+    return AIMessage(content=text)
+
+
+def calls(*names_and_args: tuple[str, dict[str, Any]]) -> AIMessage:
+    """A turn that asks for tools, numbered as the loop counts them."""
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {"name": name, "args": args, "id": f"call-{index}", "type": "tool_call"}
+            for index, (name, args) in enumerate(names_and_args, start=1)
+        ],
+    )
+
+
+def search_call(query: str = "Jahresumsatz") -> AIMessage:
+    return calls(("company_rag_search", {"query": query}))
+
+
+def rag_tool(
+    *results: RagSearchResult | Exception, name: str = "company_rag_search"
+) -> tuple[BaseTool, list[str]]:
+    """A `content_and_artifact` tool exactly like the real ones, answering from a script.
+
+    Returns the tool and the list of queries it was asked, which is what a budget assertion
+    counts: the loop's own counter and the tool's record have to agree.
+    """
+    seen: list[str] = []
+
+    class Args(BaseModel):
+        query: str
+
+    async def run(query: str) -> tuple[str, RagSearchResult]:
+        seen.append(query)
+        result = results[min(len(seen) - 1, len(results) - 1)]
+        if isinstance(result, Exception):
+            raise result
+        return result.render(), result
+
+    tool = StructuredTool.from_function(
+        coroutine=run,
+        name=name,
+        description="search the company's documents",
+        args_schema=Args,
+        response_format="content_and_artifact",
+    )
+    return tool, seen
+
+
+def check_context(
+    model: ScriptedModel,
+    *,
+    tools: Mapping[str, BaseTool] | None = None,
+    max_tool_calls: int = 4,
+    bidder: Bidder = BIDDER,
+    system_prompt: str | None = None,
+) -> CheckContext:
+    """One lane's checking context over a scripted model."""
+    return CheckContext(
+        turn=model.turn,
+        verdict=model.verdict,
+        tools=dict(tools or {}),
+        max_tool_calls=max_tool_calls,
+        bidder=bidder,
+        system_prompt=system_prompt,
+    )
+
+
+class ScriptedSession:
+    """A `SessionBuilder` that yields a fixed context and counts open/close pairs."""
+
+    def __init__(
+        self, model: ScriptedModel, *, tools: Mapping[str, BaseTool] | None = None
+    ) -> None:
+        self.model = model
+        self.tools = dict(tools or {})
+        self.opened: list[tuple[str, str, Bidder]] = []
+        self.closed = 0
+
+    def __call__(self, company_id: str, bid_id: str, bidder: Bidder) -> Any:
+        session = self
+
+        class _Open:
+            async def __aenter__(self) -> CheckContext:
+                session.opened.append((company_id, bid_id, bidder))
+                return check_context(session.model, tools=session.tools)
+
+            async def __aexit__(self, *_exc: object) -> None:
+                session.closed += 1
+
+        return _Open()

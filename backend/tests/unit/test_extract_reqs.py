@@ -34,10 +34,20 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
 from crossbid.agent.nodes import extract_reqs as extract_reqs_module
+from crossbid.agent.nodes.check_loop import (
+    BIDDER_COUNTRY_MARKER,
+    CHECK_PROMPT_NAME,
+    TOOL_BUDGET_MARKER,
+)
+from crossbid.agent.nodes.check_loop import (
+    BIDDER_LANGUAGE_MARKER as CHECK_BIDDER_LANGUAGE_MARKER,
+)
 from crossbid.agent.nodes.extract_reqs import (
+    BIDDER_LANGUAGE_MARKER,
     CLOSING_ASK,
     DEFAULT_CONCURRENCY,
     DEFAULT_SECTION_PAGES,
+    EXTRACT_PROMPT_NAME,
     MATRIX_STAGE,
     RE_ASKS_PER_SECTION,
     ExtractedRequirement,
@@ -1303,14 +1313,22 @@ def test_a_value_that_contains_braces_is_substituted_rather_than_refused() -> No
 
 
 PROMPT_VALUES: Mapping[str, Mapping[str, str]] = {
-    "extract": {"bidder_language": "de"},
-    "check": {"bidder_language": "de", "bidder_country": "de", "tool_budget": "4"},
+    EXTRACT_PROMPT_NAME: {BIDDER_LANGUAGE_MARKER: "de"},
+    CHECK_PROMPT_NAME: {
+        CHECK_BIDDER_LANGUAGE_MARKER: "de",
+        BIDDER_COUNTRY_MARKER: "de",
+        TOOL_BUDGET_MARKER: "4",
+    },
 }
 """What each node passes its prompt: `extract_reqs` here, `check_loop` for `check.md`.
 
 Written out rather than derived, because a table built from the templates themselves would
 say only that a file renders with its own markers — which is true of every file — and the
-property worth holding is that the values the *node* passes cover them."""
+property worth holding is that the values the *node* passes cover them.
+
+Keyed on the nodes' own marker constants rather than on string literals, so that renaming
+one in `check_loop.py` and forgetting the `.md` — or the other way round — fails here
+instead of reaching a model as a literal `{bidder_country}` in the middle of a bid."""
 
 
 def test_every_prompt_file_renders_with_the_values_its_node_passes() -> None:

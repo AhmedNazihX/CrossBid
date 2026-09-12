@@ -15,6 +15,10 @@ export type BidDocument = components['schemas']['BidDocumentResponse']
 export type Requirement = components['schemas']['Requirement']
 export type RequirementCategory = components['schemas']['RequirementCategory']
 export type ExtractionProblem = components['schemas']['ExtractionProblem']
+export type MatrixRow = components['schemas']['MatrixRow']
+export type RowStatus = components['schemas']['RowStatus']
+export type Evidence = components['schemas']['Evidence']
+export type EcertisEvidence = components['schemas']['EcertisEvidence']
 export type StartBidRequest = components['schemas']['StartBidRequest']
 
 /**

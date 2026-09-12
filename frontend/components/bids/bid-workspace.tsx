@@ -1,13 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 
 import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { LAST_BID_STORAGE_KEY } from '@/components/layout/nav-items'
 import { PageHeader } from '@/components/layout/page-header'
+import { MatrixSummary } from '@/components/matrix/matrix-summary'
 import { RequirementCards } from '@/components/matrix/requirement-cards'
 import { RequirementList } from '@/components/matrix/requirement-list'
+import { indexRowsByRequirement } from '@/components/matrix/row-status'
+import { citableDocuments } from '@/components/matrix/source-documents'
 import type { Citation } from '@/components/matrix/citation'
 import { SourcePanel, type SourceSelection } from '@/components/pdf/source-panel'
 import { Badge } from '@/components/ui/badge'
@@ -122,17 +125,28 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
   const isRunning = !isBidSettled(bid)
   const totalPages = bid.documents.reduce((sum, d) => sum + d.pages, 0)
   const unreadPages = bid.documents.reduce((sum, d) => sum + d.unread_pages.length, 0)
+  const rowsByRequirement = useMemo(
+    () => indexRowsByRequirement(bid.matrix_rows),
+    [bid.matrix_rows]
+  )
+  const sourceDocuments = useMemo(
+    () => citableDocuments(bid.documents, bid.matrix_rows),
+    [bid.documents, bid.matrix_rows]
+  )
+  const hasRows = bid.matrix_rows.length > 0
 
   const handleCite = useCallback(
     (citation: Citation) => {
-      const document = bid.documents.find((d) => d.name === citation.documentName)
+      const document =
+        sourceDocuments.find((d) => d.id === citation.documentId) ??
+        sourceDocuments.find((d) => d.name === citation.documentName)
       setActiveCitation(citation)
       if (document !== undefined) {
         setSelection({ documentId: document.id, page: citation.page })
       }
       setPhoneTab('source')
     },
-    [bid.documents]
+    [sourceDocuments]
   )
 
   const handleSelect = useCallback((next: SourceSelection) => {
@@ -141,7 +155,8 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
   }, [])
 
   const emptyMessage = describeEmptyList(bid)
-  const reviewNote = 'The verdict follows the evidence check, which lands in Increment 2.'
+  const reviewNote =
+    'Every row is still waiting for your confirmation; the verdict follows that review.'
   const reviewButton = (
     <Button
       disabled
@@ -196,19 +211,29 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             aria-label="Workspace sections"
             panelId={(value) => `phone-panel-${value}`}
           />
-          <p className="m-0 text-[13px] leading-none">
-            <b className="font-semibold">{bid.requirements.length}</b>
-            <span className="text-text-muted"> requirements extracted</span>
-            {unreadPages > 0 && (
-              <span className="text-text-muted"> · {plural(unreadPages, 'page')} unread</span>
-            )}
-          </p>
+          {hasRows ? (
+            <MatrixSummary
+              rows={bid.matrix_rows}
+              requirementCount={bid.requirements.length}
+              isChecking={isRunning}
+            />
+          ) : (
+            <p className="m-0 text-[13px] leading-none">
+              <b className="font-semibold">{bid.requirements.length}</b>
+              <span className="text-text-muted"> requirements extracted</span>
+              {unreadPages > 0 && (
+                <span className="text-text-muted"> · {plural(unreadPages, 'page')} unread</span>
+              )}
+            </p>
+          )}
         </div>
         {liveRegion}
         <div className="flex flex-1 flex-col gap-2.5 px-4 py-3">
           <div id="phone-panel-matrix" role="tabpanel" hidden={phoneTab !== 'matrix'}>
             <RequirementCards
               requirements={bid.requirements}
+              rowsByRequirement={rowsByRequirement}
+              isChecking={isRunning}
               activeCitation={activeCitation}
               onCite={handleCite}
               emptyMessage={emptyMessage}
@@ -217,7 +242,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
           <div id="phone-panel-source" role="tabpanel" hidden={phoneTab !== 'source'}>
             {phoneTab === 'source' && (
               <SourcePanel
-                documents={bid.documents}
+                documents={sourceDocuments}
                 selection={selection}
                 onSelect={handleSelect}
                 variant="phone"
@@ -318,47 +343,80 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
         />
       </div>
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
-        <RequirementList
-          requirements={bid.requirements}
-          problems={bid.problems}
-          documents={bid.documents}
-          bidderLanguage={bid.bidder_language}
-          activeCitation={activeCitation}
-          onCite={handleCite}
-          emptyMessage={emptyMessage}
+        <div className="flex min-w-0 flex-col gap-3">
+          {hasRows && (
+            <MatrixSummary
+              rows={bid.matrix_rows}
+              requirementCount={bid.requirements.length}
+              isChecking={isRunning}
+            />
+          )}
+          <RequirementList
+            requirements={bid.requirements}
+            rowsByRequirement={rowsByRequirement}
+            problems={bid.problems}
+            documents={bid.documents}
+            bidderLanguage={bid.bidder_language}
+            isChecking={isRunning}
+            activeCitation={activeCitation}
+            onCite={handleCite}
+            emptyMessage={emptyMessage}
+          />
+        </div>
+        <SourcePanel
+          documents={sourceDocuments}
+          selection={selection}
+          onSelect={handleSelect}
         />
-        <SourcePanel documents={bid.documents} selection={selection} onSelect={handleSelect} />
       </div>
     </>
   )
 }
 
 /**
- * One sentence per change worth announcing — the stage moving on, or requirements arriving —
- * for the page's single live region. Requirement counts are announced at most once per
- * change so a screen reader is not read every poll.
+ * One sentence per change worth announcing — the stage moving on, requirements arriving, or
+ * matrix rows arriving — for the page's single live region. Counts are announced at most
+ * once per change so a screen reader is not read every poll, and the checked count is
+ * announced against the total, because rows land lane by lane rather than all at once.
  */
 function useStatusAnnouncement(bid: BidResponse): string {
   const [announcement, setAnnouncement] = useState('')
-  const previousRef = useRef<{ status: BidResponse['status']; count: number } | undefined>(
-    undefined
-  )
+  const previousRef = useRef<Snapshot | undefined>(undefined)
+  const { status } = bid
+  const requirements = bid.requirements.length
+  const rows = bid.matrix_rows.length
   useEffect(() => {
     const previous = previousRef.current
-    const current = { status: bid.status, count: bid.requirements.length }
+    const current: Snapshot = { status, requirements, rows }
     previousRef.current = current
     if (previous === undefined) {
       return
     }
-    if (previous.status !== current.status) {
-      setAnnouncement(
-        `${BID_STATUS_LABELS[current.status].label}. ${plural(current.count, 'requirement')} extracted.`
-      )
-    } else if (previous.count !== current.count) {
-      setAnnouncement(`${plural(current.count, 'requirement')} extracted so far.`)
+    const sentence = describeChange(previous, current)
+    if (sentence !== undefined) {
+      setAnnouncement(sentence)
     }
-  }, [bid.status, bid.requirements.length])
+  }, [status, requirements, rows])
   return announcement
+}
+
+interface Snapshot {
+  readonly status: BidResponse['status']
+  readonly requirements: number
+  readonly rows: number
+}
+
+function describeChange(previous: Snapshot, current: Snapshot): string | undefined {
+  if (previous.status !== current.status) {
+    return `${BID_STATUS_LABELS[current.status].label}. ${plural(current.requirements, 'requirement')} extracted.`
+  }
+  if (previous.rows !== current.rows) {
+    return `${current.rows} of ${plural(current.requirements, 'requirement')} checked so far.`
+  }
+  if (previous.requirements !== current.requirements) {
+    return `${plural(current.requirements, 'requirement')} extracted so far.`
+  }
+  return undefined
 }
 
 function describeEmptyList(bid: BidResponse): string {

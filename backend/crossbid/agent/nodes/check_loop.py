@@ -314,6 +314,16 @@ UNCITED_SUPPORT: Final = (
 )
 NO_RATIONALE: Final = "The check returned no rationale, so there is nothing to show here."
 
+UNCITED_SUPPORT_ROOM: Final = MAX_RATIONALE_CHARS - len(UNCITED_SUPPORT) - 1
+"""What the model's own sentence gets when the downgrade's notice is appended to it.
+
+The cap is a cap on the *cell*, not on the model's half of it: trimming to
+`MAX_RATIONALE_CHARS` and then appending 131 more characters would put a 732-character
+rationale in a column sized for two sentences, which is the thing the cap exists to prevent.
+The model's sentence gives way and the notice never does — the notice is the reason the row
+is not `supported`, and half of it tells the reviewer nothing.
+"""
+
 
 # ----------------------------------------------------------------------------- the check
 
@@ -510,14 +520,16 @@ def _verdict_row(
     The downgrade is the invariant `MatrixRow` would otherwise raise on, applied here rather
     than caught there: a `supported` the model cannot back with a retrieved passage becomes
     `partially_supported`, which sends it to the reviewer instead of counting towards a `go`.
+    It carries no evidence by definition — that is what it was downgraded for — so the row
+    is built without any, and the rationale stays inside the cap (`UNCITED_SUPPORT_ROOM`).
     """
     evidence = _resolve(answer.evidence, searches)
-    status = answer.status
-    rationale = _rationale(answer.rationale)
-    if status is RowStatus.SUPPORTED and not evidence:
-        status = RowStatus.PARTIALLY_SUPPORTED
-        rationale = f"{rationale} {UNCITED_SUPPORT}"
-    return _row(requirement, status, rationale, ecertis, evidence=evidence)
+    if answer.status is RowStatus.SUPPORTED and not evidence:
+        downgraded = f"{_rationale(answer.rationale, UNCITED_SUPPORT_ROOM)} {UNCITED_SUPPORT}"
+        return _row(requirement, RowStatus.PARTIALLY_SUPPORTED, downgraded, ecertis)
+    return _row(
+        requirement, answer.status, _rationale(answer.rationale), ecertis, evidence=evidence
+    )
 
 
 def _resolve(
@@ -553,9 +565,13 @@ def _hit_at(ref: EvidenceRef, searches: Sequence[Sequence[RagHit]]) -> RagHit | 
     return hits[ref.passage - 1]
 
 
-def _rationale(text: str) -> str:
-    """The reviewer's sentence: trimmed, bounded, and never empty. See the module docstring."""
-    return text.strip()[:MAX_RATIONALE_CHARS] or NO_RATIONALE
+def _rationale(text: str, limit: int = MAX_RATIONALE_CHARS) -> str:
+    """The reviewer's sentence: trimmed, bounded, and never empty. See the module docstring.
+
+    `limit` is how much of the cell this sentence may have, which is the whole cap unless
+    something of ours is being appended to it — see `UNCITED_SUPPORT_ROOM`.
+    """
+    return text.strip()[:limit] or NO_RATIONALE
 
 
 def _row(
