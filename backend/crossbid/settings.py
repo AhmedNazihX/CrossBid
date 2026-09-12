@@ -167,6 +167,19 @@ class AgentSettings(_Frozen):
     """S3.1.1: the OpenRouter-reported cost one bid may incur (2.50)."""
 
 
+class EvaluationSettings(_Frozen):
+    """The offline quality gates. Read by `scripts/recall.py`, never by a request path.
+
+    Separate from `AgentSettings` because the two answer different questions: `agent`
+    bounds what one bid run may spend, `evaluation` says how good the result has to be
+    before the story counts as delivered. Keeping the number here rather than in the
+    script is what lets S3.2.3's threshold and S7.1's be the same number.
+    """
+
+    recall_threshold: float = Field(gt=0.0, le=1.0)
+    """S3.2.1: recall on the golden mandatory requirements must reach this (0.9)."""
+
+
 class RuntimeSettings(_Frozen):
     """What an operator may change without a deploy: YAML defaults, `app_settings` on top."""
 
@@ -180,6 +193,9 @@ class RuntimeSettings(_Frozen):
     """Not in `settings.default.yaml` yet, so `None` until it is added (see the report)."""
     ingestion: IngestionSettings
     agent: AgentSettings
+    evaluation: EvaluationSettings
+    """Offline gates (S3.2.3). Deliberately *not* published by `GET /dev/settings`: it is
+    a maintainer's scoring threshold, not a knob the developer panel changes."""
     enabled_tools: tuple[str, ...]
 
 

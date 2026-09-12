@@ -1635,3 +1635,84 @@ decoded to 231 — so any encoder that writes limited-range values shifts the gr
 Under the `multiply` blend that paints a visibly darker rectangle across the hero: the exact
 seam the mask and brightness lift exist to remove. A stream copy cannot introduce it, and the
 held frame is byte-identical to the master's.
+
+---
+
+## ADR-0019 — The recall script, and the honest gap it leaves
+
+**Date:** 2026-09-12 · **Stories:** S3.2.3 (and the S6.4 verification folded into it) · **Status:** accepted
+
+### The matching rule
+
+A golden label and an extracted `Requirement` match when **all three** hold: same document
+(exact filename), pages at most one apart, and their quotes share **one unbroken run** of at
+least 20 characters covering at least 0.6 of the shorter quote — compared through
+`extract_reqs._comparable`, **imported, never restated**, so the score cannot drift from the
+extractor's own idea of a verbatim quote. Containment either way falls out of that rule rather
+than being special-cased: it is simply the case where the run covers the shorter quote whole,
+which is what lets the extractor quote a longer or shorter span of the same clause.
+
+Deliberately **not** matched, each for a reason: a translation or paraphrase (only
+`source_text` is compared, never `translation` — a matcher that accepted translations would
+score the translator, not the extractor); the same clause from a different document (two
+citations, the line `_dedupe` already draws); the same words more than a page away; a shared
+phrase under 20 characters, which is the boilerplate false positive — 20 is the shortest quote
+in any committed golden file, so no label is made unmatchable by the floor.
+
+Multiplicity is asymmetric on purpose: one extracted row may satisfy several labels, because a
+quoted enumeration really does carry several duties, but each label is credited to exactly one
+best row so recall cannot be inflated by a single sprawling quote.
+
+### The denominator is the trap, so it is pinned
+
+`scored_labels` filters on `kind=mandatory` **and** `stage is MATRIX_STAGE` — the constant
+imported from `extract_reqs`. ADR-0015 recorded why the DE file keeps 11 `contract_performance`
+rows in `requirements`: so the stage filter can be scored in both directions. Unfiltered, recall
+reads 11 rows low.
+`test_the_de_denominator_leaves_out_its_deliberate_post_award_labels` pins 116 mandatory and
+105 scored against the real answer key, so deleting the filter fails loudly rather than
+quietly producing a worse number that still looks plausible.
+
+The report also surfaces the *other* direction as **stage-filter leaks**: matched pairs whose
+stage disagrees, which is how a wrongly-staged label gets found rather than silently dropped.
+
+### The threshold is not published
+
+`evaluation.recall_threshold: 0.9` lives in `settings.default.yaml` and **not** on
+`GET /dev/settings`. It gates how good extraction must be before a story counts as delivered;
+it is not something the agent does. Moving it from a browser would change the number the course
+reports while changing nothing about the system. ADR-0016's response-shape pin therefore passes
+unchanged.
+
+### What this story does *not* establish
+
+**No real extraction has been scored.** The committed extraction results are `source:
+synthetic`, built from the golden labels themselves — every quote a real span of the page its
+label cites, with spans widened and narrowed, every 13th mandatory label dropped, orphan
+sentences taken from excluded documents and two judgement fields changed. They exercise the
+script; they measure nothing. The figures they produce (DE 0.92, EN 0.93, FR 0.94) are
+properties of the fixtures, and **every report prints a `SYNTHETIC INPUT` banner saying so**.
+The denominators, by contrast, are real.
+
+So S3.2.1's criterion — "at least 0.9 on the DE golden tender, measured by S3.2.3" — now has a
+script and still has no measurement. Three things stand between here and closing it:
+
+1. **A live DE run** (`make test-live`, ~$1.38, ~5 min). `test_bid_run_live.py` now writes what
+   it extracted to `tests/fixtures/extractions/de.live.json` **before** its budget assertions,
+   so a paid run is never thrown away by a failing assert. FR and EN have no live path at all —
+   the live test is DE-only.
+2. **A human adjudicating the four lists** that run produces, and correcting `golden.yaml` where
+   the report is right.
+3. **The header flip**, which only a person can do: `labelled_by:
+   llm_assisted_human_verified`, `verified_by`, `verified_on` in each of the three files.
+   `GoldenMeta._verification_is_consistent` enforces it as all-or-nothing.
+
+That closes S6.4, and with it S3.2.1 — and with the still-unrecorded end-to-end demo,
+Milestone 1.
+
+### Consequence for the layering rule
+
+`eval/` sits **beside** `routers/`, not under it: it imports the agent, and nothing in a request
+path imports it. `docs/project-plan.md`'s layering line is amended to say so.
+
+2 718 tests, 100 % coverage, all offline. **Every story of Increment 2 is now built.**

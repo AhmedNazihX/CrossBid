@@ -57,6 +57,12 @@ agent:
   run_budget_seconds: 600      # S3.1.1: a bid reaches awaiting_review within 10 minutes
   run_budget_usd: 2.50         # S3.1.1: OpenRouter-reported cost per bid stays under this
 
+# S3.2.3's gate. `scripts/recall.py` scores an extraction result against a golden file
+# and exits non-zero below this, so the number E3's done-when turns on is configuration and
+# not a literal buried in a script. 0.9 is the plan's figure for S3.2.1.
+evaluation:
+  recall_threshold: 0.9
+
 enabled_tools:
   - company_rag_search
   - tender_rag_search

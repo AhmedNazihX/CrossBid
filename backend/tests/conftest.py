@@ -24,6 +24,7 @@ from collections.abc import AsyncIterator, Callable, Iterator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from functools import cache
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -45,6 +46,7 @@ from crossbid.ingestion.chunker import Chunker
 from crossbid.ingestion.embeddings import EmbeddedChunk
 from crossbid.ingestion.parser import DocumentSource, ParsedDocument, ParsedPage
 from crossbid.ingestion.pipeline import DocumentPipeline, Upload
+from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
 from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, object_key
 from crossbid.main import create_app
 from crossbid.models import (
@@ -73,6 +75,31 @@ from crossbid.tools.rag import RagHit, RagSearchResult
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 ECERTIS_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "ecertis"
 ECERTIS_GENERATOR_PATH = BACKEND_DIR / "scripts" / "build_ecertis_cache.py"
+TENDERS_DIR = Path(__file__).resolve().parent / "fixtures" / "tenders"
+
+
+def tender_pack_pdfs(fixture_dir: Path) -> dict[str, Path]:
+    """Every PDF of a fixture tender by filename: the pack, plus the notice one level up.
+
+    The notice sits beside `documents/` rather than inside it because it came from TED and
+    the rest came from the buyer's platform, but a bidder reads both, so both are in scope.
+    """
+    pdfs = sorted(fixture_dir.glob("documents/*.pdf")) + sorted(fixture_dir.glob("*.pdf"))
+    return {pdf.name: pdf for pdf in pdfs}
+
+
+@cache
+def parsed_fixture_pdf(pdf: Path) -> ParsedDocument:
+    """One parse per fixture PDF for the whole session, through the repo's own parser.
+
+    Shared ground rather than a per-module cache because two suites re-derive claims from
+    these pages -- `test_golden_labels` checks the answer keys, `test_recall_script` checks
+    the committed extraction fixtures -- and the DE pack is 191 pages. Parsed twice it cost
+    twenty seconds of every `make test`. It is `PyMuPDFParser` on purpose: a page number
+    only means something relative to the reader that produced it, and this is the reader
+    S3.2.1 runs.
+    """
+    return PyMuPDFParser().parse(pdf, document_id=pdf.name)
 
 
 # Distinctive so that a leak into a repr, a dump or an exception is unmistakable.

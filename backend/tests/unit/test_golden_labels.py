@@ -34,8 +34,6 @@ import pytest
 from pydantic import ValidationError
 
 from crossbid.agent.nodes.extract_reqs import _is_verbatim
-from crossbid.ingestion.parser import ParsedDocument
-from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
 from crossbid.models.ecertis_criteria import CRITERION_IDS
 from crossbid.models.golden import (
     PENDING_VERIFIER,
@@ -45,9 +43,8 @@ from crossbid.models.golden import (
     LabelSource,
     load_golden,
 )
+from tests.conftest import TENDERS_DIR, parsed_fixture_pdf, tender_pack_pdfs
 
-BACKEND_DIR = Path(__file__).resolve().parents[2]
-TENDERS_DIR = BACKEND_DIR / "tests" / "fixtures" / "tenders"
 GOLDEN_FILENAME = "golden.yaml"
 FIXTURES = ("de", "fr", "en")
 
@@ -63,22 +60,9 @@ def _golden(path: Path) -> GoldenFile:
     return load_golden(path)
 
 
-@cache
-def _parsed(pdf: Path) -> ParsedDocument:
-    """One parse per PDF for the whole module; a 21-page pack file is not cheap to read."""
-    return PyMuPDFParser().parse(pdf, document_id=pdf.name)
-
-
 def _pack_pdfs(path: Path) -> dict[str, Path]:
-    """Every PDF of the fixture by filename: the pack, plus the notice one level up.
-
-    The notice sits beside `documents/` rather than inside it because it came from TED and
-    the rest came from the buyer's platform, but a bidder reads both, so both are in scope
-    for labelling and both must be accounted for in the header.
-    """
-    fixture_dir = path.parent
-    pdfs = sorted(fixture_dir.glob("documents/*.pdf")) + sorted(fixture_dir.glob("*.pdf"))
-    return {pdf.name: pdf for pdf in pdfs}
+    """Every PDF of this golden file's fixture, by filename."""
+    return tender_pack_pdfs(path.parent)
 
 
 def _entry_cases() -> list[pytest.ParameterSet]:
@@ -167,7 +151,7 @@ def test_cited_document_exists_in_the_pack(path: Path, entry: GoldenRequirement)
 
 @pytest.mark.parametrize(("path", "entry"), ENTRY_CASES)
 def test_cited_page_is_inside_the_document(path: Path, entry: GoldenRequirement) -> None:
-    document = _parsed(_pack_pdfs(path)[entry.doc])
+    document = parsed_fixture_pdf(_pack_pdfs(path)[entry.doc])
 
     assert entry.page <= document.page_count
 
@@ -175,7 +159,7 @@ def test_cited_page_is_inside_the_document(path: Path, entry: GoldenRequirement)
 @pytest.mark.parametrize(("path", "entry"), ENTRY_CASES)
 def test_quote_appears_verbatim_on_the_cited_page(path: Path, entry: GoldenRequirement) -> None:
     """The check that makes an LLM-drafted label as trustworthy as a hand-written one."""
-    document = _parsed(_pack_pdfs(path)[entry.doc])
+    document = parsed_fixture_pdf(_pack_pdfs(path)[entry.doc])
     page = document.pages[entry.page - 1]
 
     assert _is_verbatim(entry.quote, page.text)

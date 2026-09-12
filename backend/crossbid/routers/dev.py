@@ -31,6 +31,11 @@ deployment detail the YAML does not. `system_prompt_set` is reported instead —
 needs to know an override is in effect; nobody needs to read it over HTTP. S4.6.2 edits it
 behind a real role check.
 
+*`evaluation`.* S3.2.3's `recall_threshold` is a gate on how good extraction has to be
+before a story counts as delivered, not a knob a panel turns: moving it from a browser
+would change the number the course reports without changing anything the agent does. It is
+read by `scripts/recall.py` from the YAML and stays off the wire.
+
 **The gate is `ENV != production`, and the refusal is a 404.** S4.6.2's criterion is "given
 a non-developer account, the route is not reachable", but there is no developer role to
 check: authentication is still the `X-Dev-Company` bridge of S0.3.1's notes, and the plan
