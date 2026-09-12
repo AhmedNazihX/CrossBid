@@ -187,6 +187,17 @@ export function BrandReveal() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const holdFrameRef = useRef<number | null>(null)
   const [hasStarted, setHasStarted] = useState(false)
+  /**
+   * True only once we know there will be no animation — autoplay refused, or the file failed
+   * to load. It gates the still, and starting it `false` is the whole point.
+   *
+   * The still used to be a poster, painted at full opacity until playback began. That put the
+   * *finished* logo on screen first, then cross-faded to the clip's opening frame — which is
+   * one dot — and drew the logo again. A visitor saw the mark, saw it vanish, then saw it
+   * assemble. The band now starts empty, which is what the clip's own first frame looks like,
+   * and the still appears only when it is the answer rather than a placeholder.
+   */
+  const [hasFallenBack, setHasFallenBack] = useState(false)
   const prefersReducedMotion = usePrefersReducedMotion()
 
   useEffect(() => {
@@ -226,14 +237,16 @@ export function BrandReveal() {
       setHasStarted(true)
       holdFrameRef.current = requestAnimationFrame(watchForHold)
     }
+    const onError = () => setHasFallenBack(true)
     video.addEventListener('playing', onPlaying)
+    video.addEventListener('error', onError)
 
     const start = () => {
       video.playbackRate = PLAYBACK_RATE
       video.currentTime = REVEAL_START_SECONDS
-      // A refusal needs no handling beyond not throwing: `playing` does not fire, so nothing
-      // above runs and the static lockup is what stays on screen.
-      void video.play().catch(() => undefined)
+      // A refusal is not an error worth surfacing, but it *is* worth answering: `playing`
+      // never fires, so without this the band would sit empty for good.
+      void video.play().catch(() => setHasFallenBack(true))
     }
 
     // Seeking before metadata exists is dropped silently, which would start the clip at 0
@@ -266,6 +279,7 @@ export function BrandReveal() {
       observer.disconnect()
       video.removeEventListener('loadedmetadata', start)
       video.removeEventListener('playing', onPlaying)
+      video.removeEventListener('error', onError)
       if (holdFrameRef.current !== null) cancelAnimationFrame(holdFrameRef.current)
     }
   }, [prefersReducedMotion])
@@ -280,9 +294,12 @@ export function BrandReveal() {
       className="relative mx-auto mb-8 w-full"
       style={{ aspectRatio: BAND_ASPECT, maxWidth: BAND_MAX_WIDTH }}
     >
-      {/* Poster and fallback both. It must fade out once the clip starts: `multiply` makes
-          the video's ground transparent, so anything left underneath shows straight through
-          the mark — two offset lockups at once. */}
+      {/* The fallback, and **not** a poster — see `hasFallenBack`. It is transparent unless
+          the animation is not going to happen, so the band's first paint matches the clip's
+          own first frame (near-empty) instead of showing the finished logo and then undoing
+          it. It must also never be visible *while* the clip plays: `multiply` makes the
+          video's ground transparent, so anything left underneath shows straight through the
+          mark — two offset lockups at once. */}
       <Image
         src={LOCKUP_SRC}
         alt=""
@@ -290,7 +307,7 @@ export function BrandReveal() {
         sizes="840px"
         priority
         className={`object-contain px-[5.5%] transition-opacity duration-300 ${
-          hasStarted ? 'opacity-0' : 'opacity-100'
+          prefersReducedMotion === true || hasFallenBack ? 'opacity-100' : 'opacity-0'
         }`}
       />
       {prefersReducedMotion === false && (

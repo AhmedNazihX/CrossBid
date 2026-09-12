@@ -1602,6 +1602,19 @@ ADR-0013 forbids paraphrasing the vocabulary; Confirm / Change status / Add evid
 and citations read `doc p. N` without the artboard's `§4.1` because the API carries no section
 marker.
 
+### The still is a fallback, not a poster
+
+Noticed on the shipped page: **the band's first paint was the finished logo**, which then
+cross-faded to the clip's opening frame — one dot — and drew the mark again. A visitor saw the
+logo, saw it vanish, and saw it assemble. The cause was treating the static lockup as a poster
+and painting it at full opacity until playback began.
+
+It is now transparent unless the animation is not going to happen: `prefers-reduced-motion`,
+a refused `play()`, or a media `error`. The band's first paint therefore matches the clip's own
+first frame, which is near-empty, and the still appears only when it is the answer rather than
+a placeholder. Verified in the browser — across a normal load the lockup's opacity never rises
+above 0, while a stubbed-rejecting `play()` and a `reduce` preference each put it at 1.
+
 ### The landing clip, settled
 
 The hold is **4.20 s** — the frame where the reveal finishes and before the rings begin to
