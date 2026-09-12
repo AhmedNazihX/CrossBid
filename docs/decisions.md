@@ -1710,6 +1710,36 @@ script and still has no measurement. Three things stand between here and closing
 That closes S6.4, and with it S3.2.1 — and with the still-unrecorded end-to-end demo,
 Milestone 1.
 
+### Measured, 2026-09-12: recall is **0.75**, and R1 has materialised
+
+The live DE run was made (245 s, $1.47, 48 model calls, **279 requirements**, 5 problems) and
+scored. `scripts/recall.py` reports **0.75 — 79 of 105 mandatory bid-eligibility labels —
+against a 0.90 threshold, and exits 1.** That is the first real measurement of S3.2.1's
+criterion, and it fails. Risk **R1** ("extraction recall stays below 0.9") is no longer a risk;
+it is an observation, and it is recorded here rather than smoothed over.
+
+It is *not* yet evidence that extraction is poor, because three numbers have to be read
+together:
+
+- **26 misses.** Splitting them: **13 have no extracted row within a page of the label** — real
+  extraction misses. The other **13 have a row on the same page that the matcher rejected**,
+  which is a human judgement call: the same duty worded differently, or genuinely two different
+  requirements. If all 13 were accepted, recall would read 0.88 — still short.
+- **173 candidate missing labels.** The extractor found 279 rows; the answer key has 162
+  entries, 105 of them scored. That asymmetry is the strongest signal in the report: the
+  LLM-drafted key is very likely *incomplete*, and a missing label makes a correct extraction
+  look like noise. This is exactly the failure a verbatim check is structurally blind to, which
+  is why the report exists.
+- **23 disagreements** on `kind` / `ecertis_criterion_id` for matched pairs.
+
+So the number to report in `REPORT.md` is not settled until a person has adjudicated those
+three lists. What *is* settled is the honest figure as of today, and the pipeline that produced
+it: SP.1's 1.00 automated / 0.95 audited came from 21 hand-picked labels across 3 documents; the
+key now covers 18 documents, and a harder denominator is most of the difference.
+
+The DE golden file's own header still reads `verified_by: pending`, so **S6.4, S3.2.1 and
+Milestone 1 all remain open** — correctly.
+
 ### Consequence for the layering rule
 
 `eval/` sits **beside** `routers/`, not under it: it imports the agent, and nothing in a request
