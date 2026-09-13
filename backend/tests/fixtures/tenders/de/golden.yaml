@@ -26,12 +26,34 @@ meta:
   ted_publication_number: "614251-2026"
   fixture_dir: tests/fixtures/tenders/de
   source_language: de
-  labelled_by: llm_draft
-  verified_by: pending
-  verified_on: null
+  labelled_by: llm_assisted_human_verified
+  verified_by: Ahmed Nazih Ali
+  verified_on: 2026-09-13
   labelled_on: 2026-09-11
   story: S6.4
   method: |
+    **Verified 2026-09-13 by Ahmed Nazih Ali**, against the live DE extraction of 2026-09-12
+    scored by `scripts/recall.py`. The worksheet and every decision are in `VERIFICATION.md`
+    beside this file. What a person actually adjudicated, rather than what a machine had
+    already proved:
+
+    - the two label/row pairs the matcher rejected on high overlap (both upheld as misses);
+    - whether the key may carry eCertis criterion ids the extractor is forbidden to infer
+      (kept -- the 16 disagreements are expected, not defects);
+    - the three `kind` clusters, of which one moved: the `Kriterienkatalog Leistung` criteria
+      are scored, not pass/fail;
+    - a sample of the misses, which generalised into seven labels that quote the recitation of
+      the law or a notice metadata field rather than a duty on the bidder.
+
+    The machine half was never in question and was not re-checked by hand:
+    `test_golden_labels.py` re-opens every cited PDF and asserts every quote appears verbatim on
+    its cited page, that every criterion id is a real member of the generated enum, and that
+    `documents_scanned` and `documents_excluded` partition the pack exactly.
+
+    Recall against that run moved 0.77 -> 0.73 -> 0.75 across the rulings. **None of that is
+    extraction changing** -- only the denominator moved, twice, for recorded reasons. The figure
+    still fails the 0.90 threshold.
+
     2026-09-13, user verification of the spot-check sample (S6.4 §4): six labels whose quote is
     the *recitation of the law* rather than a duty on the bidder moved to `kind: informational`
     and left the scored set -- DE-360/361/362 (the § 299 StGB, § 108e StGB and IntBestG entries
@@ -2765,7 +2787,7 @@ requirements:
 
   - id: DE-228
     category: technical_professional
-    kind: mandatory
+    kind: informational
     stage: bid_eligibility
     checkable: company_property
     doc: 614251-2026.notice.de.pdf

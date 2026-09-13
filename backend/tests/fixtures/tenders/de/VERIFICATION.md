@@ -4,12 +4,14 @@ Generated 2026-09-13 from the live run of 2026-09-12
 (`tests/fixtures/extractions/de.live.json`, 279 rows, $1.47) scored by
 `uv run scripts/recall.py tests/fixtures/extractions/de.live.json`.
 
-**Current figure: recall 0.75 — 134 of 178 mandatory bid-eligibility labels — against a 0.90
-threshold. FAIL.** (0.77/219 → 0.73/184 after the §3 cluster-A ruling → 0.75/178 after the §4
-spot-check, both on 2026-09-13.)
+**Current figure: recall 0.76 — 134 of 177 mandatory bid-eligibility labels — against a 0.90
+threshold. FAIL.** (0.77/219 → 0.73/184 → 0.75/178 → 0.76/177 across the rulings of 2026-09-13.
+None of that movement is extraction changing: only the denominator moved, each time for a
+recorded reason.)
 
-**Verification status: §1, §2, §3 and §4 are answered. §5 — the header flip — is the only step
-left, and one question in §4 is still open (DE-228, below).**
+**DONE — this file is closed. DE was verified by Ahmed Nazih Ali on 2026-09-13 and its header is
+flipped. FR and EN remain `verified_by: pending`: they were not reviewed here, and S6.4 asks for
+each golden tender, so it is not closed until they are.**
 
 S6.4 says labels are "produced with LLM assistance and each verified by a human". The machine
 half is already enforced: `test_golden_labels.py` re-opens every cited PDF and asserts every
@@ -161,7 +163,10 @@ records that this field routinely just answers "see the procurement documents". 
 reference requirement is labelled separately in `Kriterienkatalog_Eignung`. So it is arguably a
 pointer rather than a requirement, and would leave the scored set too (178 → 177).
 
-DE-228 decision: ____________  (keep scored / make informational)
+DE-228 decision: **make informational — applied 2026-09-13.** It is the notice's eForms
+"Quellen der Eignungskriterien" field pointing at the procurement documents, not a requirement of
+its own; the reference requirement is labelled in `Kriterienkatalog_Eignung`. Denominator
+178 → 177.
 
 The other two populations need no action: the 25 clearly-different non-matches were sampled in
 section 1, and the 20 remaining candidates were already adjudicated as correct rejections.
@@ -170,7 +175,9 @@ section 1, and the 20 remaining candidates were already adjudicated as correct r
 
 ## 5. Close it
 
-When sections 1–4 are settled, set in **each** of `de/`, `fr/`, `en/` `golden.yaml`:
+**DE is done** (`labelled_by: llm_assisted_human_verified`, `verified_by: Ahmed Nazih Ali`,
+`verified_on: 2026-09-13`). For **FR and EN**, which still read `pending`, set in each
+`golden.yaml`:
 
 ```yaml
   labelled_by: llm_assisted_human_verified
@@ -178,9 +185,11 @@ When sections 1–4 are settled, set in **each** of `de/`, `fr/`, `en/` `golden.
   verified_on: 2026-09-__
 ```
 
-`GoldenMeta._verification_is_consistent` enforces this as all-or-nothing, so a partial flip
-fails the suite. That closes **S6.4**, and with it **S3.2.1** — and with the still-unrecorded
-end-to-end demo, **Milestone 1**.
+`GoldenMeta._verification_is_consistent` enforces the three fields as all-or-nothing *per file*,
+which is why DE could be flipped alone while FR and EN stay honest drafts.
 
-Note FR and EN have no live extraction yet (the live test is DE-only), so their labels are
-verified by reading, not by scoring.
+**What flipping DE did and did not close.** S3.2.1's criterion is the DE golden tender, so its
+answer key is now verified — but the criterion is "recall at least 0.9", and the measurement is
+**0.76**, so S3.2.1 stays open on the number rather than on the key. **S6.4 asks for each golden
+tender**, so it needs FR and EN too. Neither has a live extraction (the live test is DE-only), so
+their labels can only be verified by reading — no report will generate itself for them.

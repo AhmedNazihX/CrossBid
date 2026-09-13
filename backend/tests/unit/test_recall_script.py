@@ -40,8 +40,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = BACKEND_DIR / "scripts" / "recall.py"
 EXTRACTIONS_DIR = BACKEND_DIR / "tests" / "fixtures" / "extractions"
 
-DE_MANDATORY_LABELS = 212
-DE_DENOMINATOR = 178
+DE_MANDATORY_LABELS = 211
+DE_DENOMINATOR = 177
 """253/219 until 2026-09-13, when the user ruled the `Kriterienkatalog Leistung` criteria are
 scored rather than pass/fail: 35 of them became `optional` and left the scored set. The 11
 A-Kriterien in the same catalogue stayed `mandatory` — an offer below their point thresholds is
@@ -49,8 +49,11 @@ excluded, so they are pass/fail despite being expressed in points. Recall fell 0
 
 Then 184 -> 178 on 2026-09-13, when the §4 spot-check found six labels quoting the *recitation
 of the law* rather than a duty on the bidder — the offences listed inside one exclusion ground,
-and the sub-clause on how the buyer may prove it. The bidder's duty there is the Eigenerklärung,
-labelled separately; counting the statute too made one obligation look like several.
+and the sub-clause on how the buyer may prove it. Then 178 -> 177 for DE-228, the
+notice's eForms "Quellen der Eignungskriterien" field, which points at the procurement
+documents rather than stating a requirement of its own. The bidder's duty in those cases is
+the Eigenerklärung, labelled separately; counting the statute too made one obligation look
+like several.
 
 These numbers are pinned so the denominator may only move on a recorded decision."""
 """The DE answer key's mandatory labels, and the ones the extractor can actually produce.
