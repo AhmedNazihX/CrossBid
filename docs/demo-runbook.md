@@ -3,9 +3,10 @@
 Milestone 1 and Milestone 2 both close on a recorded end-to-end demo. This is the script for
 **one** take covering both, written so nothing has to be decided while recording.
 
-State as of 2026-09-14: the demo company is seeded, the FR tender is uploaded, and a completed
-FR bid already sits at `awaiting_review`. Everything below has been performed once already —
-see ADR-0023 for what it proved.
+**State as of 2026-09-14: reset for a live take.** The demo company is seeded with its ten
+evidence documents and nothing else — no tender documents, no bids. You upload the tender and
+start the run on camera. The whole flow has been performed once already against this exact
+build, so nothing below is untested; see ADR-0023 for what that run proved.
 
 ---
 
@@ -22,12 +23,16 @@ cd frontend && npm run dev
 make seed-demo
 ```
 
-Then check, in the browser:
+Then check, in the browser — this is the **clean first-run state** the take starts from:
 
-- `/company` lists **13 documents, all Ready** — ten company evidence, plus the FR notice, the
-  FR RC and `DUME_acheteur.xml`. No duplicates, no `Failed`.
-- `DUME_acheteur.xml` shows **`—`** in both page columns, not `0`.
-- `/bids` lists the FR bid at **Review verdict**.
+- `/company` lists **exactly 10 documents, all Ready**, all of type _Company evidence_. No
+  tender documents, no duplicates, no `Failed`.
+- `/bids` shows its empty state with the "What to do next" panel.
+- `/bids/new` shows "No tender documents are waiting for a bid".
+
+If tender documents or a bid are present, a previous take was not reset. The reset is: delete
+the bid (documents, requirements and matrix rows cascade from it) and remove the three tender
+objects from Storage.
 
 If any screen 401s, `frontend/.env.local` is missing — see `HANDOVER.md`. If uploads fail,
 the Storage bucket is wrong — also `HANDOVER.md`. Neither is a code problem.
@@ -54,8 +59,18 @@ tender. The evidence mapping is bidder-side.
 
 ### 3. Upload the tender (~40 s) — `/company`
 
-Upload is already done, so either re-upload into a fresh company or narrate the existing rows.
-The three files and their types:
+This is a live upload — the table is empty of tender documents when you start. All three files
+are in the repo at `backend/tests/fixtures/tenders/fr/`; have that folder open in the file
+picker before you start recording, so the take is not a hunt through directories.
+
+| File   | Path                                                      |
+| ------ | --------------------------------------------------------- |
+| notice | `fr/618320-2026.notice.fr.pdf`                            |
+| RC     | `fr/documents/26023_AOO_Conseil_Architecure_SI_RC_v1.pdf` |
+| DUME   | `fr/documents/DUME_acheteur.xml`                          |
+
+Upload each one, choosing its type first — **the type select drives what the file picker will
+accept**, so changing it after choosing a file is the one way to get a refusal on camera:
 
 | File                                         | Type to choose          |
 | -------------------------------------------- | ----------------------- |
@@ -63,9 +78,15 @@ The three files and their types:
 | `26023_AOO_Conseil_Architecure_SI_RC_v1.pdf` | Tender document         |
 | `DUME_acheteur.xml`                          | **ESPD / DUME request** |
 
-**Pause on the third.** Selecting it changes the file picker to XML and the hint to "the
-buyer's published ESPD request (DUME)". This is the whole wedge in one control: where a buyer
-publishes a DUME, the EU criteria are stated outright and nothing has to be inferred from prose.
+**Pause on the third.** Selecting **ESPD / DUME request** changes the file picker to XML and
+the hint to "the buyer's published ESPD request (DUME)". This is the whole wedge in one control:
+where a buyer publishes a DUME, the EU criteria are stated outright and nothing has to be
+inferred from prose.
+
+Each file goes `Uploaded, reading… → Read, indexing… → Ready` on its own, a few seconds each.
+Wait for all three to read **Ready** before moving on — the start screen will not let you tick a
+document that is not ready. Note the DUME lands on `—` in both page columns while the two PDFs
+show 5 and 20: an XML form has no pages, and the product says so rather than printing a `0`.
 
 ### 4. Start the run (~20 s) — `/bids/new`
 
@@ -81,8 +102,11 @@ Press **Start analysis**.
 Do not cut away. The interesting part is the order things appear:
 
 - Within seconds: **30 requirements, 24 of them exclusion grounds.** These are the DUME's, read
-  structurally. No model was asked.
-- Then the counter climbs to **135** as the RC and the notice are extracted section by section.
+  structurally by a prefix table over the ESPD type codes. No model was asked, which is why they
+  arrive before anything else — and why that 30 is the same every run.
+- Then the counter climbs to **around 135** as the RC and the notice are extracted section by
+  section. That total comes from the model, so treat it as approximate on the day and read the
+  number off the screen rather than quoting this one.
 - Then matrix rows fill in as each requirement is checked against the company's documents.
 - It parks at **Review verdict** — `awaiting_review`. About two minutes for this 25-page pack.
 
@@ -101,8 +125,10 @@ Every row either cites something or is marked partially supported. There is no t
 
 ### 7. The eCertis card — **the money shot** (~60 s)
 
-Filter to **Exclusion** and expand a row whose source reads `DUME_acheteur.xml · ESPD criterion`.
-`REQ-106` is a good one.
+Filter to **Exclusion** and expand any row whose source reads
+`DUME_acheteur.xml · ESPD criterion`. **Do not go looking for a specific REQ number** — ids are
+assigned by position and will differ from run to run. The DUME rows are the ones citing the XML;
+on the last run they sat together partway down the Exclusion list.
 
 Three things to point at, in this order:
 
@@ -131,7 +157,8 @@ editing rows and the verdict itself are Increment 3. What is there is the promis
 
 ## Say these numbers, and only these
 
-- **135 requirements** from a 25-page French pack, 30 of them straight from the DUME.
+- **~135 requirements** from a 25-page French pack, **exactly 30** of them straight from the
+  DUME. The 30 is deterministic; the total is not — read it off the screen.
 - **30 of 30** eCertis lookups resolved.
 - **~2 minutes** for this pack. The 191-page German pack takes about five.
 - Recall on the German golden tender is **~0.74 ± 0.02**, against a 0.90 target. **Say this if
