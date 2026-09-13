@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select'
 import {
   DOCUMENT_KINDS,
   isDocumentKind,
-  MAX_UPLOAD_MEGABYTES,
+  uploadShapeFor,
   validateUploadFile,
   type DocumentKind,
 } from '@/lib/documents'
@@ -33,6 +33,9 @@ export function UploadForm({ onUpload }: UploadFormProps) {
   const [kind, setKind] = useState<DocumentKind>(DEFAULT_KIND)
   const [error, setError] = useState<string | undefined>(undefined)
   const [isUploading, setIsUploading] = useState(false)
+  // The ESPD request is XML and every other kind is a PDF, so the picker's filter, its hint
+  // and the refusals all follow the chosen type rather than assuming one shape.
+  const shape = uploadShapeFor(kind)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -40,9 +43,9 @@ export function UploadForm({ onUpload }: UploadFormProps) {
     const file = new FormData(form).get('file')
     const chosenFile = file instanceof File ? file : undefined
 
-    const problem = validateUploadFile(chosenFile)
+    const problem = validateUploadFile(chosenFile, kind)
     if (problem !== undefined || chosenFile === undefined) {
-      setError(problem ?? 'Choose a PDF to upload.')
+      setError(problem ?? shape.missing)
       return
     }
 
@@ -69,13 +72,13 @@ export function UploadForm({ onUpload }: UploadFormProps) {
       <div className="grid gap-4 shell:grid-cols-2">
         <Input
           id={fileId}
-          label="PDF file"
+          label="File"
           name="file"
           type="file"
-          accept="application/pdf,.pdf"
+          accept={shape.accept}
           required
           disabled={isUploading}
-          hint={`One PDF, up to ${MAX_UPLOAD_MEGABYTES} MB.`}
+          hint={shape.hint}
         />
         <Select
           id={kindId}

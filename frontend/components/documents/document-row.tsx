@@ -5,7 +5,12 @@ import { useCallback, useEffect, useRef } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Td, Tr } from '@/components/ui/data-table'
 import { describeApiError } from '@/lib/api-client'
-import { getDocument, isDocumentSettled, type DocumentResponse } from '@/lib/documents'
+import {
+  getDocument,
+  hasPages,
+  isDocumentSettled,
+  type DocumentResponse,
+} from '@/lib/documents'
 import { formatPageList } from '@/lib/format'
 import { usePolling } from '@/lib/use-polling'
 import {
@@ -51,6 +56,8 @@ export function DocumentRow({ document, onChange }: DocumentRowProps) {
   }, [value, onChange])
 
   const isParsed = value.status !== 'uploaded'
+  // An ESPD request has no pages to count, so both page columns read — rather than 0.
+  const isPaginated = hasPages(value.kind)
 
   return (
     <Tr>
@@ -78,9 +85,9 @@ export function DocumentRow({ document, onChange }: DocumentRowProps) {
           )}
         </div>
       </Td>
-      <Td className="text-right tabular-nums">{isParsed ? value.pages : '—'}</Td>
+      <Td className="text-right tabular-nums">{isParsed && isPaginated ? value.pages : '—'}</Td>
       <Td className="text-right tabular-nums">
-        <UnreadPages document={value} isParsed={isParsed} />
+        <UnreadPages document={value} hasCount={isParsed && isPaginated} />
       </Td>
     </Tr>
   )
@@ -89,15 +96,18 @@ export function DocumentRow({ document, onChange }: DocumentRowProps) {
 /**
  * The count, with the page numbers on hover for a mouse and read aloud for a screen
  * reader — `title` alone reaches neither the keyboard nor assistive technology.
+ *
+ * `hasCount` is false both before the file is parsed and for a kind that has no pages at
+ * all, because in either case a `0` would claim something that was never counted.
  */
 function UnreadPages({
   document,
-  isParsed,
+  hasCount,
 }: {
   document: DocumentResponse
-  isParsed: boolean
+  hasCount: boolean
 }) {
-  if (!isParsed) {
+  if (!hasCount) {
     return <>—</>
   }
   if (document.unread_page_count === 0) {

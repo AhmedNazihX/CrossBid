@@ -15,7 +15,12 @@ import { Select } from '@/components/ui/select'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { startBid } from '@/lib/bids'
-import { listDocuments, TENDER_DOCUMENT_KINDS, type DocumentResponse } from '@/lib/documents'
+import {
+  hasPages,
+  listDocuments,
+  TENDER_DOCUMENT_KINDS,
+  type DocumentResponse,
+} from '@/lib/documents'
 import { plural } from '@/lib/format'
 import {
   DOCUMENT_KIND_LABELS,
@@ -123,7 +128,9 @@ export function StartBidForm() {
         <Link href="/company" className="underline">
           Company profile
         </Link>{' '}
-        page with the type <b className="font-medium">Tender document</b>, then start here.
+        page with the type <b className="font-medium">Tender document</b> — and, where the buyer
+        published one, the <b className="font-medium">ESPD / DUME request</b> XML, which names
+        the EU criteria outright — then start here.
       </Notice>
 
       <Card
@@ -230,7 +237,8 @@ function DocumentChecklist({
         <Link href="/company" className="underline">
           Company profile
         </Link>{' '}
-        page first — the RC, the specifications, the notice, any annexes.
+        page first — the RC, the specifications, the notice, any annexes, and the buyer&rsquo;s
+        ESPD request if there is one.
       </p>
     )
   }
@@ -254,13 +262,7 @@ function DocumentChecklist({
               disabled={disabled || !isReady}
               onChange={(event) => onToggle(document.id, event.target.checked)}
               label={document.name}
-              description={`${DOCUMENT_KIND_LABELS[document.kind].label}${
-                document.status === 'ready' ? ` · ${plural(document.pages, 'page')}` : ''
-              }${
-                document.unread_page_count > 0
-                  ? ` · ${plural(document.unread_page_count, 'page')} without a text layer`
-                  : ''
-              }`}
+              description={describeDocument(document)}
               className="min-w-0 flex-1"
             />
             <Badge tone={statusBadgeTone(document.status)} size="sm">
@@ -271,4 +273,20 @@ function DocumentChecklist({
       })}
     </ul>
   )
+}
+
+/**
+ * The one line under a document's checkbox: what it is, and — only where pages exist — how
+ * many were read and how many carry no text layer. An ESPD request is XML with no pages, so
+ * it names only its type rather than claiming zero of something never counted.
+ */
+function describeDocument(document: DocumentResponse): string {
+  const parts = [DOCUMENT_KIND_LABELS[document.kind].label]
+  if (document.status === 'ready' && hasPages(document.kind)) {
+    parts.push(plural(document.pages, 'page'))
+    if (document.unread_page_count > 0) {
+      parts.push(`${plural(document.unread_page_count, 'page')} without a text layer`)
+    }
+  }
+  return parts.join(' \u00b7 ')
 }
