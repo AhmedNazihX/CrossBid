@@ -32,6 +32,15 @@ meta:
   labelled_on: 2026-09-11
   story: S6.4
   method: |
+    2026-09-13, user verification of the spot-check sample (S6.4 §4): six labels whose quote is
+    the *recitation of the law* rather than a duty on the bidder moved to `kind: informational`
+    and left the scored set -- DE-360/361/362 (the § 299 StGB, § 108e StGB and IntBestG entries
+    inside one exclusion ground's list of offences), DE-363 ("2) die öffentlichen Auftraggeber
+    ... nachweisen können", the sub-clause on how the buyer may prove it), DE-107 (the statutory
+    text of the tax/social-security ground) and DE-376 (the Russia-sanctions annex reference).
+    The bidder's actual duty in each case is the Eigenerklärung, which is labelled separately;
+    counting the statute as well double-counted one obligation as several. Denominator 184 -> 178.
+
     2026-09-13, user ruling on the `Kriterienkatalog Leistung`: its criteria are **scored,
     not pass/fail**. Missing one costs Leistungspunkte; it does not exclude the offer. So 35
     labels from that catalogue moved from `kind: mandatory` to `kind: optional` and left the
@@ -1609,7 +1618,7 @@ requirements:
 
   - id: DE-107
     category: exclusion_ground
-    kind: mandatory
+    kind: informational
     stage: bid_eligibility
     checkable: company_property
     doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
@@ -3444,7 +3453,7 @@ requirements:
 
   - id: DE-376
     category: exclusion_ground
-    kind: mandatory
+    kind: informational
     stage: bid_eligibility
     checkable: company_property
     doc: Eigenerklaerung_Sanktionen_Russland_VV2.pdf
@@ -5734,7 +5743,7 @@ requirements:
 
   - id: DE-360
     category: exclusion_ground
-    kind: mandatory
+    kind: informational
     stage: bid_eligibility
     checkable: company_property
     doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
@@ -5753,7 +5762,7 @@ requirements:
 
   - id: DE-361
     category: exclusion_ground
-    kind: mandatory
+    kind: informational
     stage: bid_eligibility
     checkable: company_property
     doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
@@ -5772,7 +5781,7 @@ requirements:
 
   - id: DE-362
     category: exclusion_ground
-    kind: mandatory
+    kind: informational
     stage: bid_eligibility
     checkable: company_property
     doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
@@ -5792,7 +5801,7 @@ requirements:
 
   - id: DE-363
     category: exclusion_ground
-    kind: mandatory
+    kind: informational
     stage: bid_eligibility
     checkable: company_property
     doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf

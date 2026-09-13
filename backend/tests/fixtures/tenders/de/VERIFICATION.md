@@ -4,8 +4,12 @@ Generated 2026-09-13 from the live run of 2026-09-12
 (`tests/fixtures/extractions/de.live.json`, 279 rows, $1.47) scored by
 `uv run scripts/recall.py tests/fixtures/extractions/de.live.json`.
 
-**Current figure: recall 0.73 — 135 of 184 mandatory bid-eligibility labels — against a 0.90
-threshold. FAIL.** (Was 0.77/219 before the §3 cluster-A ruling of 2026-09-13.)
+**Current figure: recall 0.75 — 134 of 178 mandatory bid-eligibility labels — against a 0.90
+threshold. FAIL.** (0.77/219 → 0.73/184 after the §3 cluster-A ruling → 0.75/178 after the §4
+spot-check, both on 2026-09-13.)
+
+**Verification status: §1, §2, §3 and §4 are answered. §5 — the header flip — is the only step
+left, and one question in §4 is still open (DE-228, below).**
 
 S6.4 says labels are "produced with LLM assistance and each verified by a human". The machine
 half is already enforced: `test_golden_labels.py` re-opens every cited PDF and asserts every
@@ -32,7 +36,7 @@ floor. It is a real find. **But a 16-character quote is not a citation a reviewe
 which is the product's whole promise, so counting it as a hit would flatter the extractor. The
 honest reading is that extraction produced an unusable citation here.
 
-decision: ____________  (accept / overturn — overturn credits it as found)
+decision: Accept — **settled 2026-09-13.** No change: the label stays a miss.
 
 ### DE-484 — recommend: ACCEPT the rejection (genuinely different requirements)
 ```
@@ -42,7 +46,7 @@ EXTRACTED "- mindestens drei verschiedene Referenzen für IPv6-Migrationseinzelp
 60% shared text, but **one reference versus three**. Different thresholds are different
 requirements.
 
-decision: ____________
+decision: Accept — **settled 2026-09-13.** No change: different thresholds, different requirements.
 
 ---
 
@@ -66,7 +70,8 @@ question, not sixteen:
 Recommend **keep, and treat the 16 as expected rather than as defects** — the report already
 lists them separately from misses.
 
-decision: ____________
+decision: as recommended — **settled 2026-09-13.** The key keeps its 27 inferred criterion ids;
+the 16 disagreements are expected, not defects. Nothing changed in the key.
 
 **Consequence you should know either way:** S3.3.1 looks up eCertis only when a requirement
 carries a criterion id. On the DE tender none will, so **the eCertis equivalence card never
@@ -112,7 +117,7 @@ Unterlagen nicht beibringen können, teilen Sie diese Gründe mit" (DE-063, DE-4
 (DE-535). These bind only if a condition applies; the extractor reads "bitte + imperative" as an
 unconditional duty. The key looks right.
 
-decision: ____________  (keep / change to mandatory)
+decision: Keep — **settled 2026-09-13.** No change; the key's `optional` is right.
 
 ### Cluster C — key says INFORMATIONAL, extractor says MANDATORY (5 labels) — recommend KEEP
 Statements of consequence rather than actions the bidder takes: "Referenzen, die … nicht
@@ -121,7 +126,7 @@ berücksichtigt werden" (DE-441), "Sie ist nicht gesondert zu unterschreiben" (D
 arguable one is DE-477 "Weitere Fragen … sind nicht gestattet", which is a prohibition and so
 arguably a duty.
 
-decision: ____________  (keep / change DE-477 only / change all)
+decision: Keep — **settled 2026-09-13.** No change, DE-477 included.
 
 ---
 
@@ -138,7 +143,25 @@ sound and 0.77 is a fair figure.
 | DE-228 | `614251-2026.notice.de.pdf` | 5 | "Quellen der Eignungskriterien: Bekanntmachung, Auftragsunterlagen…" — the notice's own reference criterion |
 | DE-363 | `Eigenerklaerung_Ausschlussgruende_VV2.pdf` | 6 | "…die öffentlichen Auftraggeber auf sonstige geeignete Weise die Verletzung…" — the buyer proving non-payment by other means |
 
-all three are real requirements? ____________  (yes / no — say which)
+all three are real requirements? **Answered 2026-09-13: no — 1 and 3 are mandatory exclusion
+grounds but not obligations to be able to bid.**
+
+**Applied.** The reading generalised: DE-107 and DE-363 quote the *recitation of the law*, not a
+duty on the bidder, and four more labels in the key do the same — DE-360/361/362 (the § 299
+StGB, § 108e StGB and IntBestG entries listed *inside* one exclusion ground) and DE-376 (the
+Russia-sanctions annex). All six moved to `kind: informational` and left the scored set. The
+bidder's actual duty in each case is the Eigenerklärung, which is labelled separately; counting
+the statute as well made one obligation look like several. Denominator 184 → 178, recall
+0.73 → **0.75**.
+
+**Still open — DE-228.** Your note reads "Number 2 is read requirements", which is ambiguous.
+Its quote is the notice's eForms metadata field: "Quellen der Eignungskriterien: Bekanntmachung,
+Auftragsunterlagen". Its own summary says the notice *names* the criterion — and CLAUDE.md
+records that this field routinely just answers "see the procurement documents". The actual
+reference requirement is labelled separately in `Kriterienkatalog_Eignung`. So it is arguably a
+pointer rather than a requirement, and would leave the scored set too (178 → 177).
+
+DE-228 decision: ____________  (keep scored / make informational)
 
 The other two populations need no action: the 25 clearly-different non-matches were sampled in
 section 1, and the 20 remaining candidates were already adjudicated as correct rejections.
