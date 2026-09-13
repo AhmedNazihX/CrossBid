@@ -15,11 +15,15 @@ S2.4.2, S3.3.1, S3.3.2, S4.5.1's matrix criterion, plus the wait-fillers S6.3, S
 ADR-0023 record the decisions, and the Increment 2 retro and re-forecast close the sprint.
 
 **Added 2026-09-14.** The DUME work landed and the cross-border wedge now runs where a person
-can reach it (ADR-0022, ADR-0023): the demo company is seeded in Frankfurt, the FR pack
-including `DUME_acheteur.xml` is uploaded, and a finished FR bid sits at `awaiting_review` with
-**135 requirements, 30 of them from the DUME, and 30 of 30 eCertis lookups resolved**. The only
-thing left for Milestone 1 besides S3.2.1 is pressing record — `docs/demo-runbook.md` is the
-script.
+can reach it (ADR-0022, ADR-0023). A full FR run was performed against this build and proved
+it: **135 requirements, 30 of them from the DUME, and 30 of 30 eCertis lookups resolved**, the
+card resolving *Terrorist offences* to `Auszug aus dem Bundeszentralregister / Führungszeugnis`.
+
+**That run was then deleted on purpose.** Frankfurt is **reset to the clean first-run state** —
+the demo company and its ten evidence documents, **no tender documents and no bids** — so the
+demo can be recorded as a live take rather than a narration. Do not go looking for a parked bid;
+there is none, and that is deliberate. `docs/demo-runbook.md` is the script and describes both
+the state to expect and how to reset it again after a take.
 
 The product runs end to end: a tender pack goes in, requirements come out cited and translated,
 each is checked against the company's documents by a per-requirement ReAct loop with eCertis
@@ -175,10 +179,10 @@ Three options, in the order I would take them.
 1. **Record the end-to-end demo.** It is the only thing besides S3.2.1 holding Milestone 1 open,
    it needs no new code, and it doubles as the user guide's screenshots (S7.4).
    **`docs/demo-runbook.md` is the script** — the take shot by shot, the numbers to quote, and
-   the three things not to do. The state it assumes is already in Frankfurt: seeded company, FR
-   pack uploaded including `DUME_acheteur.xml`, and a finished FR bid at `awaiting_review`. Show
-   the wedge on **FR with the DUME**; the PDFs on their own leave the card dark. The retro's one
-   recommendation is to do this *first* next sprint, not last.
+   the things not to do. Frankfurt is already reset for a **live take**: the seeded company and
+   its ten evidence documents, no tender documents, no bids. The FR pack is uploaded on camera
+   from `backend/tests/fixtures/tenders/fr/`. Show the wedge on **FR with the DUME**; the PDFs on
+   their own leave the card dark. The retro's one recommendation is to do this *first*, not last.
 2. **Start Increment 3 — the review round-trip.** S3.4.1–S3.4.4, S4.5.2, S4.5.3 (**S2.4.3 is
    done** — `make seed-demo` landed early because the demo needed it): the
    verdict, the human interrupt, and the reviewer editing rows. This is the product's safety
@@ -237,9 +241,13 @@ Wait-fillers for this increment: **S6.5, S7.3**, then S7.2.
   `supported` / `partially_supported` / `unsupported` / `not_applicable`; verdicts are
   `go` / `conditional` / `no_go` / `insufficient_evidence`. `/verdicts` is a placeholder route
   that names its story.
-- **A real parked bid is waiting for you.** Bid `7c3869f9-d285-41f5-a7d5-2b2fa5876840` (FR,
-  notice 618320-2026) sits at `awaiting_review` with 135 requirements and 135 matrix rows, 30 of
-  them DUME-sourced with eCertis evidence. It is the fixture for every resume path you write.
+- **You will need a parked bid to work against, and there is none right now.** The FR run that
+  proved ADR-0023 was deleted so the demo could be recorded live (see above). Recreate one in
+  about three minutes whenever you need it: upload the three files in
+  `backend/tests/fixtures/tenders/fr/` as *Tender notice*, *Tender document* and *ESPD / DUME
+  request*, then start a bid on notice `618320-2026` in French. It parks at `awaiting_review`
+  with ~135 requirements, 30 of them DUME-sourced with eCertis evidence — the fixture every
+  resume path in S3.4.2 needs. **If the demo has since been recorded, one may already exist.**
 
 ### The one process change the retro asks for
 
