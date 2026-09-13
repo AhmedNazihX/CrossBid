@@ -35,7 +35,8 @@ requirements at all, which is false.
 I looked for a better sentence on page 17 that states the duty rather than the objective; there
 is none in the PDF.
 
-decision: ____________  (keep mandatory / make informational)
+decision: **keep mandatory — confirmed 2026-09-13.** No change. The reasoning, and why it is the
+opposite of the DE answer, is recorded in the file header.
 
 ## 2. No eCertis ids, deliberately — confirm only
 
@@ -43,7 +44,7 @@ Zero labels carry a criterion id, and that is correct: EASA procures under Art. 
 Financial Regulation, and Tender Specifications p.18 fn.12 says the ESPD may not be used here.
 This fixture is the control case for "degrade honestly rather than invent an equivalence".
 
-decision: ____________  (confirm / disagree)
+decision: **confirmed 2026-09-13.** No change.
 
 ## 3. The structural gap you should record, not fix
 
@@ -55,7 +56,8 @@ the umbrella row and say so in `REPORT.md`.
 recommend: **accept and record.** It is one tender's exclusion grounds, and the DE fixture
 covers exclusion grounds thoroughly (52 labels).
 
-decision: ____________
+decision: **accepted and recorded 2026-09-13.** Written into the file header as a known
+limitation; no label changed.
 
 ## 4. Spot-check three — open the PDF at the page and confirm each is a real obligation
 
@@ -65,14 +67,10 @@ decision: ____________
 | EN-026 | `Tender_Specifications_V1.pdf` | 20 | "All of the above-specified evidence of economic and financial capacity must be provided with the tender." |
 | EN-046 | `Annex_9_Simulation_exercise_V1.pdf` | 1 | "The proposed mock-ups shall demonstrate, at a minimum, the following core functionalities:" |
 
-all three real requirements? ____________  (yes / no — say which)
+all three real requirements? **confirmed 2026-09-13.**
 
-## 5. Close it
+## 5. Closed
 
-When 1–4 are settled, set in this file's header:
-
-```yaml
-  labelled_by: llm_assisted_human_verified
-  verified_by: <your name>
-  verified_on: 2026-09-__
-```
+**Done 2026-09-13.** Header set to `labelled_by: llm_assisted_human_verified`,
+`verified_by: Ahmed Nazih Ali`, `verified_on: 2026-09-13`. This file is closed — and with DE and
+FR, **S6.4 is closed outright**.

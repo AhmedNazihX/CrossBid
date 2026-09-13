@@ -17,12 +17,37 @@ meta:
   ted_publication_number: "606362-2026"
   fixture_dir: tests/fixtures/tenders/en
   source_language: en
-  labelled_by: llm_draft
-  verified_by: pending
-  verified_on: null
+  labelled_by: llm_assisted_human_verified
+  verified_by: Ahmed Nazih Ali
+  verified_on: 2026-09-13
   labelled_on: 2026-09-11
   story: S6.4
   method: |
+    **Verified 2026-09-13 by Ahmed Nazih Ali**, by reading — there is no recall report for this
+    tender, because the live extraction test is DE-only. The worksheet and every decision are in
+    `VERIFICATION.md` beside this file.
+
+    The four rulings made while verifying the DE key were applied here as patterns. One matched
+    and was **deliberately answered the other way**. EN-017's quote is narration -- "The objective
+    of the exclusion criteria is to assess whether ..." -- which on the DE key would have made it
+    `informational`. It stays `mandatory` here because the situation inverts: in DE the bidder's
+    real duty was labelled separately as the Eigenerklärung, so dropping the statute lost nothing,
+    whereas the nine lettered situations of Art. 138(1) and five further declarations live in
+    `Annex_2_*.docx`, which the PDF-only parser cannot page-anchor. EN-017 is the only
+    representation in this key of **14 real requirements**; making it informational would have the
+    key assert that this tender has no exclusion requirements at all. Page 17 was searched for a
+    sentence stating the duty rather than the objective; the PDF contains none.
+
+    **Zero criterion ids, deliberately.** EASA procures under Art. 138 of the Financial
+    Regulation and Tender Specifications p.18 fn.12 says the ESPD may not be used, so there is no
+    equivalence to record. This fixture is the control case for degrading honestly rather than
+    inventing one.
+
+    **Known and accepted limitation:** per-ground exclusion recall is not scorable here while the
+    parser is PDF-only. Reading `.docx` is S2.1.2 (stretch); labelling the annexes without page
+    anchors would break the verbatim guarantee the whole key rests on. The DE fixture covers
+    exclusion grounds thoroughly (52 labels), so this is recorded rather than worked around.
+
     How these labels were produced, exactly.
 
     1. Every PDF in `tests/fixtures/tenders/en/` and `.../en/documents/` was read

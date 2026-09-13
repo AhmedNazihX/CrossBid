@@ -32,7 +32,7 @@ These are the exact analogue of the DE `Kriterienkatalog Leistung` criteria you 
 
 recommend: **change all four to `optional`**, consistent with the DE ruling. Denominator 34 → 30.
 
-decision: ____________
+decision: **applied 2026-09-13 — all four are now `optional`.** Denominator 34 → 30.
 
 ## 2. FR-025 stays mandatory — confirm only
 
@@ -46,7 +46,8 @@ Known limitation, recorded by the labeller: `ThresholdUnit` has no `POINTS` memb
 would misrepresent a 5-of-10 sum, so this label carries **no typed threshold**. The rule is in
 the quote and the summary only — a scorer cannot check it numerically.
 
-decision: ____________  (confirm / disagree)
+decision: **confirmed 2026-09-13.** No change; FR-025 stays `mandatory`, and its missing typed
+threshold is recorded in the file header as a known limitation.
 
 ## 3. The eCertis ids are the strong part — confirm only
 
@@ -58,7 +59,7 @@ them.
 
 **This is the tender to demo the cross-border wedge on.** DE will never show an eCertis card.
 
-decision: ____________  (confirm / disagree)
+decision: **confirmed 2026-09-13.** No change.
 
 ## 4. Spot-check three — open the PDF at the page and confirm each is a real obligation
 
@@ -68,14 +69,9 @@ decision: ____________  (confirm / disagree)
 | FR-023 | 13 | "Critère n°3 : Nombre de références datées et chiffrées de moins de trois ans …" |
 | FR-046 | 19 | "Les formats de signature sont XAdES, CAdES ou PAdES …" |
 
-all three real requirements? ____________  (yes / no — say which)
+all three real requirements? **confirmed 2026-09-13.**
 
-## 5. Close it
+## 5. Closed
 
-When 1–4 are settled, set in this file's header:
-
-```yaml
-  labelled_by: llm_assisted_human_verified
-  verified_by: <your name>
-  verified_on: 2026-09-__
-```
+**Done 2026-09-13.** Header set to `labelled_by: llm_assisted_human_verified`,
+`verified_by: Ahmed Nazih Ali`, `verified_on: 2026-09-13`. This file is closed.

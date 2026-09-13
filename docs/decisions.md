@@ -1793,3 +1793,78 @@ improves enough to pass, that test fails and is the reminder to record it in an 
 path imports it. `docs/project-plan.md`'s layering line is amended to say so.
 
 2 718 tests, 100 % coverage, all offline. **Every story of Increment 2 is now built.**
+
+---
+
+## ADR-0020 — The answer keys are verified, and what verifying them changed
+
+**Date:** 2026-09-13 · **Stories:** S6.4 (closed) · **Status:** accepted (user verification)
+
+All three golden keys now read `labelled_by: llm_assisted_human_verified`, `verified_by: Ahmed
+Nazih Ali`, `verified_on: 2026-09-13`. Each carries a `VERIFICATION.md` worksheet beside it and
+a header stating what a person actually adjudicated.
+
+### What the human pass was, and was not
+
+It was not proofreading. `test_golden_labels.py` already re-opens every cited PDF and asserts
+every quote appears verbatim on its cited page, every criterion id is a real member of the
+generated enum, and `documents_scanned`/`documents_excluded` partition the pack exactly. A typo
+or a wrong page cannot survive CI, so none of the review was spent on them.
+
+What a person decided was four things a machine cannot: whether a clause is *a duty on the
+bidder*, whether a criterion is pass/fail or scored, whether the key may claim what the
+extractor is forbidden to infer, and whether a near-match is the same obligation.
+
+### The four rulings
+
+1. **`Kriterienkatalog Leistung` criteria are scored, not pass/fail.** Missing one costs
+   Leistungspunkte; it does not exclude the offer. Applied to all **35** non-A criteria, not only
+   the 12 that happened to disagree with the extractor — the rest were unmarked only because the
+   extractor agreed, and leaving them would have made the key internally inconsistent. The **11
+   A-Kriterien stay mandatory**: "das Angebot muss … mindestens 80 Punkte erreichen" is a
+   threshold *on* points, and an offer below it is excluded.
+2. **The statute is not the duty.** Six DE labels quoted the recitation of the law rather than an
+   obligation — the § 299 StGB / § 108e StGB / IntBestG entries listed *inside* one exclusion
+   ground, the sub-clause on how the buyer may prove it, and the Russia-sanctions annex. The
+   bidder's duty in each case is the Eigenerklärung, labelled separately; counting the statute as
+   well made one obligation look like six.
+3. **A pointer is not a requirement.** DE-228 quoted the notice's eForms "Quellen der
+   Eignungskriterien" field, which points at the procurement documents. The reference requirement
+   itself is labelled in `Kriterienkatalog_Eignung`.
+4. **The key keeps criterion ids the extractor may not infer.** The 16 disagreements are expected,
+   not defects, and the report lists them separately from misses.
+
+### The same rulings, applied to FR and EN — one matched each
+
+Screening both keys against all four is what made those reviews small: **74 scored labels, two
+matches.** FR's four banded criteria ("Critère n°N … noté sur 3") are the Leistung analogue and
+became `optional`; FR-025 ("n'ayant pas obtenu la note de **5/10** … sont éliminés") is their
+elimination gate and stays `mandatory`, the A-Kriterien analogue.
+
+**EN matched ruling 2 and was deliberately answered the other way.** EN-017's quote is narration
+about the objective of the exclusion criteria. In DE, dropping such a label lost nothing because
+the duty was labelled separately. Here it inverts: the nine lettered situations of Art. 138(1)
+and five further declarations live in `Annex_2_*.docx`, which the PDF-only parser cannot
+page-anchor, so **EN-017 is the only representation of 14 real requirements**. Making it
+informational would have the key assert this tender has no exclusion requirements at all. The
+same rule, read as a rule rather than applied mechanically, gives the opposite answer.
+
+### What it did to the number, and what that means
+
+DE recall moved **0.77 → 0.73 → 0.75 → 0.76** across the rulings. **None of that is extraction
+changing** — the extractor produced the same 279 rows throughout; only the denominator moved,
+each time for a recorded reason. Every move failed the pinned denominator test first, which is
+why the pin exists: it makes a change to the scored set a decision rather than a drift.
+
+**S6.4 is closed. S3.2.1 is not** — its criterion is "recall at least 0.9 on the DE golden
+tender", and the measurement is **0.76**. Its answer key is now verified, so what remains is the
+number, not the evidence. Milestone 1 additionally wants the recorded end-to-end demo.
+
+### One consequence for the demo and the user guide
+
+DE extraction carries **zero** criterion ids and correctly so (the pack publishes no DUME, and
+the prompt forbids inferring one). `check_reqs` only looks up eCertis when a requirement carries
+an id, so **the eCertis card never appears in a DE walkthrough**. FR's eight ids were read off
+the buyer's published `DUME_acheteur.xml` — all 30 of its UUIDs are members of the generated
+enum, independently confirming ADR-0007. **The cross-border wedge must be demonstrated on FR**,
+which affects S7.4's user guide and Milestone 1's recorded demo.

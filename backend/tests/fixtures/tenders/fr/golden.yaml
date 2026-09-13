@@ -18,12 +18,33 @@ meta:
   ted_publication_number: "618320-2026"
   fixture_dir: tests/fixtures/tenders/fr
   source_language: fr
-  labelled_by: llm_draft
-  verified_by: pending
-  verified_on: null
+  labelled_by: llm_assisted_human_verified
+  verified_by: Ahmed Nazih Ali
+  verified_on: 2026-09-13
   labelled_on: 2026-09-11
   story: S6.4
   method: |
+    **Verified 2026-09-13 by Ahmed Nazih Ali**, by reading — there is no recall report for this
+    tender, because the live extraction test is DE-only. The worksheet and every decision are in
+    `VERIFICATION.md` beside this file.
+
+    The four rulings made while verifying the DE key were applied here as patterns, and **only
+    one matched**: FR-021 to FR-024, the banded selection criteria ("Critère n°N ... noté sur 3"),
+    are the analogue of the `Kriterienkatalog Leistung` criteria -- scored, not pass/fail -- and
+    moved to `kind: optional`. Denominator 34 -> 30.
+
+    **FR-025 stays `mandatory`**: "Les candidats n'ayant pas obtenu la note de 5/10 ... sont
+    éliminés" is the elimination gate, the analogue of the DE A-Kriterien, a threshold *on* points
+    that excludes a candidate. Its recorded limitation stands -- `ThresholdUnit` has no `POINTS`
+    member and `PERCENT` would misrepresent a 5-of-10 sum, so it carries no typed threshold and a
+    scorer cannot check it numerically.
+
+    **The eight criterion ids were read off the buyer's published `DUME_acheteur.xml`, never
+    inferred**, and all 30 `ccv:Criterion` UUIDs in that file are members of the generated
+    `EcertisCriterionId` enum -- an independent confirmation of ADR-0007. This is therefore the
+    fixture on which the cross-border wedge can be demonstrated; the DE tender publishes no DUME
+    and its extraction carries no criterion id at all.
+
     How these labels were produced, exactly.
 
     1. Every PDF in `tests/fixtures/tenders/fr/` and `.../fr/documents/` was read
@@ -353,7 +374,7 @@ requirements:
   # ---- Article 15.1: the scored selection criteria (RC p.13) ----
   - id: FR-021
     category: economic_financial
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
@@ -371,7 +392,7 @@ requirements:
 
   - id: FR-022
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
@@ -387,7 +408,7 @@ requirements:
 
   - id: FR-023
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
@@ -403,7 +424,7 @@ requirements:
 
   - id: FR-024
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
