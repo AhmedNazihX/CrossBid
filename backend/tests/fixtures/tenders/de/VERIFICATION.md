@@ -4,8 +4,8 @@ Generated 2026-09-13 from the live run of 2026-09-12
 (`tests/fixtures/extractions/de.live.json`, 279 rows, $1.47) scored by
 `uv run scripts/recall.py tests/fixtures/extractions/de.live.json`.
 
-**Current figure: recall 0.77 — 168 of 219 mandatory bid-eligibility labels — against a 0.90
-threshold. FAIL.**
+**Current figure: recall 0.73 — 135 of 184 mandatory bid-eligibility labels — against a 0.90
+threshold. FAIL.** (Was 0.77/219 before the §3 cluster-A ruling of 2026-09-13.)
 
 S6.4 says labels are "produced with LLM assistance and each verified by a human". The machine
 half is already enforced: `test_golden_labels.py` re-opens every cited PDF and asserts every
@@ -98,7 +98,12 @@ extractor is right (`optional`) and they should leave the scored set. `Eignung` 
 **This does not rescue the number.** All 12 are currently *matched*, so reclassifying them
 removes 12 from both sides: **0.77 → 0.75**. Decide it on what the tender actually means.
 
-decision: ____________  (keep mandatory / change to optional)
+decision: **DONE 2026-09-13 — changed to optional.** The ruling is "Leistung criteria are
+scored, not pass/fail", applied to all **35** non-A criteria in the catalogue, not only the 12
+that happened to disagree with the extractor. The **11 A-Kriterien stay mandatory**: "Das
+Angebot muss … mindestens 80 Punkte erreichen" is a threshold *on* points and excludes an offer.
+Denominator 219 → 184, **recall 0.77 → 0.73**. The score went down, which is the point — the
+call was made on what the tender means.
 
 ### Cluster B — key says OPTIONAL, extractor says MANDATORY (8 labels) — recommend KEEP
 Conditional escape clauses and formatting notes: "**Sofern** Sie aus berechtigten Gründen die

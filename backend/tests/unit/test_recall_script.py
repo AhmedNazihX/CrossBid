@@ -40,8 +40,13 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = BACKEND_DIR / "scripts" / "recall.py"
 EXTRACTIONS_DIR = BACKEND_DIR / "tests" / "fixtures" / "extractions"
 
-DE_MANDATORY_LABELS = 253
-DE_DENOMINATOR = 219
+DE_MANDATORY_LABELS = 218
+DE_DENOMINATOR = 184
+"""253/219 until 2026-09-13, when the user ruled the `Kriterienkatalog Leistung` criteria are
+scored rather than pass/fail: 35 of them became `optional` and left the scored set. The 11
+A-Kriterien in the same catalogue stayed `mandatory` — an offer below their point thresholds is
+excluded, so they are pass/fail despite being expressed in points. Recall fell 0.77 -> 0.73,
+which is why these numbers are pinned: the denominator may only move on a recorded decision."""
 """The DE answer key's mandatory labels, and the ones the extractor can actually produce.
 
 Pinned because the gap between them is the whole point of ADR-0015: 34 of the mandatory

@@ -32,6 +32,17 @@ meta:
   labelled_on: 2026-09-11
   story: S6.4
   method: |
+    2026-09-13, user ruling on the `Kriterienkatalog Leistung`: its criteria are **scored,
+    not pass/fail**. Missing one costs Leistungspunkte; it does not exclude the offer. So 35
+    labels from that catalogue moved from `kind: mandatory` to `kind: optional` and left the
+    scored set (denominator 219 -> 184, recall 0.77 -> 0.73 -- the figure went *down*, which
+    is the point: the ruling was made on what the tender means, not on the score).
+
+    The **11 A-Kriterien in the same catalogue stay `mandatory`**. They read like scoring but
+    are not: "Das Angebot muss im B-Kriterium B 1.3 ... mindestens 80 Punkte erreichen" is a
+    threshold *on* points, and an offer below it is excluded. A-Kriterium wording is the
+    marker (`A 1.1`, `A 2.5`); B-Kriterien earn points and are now optional.
+
     Drafted by an LLM (Claude Opus 5) on 2026-09-11, from the text the repo's own
     `PyMuPDFParser` produces -- not from the raw PDFs and not from `page.get_text()`.
     That matters: `pymupdf4llm` returns markdown, so a bold clause arrives as
@@ -2064,7 +2075,7 @@ requirements:
   # ---------------------------------------------------------------------------------
   - id: DE-180
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: document_submission
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -2112,7 +2123,7 @@ requirements:
 
   - id: DE-183
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -2130,7 +2141,7 @@ requirements:
 
   - id: DE-184
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -2150,7 +2161,7 @@ requirements:
 
   - id: DE-185
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -2173,7 +2184,7 @@ requirements:
 
   - id: DE-186
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4219,7 +4230,7 @@ requirements:
 
   - id: DE-450
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: document_submission
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4239,7 +4250,7 @@ requirements:
 
   - id: DE-451
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: document_submission
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4254,7 +4265,7 @@ requirements:
 
   - id: DE-452
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: document_submission
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4271,7 +4282,7 @@ requirements:
 
   - id: DE-453
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: document_submission
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4287,7 +4298,7 @@ requirements:
 
   - id: DE-454
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4312,7 +4323,7 @@ requirements:
 
   - id: DE-455
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4334,7 +4345,7 @@ requirements:
 
   - id: DE-456
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4361,7 +4372,7 @@ requirements:
 
   - id: DE-457
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4386,7 +4397,7 @@ requirements:
 
   - id: DE-458
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4410,7 +4421,7 @@ requirements:
 
   - id: DE-459
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4431,7 +4442,7 @@ requirements:
 
   - id: DE-460
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4454,7 +4465,7 @@ requirements:
 
   - id: DE-461
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4478,7 +4489,7 @@ requirements:
 
   - id: DE-462
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4503,7 +4514,7 @@ requirements:
 
   - id: DE-463
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4523,7 +4534,7 @@ requirements:
 
   - id: DE-464
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4544,7 +4555,7 @@ requirements:
 
   - id: DE-465
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4565,7 +4576,7 @@ requirements:
 
   - id: DE-466
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4589,7 +4600,7 @@ requirements:
 
   - id: DE-467
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4609,7 +4620,7 @@ requirements:
 
   - id: DE-468
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4629,7 +4640,7 @@ requirements:
 
   - id: DE-469
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4648,7 +4659,7 @@ requirements:
 
   - id: DE-470
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4673,7 +4684,7 @@ requirements:
 
   - id: DE-471
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4693,7 +4704,7 @@ requirements:
 
   - id: DE-472
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4715,7 +4726,7 @@ requirements:
 
   - id: DE-473
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4734,7 +4745,7 @@ requirements:
 
   - id: DE-474
     category: formal
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: document_submission
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4751,7 +4762,7 @@ requirements:
 
   - id: DE-475
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -4768,7 +4779,7 @@ requirements:
 
   - id: DE-476
     category: formal
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: neither
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -5198,7 +5209,7 @@ requirements:
 
   - id: DE-480
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -5270,7 +5281,7 @@ requirements:
 
   - id: DE-484
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
@@ -5293,7 +5304,7 @@ requirements:
 
   - id: DE-485
     category: technical_professional
-    kind: mandatory
+    kind: optional
     stage: bid_eligibility
     checkable: company_property
     doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
