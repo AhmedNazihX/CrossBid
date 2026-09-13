@@ -20,7 +20,14 @@ available_models:
   - google/gemini-2.5-flash-lite
 
 temperature: 0.0
-max_tokens: 4096
+
+# The completion cap, not the context window. 4096 was too small and failed *silently*: a
+# dense extraction section returns one structured object holding every requirement it found,
+# and the Eigenerklärung Ausschlussgründe section alone holds 15. Exceeding the cap raises
+# LengthFinishReasonError, which `extract_reqs` records as a bare `model_error` and retries
+# once — the retry hits the same wall, and six to twelve pages of requirements are lost with
+# nothing in the output saying why. Measured 2026-09-13.
+max_tokens: 16384
 
 # The agent's standing instructions. Tender text is untrusted input and is always wrapped as
 # a delimited data block: this prompt states the rule at system level, and `guards/wrap.py`

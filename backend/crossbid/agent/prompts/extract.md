@@ -64,3 +64,17 @@ document with the offer is `bid_eligibility`; the duties written inside it are n
 Getting this wrong in the safe-looking direction is not safe. Marking contract duties
 `bid_eligibility` buried the real selection criteria under 484 spurious rows when this was
 measured on a real German pack.
+
+**The statement of work is the exception that costs the most.** A `Leistungsbeschreibung`,
+`cahier des charges` or `tender specification` describes the service, so most of it really is
+`contract_performance` — but buyers routinely state the **minimum qualifications a bidder's
+staff must already hold** inside it, and the suitability catalogue then just points back at
+those pages. Years of experience, certifications, language levels, a minimum number of days on
+a reference project: these are selection criteria wherever they are printed, and they are
+`bid_eligibility`. Read such a document for them rather than dismissing it as delivery text —
+measured on a real German pack, pages 9 to 12 of its `Leistungsbeschreibung` carry seventeen
+personnel minimums and a run that treated the whole document as background returned an empty
+list for every one of them.
+
+The test still holds and settles it: a company that never won the contract would still have
+had to *have* those staff to be allowed to bid.

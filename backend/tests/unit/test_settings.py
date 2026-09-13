@@ -100,7 +100,10 @@ def test_yaml_defaults_load(valid_env: None) -> None:
     assert settings.runtime.models.embed == "openai/text-embedding-3-small"
     assert settings.runtime.models.judge == "anthropic/claude-haiku-4.5"
     assert settings.runtime.temperature == 0.0
-    assert settings.runtime.max_tokens == 4096
+    # 4096 until 2026-09-13, when it was measured losing whole sections: a dense extraction
+    # section returns one structured object holding every requirement it found, and exceeding
+    # the cap raises LengthFinishReasonError, which the node records as a bare `model_error`.
+    assert settings.runtime.max_tokens == 16384
     assert settings.runtime.ingestion.chunk_tokens == 800
     assert settings.runtime.ingestion.chunk_overlap == 100
     assert settings.runtime.ingestion.section_pages == 6

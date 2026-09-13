@@ -140,6 +140,29 @@ VALID_CRITERION_IDS: Final = frozenset(CRITERION_IDS)
 
 _WHITESPACE: Final = re.compile(r"\s+")
 
+_PARSER_LINE_BREAK: Final = re.compile(r"<br\s*/?>", re.IGNORECASE)
+_PARSER_INLINE_TAGS: Final = re.compile(r"</?(?:sup|sub|u|b|i|em|strong)\s*>", re.IGNORECASE)
+"""The inline *tags* `pymupdf4llm` emits, replaced by a space before the check.
+
+Emphasis below covers `**bold**`; this covers what the parser writes when markdown cannot
+express the layout. Inside a table cell a line break arrives as a literal `<br>`, and
+footnote markers arrive as `<sup>`.
+
+This one was measured, not guessed. On 2026-09-13 seven rows from the DE pack's
+`Eigenerklärung Ausschlussgründe` were thrown away as "not verbatim" while being perfectly
+honest quotes: the page holds
+`... aufträge gegen geltende<br>umwelt-, sozial- oder arbeitsrechtliche ...` and the model,
+reading the clause as a human does, wrote a space where the `<br>` is. The quote matched for
+65 characters and then diverged on parser punctuation the buyer never wrote. Those rejections
+cost nine labels of recall in one document.
+
+The two patterns are separate because the substitution differs, and getting that backwards
+re-breaks the check. `<br>` is a *line break*: it becomes a space, or `geltende<br>umwelt`
+fuses into one word that appears in no document. The inline tags are not whitespace and
+become nothing, or `EUR<sup>1</sup>` would split into `EUR 1` and reject a quote reading
+`EUR1`.
+"""
+
 _PARSER_EMPHASIS: Final = re.compile(r"[*_`]+")
 """Inline markdown runs, removed from both sides of the verbatim check.
 
@@ -633,8 +656,9 @@ def _is_repeat(row: Requirement, text: str, other: Requirement, other_text: str)
 
 
 def _normalised(text: str) -> str:
-    """Comparable text: emphasis removed, whitespace collapsed, ends trimmed, case kept."""
-    return _WHITESPACE.sub(" ", _PARSER_EMPHASIS.sub("", text)).strip()
+    """Comparable text: parser markup removed, whitespace collapsed, trimmed, case kept."""
+    without_tags = _PARSER_INLINE_TAGS.sub("", _PARSER_LINE_BREAK.sub(" ", text))
+    return _WHITESPACE.sub(" ", _PARSER_EMPHASIS.sub("", without_tags)).strip()
 
 
 def _comparable(text: str) -> str:

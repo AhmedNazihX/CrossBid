@@ -1868,3 +1868,93 @@ an id, so **the eCertis card never appears in a DE walkthrough**. FR's eight ids
 the buyer's published `DUME_acheteur.xml` — all 30 of its UUIDs are members of the generated
 enum, independently confirming ADR-0007. **The cross-border wedge must be demonstrated on FR**,
 which affects S7.4's user guide and Milestone 1's recorded demo.
+
+---
+
+## ADR-0021 — Three real extraction defects, and a measurement too noisy to prove them
+
+**Date:** 2026-09-13 · **Stories:** S3.2.1 (still open) · **Status:** accepted
+
+Attacking the extraction gap found three genuine defects and fixed all three. It did **not**
+improve recall, and the reason that sentence is not a contradiction is the last section.
+
+### The diagnosis, which the answer key made possible
+
+Only **55 of the DE pack's 191 pages (29 %)** produced a single row, and the misses were
+concentrated: 17 of 43 in the `Leistungsbeschreibung`, which yielded 11 rows across pages 13–14
+and nothing at all from pages 1–12. With `section_pages: 6` that document is four sections, and
+two of them returned empty with **no problem recorded**.
+
+### Defect 1 — `max_tokens: 4096` silently lost whole sections
+
+Probing one section live (pennies, not a $1.50 run) returned `LengthFinishReasonError`. A dense
+section returns **one** structured object holding every requirement it found; the
+`Eigenerklärung Ausschlussgründe` section alone holds fifteen. Exceeding the completion cap
+raises, which `_attempt` records as a bare `model_error` and re-asks once — and the re-ask hits
+the same wall. Six to twelve pages of requirements vanish with nothing in the output saying why.
+
+Raised to 16384. The same probe then returned 12 rows. This is a correctness bug independent of
+any score: a run that silently drops a section is wrong even if recall never moves.
+
+### Defect 2 — the verbatim check rejected honest quotes over parser punctuation
+
+Seven rows from `Eigenerklärung Ausschlussgründe` were thrown away as "not verbatim" while
+quoting the buyer exactly. The page holds
+`... aufträge gegen geltende<br>umwelt-, sozial- oder arbeitsrechtliche ...` — `<br>` being
+what `pymupdf4llm` writes when a table cell wraps — and the model, reading the clause as a
+human does, wrote a space. The quote matched for 65 characters and then diverged on punctuation
+the buyer never wrote. `_normalised` already stripped `**bold**` for exactly this reason
+(ADR-0008) but not the tags.
+
+The two substitutions differ, and reversing them re-breaks the check: `<br>` becomes a **space**
+or `geltende<br>umwelt` fuses into a word in no document; `<sup>` becomes **nothing** or
+`EUR<sup>1</sup>` splits into `EUR 1` and rejects a quote reading `EUR1`. Both directions are
+pinned by tests — the second was caught *by* the first version of that test failing.
+
+### Defect 3 — the statement of work was read as background
+
+`prompts/extract.md` warns hard against marking delivery duties `bid_eligibility`, citing the
+484 spurious rows that mistake once produced. A `Leistungsbeschreibung` reads like delivery, so
+the model returned empty lists for it — while pages 9–12 carry seventeen **personnel
+qualification minimums**, which are selection criteria wherever they are printed. The prompt now
+names that case, with the test that settles it: a company that never won the contract would
+still have had to *have* those staff to be allowed to bid.
+
+Probed before and after on the same section: **0 rows → 14**, all
+`mandatory/bid_eligibility/technical_professional`. Two controls — the framework agreement and
+VOL/B — still returned **0 rows**, so the exception did not become a general loosening.
+
+### Why the score did not move, and what that means
+
+| configuration | matched | recall |
+|---|---|---|
+| baseline | 134 | 0.76 |
+| + statement-of-work prompt | 130 | 0.73 |
+| + `max_tokens` 16384 | 135 | 0.76 |
+| + markup fix | 128 | 0.72 |
+
+Four live runs of the same pack, same model, `temperature: 0.0`: **128 to 135 matched, a spread
+of 7 labels — 4 points of recall.** Every effect being chased is inside that. At n = 1 per
+configuration the table above measures noise as much as it measures the changes, and reading it
+as "the markup fix cost 7 labels" would be unfounded.
+
+**So the three fixes are kept on their own direct evidence — a probe showing 0 → 12 rows where a
+section had silently died, a documented rejection of honest quotes, 0 → 14 rows with clean
+controls — and not on the headline.** Reverting them to recover 0.76 would be optimising a noisy
+metric over a system known to be wrong.
+
+The headline is **0.76 → 0.72 on the committed run, and the honest summary is that recall is
+~0.74 ± 0.02 and unchanged.** S3.2.1 stays open.
+
+### What this changes about method
+
+Single live runs cannot validate an extraction change: the noise floor is ±4 points and each
+measurement costs ~$1.60 and four minutes. Anything further needs repeated runs per
+configuration, or a cheap offline proxy. The **section probe** built here is that proxy for
+targeted work — it isolates one section for pennies and answers "does this section extract at
+all", which is what found all three defects. Total spend for this round: about **$6.40**.
+
+One consequence for the next attempt: `Erklaerung_zur_sozialen_Nachhaltigkeit` pages 9–12 now
+produce 16 `no_verbatim_quote` rejections where they previously produced a `model_error` and
+nothing. That section is no longer silently lost, which is the improvement; its quote fidelity
+is the next defect, not a regression.

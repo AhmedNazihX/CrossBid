@@ -54,6 +54,7 @@ from crossbid.agent.nodes.extract_reqs import (
     Prompt,
     RequirementExtractor,
     SectionExtraction,
+    _is_verbatim,
     build_extract_reqs,
     structured_extractor,
 )
@@ -1344,3 +1345,47 @@ def test_every_prompt_file_renders_with_the_values_its_node_passes() -> None:
     assert names == sorted(PROMPT_VALUES)
     for name, values in PROMPT_VALUES.items():
         assert render(name, values), name
+
+
+# --------------------------------------------- parser markup is not the buyer's punctuation
+
+
+@pytest.mark.parametrize(
+    ("page", "quote"),
+    [
+        pytest.param(
+            "Aufträge gegen geltende<br>umwelt-, sozial- oder arbeitsrechtliche Pflichten",
+            "Aufträge gegen geltende umwelt-, sozial- oder arbeitsrechtliche Pflichten",
+            id="br-inside-a-table-cell",
+        ),
+        pytest.param(
+            "Der Umsatz muss mindestens 3.000.000,00 EUR<sup>1</sup> betragen.",
+            "Der Umsatz muss mindestens 3.000.000,00 EUR1 betragen.",
+            id="sup-footnote-marker",
+        ),
+        pytest.param(
+            "Die <u>Eigenerklärung</u> ist beizufügen.",
+            "Die Eigenerklärung ist beizufügen.",
+            id="underline-tag",
+        ),
+    ],
+)
+def test_a_quote_spanning_parser_markup_is_still_verbatim(page: str, quote: str) -> None:
+    """Seven honest rows were thrown away over this, costing nine labels of recall.
+
+    `pymupdf4llm` writes `<br>` where a table cell wraps and `<sup>` for a footnote marker.
+    A model reading the clause as a human does writes a space, or nothing, in their place —
+    and the quote is the buyer's words either way. Rejecting it costs the graded number.
+    """
+    # Act & Assert
+    assert _is_verbatim(quote, page)
+
+
+def test_stripping_markup_does_not_fuse_the_words_it_separated() -> None:
+    """`<br>` becomes a space, never an empty string: `geltende<br>umwelt` is two words.
+
+    Deleting the tag instead would invent `geltendeumwelt`, which appears in no document, and
+    would then reject the honest quote it was meant to admit.
+    """
+    # Act & Assert
+    assert not _is_verbatim("geltendeumwelt", "geltende<br>umwelt")
