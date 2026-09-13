@@ -191,10 +191,70 @@ defensible story for the grader than a number chased to 0.9.
 
 ---
 
+## Starting Increment 3 — read this first
+
+Increment 3 is the **review round-trip**: the verdict, the human interrupt that accepts a
+reviewer's edits, and the workspace UI for making them. It is the product's safety boundary and
+the last substantial work before the submission line at Milestone 5.
+
+### The stories, and why the order is forced
+
+`S3.4.1 → S3.4.2 → {S3.4.3, S3.4.4} → {S4.5.2, S4.5.3}`
+
+| Story | Size | What it is | `needs` |
+|---|---|---|---|
+| **S3.4.1** | M | The scorer: mandatory row `unsupported` or an unmet exclusion ground → `no_go`; mandatory `partially_supported` → `conditional`; a mandatory row with no evidence is **never** `go` | S3.3.1 ✅ |
+| **S3.4.2** | M | The interrupt accepts a review: rows + decision come back, the scorer re-runs on the reviewer's statuses, bid ends `done`; a second submission is **409** | S3.4.1 |
+| **S3.4.3** | M | Read-model writes at scoring and at review; `GET /bids` reads only from them, with a consistency test against the checkpoint | S3.4.2 |
+| **S3.4.4** | M | Resilience: unread pages listed, LLM timeout → one retry → smaller model, schema violation → one re-ask → `partially_supported`, no eCertis entry flagged, expired certificate warned with its date | S3.4.2 |
+| **S4.5.2** | **L** | Reviewer edits a row's status, gives a reason, attaches a document, switches FR/DE per row; edits held locally until confirm, agent's original stays visible | S3.4.3, S4.0.1 ✅ |
+| **S4.5.3** | M | Confirm or override the verdict with a reason; submitted once, final state shown | S3.4.2, S4.0.1 ✅ |
+
+**Nothing parallelises until S3.4.1 lands** — every other story depends on it directly or
+transitively. After S3.4.2, S3.4.3 and S3.4.4 are independent of each other, and so are S4.5.2
+and S4.5.3 once their backend dependency is in. S4.5.2 is the only **L** in the increment.
+
+Wait-fillers for this increment: **S6.5, S7.3**, then S7.2.
+
+### What already exists, so you do not rebuild it
+
+- **The graph is built for this.** `crossbid/agent/graph.py`'s module docstring already names
+  `score_verdict`, `apply_review` and `finalize` as "later stories", and decision 2 explains why
+  the interrupt is a **node calling `interrupt()`** rather than `interrupt_after=`: a static
+  interrupt on the last node leaves `aget_state().next == ()` with no `interrupts`, which is
+  indistinguishable from a finished run. The node parks with `next == ("await_review",)` and
+  continues on `Command(resume=review)`, **which is exactly the mechanism S3.4.2 needs.** That
+  was measured on langgraph 1.2.11 before being chosen — do not re-litigate it.
+- **`_request_review` is the seam.** It currently returns `{}` and its docstring says so:
+  "S3.4.2 replaces the return with the review payload `interrupt()` hands back."
+- **One documented caveat you will hit:** on resume the node re-runs from its top, so the
+  `awaiting_review` status write happens twice. The value is identical both times and
+  `apply_review`'s stage overwrites it immediately. This is known, not a bug to chase.
+- **`stage()` wraps every node** — status on entry, projection on exit, `StageError` naming the
+  stage and never the document (ADR-0008). New nodes go through it; do not write the read model
+  directly from a node.
+- **The vocabulary is settled (ADR-0013)**, and the UI already speaks it: rows are
+  `supported` / `partially_supported` / `unsupported` / `not_applicable`; verdicts are
+  `go` / `conditional` / `no_go` / `insufficient_evidence`. `/verdicts` is a placeholder route
+  that names its story.
+- **A real parked bid is waiting for you.** Bid `7c3869f9-d285-41f5-a7d5-2b2fa5876840` (FR,
+  notice 618320-2026) sits at `awaiting_review` with 135 requirements and 135 matrix rows, 30 of
+  them DUME-sourced with eCertis evidence. It is the fixture for every resume path you write.
+
+### The one process change the retro asks for
+
+**Record the demo first, not last.** Every defect found in Increment 2 — unverified answer keys,
+a wedge no run could light, a DUME no user could upload — was reachable only by walking the
+product end to end, and each was found when the walkthrough was finally attempted. Increment 3's
+demo is the review round-trip; walking it early is how S3.4.2's 409 and S4.5.2's local-edit
+state get exercised before they are called done.
+
+---
+
 ## Reproducing the state
 
 ```bash
-make install && make lint && make test          # 3 853 tests, 100 % coverage, all offline
+make install && make lint && make test          # 3 996 tests, 100 % coverage, all offline
 uv run scripts/recall.py                        # scores the committed fixtures
 uv run scripts/recall.py tests/fixtures/extractions/de.live.json   # the real DE figure; exits 1
 make test-live                                  # costs money; the DE bid run alone is ~$1.60
