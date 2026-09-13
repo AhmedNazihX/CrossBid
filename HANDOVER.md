@@ -101,12 +101,20 @@ regression.
 
 ## Facts that will bite you if you do not know them
 
-- **The eCertis card can only be demonstrated on the FR tender.** DE extraction carries **zero**
-  criterion ids, and correctly so: the pack publishes no DUME and `prompts/extract.md` forbids
-  inferring one (ADR-0007 — a wrong id is worse than none). `check_reqs` only looks up eCertis
-  when an id is present, so a DE walkthrough will never show the cross-border wedge. FR's eight
-  ids were read off the buyer's published `DUME_acheteur.xml`. **This affects S7.4's user guide
-  and Milestone 1's recorded demo**, which both assume DE is the showcase.
+- **The eCertis card needs the FR tender's `DUME_acheteur.xml` uploaded — the PDFs alone will
+  not do it.** DE extraction carries **zero** criterion ids, and correctly so: the pack publishes
+  no DUME and `prompts/extract.md` forbids inferring one (ADR-0007 — a wrong id is worse than
+  none). `check_reqs` only looks up eCertis when an id is present, so a DE walkthrough never
+  shows the cross-border wedge.
+
+  **Corrected 2026-09-14 (ADR-0022):** an earlier version of this file, and ADR-0020, said
+  "demo the wedge on FR" full stop. That was wrong and would have produced a dark card on
+  camera. Scanning all 38 fixture PDFs across DE, FR and EN found **zero** real ESPD criterion
+  UUIDs — FR's RC prints none, and the notice's two are TED internal identifiers, not criteria.
+  The eight FR ids were read by a human straight off `DUME_acheteur.xml`, a file the product
+  could not ingest at all until the DUME work landed. So the demo step is: upload
+  `DUME_acheteur.xml` as `tender_espd_request` **alongside** the FR PDFs, then run the bid.
+  **This affects S7.4's user guide and Milestone 1's recorded demo.**
 - **Any scorer must filter the DE key on `stage: bid_eligibility`.** Rows deliberately sit in
   `requirements` that are `contract_performance`, so the stage filter can be scored in both
   directions (ADR-0015). `scored_labels` does this; anything new must too.
@@ -114,6 +122,22 @@ regression.
   Docker image. Use `make dev-web` (`npm run dev`) locally, and `node .next/standalone/server.js`
   in production. Starting it the wrong way yields a working-looking server whose chunks 404 and
   a "client-side exception" in the browser. This cost time twice.
+- **`npm run build` while `next dev` is running breaks :3000 the same way.** The build overwrites
+  the `.next` the dev server is serving from, so the HTML still renders and every
+  `_next/static/*` chunk 404s — identical symptom, different cause, and the one that actually
+  happened the third time. Restart the dev server after any build.
+- **`SUPABASE_STORAGE_BUCKET` must be set, and the Frankfurt bucket is `company-docs`.** The
+  root `.env` carried no such line, so the app used the code default `company-documents`, which
+  does not exist in the project — every upload failed `404 Bucket not found`. `storage.py`
+  deliberately suppresses Storage's own message (nothing about the bucket leaves the server), so
+  the only symptom is "The file could not be stored. Please upload it again." on all ten seeded
+  documents. If uploads fail wholesale, list the buckets before debugging the code. Note
+  `infra/.env.example` still says `company-documents` — it is an example, not this project.
+- **The host needs `frontend/.env.local`.** Next reads `.env*` from `frontend/` only, so the
+  root `.env`'s `NEXT_PUBLIC_DEV_COMPANY_ID` never reaches `npm run dev`; the app then sends no
+  `X-Dev-Company` header and every API-backed screen 401s. Only `make dev` (Compose) was ever
+  wired, via a build arg. Untracked and not secret — both `NEXT_PUBLIC_*` values are inlined
+  into the client bundle by design. `make seed-dev` prints the line.
 - **The pinned denominator is a feature.** `test_recall_script.py` fails whenever the scored set
   changes. That is deliberate: it forces a change to the answer key to be a recorded decision
   rather than a drift. Update the constant *with its reason*, do not delete the test.
@@ -142,8 +166,9 @@ blend that paints a visibly darker rectangle across the hero.
 Three options, in the order I would take them.
 
 1. **Record the end-to-end demo.** It is the only thing besides S3.2.1 holding Milestone 1 open,
-   it needs no new code, and it doubles as the user guide's screenshots (S7.4). Demo the eCertis
-   wedge on **FR**.
+   it needs no new code, and it doubles as the user guide's screenshots (S7.4). Seed with
+   `make seed-demo`, then show the eCertis wedge on **FR with `DUME_acheteur.xml` uploaded** —
+   see the corrected note above; the PDFs on their own leave the card dark.
 2. **Start Increment 3 — the review round-trip.** S3.4.1–S3.4.4, S2.4.3, S4.5.2, S4.5.3: the
    verdict, the human interrupt, and the reviewer editing rows. This is the product's safety
    boundary and the last substantial work before the submission line at Milestone 5.

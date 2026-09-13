@@ -208,6 +208,15 @@ Copy `infra/.env.example`; `make dev` passes both through Compose as build
 arguments, so changing either means rebuilding the `web` image. Once S4.1 lands
 the app also reads the Supabase URL and anon key from `NEXT_PUBLIC_*` variables.
 
+**On the host they must live in `frontend/.env.local`, not the repository root.**
+Next reads `.env*` from _this_ directory only, so the root `.env` that `make dev`
+and the backend use never reaches `next dev`. Without it the app sends no
+`X-Dev-Company` header and every screen that calls the API shows a 401 — a
+failure that looks like a broken page rather than a missing variable. The file is
+gitignored (`.env.*`) and holds nothing secret: both variables are inlined into
+the client bundle by design. `make seed-dev` prints the authoritative
+`NEXT_PUBLIC_DEV_COMPANY_ID` line to paste; keep it equal to the root `.env`.
+
 ## Docker
 
 `Dockerfile` is a three-stage build (deps → build → runtime) on `node:22-alpine`,
