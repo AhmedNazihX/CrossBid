@@ -75,30 +75,68 @@ DUME — which the FR fixture does (30 criteria, 8 labelled). **Demo the wedge o
 
 ---
 
-## 3. The 25 `kind` disagreements — spot-check, then accept in bulk
+## 3. The 25 `kind` disagreements — 3 decisions, one per cluster
 
-Golden `kind` versus extracted `kind` on matched pairs (`optional` vs `mandatory`, and so on).
-These do not move recall — the denominator uses the key's own `kind` — but a wrong `kind` in the
-key is still wrong. They cluster in `Vordruck_Referenzen` and `Kriterienkatalog_Leistung`.
+`kind` is `mandatory` / `optional` / `informational`. It matters because **recall scores only
+the key's `mandatory` + `bid_eligibility` labels** — so the key's `kind` decides what is counted.
+The extractor's `kind` never affects the score; only changing the *key* would.
 
-Full list: section `DISAGREEMENTS` of the report.
+They fall into three clean clusters. Decide one line per cluster, not per label.
 
-decision: ____________  (accept the key's values / list the ids to change)
+### Cluster A — key says MANDATORY, extractor says OPTIONAL (12 labels)
+All from `Kriterienkatalog_Leistung` — the *performance* catalogue. Examples:
+- DE-183 "Beherrschung der deutschen Sprache … Niveau C1"
+- DE-455 "mindestens sechs Jahre Berufserfahrung, davon mindestens vier Jahre …"
+- DE-456 "Mindestens ein Weiterbildungszertifikat: IPv6 Forum … (CNE6) Silver"
+- DE-460 "Die zu bewertende Referenz muss mindestens drei der … Inhalte …"
+
+**The real question: are the *Leistung* criteria pass/fail, or are they scored?** If a bidder
+who misses them is excluded, the key is right (`mandatory`). If they only lose points, the
+extractor is right (`optional`) and they should leave the scored set. `Eignung` = suitability
+(pass/fail); `Leistung` = performance (points) — which is why the extractor read them as scored.
+
+**This does not rescue the number.** All 12 are currently *matched*, so reclassifying them
+removes 12 from both sides: **0.77 → 0.75**. Decide it on what the tender actually means.
+
+decision: ____________  (keep mandatory / change to optional)
+
+### Cluster B — key says OPTIONAL, extractor says MANDATORY (8 labels) — recommend KEEP
+Conditional escape clauses and formatting notes: "**Sofern** Sie aus berechtigten Gründen die
+Unterlagen nicht beibringen können, teilen Sie diese Gründe mit" (DE-063, DE-438, DE-536),
+"**Soweit** Sie mehr als drei Referenzen aufführen, benutzen Sie bitte die Folgeseiten"
+(DE-535). These bind only if a condition applies; the extractor reads "bitte + imperative" as an
+unconditional duty. The key looks right.
+
+decision: ____________  (keep / change to mandatory)
+
+### Cluster C — key says INFORMATIONAL, extractor says MANDATORY (5 labels) — recommend KEEP
+Statements of consequence rather than actions the bidder takes: "Referenzen, die … nicht
+erfüllen, gelten nicht" (DE-161), "Noch nicht realisierte Leistungsstände können nicht
+berücksichtigt werden" (DE-441), "Sie ist nicht gesondert zu unterschreiben" (DE-132). The
+arguable one is DE-477 "Weitere Fragen … sind nicht gestattet", which is a prohibition and so
+arguably a duty.
+
+decision: ____________  (keep / change DE-477 only / change all)
 
 ---
 
-## 4. Spot-check the bulk — confidence, not exhaustion
+## 4. Spot-check three misses — 10 minutes, builds confidence in the 0.77
 
-Not every item needs an individual decision; these are the populations behind the number.
+24 labels have no extracted row anywhere near them: the extractor simply did not produce these.
+You do not need to check all 24. Open these three in the PDF at the page given and confirm each
+is a real obligation that a bidder would have to satisfy. If all three hold, the population is
+sound and 0.77 is a fair figure.
 
-- **24 misses with no extracted row within a page** — genuine extraction failures. 13 are in
-  `Leistungsbeschreibung_VV2_V1.pdf` and 7 in the notice PDF. Sample a few to confirm they are
-  real requirements.
-- **25 clearly-different non-matches** — sampled above; the two arguable ones are in section 1.
-- **20 remaining candidates** — already adjudicated as correct rejections (restatements, a
-  `Rechtsbehelfsbelehrung` that grants a right rather than imposing a duty, section headings).
+| Label | Document | Page | The clause |
+|---|---|---|---|
+| DE-107 | `Eigenerklaerung_Ausschlussgruende_VV2.pdf` | 6 | "…seinen Verpflichtungen zur Zahlung von Steuern, Abgaben oder Beiträgen zur Sozialversicherung…" — non-payment of taxes as an exclusion ground |
+| DE-228 | `614251-2026.notice.de.pdf` | 5 | "Quellen der Eignungskriterien: Bekanntmachung, Auftragsunterlagen…" — the notice's own reference criterion |
+| DE-363 | `Eigenerklaerung_Ausschlussgruende_VV2.pdf` | 6 | "…die öffentlichen Auftraggeber auf sonstige geeignete Weise die Verletzung…" — the buyer proving non-payment by other means |
 
-sampled: ____________   looks right? ____________
+all three are real requirements? ____________  (yes / no — say which)
+
+The other two populations need no action: the 25 clearly-different non-matches were sampled in
+section 1, and the 20 remaining candidates were already adjudicated as correct rejections.
 
 ---
 
