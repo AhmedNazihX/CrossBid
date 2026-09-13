@@ -2043,3 +2043,139 @@ Storage key and exits 1. First run costs ≈ **$0.0002**.
 It is a second script rather than an extension of `seed_dev_company.py`, which imports nothing
 from `crossbid` on purpose — that is what lets it run before the package is importable and with
 no secret present, and folding them together would have cost it that property.
+
+---
+
+## ADR-0023 — The wedge ran, but the product could not reach it
+
+**Date:** 2026-09-14 · **Stories:** the S2.4.3 walkthrough, and the DUME upload path · **Status:** accepted
+
+### The discovery
+
+ADR-0022 ended "the wedge is no longer notional", and at the layer it tested that was true:
+`test_espd_to_ecertis.py` pins a French criterion becoming a row naming German evidence, with
+the model receiving zero prompts. What it could not see is that **no user could produce that
+row**, because the web app would not let a DUME be uploaded.
+
+`lib/documents.ts` listed three `DocumentKind` values where the schema has four, so
+`tender_espd_request` never appeared in the upload form's select. `validateUploadFile` refused
+any file not ending `.pdf`. The file input's `accept` was `application/pdf,.pdf`. Each of the
+three would have been sufficient on its own.
+
+**`DOCUMENT_KIND_LABELS` already had a correct entry for the kind** — label, hint and all,
+added with the ADR-0022 work. That is what made the omission invisible to review: every search
+for the kind's name in the frontend found a hit, and the hit was unreachable code.
+
+This is ADR-0022's own failure mode recurring one layer up. There, every piece worked in
+isolation and nothing set `ecertis_criterion_id`. Here, the backend sets it correctly and
+nothing could deliver the file that makes it happen. A test for each piece did not add up to a
+test of the path.
+
+### Decisions
+
+**Client validation is a table keyed by kind, not a constant.** `uploadShapeFor(kind)` returns
+the suffix, the accepted content types, the byte cap and the four refusal sentences, mirroring
+`XML_KINDS` and the `*_DETAIL` constants in `routers/documents.py`. The sentences are copied
+deliberately so the bidder reads the same words whichever side notices first; the server stays
+the authority, since neither side can settle a PDF from its filename and the ESPD request is
+only confirmed by a full parse.
+
+**A kind that has no pages shows `—`, never `0`.** `ingestion/pipeline.py` stores zero pages for
+an XML form as "the honest count", and it is honest in the database. Printed in a table column
+it becomes a claim — *we read this file and found no pages* — about a file that was never
+paginated. `hasPages(kind)` gates the pages column, the unread-pages column and the start-bid
+checklist's description. This is the same distinction ADR-0022 drew by making a requirement's
+`page` nullable and rendering its citation as a label rather than a link.
+
+**`TENDER_DOCUMENT_KINDS` exists twice and both copies must agree.** `readmodel/bids.py`'s copy
+already carried the warning that omitting the ESPD request there "would be the one way to upload
+a DUME and never use it". The frontend's copy omitted it. A duplicated set with a comment
+explaining the trap on only one of the two copies is not a safeguard.
+
+### Consequence
+
+Verified on a real run rather than a fixture — notice + RC + DUME for 618320-2026, uploaded
+through the browser: **135 requirements, 30 of them from the DUME**, each carrying a real
+criterion id and a null page, with the `(source = 'espd_request') = (page is null)` constraint
+holding exactly 30 to 30. All 30 eCertis lookups returned `found: true`. The card resolves
+*Terrorist offences* to `Auszug aus dem Bundeszentralregister / Führungszeugnis` and
+*Professional risk indemnity insurance* to the demo company's own €5 000 000 policy. The DUME
+row cites `DUME_acheteur.xml · ESPD criterion` as a label, never a page link.
+
+**The lesson for the remaining increments:** a wedge is reachable only if some test or run
+starts where a user starts. Three ADRs now describe the same product working at three different
+depths; only the third one a person could perform.
+
+### Three configuration traps, recorded because each looked like a broken product
+
+None is an architectural decision, and all three cost real time, presenting as "the app is
+broken" rather than as configuration. They are in `HANDOVER.md` in full.
+
+- **`npm run build` while `next dev` runs** overwrites the `.next` the dev server serves from:
+  the HTML renders and every `_next/static/*` chunk 404s. Indistinguishable in the browser from
+  the known `output: 'standalone'` / `next start` gotcha, and a separate cause.
+- **Next reads `.env*` from `frontend/` only**, so the root `.env`'s `NEXT_PUBLIC_DEV_COMPANY_ID`
+  never reached `npm run dev` and every API-backed screen 401'd. Only `make dev` was ever wired,
+  through a Compose build arg. Fixed with an untracked `frontend/.env.local`.
+- **`SUPABASE_STORAGE_BUCKET` was unset**, so the app used the code default `company-documents`
+  while the project's bucket is `company-docs`; every upload failed `404 Bucket not found`.
+  `storage.py` suppresses Storage's own message on purpose (ADR-0008), so the only symptom was
+  "The file could not be stored" on all ten seeded documents. **When uploads fail wholesale,
+  list the buckets before reading the code.**
+
+---
+
+## Retro — Increment 2, and the re-forecast the cadence asks for
+
+**Date:** 2026-09-14 · **Status:** the sprint's closing note, not a decision
+
+### What slipped, and why
+
+Every story of Increment 2 was built on 2026-09-12, two days after the increment started. What
+took the remaining two days was not code, and that is the finding worth carrying forward:
+**three separate times, something was "done" at the layer it was tested and not done at the
+layer a person touches.** S6.4's labels existed but were unverified drafts, so S3.2.1's recall
+figure measured nothing until a human adjudicated 346 entries. The eCertis wedge passed its
+tests while nothing in the running system set a criterion id (ADR-0022). Then the DUME could be
+ingested but not uploaded (ADR-0023). Each was found by trying to *use* the product rather than
+by reading or testing it, and each would have been found on the demo recording instead — which
+is the one thing that had been deferred every sprint.
+
+The other real cost was measurement noise. Four identical live runs scored 128–135 of 177, so a
+single $1.60 run cannot validate a prompt change; two days of recall work produced three genuine
+extraction fixes (ADR-0021) and no movement in the headline, and the honest reading is that the
+headline could not have moved detectably either way. The section probe, found late, does the
+same job for pennies. **Recall stands at ~0.74 ± 0.02 against a 0.90 target and is reported as
+a measurement, not chased.**
+
+Nothing was descoped. Increment 3's S2.4.3 was pulled forward because the demo needed it.
+
+### Velocity, measured
+
+Work began 2026-09-10 and this note is written on 2026-09-14: **five calendar days** for
+Increment 0, Increment 1, Increment 2 and one Increment 3 story — about **43 of the plan's 75
+stories**, plus the unnumbered DUME ingestion. 3 996 tests, 100 % coverage, 23 ADRs.
+
+The plan's estimate was 87–205 hours for 75 stories, and R5 flagged velocity as unknown. It is
+no longer unknown, but **the measured figure does not refute the estimate — it replaces its
+unit.** This is agent-assisted calendar time with a single reviewer, not solo developer-hours,
+and the two are not comparable. Quoting "43 stories in five days" as if it beat a 205-hour
+estimate would be the same error as quoting 0.72 recall as precise.
+
+### Re-forecast to the submission line
+
+| Increment | Stories left | Forecast |
+|---|---|---|
+| 3 — review round-trip | 6 (S2.4.3 done) + S6.5, S7.3 | ~1 day |
+| 4 — every graded requirement | 18 | ~2–3 days |
+| 5 — submission-ready | 5 | ~1 day |
+
+**~4–5 calendar days to Milestone 5**, at the observed rate and assuming no repeat of the
+verification work that dominated this sprint. Two things make that optimistic and are named
+rather than buffered: Increment 4 is the widest (18 stories, including magic-link auth, the
+first story to touch real sign-in), and S7.1's eval report will re-open the recall question
+with a threshold that is currently failing.
+
+**The change to make next sprint:** record the demo *first*, not last. Every defect this sprint
+was reachable only by using the product end to end, and the demo is exactly that walk. Deferring
+it turned the walkthrough from a recording into a debugging session three times running.

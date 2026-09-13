@@ -1,4 +1,4 @@
-# Handover — end of the Increment 2 session (2026-09-13)
+# Handover — end of the Increment 2 session (2026-09-13, extended 2026-09-14)
 
 Written for whoever picks this up next, including a future me with no memory of the session.
 `CLAUDE.md` is still the standing brief; `docs/project-plan.md` is still the source of truth for
@@ -11,8 +11,15 @@ scope. This file only covers what changed, what it cost, and what is genuinely o
 **Increment 2 is code-complete.** Every story built and committed: S1.1.2, S1.4.1, S2.4.1,
 S2.4.2, S3.3.1, S3.3.2, S4.5.1's matrix criterion, plus the wait-fillers S6.3, S6.4 and S3.2.3.
 
-**3 853 tests, 100 % coverage, `make lint` clean, working tree clean.** ADR-0015 through
-ADR-0021 record the decisions.
+**3 996 tests, 100 % coverage, `make lint` clean, working tree clean.** ADR-0015 through
+ADR-0023 record the decisions, and the Increment 2 retro and re-forecast close the sprint.
+
+**Added 2026-09-14.** The DUME work landed and the cross-border wedge now runs where a person
+can reach it (ADR-0022, ADR-0023): the demo company is seeded in Frankfurt, the FR pack
+including `DUME_acheteur.xml` is uploaded, and a finished FR bid sits at `awaiting_review` with
+**135 requirements, 30 of them from the DUME, and 30 of 30 eCertis lookups resolved**. The only
+thing left for Milestone 1 besides S3.2.1 is pressing record — `docs/demo-runbook.md` is the
+script.
 
 The product runs end to end: a tender pack goes in, requirements come out cited and translated,
 each is checked against the company's documents by a per-requirement ReAct loop with eCertis
@@ -166,10 +173,14 @@ blend that paints a visibly darker rectangle across the hero.
 Three options, in the order I would take them.
 
 1. **Record the end-to-end demo.** It is the only thing besides S3.2.1 holding Milestone 1 open,
-   it needs no new code, and it doubles as the user guide's screenshots (S7.4). Seed with
-   `make seed-demo`, then show the eCertis wedge on **FR with `DUME_acheteur.xml` uploaded** —
-   see the corrected note above; the PDFs on their own leave the card dark.
-2. **Start Increment 3 — the review round-trip.** S3.4.1–S3.4.4, S2.4.3, S4.5.2, S4.5.3: the
+   it needs no new code, and it doubles as the user guide's screenshots (S7.4).
+   **`docs/demo-runbook.md` is the script** — the take shot by shot, the numbers to quote, and
+   the three things not to do. The state it assumes is already in Frankfurt: seeded company, FR
+   pack uploaded including `DUME_acheteur.xml`, and a finished FR bid at `awaiting_review`. Show
+   the wedge on **FR with the DUME**; the PDFs on their own leave the card dark. The retro's one
+   recommendation is to do this *first* next sprint, not last.
+2. **Start Increment 3 — the review round-trip.** S3.4.1–S3.4.4, S4.5.2, S4.5.3 (**S2.4.3 is
+   done** — `make seed-demo` landed early because the demo needed it): the
    verdict, the human interrupt, and the reviewer editing rows. This is the product's safety
    boundary and the last substantial work before the submission line at Milestone 5.
 3. **Keep attacking recall** — only with repeated runs per configuration, and knowing the noise

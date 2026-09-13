@@ -651,6 +651,8 @@ Lanes A–E survive only as tags on stories in the roadmap's story board; they d
 
 **Effort.** 75 stories: 19 S, 50 M, 6 L, plus continuous ADRs. At the plan's own ranges that is 87 to 205 hours against the brief's 18-hour estimate. Time is not a hard constraint (settled decision), but Increments 0–5 are the only ones the grade depends on.
 
+**Re-forecast, 2026-09-14** (the cadence's re-forecast after Increments 1 and 2; the retro is in `docs/decisions.md`). Measured: **43 of 75 stories in five calendar days**, 2026-09-10 to 2026-09-14, covering Increments 0, 1, 2 and S2.4.3. Remaining to the submission line: Increment 3 ~1 day, Increment 4 ~2–3 days (widest, 18 stories, includes the first real sign-in), Increment 5 ~1 day — **~4–5 calendar days to Milestone 5**. This replaces the hour ranges above *as the working forecast only*: it is agent-assisted calendar time with one reviewer and is not comparable to solo developer-hours, so it neither confirms nor refutes the 87–205 h estimate. **R5 is closed as a risk and reopened as a measurement.** The forecast assumes no repeat of the verification work that dominated Increment 2, which is the assumption most likely to be wrong.
+
 ---
 
 ## Risks
