@@ -25,6 +25,10 @@ export const DOCUMENT_KIND_LABELS: Readonly<Record<DocumentKind, DocumentKindLab
     label: 'Tender notice',
     hint: 'The contract notice itself, as published on TED or the national platform.',
   },
+  tender_espd_request: {
+    label: 'ESPD / DUME request',
+    hint: "The buyer's ESPD XML. It names the EU criteria directly, so no guessing is needed.",
+  },
 }
 
 /**

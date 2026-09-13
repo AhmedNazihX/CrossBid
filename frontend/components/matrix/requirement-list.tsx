@@ -173,7 +173,11 @@ function RequirementRow({
   showDocument,
 }: RequirementRowProps) {
   const detailId = `${requirement.id}-detail`
-  const citation: Citation = { documentName: requirement.document_name, page: requirement.page }
+  const citation: Citation = {
+    documentName: requirement.document_name,
+    page: requirement.page ?? null,
+    criterionId: requirement.ecertis_criterion_id ?? undefined,
+  }
   const explained = requirement.translation ?? requirement.source_text
   const isTranslated = requirement.translation !== null && requirement.translation !== undefined
 

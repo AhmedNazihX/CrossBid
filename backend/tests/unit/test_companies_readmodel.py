@@ -1,4 +1,4 @@
-"""S2.4.1 — the `companies` read model: two statements, one tenant, one split.
+"""S2.4.1 — the `companies` read model: the statements, the tenant, and the split.
 
 Offline, over `conftest`'s recording connection: what is asserted is the statement text and
 the bound parameters Postgres would actually receive. That matters
@@ -7,7 +7,9 @@ twice here.
 * **Scope.** The API connects as a `BYPASSRLS` role (ADR-0009), so `id = %(company_id)s`
   written into each statement is the only boundary between two companies. The tenant key is
   the primary key rather than a `company_id` column, because the company *is* the row — the
-  parameter is still named `company_id`, so the predicate reads the same everywhere.
+  parameter is still named `company_id`, so the predicate reads the same everywhere. The
+  insert S2.4.3 added has no rows to filter, so it is held to the other half of the rule:
+  the tenant has to be a bound value of the row it creates, exactly as in `documents.py`.
 * **The column/jsonb split.** Which half of `CompanyProfile` lands in a real column and which
   in `profile jsonb` is a decision a reader must not have to guess, so the two field tuples
   are asserted to partition the model exactly. Adding a field to `CompanyProfile` without
@@ -17,6 +19,7 @@ twice here.
 from __future__ import annotations
 
 import inspect
+import re
 import uuid
 from typing import Any
 
@@ -26,6 +29,7 @@ from psycopg.types.json import Jsonb
 from crossbid.models import CompanyProfile
 from crossbid.readmodel.companies import (
     COLUMN_FIELDS,
+    INSERT_COMPANY_SQL,
     JSONB_FIELDS,
     SCOPED_STATEMENTS,
     SELECT_COMPANY_SQL,
@@ -39,6 +43,7 @@ from tests.conftest import COMPANY_PROFILE, DEMO_COMPANY_ID, FakeConnectionSourc
 
 COMPANY_ID = DEMO_COMPANY_ID
 OTHER_COMPANY_ID = uuid.UUID("22222222-2222-4222-8222-222222222222")
+OWNER_USER_ID = uuid.UUID("55555555-5555-4555-8555-555555555555")
 
 COMPANY_COLUMNS = "id, name, country, legal_form, language, tone, profile"
 """What both statements must select and return — an expectation about the SQL, so it lives
@@ -71,11 +76,31 @@ def _one_line(sql: str) -> str:
     return " ".join(sql.split())
 
 
-@pytest.mark.parametrize("sql", SCOPED_STATEMENTS, ids=lambda sql: sql.split()[0])
-def test_every_statement_carries_the_tenant_scope_in_its_own_text(sql: str) -> None:
+WHERE_SCOPED_STATEMENTS = tuple(
+    sql for sql in SCOPED_STATEMENTS if sql is not INSERT_COMPANY_SQL
+)
+"""Every statement that filters rows. The insert is the one that creates the row instead."""
+
+
+@pytest.mark.parametrize("sql", WHERE_SCOPED_STATEMENTS, ids=lambda sql: sql.split()[0])
+def test_every_filtering_statement_carries_the_tenant_scope_in_its_own_text(sql: str) -> None:
     """The only line between two companies (ADR-0009); nothing at run time may add it."""
     assert TENANT_PARAMETER in sql
     assert "where" in sql
+
+
+def test_the_insert_binds_the_tenant_into_the_row_it_creates() -> None:
+    """No `where` to scope, so the scope is the `company_id` value itself (S2.4.3)."""
+    match = re.search(
+        r"insert into companies \((?P<columns>[^)]*)\) values \((?P<values>.*?)\) on conflict",
+        _one_line(INSERT_COMPANY_SQL),
+    )
+    assert match is not None, INSERT_COMPANY_SQL
+    columns = [name.strip() for name in match["columns"].split(",")]
+    values = [value.strip() for value in match["values"].split(",")]
+    assert columns[0] == "id"
+    assert values[0] == "%(company_id)s"
+    assert "%(owner_user_id)s" in values, "a company arrives with its owner or not at all"
 
 
 @pytest.mark.parametrize("sql", SCOPED_STATEMENTS, ids=lambda sql: sql.split()[0])
@@ -89,8 +114,8 @@ def test_every_statement_returns_the_same_column_list(sql: str) -> None:
     assert COMPANY_COLUMNS in _one_line(sql)
 
 
-def test_the_statements_are_the_two_the_module_defines() -> None:
-    assert SCOPED_STATEMENTS == (SELECT_COMPANY_SQL, UPDATE_COMPANY_SQL)
+def test_the_statements_are_the_three_the_module_defines() -> None:
+    assert SCOPED_STATEMENTS == (SELECT_COMPANY_SQL, UPDATE_COMPANY_SQL, INSERT_COMPANY_SQL)
 
 
 def test_the_column_list_is_the_id_the_scalar_columns_and_the_jsonb() -> None:
@@ -240,7 +265,59 @@ async def test_save_returns_none_when_the_update_touched_no_row() -> None:
     assert await records.save(company_id=OTHER_COMPANY_ID, profile=PROFILE) is None
 
 
-@pytest.mark.parametrize("method", ["get", "save"])
+# ----------------------------------------------------------------------------- create
+
+
+@pytest.mark.anyio
+async def test_create_binds_both_ids_and_the_same_split_save_uses() -> None:
+    """The seed must not grow a second opinion about where a fact lives (S2.4.3)."""
+    # Arrange
+    records, source = read_model((company_row(),))
+
+    # Act
+    await records.create(company_id=COMPANY_ID, owner_user_id=OWNER_USER_ID, profile=PROFILE)
+
+    # Assert
+    assert source.only.sql == INSERT_COMPANY_SQL
+    params = source.only.params
+    assert params["company_id"] == COMPANY_ID
+    assert params["owner_user_id"] == OWNER_USER_ID
+    assert params["name"] == PROFILE.name
+    assert params["legal_form"] == "gmbh"
+    document = params["profile"]
+    assert isinstance(document, Jsonb)
+    assert document.obj == profile_document(PROFILE)
+
+
+@pytest.mark.anyio
+async def test_create_returns_the_row_it_inserted() -> None:
+    records, _ = read_model((company_row(),))
+
+    created = await records.create(
+        company_id=COMPANY_ID, owner_user_id=OWNER_USER_ID, profile=PROFILE
+    )
+
+    assert created == PROFILE
+
+
+@pytest.mark.anyio
+async def test_create_returns_none_when_the_company_is_already_there() -> None:
+    """`on conflict do nothing` returns no row, which is how a second seed is detected."""
+    records, _ = read_model(())
+
+    created = await records.create(
+        company_id=COMPANY_ID, owner_user_id=OWNER_USER_ID, profile=PROFILE
+    )
+
+    assert created is None
+
+
+def test_create_leaves_active_provider_to_the_column_default() -> None:
+    """The seed has no opinion about the provider, so it must not restate the default."""
+    assert "active_provider" not in INSERT_COMPANY_SQL
+
+
+@pytest.mark.parametrize("method", ["get", "save", "create"])
 def test_the_scope_argument_is_keyword_only_with_no_default(method: str) -> None:
     """A call that forgets the company must not type-check and must not run."""
     parameter = inspect.signature(getattr(CompaniesReadModel, method)).parameters["company_id"]

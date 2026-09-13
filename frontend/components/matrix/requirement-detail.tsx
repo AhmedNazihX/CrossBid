@@ -45,7 +45,11 @@ export function RequirementDetail({
             Source ({formatLanguage(requirement.source_lang)})
           </Eyebrow>
           <p className="m-0 mb-1.5 [font:var(--type-mono)] text-text-muted">
-            {requirement.document_name} p. {requirement.page}
+            {requirement.document_name}
+            {/* A DUME row has no page; it cites the file and the criterion instead. */}
+            {requirement.page === null || requirement.page === undefined
+              ? ' · ESPD criterion'
+              : ` p. ${requirement.page}`}
           </p>
           <blockquote
             lang={requirement.source_lang}

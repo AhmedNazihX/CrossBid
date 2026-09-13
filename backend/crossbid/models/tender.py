@@ -29,16 +29,24 @@ class BidStatus(StrEnum):
 
 
 class DocumentKind(StrEnum):
-    """What a stored PDF is.
+    """What a stored file is — and, since S2.5.1, which reader is allowed to open it.
 
     A company's evidence pack outlives any single bid; a tender's documents belong to one bid
     and are deleted with it. The notice is kept apart from the procurement documents because
     it comes from TED's documented API while the rest is uploaded by the bidder.
+
+    `TENDER_ESPD_REQUEST` is the odd one and deliberately so: it is the only kind that is not
+    a PDF. A published DUME is an XML form carrying the buyer's ESPD criteria as canonical
+    UUIDs, so it is read by `ingestion/espd.py` and never by the PDF parser. Keeping it a
+    *kind* rather than an exception to the PDF rule is what lets the upload boundary stay an
+    accept-list: every other kind is still PDF-only, and this one is XML-only (see
+    `routers/documents.py`).
     """
 
     COMPANY_EVIDENCE = "company_evidence"
     TENDER_DOCUMENT = "tender_document"
     TENDER_NOTICE = "tender_notice"
+    TENDER_ESPD_REQUEST = "tender_espd_request"
 
 
 class TedNotice(BaseModel):

@@ -31,6 +31,7 @@ from crossbid.models import (
     Provider,
     RequirementCategory,
     RequirementKind,
+    RequirementSource,
     RequirementStage,
     ReviewerStatus,
     RowStatus,
@@ -55,6 +56,7 @@ CONSTRAINT_ENUMS: dict[str, type[enum.Enum]] = {
     "requirements_kind_check": RequirementKind,
     "requirements_stage_check": RequirementStage,
     "requirements_checkable_check": Checkability,
+    "requirements_source_check": RequirementSource,  # 0005 (S2.5.1)
     "matrix_rows_status_check": RowStatus,
     "matrix_rows_reviewer_status_check": ReviewerStatus,
     "reviews_decision_check": Decision,
@@ -238,6 +240,21 @@ def test_the_supported_row_invariant_is_enforced_in_the_database_too() -> None:
     definition = sql[sql.rindex("matrix_rows_supported_needs_evidence_check check") :]
     assert "status <> 'supported'" in definition
     assert "drop constraint if exists matrix_rows_met_needs_evidence_check" in sql
+
+
+def test_the_espd_citation_invariant_is_enforced_in_the_database_too() -> None:
+    """S2.5.1: `page is null` exactly for ESPD rows, in the column pair as well as Pydantic.
+
+    `Requirement` refuses the two bad shapes, but a direct SQL write would bypass it, and
+    both are citation bugs: an extracted quote with no page cites nothing a reviewer can
+    open, and an ESPD criterion with a page cites a page that does not exist.
+    """
+    # Act
+    sql = _sql_without_comments()
+
+    # Assert
+    assert "requirements_page_matches_source_check" in sql
+    assert "(source = 'espd_request') = (page is null)" in sql
 
 
 def test_the_override_reason_invariant_is_enforced_in_the_database_too() -> None:

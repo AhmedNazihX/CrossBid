@@ -23,18 +23,19 @@ from crossbid.readmodel.bids import ConnectionSource
 
 UPSERT_REQUIREMENT: Final[LiteralString] = """
 insert into requirements (
-    id, bid_id, company_id, category, kind, stage, checkable, source_text, source_lang,
-    document_name, page, translation, ecertis_criterion_id, threshold, deadline
+    id, bid_id, company_id, category, kind, stage, checkable, source, source_text,
+    source_lang, document_name, page, translation, ecertis_criterion_id, threshold, deadline
 ) values (
     %(id)s, %(bid_id)s, %(company_id)s, %(category)s, %(kind)s, %(stage)s, %(checkable)s,
-    %(source_text)s, %(source_lang)s, %(document_name)s, %(page)s, %(translation)s,
-    %(ecertis_criterion_id)s, %(threshold)s, %(deadline)s
+    %(source)s, %(source_text)s, %(source_lang)s, %(document_name)s, %(page)s,
+    %(translation)s, %(ecertis_criterion_id)s, %(threshold)s, %(deadline)s
 )
 on conflict (id) do update set
     category = excluded.category,
     kind = excluded.kind,
     stage = excluded.stage,
     checkable = excluded.checkable,
+    source = excluded.source,
     source_text = excluded.source_text,
     source_lang = excluded.source_lang,
     document_name = excluded.document_name,
@@ -47,8 +48,8 @@ where requirements.company_id = %(company_id)s
 """
 
 SELECT_REQUIREMENTS: Final[LiteralString] = """
-select id, bid_id, category, kind, stage, checkable, source_text, source_lang, document_name,
-       page, translation, ecertis_criterion_id, threshold, deadline
+select id, bid_id, category, kind, stage, checkable, source, source_text, source_lang,
+       document_name, page, translation, ecertis_criterion_id, threshold, deadline
 from requirements
 where company_id = %(company_id)s and bid_id = %(bid_id)s
 order by document_name, page, created_at
@@ -97,6 +98,7 @@ def _params(row: Requirement, company_id: str) -> dict[str, Any]:
         "kind": row.kind.value,
         "stage": row.stage.value,
         "checkable": row.checkable.value,
+        "source": row.source.value,
         "source_text": row.source_text,
         "source_lang": row.source_lang,
         "document_name": row.document_name,
@@ -120,6 +122,7 @@ def _requirement(record: Mapping[str, Any]) -> Requirement:
             "kind": record["kind"],
             "stage": record["stage"],
             "checkable": record["checkable"],
+            "source": record["source"],
             "source_text": record["source_text"],
             "source_lang": record["source_lang"],
             "document_name": record["document_name"],

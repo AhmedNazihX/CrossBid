@@ -30,6 +30,26 @@ export function CitationLink({
   nameChars = CITATION_NAME_CHARS,
   className,
 }: CitationLinkProps) {
+  // A DUME/ESPD requirement has no page and its file is XML, which the source panel cannot
+  // render. Offering the usual link would promise a jump that cannot happen, so it reads as
+  // a label: the file, and the criterion the buyer keyed it on. Not from an artboard —
+  // `Main.dc.html` predates ESPD ingestion and has no state for a page-less citation.
+  if (citation.page === null) {
+    return (
+      <span
+        title={citation.criterionId ?? citation.documentName}
+        className={cn(
+          'inline-flex min-h-8 items-center gap-[5px] [font:var(--type-mono)] text-text-muted',
+          className
+        )}
+      >
+        {showDocument && shortDocumentName(citation.documentName, nameChars)}
+        {showDocument && ' · '}
+        ESPD criterion
+      </span>
+    )
+  }
+
   return (
     <button
       type="button"

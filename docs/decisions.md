@@ -1958,3 +1958,88 @@ One consequence for the next attempt: `Erklaerung_zur_sozialen_Nachhaltigkeit` p
 produce 16 `no_verbatim_quote` rejections where they previously produced a `model_error` and
 nothing. That section is no longer silently lost, which is the improvement; its quote fidelity
 is the next defect, not a regression.
+
+---
+
+## ADR-0022 — The DUME is a structured input, and the wedge finally runs
+
+**Date:** 2026-09-14 · **Stories:** S2.4.3, and DUME/ESPD ingestion (new, unnumbered) · **Status:** accepted
+
+### The discovery that forced this
+
+The cross-border wedge — eCertis equivalence, the thing that distinguishes this from TenderWolf
+— was **completely dark end to end**, and nobody had noticed because every piece worked in
+isolation: the cached register, the bidder-language lookup, the tool, `check_reqs` calling it,
+the UI card, and eight human-verified FR labels carrying criterion ids.
+
+`check_reqs` only looks up eCertis when a requirement carries an `ecertis_criterion_id`, and
+**nothing in the running system ever set one.** Scanning all 38 fixture PDFs across DE, FR and
+EN found **zero** real ESPD criterion UUIDs. `prompts/extract.md` forbids inferring one from
+wording, correctly (ADR-0007: a wrong id is worse than none). The only input that carries them
+is `DUME_acheteur.xml`, and upload was PDF-only, so the pipeline never saw it. The human
+labellers had read that file off disk; the product could not.
+
+This also corrects advice given earlier in ADR-0020 and in `HANDOVER.md`: "demo the wedge on FR"
+was **wrong**. FR's RC prints no UUIDs, and the notice's two are TED internal identifiers, not
+criteria.
+
+`CLAUDE.md` had already specified the fix and it had never been built: *"Treat a published DUME
+as a high-confidence structured input, not as prose to extract."*
+
+### Decisions
+
+**The ESPD type code classifies; no model is asked.** `CRITERION.EXCLUSION.*` →
+`exclusion_ground`, `SELECTION.ECONOMIC_FINANCIAL_STANDING` / `TECHNICAL_PROFESSIONAL_ABILITY` /
+`SUITABILITY` → their categories. A prefix table, not inference — which is the whole point of
+preferring a DUME to prose. All 30 of the fixture's criteria survive validation against the
+generated `EcertisCriterionId`; an id the register does not know is dropped and reported as an
+`INVALID_CRITERION_ID` problem rather than looked up and silently answering nothing.
+
+**A DUME row has no page, and may not pretend to.** `Requirement.page` became `int | None` and
+gained `source: tender_document | espd_request`, bound by a model validator: **page is present
+exactly when the source has pages.** `migrations/0005` enforces the same as a check constraint,
+`(source = 'espd_request') = (page is null)`, which a direct SQL write cannot bypass. Giving such
+a row `page: 1` would render in the workspace as `DUME_acheteur.xml p. 1` — a citation a reviewer
+can click and land nowhere, which is exactly the failure the product's citation promise exists to
+prevent. It cites file + criterion id instead, and the UI renders it as a **label, not a link**,
+because the file is XML and the source panel shows PDFs.
+
+**The upload boundary was extended, not loosened.** A new `DocumentKind.TENDER_ESPD_REQUEST` and
+an accept-list keyed on kind: every other kind stays PDF-only, and an XML posted as
+`tender_document` is still 415 with the PDF message. The three-fold spoofing defence keeps its
+shape for XML — suffix, declared content type, and a content sniff that is a full parse through
+the hardened reader, so a hostile file is refused at 415 before any background task exists.
+
+**XML hardening, written down because `defusedxml` is not installed and was not added.**
+`ingestion/safe_xml.py`: a 4 MB cap checked before parsing; then an `expat` preflight that builds
+no tree and whose `StartDoctypeDeclHandler` **raises**, refusing a DOCTYPE before its internal
+subset is read — closing billion-laughs, quadratic blowup, external entities and external DTDs at
+the declaration site rather than trusting a runtime default; depth capped at 40; only then
+`ET.fromstring`, which by construction cannot meet an entity declaration. Twelve tests fire real
+payloads, including an XXE at `/etc/passwd`, asserting the refusal rather than merely the absence
+of an exception. **Residual risk, stated:** parsing is still linear work on attacker-sized input
+bounded only by the cap, and namespace and attribute handling are expat's.
+
+### Consequence
+
+An FR bid now yields **30 requirements carrying criterion ids** — 24 exclusion grounds resolving
+straight to eCertis matrix rows, 6 selection criteria additionally entering the checking loop.
+`test_espd_to_ecertis.py` pins the chain offline and free: a French buyer's tax criterion becomes
+a row whose `ecertis_evidence` names the **German** paper for a `de` bidder, with the scripted
+model asserted to have received **zero prompts**. The wedge is no longer notional.
+
+### S2.4.3 — the one-command seed
+
+`make seed-demo` writes the demo GmbH, its profile, its Store memory at `profile/{company_id}`,
+and all ten S6.3 documents driven to `ready` through the **same** `DocumentPipeline` wiring the
+upload route uses, so a seeded document is chunked and embedded identically to an uploaded one.
+
+Idempotence is by deterministic `uuid5` ids with a read before every write, so a second run
+**spends nothing** — not merely "changes nothing", which matters because embeddings are billed.
+A document whose row exists but is not `ready` is **reported, not repaired**: re-upload collides
+with `x-upsert: false` and re-embedding would duplicate chunks, so it names the row and the exact
+Storage key and exits 1. First run costs ≈ **$0.0002**.
+
+It is a second script rather than an extension of `seed_dev_company.py`, which imports nothing
+from `crossbid` on purpose — that is what lets it run before the package is importable and with
+no secret present, and folding them together would have cost it that property.

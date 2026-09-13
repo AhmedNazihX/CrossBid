@@ -28,8 +28,10 @@ from starlette.datastructures import Headers, UploadFile
 from crossbid.auth import DEV_COMPANY_HEADER
 from crossbid.ingestion.parser import ParserError
 from crossbid.ingestion.pipeline import UNREADABLE_REASON, DocumentPipeline
+from crossbid.ingestion.safe_xml import MAX_XML_BYTES
 from crossbid.ingestion.storage import (
     DEFAULT_CONTENT_TYPE,
+    XML_CONTENT_TYPE,
     CompanyDocumentStore,
     ObjectNotFoundError,
     SignedUrl,
@@ -37,18 +39,23 @@ from crossbid.ingestion.storage import (
     object_key,
 )
 from crossbid.main import create_app, get_database
+from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentsReadModel, DocumentStatus, ReadModelError
 from crossbid.routers.documents import (
     EMPTY_FILE_DETAIL,
     MAX_UPLOAD_BYTES,
     NO_FILENAME_DETAIL,
     NO_SUCH_DOCUMENT_DETAIL,
+    NOT_ESPD_CONTENT_DETAIL,
     NOT_PDF_CONTENT_DETAIL,
     NOT_PDF_SUFFIX_DETAIL,
     NOT_PDF_TYPE_DETAIL,
+    NOT_XML_SUFFIX_DETAIL,
+    NOT_XML_TYPE_DETAIL,
     STORAGE_NOT_CONFIGURED_DETAIL,
     TOO_LARGE_DETAIL,
     URL_NOT_SIGNED_DETAIL,
+    XML_TOO_LARGE_DETAIL,
     DocumentListResponse,
     DocumentResponse,
     DocumentUrlResponse,
@@ -67,6 +74,7 @@ from tests.conftest import (
     FakeParser,
     Harness,
     InMemoryRecords,
+    espd_request_bytes,
     harness,
 )
 
@@ -413,7 +421,7 @@ async def test_a_part_without_a_filename_is_refused(filename: str | None) -> Non
     )
 
     with pytest.raises(HTTPException) as caught:
-        await validated_upload(part)
+        await validated_upload(part, DocumentKind.COMPANY_EVIDENCE)
     assert caught.value.status_code == 422
     assert caught.value.detail == NO_FILENAME_DETAIL
 
@@ -686,3 +694,108 @@ def test_get_document_store_builds_the_real_store_without_opening_a_socket(
     built = get_document_store(settings=with_storage(offline_settings))
 
     assert isinstance(built, CompanyDocumentStore)
+
+
+# ------------------------------------------------- the ESPD request (DUME), S2.5.1
+
+
+def espd_part(
+    filename: str = "DUME_acheteur.xml",
+    content: bytes | None = None,
+    content_type: str | None = XML_CONTENT_TYPE,
+) -> dict[str, tuple[str, bytes, str | None]]:
+    return {
+        "file": (
+            filename,
+            content if content is not None else espd_request_bytes(),
+            content_type,
+        )
+    }
+
+
+def post_espd(api: TestClient, **part: Any) -> Any:
+    return api.post(
+        "/documents",
+        files=espd_part(**part),
+        data={"kind": "tender_espd_request"},
+        headers=AS_COMPANY,
+    )
+
+
+def test_a_published_dume_is_accepted_and_stored_as_xml(
+    api: TestClient, pipeline: Harness
+) -> None:
+    """The one non-PDF kind. The accept-list is keyed on kind, not on an exception to it."""
+    # Act
+    response = post_espd(api)
+
+    # Assert
+    assert response.status_code == 202
+    assert response.json()["kind"] == "tender_espd_request"
+    assert pipeline.store.uploads[0]["content_type"] == XML_CONTENT_TYPE
+    assert pipeline.store.uploads[0]["content"] == espd_request_bytes()
+
+
+@pytest.mark.parametrize(
+    ("part", "status", "detail"),
+    [
+        ({"filename": "dume.pdf"}, 415, NOT_XML_SUFFIX_DETAIL),
+        ({"content_type": "application/pdf"}, 415, NOT_XML_TYPE_DETAIL),
+        ({"content": b"%PDF-1.7 really a pdf"}, 415, NOT_ESPD_CONTENT_DETAIL),
+        ({"content": b"<cac:Tender/>"}, 415, NOT_ESPD_CONTENT_DETAIL),
+        ({"content": b""}, 422, EMPTY_FILE_DETAIL),
+        ({"content": b"<a>" + b"x" * MAX_XML_BYTES}, 413, XML_TOO_LARGE_DETAIL),
+    ],
+    ids=["pdf-suffix", "declared-type", "pdf-content", "not-espd", "empty", "oversized"],
+)
+def test_a_refused_espd_upload_names_the_problem_and_writes_nothing(
+    api: TestClient, pipeline: Harness, part: dict[str, Any], status: int, detail: str
+) -> None:
+    # Act
+    response = post_espd(api, **part)
+
+    # Assert
+    assert response.status_code == status
+    assert response.json() == {"detail": detail}
+    assert pipeline.records.rows == {} and pipeline.store.uploads == []
+
+
+def test_a_hostile_xml_is_refused_at_the_boundary(api: TestClient, pipeline: Harness) -> None:
+    """The upload route reads the file with the hardened reader, not a bare parser."""
+    # Arrange
+    billion_laughs = (
+        b'<?xml version="1.0"?>'
+        b'<!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;">]>'
+        b"<lolz>&lol2;</lolz>"
+    )
+
+    # Act
+    response = post_espd(api, content=billion_laughs)
+
+    # Assert
+    assert response.status_code == 415
+    assert response.json() == {"detail": NOT_ESPD_CONTENT_DETAIL}
+    assert pipeline.store.uploads == []
+
+
+def test_an_xml_uploaded_as_a_tender_document_is_still_refused(api: TestClient) -> None:
+    """The accept-list narrows per kind; it does not loosen the PDF rule for everyone."""
+    # Act
+    response = api.post(
+        "/documents",
+        files=espd_part(),
+        data={"kind": "tender_document"},
+        headers=AS_COMPANY,
+    )
+
+    # Assert
+    assert response.status_code == 415
+    assert response.json() == {"detail": NOT_PDF_SUFFIX_DETAIL}
+
+
+@pytest.mark.parametrize("content_type", ["application/octet-stream", "", "text/xml"])
+def test_a_client_that_declares_a_plausible_xml_type_is_accepted(
+    api: TestClient, content_type: str
+) -> None:
+    """The root element decides, the same way the magic bytes decide for a PDF."""
+    assert post_espd(api, content_type=content_type).status_code == 202

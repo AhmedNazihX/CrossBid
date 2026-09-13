@@ -18,7 +18,10 @@ as well, which is what makes the retry described below safe.
 **Two writes, and what happens when the second fails.** The row is written first and is the
 source of truth; the LangGraph Store namespace `profile/{company_id}` is the agent's copy of
 it (brief Medium 2 — long-term memory), so `check_reqs` reasons about the same facts the API
-answers with. If the Store write fails the row is already saved, so the answer is **200 with
+answers with. The namespace itself is `memory/profile.py`'s, not this module's: S2.4.3's demo
+seed writes the same item with no request behind it, and one address serves both writers.
+
+If the Store write fails the row is already saved, so the answer is **200 with
 `warning` set** rather than a 5xx: reporting failure for a write that landed is the worse lie,
 and a bidder told "save failed" would reasonably assume their facts were lost. The warning
 carries the partial failure instead — a typed, described field on the response, so S4.2.1 can
@@ -50,6 +53,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
 from crossbid.main import get_database
+from crossbid.memory.profile import PROFILE_STORE_KEY, profile_namespace
 from crossbid.models import CertificateHeld, CompanyProfile, LegalForm, Tone, TurnoverYear
 from crossbid.readmodel.companies import CompaniesReadModel
 
@@ -64,19 +68,6 @@ MEMORY_NOT_UPDATED_WARNING: Final = (
 )
 """The `warning` on an otherwise successful save. A sentence the bidder can act on, and it
 says *when* it matters — the stale memory only bites once a bid runs."""
-
-PROFILE_NAMESPACE_PREFIX: Final = "profile"
-"""`db.py` names the Store namespace `profile/{company_id}`; this is its first segment."""
-
-PROFILE_STORE_KEY: Final = "company"
-"""The whole profile is one item under the namespace, not a field per key: the agent reads
-the bidder's facts as a unit, and one `aput` makes a save atomic from its point of view."""
-
-
-def profile_namespace(company_id: uuid.UUID) -> tuple[str, str]:
-    """`profile/{company_id}` as LangGraph spells a namespace. One definition, both sides."""
-    return (PROFILE_NAMESPACE_PREFIX, str(company_id))
-
 
 # ----------------------------------------------------------------------- response models
 

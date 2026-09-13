@@ -11,12 +11,28 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
+from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from crossbid.models.ecertis_criteria import EcertisCriterionId
 
 MAX_QUOTE_CHARS = 2000
+
+
+class RequirementSource(StrEnum):
+    """Which kind of artefact the requirement was read out of.
+
+    Two, because the two are read in completely different ways and a reviewer must be able
+    to tell them apart at a glance. A `TENDER_DOCUMENT` row is a verbatim quote a model
+    found on a numbered page of a PDF and that was checked against that page. An
+    `ESPD_REQUEST` row is a criterion the buyer *declared* in machine-readable form in a
+    published DUME — no model, no inference, no page — and it is the only kind that arrives
+    with an `ecertis_criterion_id` nobody had to guess (S2.5.1).
+    """
+
+    TENDER_DOCUMENT = "tender_document"
+    ESPD_REQUEST = "espd_request"
 
 
 class RequirementCategory(StrEnum):
@@ -125,13 +141,24 @@ class Requirement(BaseModel):
     stage: RequirementStage
     checkable: Checkability
 
+    source: RequirementSource = RequirementSource.TENDER_DOCUMENT
+    """Which artefact this was read out of, and therefore how far the citation reaches.
+    Defaulted, because extraction produces the overwhelming majority of rows."""
+
     source_text: str = Field(
         max_length=MAX_QUOTE_CHARS,
         description="Verbatim quote in the tender's own language. Never paraphrased.",
     )
     source_lang: str = Field(min_length=2, max_length=5, description="BCP 47, e.g. 'de'")
     document_name: str = Field(description="File the quote came from, for the citation")
-    page: int = Field(ge=1, description="1-indexed, so it matches what the PDF viewer shows")
+    page: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "1-indexed, so it matches what the PDF viewer shows. Null for an ESPD request: "
+            "a DUME is XML and has no pages, and the criterion id is its locator instead."
+        ),
+    )
 
     translation: str | None = Field(
         default=None, description="Bidder-language rendering; None until translated"
@@ -143,3 +170,27 @@ class Requirement(BaseModel):
 
     threshold: Threshold | None = None
     deadline: date | None = None
+
+    @model_validator(mode="after")
+    def _the_citation_matches_the_source(self) -> Self:
+        """A page exactly when the source has pages. Both directions, and both matter.
+
+        A quote extracted from a PDF without a page cites nothing a reviewer can open, and
+        that is the product's central promise. The other direction is the one S2.5.1 had to
+        decide: an ESPD criterion carries no page, and giving it one — 1, or the criterion's
+        position in the file — would render in the workspace as `DUME_acheteur.xml p. 1`, a
+        citation that looks followable and is not. A citation a reviewer cannot follow is
+        worse than none, so the row says `page: null` and names its criterion instead.
+        """
+        has_pages = self.source is not RequirementSource.ESPD_REQUEST
+        if has_pages and self.page is None:
+            raise ValueError(
+                "a requirement read from a tender document must carry the page it was read "
+                "from; only an ESPD request has no page"
+            )
+        if not has_pages and self.page is not None:
+            raise ValueError(
+                "a requirement read from an ESPD request must not carry a page: a DUME is "
+                "XML and has no pages, and a page a reviewer cannot open is a false citation"
+            )
+        return self

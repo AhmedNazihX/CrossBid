@@ -64,6 +64,7 @@ from crossbid.models.requirement import (
     Requirement,
     RequirementCategory,
     RequirementKind,
+    RequirementSource,
     RequirementStage,
 )
 from crossbid.readmodel.companies import profile_document
@@ -86,6 +87,60 @@ def tender_pack_pdfs(fixture_dir: Path) -> dict[str, Path]:
     """
     pdfs = sorted(fixture_dir.glob("documents/*.pdf")) + sorted(fixture_dir.glob("*.pdf"))
     return {pdf.name: pdf for pdf in pdfs}
+
+
+ESPD_REQUEST_PATH = TENDERS_DIR / "fr" / "documents" / "DUME_acheteur.xml"
+"""The French buyer's published ESPD request (DUME), the one structured input in the whole
+fixture set that carries canonical ESPD criterion ids. Four suites read it -- the reader
+itself, the requirement mapping, the upload boundary and `parse_docs` -- and every one of
+them must read the *same* bytes, because the claim they share is "30 criteria, all of them
+in the generated register"."""
+
+ESPD_NAMESPACES = {
+    "espd-req": "urn:grow:names:specification:ubl:schema:xsd:ESPDRequest-1",
+    "ccv": "urn:isa:names:specification:ubl:schema:xsd:CCV-CommonAggregateComponents-1",
+    "cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+    "cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+    "espd": "urn:grow:names:specification:ubl:schema:xsd:ESPDResponse-1",
+}
+"""ESPD 1.0.2's namespaces, copied from the fixture's own root element."""
+
+
+def espd_request_bytes() -> bytes:
+    """The committed ESPD request as uploaded bytes."""
+    return ESPD_REQUEST_PATH.read_bytes()
+
+
+def espd_request_xml(
+    *criteria: tuple[str, str, str, str],
+    root: str = "espd-req:ESPDRequest",
+    language: str | None = None,
+) -> bytes:
+    """A synthetic ESPD request carrying exactly `criteria` as `(id, type code, name, text)`.
+
+    Shared because the reader, the upload boundary and the pipeline all need to hand a
+    *hostile or unusual* ESPD request to the code under test — an unknown criterion id, a
+    repeated one, a wrong root element — and the committed fixture is by definition none of
+    those. `root` takes the qualified name so a test can build a document that is XML but
+    not an ESPD request; `language` sets UBL's `languageID`, which the fixture omits.
+    """
+    attribute = "" if language is None else f' languageID="{language}"'
+    elements = "".join(
+        f"<ccv:Criterion>"
+        f'<cbc:ID schemeID="CriteriaID">{identifier}</cbc:ID>'
+        f'<cbc:TypeCode listID="CriteriaTypeCode">{type_code}</cbc:TypeCode>'
+        f"<cbc:Name{attribute}>{name}</cbc:Name>"
+        f"<cbc:Description>{description}</cbc:Description>"
+        f"</ccv:Criterion>"
+        for identifier, type_code, name, description in criteria
+    )
+    declarations = " ".join(
+        f'xmlns:{prefix}="{uri}"' for prefix, uri in ESPD_NAMESPACES.items()
+    )
+    document = (
+        f'<?xml version="1.0" encoding="UTF-8"?><{root} {declarations}>{elements}</{root}>'
+    )
+    return document.encode()
 
 
 @cache
@@ -794,12 +849,18 @@ BIDDER = Bidder(country="de", language="de")
 def requirement(
     source_text: str = TURNOVER,
     *,
-    page: int = 4,
+    page: int | None = 4,
     checkable: Checkability = Checkability.COMPANY_PROPERTY,
     criterion_id: str | None = None,
     identifier: str | None = None,
+    source: RequirementSource = RequirementSource.TENDER_DOCUMENT,
+    document_name: str = DOCUMENT_NAME,
 ) -> Requirement:
-    """One extracted requirement, defaulting to the kind a company document can settle."""
+    """One extracted requirement, defaulting to the kind a company document can settle.
+
+    `source` and `page` travel together: an `ESPD_REQUEST` row carries `page=None`, which
+    `Requirement` enforces (S2.5.1), so a caller that flips one must flip the other.
+    """
     return Requirement(
         id=identifier or str(uuid.uuid5(uuid.NAMESPACE_URL, source_text)),
         bid_id=BID_ID,
@@ -807,9 +868,10 @@ def requirement(
         kind=RequirementKind.MANDATORY,
         stage=RequirementStage.BID_ELIGIBILITY,
         checkable=checkable,
+        source=source,
         source_text=source_text,
         source_lang="de",
-        document_name=DOCUMENT_NAME,
+        document_name=document_name,
         page=page,
         ecertis_criterion_id=criterion_id,  # type: ignore[arg-type]
     )

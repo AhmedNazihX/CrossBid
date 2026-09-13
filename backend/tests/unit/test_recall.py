@@ -57,6 +57,7 @@ from crossbid.models.requirement import (
     Requirement,
     RequirementCategory,
     RequirementKind,
+    RequirementSource,
     RequirementStage,
 )
 from crossbid.settings import load_runtime_settings
@@ -232,6 +233,18 @@ def test_the_same_clause_quoted_from_another_document_does_not_match() -> None:
     the same line: one obligation cited from two documents is two citations."""
     # Act & Assert
     assert matched_ids(golden(label(doc=DOC)), extracted(doc=OTHER_DOC)) == set()
+
+
+def test_a_row_read_from_an_espd_request_cannot_evidence_a_page_anchored_label() -> None:
+    """S2.5.1 rows cite a criterion, not a page. A golden label is a page-anchored quote by
+    schema, so crediting one to such a row would score a different kind of finding."""
+    # Arrange
+    row = extracted().model_copy(
+        update={"source": RequirementSource.ESPD_REQUEST, "page": None}
+    )
+
+    # Act & Assert
+    assert matched_ids(golden(label(page=4)), row) == set()
 
 
 def test_a_translation_of_the_clause_does_not_match() -> None:

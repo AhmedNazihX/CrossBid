@@ -152,6 +152,10 @@ def cites_same_place(label: GoldenRequirement, requirement: Requirement) -> bool
     """Same file, and pages close enough to be the same clause. See the module docstring."""
     return (
         label.doc == requirement.document_name
+        # A row read from a published ESPD request carries no page (S2.5.1). A golden label
+        # is a page-anchored quote by schema, so such a row can never evidence one, and
+        # scoring it against the labels would credit recall to a different kind of finding.
+        and requirement.page is not None
         and abs(label.page - requirement.page) <= PAGE_WINDOW
     )
 
@@ -186,7 +190,8 @@ def _best(candidates: Sequence[Match]) -> Match | None:
         candidates,
         key=lambda match: (
             -match.overlap.ratio,
-            abs(match.requirement.page - match.label.page),
+            # Not None: `cites_same_place` has already refused a row without a page.
+            abs((match.requirement.page or 0) - match.label.page),
             match.requirement.id,
         ),
     )

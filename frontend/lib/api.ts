@@ -38,8 +38,11 @@ export interface paths {
         get: operations["list_documents_documents_get"];
         put?: never;
         /**
-         * Upload a PDF
-         * @description Accept a PDF and answer 202 at once; poll `GET /documents/{id}` until it is done.
+         * Upload a document
+         * @description Accept the file and answer 202 at once; poll `GET /documents/{id}` until it is done.
+         *
+         *     Every kind but `tender_espd_request` must be a PDF; that one must be the buyer's ESPD
+         *     request (DUME) as XML, and nothing else may be (see the module docstring).
          *
          *     The status moves `uploaded → parsed → embedded → ready`. A failure carries a
          *     `failure_reason` the bidder can act on.
@@ -366,10 +369,10 @@ export interface components {
         Body_upload_document_documents_post: {
             /**
              * File
-             * @description The PDF, at most 50 MB
+             * @description The PDF, at most 50 MB — or, for the kind `tender_espd_request`, the buyer's ESPD request XML, at most 4194304 bytes
              */
             file: string;
-            /** @description What the document is */
+            /** @description What the document is; it also decides which file types are accepted */
             kind: components["schemas"]["DocumentKind"];
         };
         /**
@@ -622,14 +625,21 @@ export interface components {
         };
         /**
          * DocumentKind
-         * @description What a stored PDF is.
+         * @description What a stored file is — and, since S2.5.1, which reader is allowed to open it.
          *
          *     A company's evidence pack outlives any single bid; a tender's documents belong to one bid
          *     and are deleted with it. The notice is kept apart from the procurement documents because
          *     it comes from TED's documented API while the rest is uploaded by the bidder.
+         *
+         *     `TENDER_ESPD_REQUEST` is the odd one and deliberately so: it is the only kind that is not
+         *     a PDF. A published DUME is an XML form carrying the buyer's ESPD criteria as canonical
+         *     UUIDs, so it is read by `ingestion/espd.py` and never by the PDF parser. Keeping it a
+         *     *kind* rather than an exception to the PDF rule is what lets the upload boundary stay an
+         *     accept-list: every other kind is still PDF-only, and this one is XML-only (see
+         *     `routers/documents.py`).
          * @enum {string}
          */
-        DocumentKind: "company_evidence" | "tender_document" | "tender_notice";
+        DocumentKind: "company_evidence" | "tender_document" | "tender_notice" | "tender_espd_request";
         /**
          * DocumentListResponse
          * @description Every document of the calling company, newest first.
@@ -652,7 +662,7 @@ export interface components {
              * @description The document id; use it to poll and to start a bid
              */
             id: string;
-            /** @description Company evidence, tender document or tender notice */
+            /** @description Company evidence, tender document, tender notice, or the buyer's published ESPD request (DUME), which is the one kind that is XML rather than PDF */
             kind: components["schemas"]["DocumentKind"];
             /**
              * Name
@@ -897,6 +907,8 @@ export interface components {
             kind: components["schemas"]["RequirementKind"];
             stage: components["schemas"]["RequirementStage"];
             checkable: components["schemas"]["Checkability"];
+            /** @default tender_document */
+            source: components["schemas"]["RequirementSource"];
             /**
              * Source Text
              * @description Verbatim quote in the tender's own language. Never paraphrased.
@@ -914,9 +926,9 @@ export interface components {
             document_name: string;
             /**
              * Page
-             * @description 1-indexed, so it matches what the PDF viewer shows
+             * @description 1-indexed, so it matches what the PDF viewer shows. Null for an ESPD request: a DUME is XML and has no pages, and the criterion id is its locator instead.
              */
-            page: number;
+            page?: number | null;
             /**
              * Translation
              * @description Bidder-language rendering; None until translated
@@ -940,6 +952,19 @@ export interface components {
          * @enum {string}
          */
         RequirementKind: "mandatory" | "optional" | "informational";
+        /**
+         * RequirementSource
+         * @description Which kind of artefact the requirement was read out of.
+         *
+         *     Two, because the two are read in completely different ways and a reviewer must be able
+         *     to tell them apart at a glance. A `TENDER_DOCUMENT` row is a verbatim quote a model
+         *     found on a numbered page of a PDF and that was checked against that page. An
+         *     `ESPD_REQUEST` row is a criterion the buyer *declared* in machine-readable form in a
+         *     published DUME — no model, no inference, no page — and it is the only kind that arrives
+         *     with an `ecertis_criterion_id` nobody had to guess (S2.5.1).
+         * @enum {string}
+         */
+        RequirementSource: "tender_document" | "espd_request";
         /**
          * RequirementStage
          * @description When the obligation bites.

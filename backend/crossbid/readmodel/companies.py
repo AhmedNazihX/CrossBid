@@ -7,7 +7,9 @@ parameter keeps the name it has everywhere else so the predicate reads the same 
 model. As in `documents.py` and `bids.py` the statements are `Final[LiteralString]` module
 constants with the scope already in their text: the API connects as a `BYPASSRLS` role, so
 that predicate is the *only* thing between two companies (ADR-0009), and `SCOPED_STATEMENTS`
-exists so one test can assert it across all of them.
+exists so one test can assert it across all of them. The one exception is `INSERT_COMPANY_SQL`
+(S2.4.3), which creates the row instead of filtering rows and so binds the tenant as a value;
+`documents.py` already draws that line and the test draws it the same way here.
 
 **Where each field of `CompanyProfile` lives, and why.** The `companies` table already had
 both halves before this story — `migrations/0001_init.sql` gives it the five scalar columns
@@ -107,8 +109,38 @@ returning id, name, country, legal_form, language, tone, profile
 form is a PUT). `returning` means the caller answers with what the row says rather than with
 what it sent — the two differ whenever Postgres normalises something."""
 
-SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (SELECT_COMPANY_SQL, UPDATE_COMPANY_SQL)
-"""Every statement in the module. The test asserts each carries the tenant predicate."""
+INSERT_COMPANY_SQL: Final[LiteralString] = """
+insert into companies
+    (id, owner_user_id, name, country, legal_form, language, tone, profile)
+values
+    (%(company_id)s, %(owner_user_id)s, %(name)s, %(country)s, %(legal_form)s,
+     %(language)s, %(tone)s, %(profile)s)
+on conflict (id) do nothing
+returning id, name, country, legal_form, language, tone, profile
+"""
+"""The one statement that *creates* a company, for the S2.4.3 demo seed.
+
+There is no create route and there must not be one: `owner_user_id` is `NOT NULL` and comes
+from sign-up, so a company arrives with its owner or not at all — which is why `save` is an
+update and answers `None` for a row that does not exist. The seed is the exception the plan
+always had, and it brings both ids because it invents the tenant rather than finding it.
+
+`on conflict (id) do nothing` is the whole idempotence mechanism: a second seed inserts
+nothing, returns no row, and the caller reads the existing profile instead of racing a
+select against an insert. `active_provider` is left to its column default (`openrouter`),
+so the one value the seed has no opinion about cannot drift from the schema.
+
+Unlike every statement above it, this one carries no `where`: the tenant is the row being
+created, so the scope is the `company_id` *value*. `documents.py`'s insert makes the same
+trade for the same reason, and a test pins the binding rather than the predicate."""
+
+SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
+    SELECT_COMPANY_SQL,
+    UPDATE_COMPANY_SQL,
+    INSERT_COMPANY_SQL,
+)
+"""Every statement in the module. The test asserts the two filtering ones carry the tenant
+predicate and that the insert binds the tenant into the row it creates."""
 
 TENANT_PARAMETER: Final = "id = %(company_id)s"
 """What the scope looks like in a `where` clause here: the primary key, bound to the same
@@ -121,7 +153,7 @@ parameter name the other read models filter a `company_id` column with."""
 class CompaniesReadModel:
     """Reads and writes one company's row. Create with the process pool.
 
-    The scope argument is keyword-only with no default on both methods, so a call that
+    The scope argument is keyword-only with no default on every method, so a call that
     forgets the company neither type-checks nor runs.
     """
 
@@ -138,13 +170,34 @@ class CompaniesReadModel:
         row = await self._fetch_one(SELECT_COMPANY_SQL, {"company_id": company_id})
         return None if row is None else _profile(row)
 
+    async def create(
+        self, *, company_id: uuid.UUID, owner_user_id: uuid.UUID, profile: CompanyProfile
+    ) -> CompanyProfile | None:
+        """Insert the company, or answer `None` because it is already there (S2.4.3).
+
+        `None` is not a failure here and must not be treated as one: it is how
+        `on conflict (id) do nothing` says "a second run", which is exactly what the seed
+        wants to hear. The caller then reads the row and decides whether it still matches.
+        """
+        row = await self._fetch_one(
+            INSERT_COMPANY_SQL,
+            {
+                "company_id": company_id,
+                "owner_user_id": owner_user_id,
+                **{field: _column_value(profile, field) for field in COLUMN_FIELDS},
+                "profile": Jsonb(profile_document(profile)),
+            },
+        )
+        return None if row is None else _profile(row)
+
     async def save(
         self, *, company_id: uuid.UUID, profile: CompanyProfile
     ) -> CompanyProfile | None:
         """Replace the profile and return the row as it now reads, or `None` for no such row.
 
-        Nothing here creates a company: `owner_user_id` is `NOT NULL` and comes from sign-up,
-        so an unseeded id is a 404 and not an insert.
+        This never creates a company: `owner_user_id` is `NOT NULL` and comes from sign-up,
+        so an unseeded id is a 404 and not an upsert. `create` above is the one insert, and
+        only the S2.4.3 seed reaches it — no route does.
         """
         row = await self._fetch_one(
             UPDATE_COMPANY_SQL,

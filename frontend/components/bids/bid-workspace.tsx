@@ -137,6 +137,12 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
 
   const handleCite = useCallback(
     (citation: Citation) => {
+      // A page-less citation is a DUME/ESPD requirement: XML, no pages, and the panel shows
+      // PDFs. `CitationLink` renders those as a label rather than a button so this cannot be
+      // reached from the UI — the guard is here because the type allows it and opening the
+      // panel on nothing would be worse than doing nothing.
+      if (citation.page === null) return
+
       const document =
         sourceDocuments.find((d) => d.id === citation.documentId) ??
         sourceDocuments.find((d) => d.name === citation.documentName)

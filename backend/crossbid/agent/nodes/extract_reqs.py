@@ -509,7 +509,7 @@ def _read_answer(answer: SectionExtraction, section: DocumentSection, bid_id: st
     result = _SectionResult(
         # By page, so page proximity means the same thing whatever order the model answered
         # in. Stable, so two rows quoting one page keep the order they were written in.
-        rows=tuple(sorted(rows, key=lambda row: row.page)),
+        rows=tuple(sorted(rows, key=_page_of)),
         problems=tuple(problems),
     )
     if not unquoted:
@@ -646,13 +646,24 @@ def _dedupe(rows: Iterable[Requirement]) -> tuple[Requirement, ...]:
 def _is_repeat(row: Requirement, text: str, other: Requirement, other_text: str) -> bool:
     if row.document_name != other.document_name:
         return False
-    if abs(row.page - other.page) > PAGE_PROXIMITY:
+    if abs(_page_of(row) - _page_of(other)) > PAGE_PROXIMITY:
         return False
     # `autojunk=False`: the heuristic it disables treats characters that recur in more than
     # 1% of a long string as junk, which for a 2000-character legal quote means most of the
     # alphabet, and it would report near-identical clauses as unlike.
     ratio = difflib.SequenceMatcher(None, text, other_text, autojunk=False).ratio()
     return ratio >= QUOTE_SIMILARITY_THRESHOLD
+
+
+def _page_of(row: Requirement) -> int:
+    """The row's page. Zero is unreachable here and exists for the type checker.
+
+    `Requirement.page` became nullable when a published ESPD request gained the right to
+    produce rows that cite a criterion instead of a page (S2.5.1). Nothing in this module
+    can see one: every row here is built from an `ExtractedRequirement`, which carries an
+    `int` page that is then checked against the text of that very page.
+    """
+    return row.page or 0
 
 
 def _normalised(text: str) -> str:

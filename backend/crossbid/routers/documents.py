@@ -16,6 +16,18 @@ the content type cannot be trusted on its own, and a `.pdf` suffix on an executa
 the upload a parser should never see. The size cap is a named constant here and should become
 a setting (`ingestion.max_upload_bytes`) once `settings.default.yaml` grows an upload section.
 
+**The accept-list is keyed on `kind`, not on an exception to the PDF rule (S2.5.1).** A
+published ESPD request (DUME) is XML, and it is the only kind that is: `XML_KINDS` says which
+kinds are read as XML and every other kind stays PDF-only, so admitting a DUME did not widen
+what a tender document or a company evidence file may be. The XML branch keeps the same
+three-fold shape, with each check's XML equivalent — the `.xml` suffix, a declared type that
+is plausibly XML, and a **content sniff that the root element really is an ESPD request**.
+That last one is `ingestion/espd.py`, which reads through `ingestion/safe_xml.py`, so a
+hostile document (entity expansion, an external entity, a nesting bomb) is refused here at
+415 and never reaches a background task. The XML size cap is `safe_xml.MAX_XML_BYTES` rather
+than the 50 MB PDF cap: the reader will not parse more than that, so accepting more would
+only be a 202 followed by a failure.
+
 Every route depends on `auth.current_company` and scopes by `company.company_id`. A document
 that belongs to another company answers **404**, never 403 (S2.2.2's reasoning: a "forbidden"
 confirms the id exists). There is no `bid_id` on the upload: the pack is uploaded first and
@@ -55,12 +67,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
-from crossbid.ingestion.chunker import Chunker
-from crossbid.ingestion.embeddings import ChunkVectorStore, EmbeddingsClient
-from crossbid.ingestion.pipeline import DocumentPipeline, Upload
-from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
+from crossbid.ingestion.espd import EspdParseError, parse_espd_request
+from crossbid.ingestion.pipeline import DocumentPipeline, Upload, build_pipeline
+from crossbid.ingestion.safe_xml import MAX_XML_BYTES
 from crossbid.ingestion.storage import (
     DEFAULT_CONTENT_TYPE,
+    XML_CONTENT_TYPE,
     CompanyDocumentStore,
     ObjectNotFoundError,
     StorageError,
@@ -91,12 +103,33 @@ GENERIC_CONTENT_TYPES: Final = frozenset({"application/octet-stream", ""})
 """What a browser or `curl` sends when it does not know better. Allowed, because the magic
 bytes decide; a declared type outside both sets is an honest "this is not a PDF"."""
 
+XML_KINDS: Final = frozenset({DocumentKind.TENDER_ESPD_REQUEST})
+"""The kinds read as XML. Every other kind is PDF-only — see the module docstring."""
+
+XML_SUFFIX: Final = ".xml"
+XML_CONTENT_TYPES: Final = frozenset({"application/xml", "text/xml", "application/espd+xml"})
+"""Declared types a client may plausibly send an ESPD request as. As with a PDF, this is a
+filter and not the decision: the root element is what settles it."""
+
 NO_FILENAME_DETAIL: Final = "The upload needs a filename."
 NOT_PDF_SUFFIX_DETAIL: Final = (
     f"Only PDF files are accepted; the filename must end in {PDF_SUFFIX}."
 )
 NOT_PDF_TYPE_DETAIL: Final = "Only PDF files are accepted; the file was sent as another type."
 NOT_PDF_CONTENT_DETAIL: Final = "Only PDF files are accepted; the file's content is not a PDF."
+NOT_XML_SUFFIX_DETAIL: Final = (
+    f"An ESPD request must be an XML file; the filename must end in {XML_SUFFIX}."
+)
+NOT_XML_TYPE_DETAIL: Final = (
+    "An ESPD request must be sent as XML; the file was sent as another type."
+)
+NOT_ESPD_CONTENT_DETAIL: Final = (
+    "This file is not a readable ESPD request (DUME). Upload the ESPD request XML the buyer "
+    "published with the tender."
+)
+XML_TOO_LARGE_DETAIL: Final = (
+    f"An ESPD request larger than {MAX_XML_BYTES} bytes is not read; check the file."
+)
 EMPTY_FILE_DETAIL: Final = "The uploaded file is empty."
 TOO_LARGE_DETAIL: Final = f"The file is larger than {MAX_UPLOAD_MEGABYTES} MB."
 NO_SUCH_DOCUMENT_DETAIL: Final = "No such document."
@@ -115,7 +148,12 @@ class DocumentResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     id: uuid.UUID = Field(description="The document id; use it to poll and to start a bid")
-    kind: DocumentKind = Field(description="Company evidence, tender document or tender notice")
+    kind: DocumentKind = Field(
+        description=(
+            "Company evidence, tender document, tender notice, or the buyer's published "
+            "ESPD request (DUME), which is the one kind that is XML rather than PDF"
+        )
+    )
     name: str = Field(description="The filename as uploaded")
     bid_id: uuid.UUID | None = Field(
         description="The bid this document is attached to; null until a bid is started with it"
@@ -199,23 +237,13 @@ def get_pipeline(
     records: DocumentsReadModel = Depends(get_document_records),
     store: CompanyDocumentStore = Depends(get_document_store),
 ) -> DocumentPipeline:
-    """The production wiring: real Storage, parser, chunker, embeddings and vector store.
+    """The production wiring, which `ingestion.pipeline.build_pipeline` owns.
 
     Built per request because the embeddings client owns an HTTP pool that the background
-    task must be able to close. The chunker's encoder is left to its lazy default, so the
-    BPE table is loaded in the background task and never inside a request.
+    task must be able to close. The factory is shared with S2.4.3's demo seed so that a
+    seeded document and an uploaded one are chunked and embedded by the same numbers.
     """
-    ingestion = settings.runtime.ingestion
-    return DocumentPipeline(
-        store=store,
-        parser=PyMuPDFParser(),
-        chunker=Chunker(
-            chunk_tokens=ingestion.chunk_tokens, overlap_tokens=ingestion.chunk_overlap
-        ),
-        embedder=EmbeddingsClient(settings),
-        chunk_writer=ChunkVectorStore(db),
-        records=records,
-    )
+    return build_pipeline(settings, source=db, store=store, records=records)
 
 
 # ------------------------------------------------------------------------------- routes
@@ -225,21 +253,32 @@ def get_pipeline(
     "",
     status_code=status.HTTP_202_ACCEPTED,
     response_model=DocumentResponse,
-    summary="Upload a PDF",
+    summary="Upload a document",
 )
 async def upload_document(
     background: BackgroundTasks,
-    file: UploadFile = File(description=f"The PDF, at most {MAX_UPLOAD_MEGABYTES} MB"),
-    kind: DocumentKind = Form(description="What the document is"),
+    file: UploadFile = File(
+        description=(
+            f"The PDF, at most {MAX_UPLOAD_MEGABYTES} MB — or, for the kind "
+            f"`tender_espd_request`, the buyer's ESPD request XML, at most "
+            f"{MAX_XML_BYTES} bytes"
+        )
+    ),
+    kind: DocumentKind = Form(
+        description="What the document is; it also decides which file types are accepted"
+    ),
     company: CompanyContext = Depends(current_company),
     pipeline: DocumentPipeline = Depends(get_pipeline),
 ) -> DocumentResponse:
-    """Accept a PDF and answer 202 at once; poll `GET /documents/{id}` until it is done.
+    """Accept the file and answer 202 at once; poll `GET /documents/{id}` until it is done.
+
+    Every kind but `tender_espd_request` must be a PDF; that one must be the buyer's ESPD
+    request (DUME) as XML, and nothing else may be (see the module docstring).
 
     The status moves `uploaded → parsed → embedded → ready`. A failure carries a
     `failure_reason` the bidder can act on.
     """
-    upload = await validated_upload(file)
+    upload = await validated_upload(file, kind)
     try:
         record = await pipeline.accept(
             company_id=_company_uuid(company), kind=kind, upload=upload
@@ -320,36 +359,89 @@ def _company_uuid(company: CompanyContext) -> uuid.UUID:
     return uuid.UUID(company.company_id)
 
 
-async def validated_upload(file: UploadFile) -> Upload:
+async def validated_upload(file: UploadFile, kind: DocumentKind) -> Upload:
     """The multipart part as an `Upload`, or the 4xx that names what is wrong with it.
 
-    The body is read with a limit of one byte over the cap, so an oversized upload is
-    recognised without being held in memory whole. The stored content type is always
-    `application/pdf`: the magic bytes have been checked, so that is what the file *is*,
-    whatever the client declared.
+    `kind` chooses the accept-list: a published ESPD request is read as XML, everything else
+    as a PDF (see the module docstring). The filename is the one check both share.
     """
     filename = (file.filename or "").strip()
     if not filename:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=NO_FILENAME_DETAIL)
+    if kind in XML_KINDS:
+        return await _validated_espd_request(file, filename)
+    return await _validated_pdf(file, filename)
+
+
+async def _validated_espd_request(file: UploadFile, filename: str) -> Upload:
+    """The XML branch: suffix, declared type, and a root element that is an ESPD request.
+
+    The sniff is a full parse through `ingestion/espd.py`, which is the hardened reader —
+    so this is also where a hostile XML is refused, before any background task exists. It is
+    synchronous work inside the request, which is acceptable because `MAX_XML_BYTES` bounds
+    it at four megabytes and the French fixture's 145 KB form parses in milliseconds.
+    """
+    if not filename.lower().endswith(XML_SUFFIX):
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=NOT_XML_SUFFIX_DETAIL
+        )
+    declared = _declared_type(file)
+    if declared not in XML_CONTENT_TYPES and declared not in GENERIC_CONTENT_TYPES:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=NOT_XML_TYPE_DETAIL)
+
+    content = await _body(file, limit=MAX_XML_BYTES, too_large=XML_TOO_LARGE_DETAIL)
+    try:
+        parse_espd_request(content)
+    except EspdParseError as exc:
+        # The reason is in the log for an operator; the bidder gets one sentence, and the
+        # exception's own message never reaches it (it is derived from the file, ADR-0008).
+        logger.info("upload refused: %s is not an ESPD request (%s)", filename, exc)
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=NOT_ESPD_CONTENT_DETAIL
+        ) from exc
+    return Upload(filename=filename, content_type=XML_CONTENT_TYPE, content=content)
+
+
+async def _validated_pdf(file: UploadFile, filename: str) -> Upload:
+    """The PDF branch: suffix, declared type, and the `%PDF-` magic bytes.
+
+    The stored content type is always `application/pdf`: the magic bytes have been checked,
+    so that is what the file *is*, whatever the client declared.
+    """
     if not filename.lower().endswith(PDF_SUFFIX):
         raise HTTPException(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=NOT_PDF_SUFFIX_DETAIL
         )
 
-    declared = (file.content_type or "").split(";", 1)[0].strip().lower()
+    declared = _declared_type(file)
     if declared not in PDF_CONTENT_TYPES and declared not in GENERIC_CONTENT_TYPES:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=NOT_PDF_TYPE_DETAIL)
 
-    content = await file.read(MAX_UPLOAD_BYTES + 1)
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail=TOO_LARGE_DETAIL)
-    if not content:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=EMPTY_FILE_DETAIL)
+    content = await _body(file, limit=MAX_UPLOAD_BYTES, too_large=TOO_LARGE_DETAIL)
     if not content.startswith(PDF_MAGIC):
         raise HTTPException(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=NOT_PDF_CONTENT_DETAIL
         )
     return Upload(filename=filename, content_type=DEFAULT_CONTENT_TYPE, content=content)
+
+
+def _declared_type(file: UploadFile) -> str:
+    """The part's content type without its parameters, lower-cased. Never trusted alone."""
+    return (file.content_type or "").split(";", 1)[0].strip().lower()
+
+
+async def _body(file: UploadFile, *, limit: int, too_large: str) -> bytes:
+    """The part's bytes, or the 4xx for empty and oversized.
+
+    Read with a limit of one byte over the cap, so an oversized upload is recognised
+    without being held in memory whole.
+    """
+    content = await file.read(limit + 1)
+    if len(content) > limit:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail=too_large)
+    if not content:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=EMPTY_FILE_DETAIL)
+    return content
 
 
 async def _process_in_background(

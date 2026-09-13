@@ -31,14 +31,21 @@ from crossbid.ingestion.pipeline import (
     EMBED_FAILED_REASON,
     EMBEDDED_KINDS,
     FAILURE_REASONS,
+    NO_ESPD_CRITERIA_REASON,
     NO_READABLE_TEXT_REASON,
+    NOT_AN_ESPD_REQUEST_REASON,
     SAVE_FAILED_REASON,
     STORE_FAILED_REASON,
     UNEXPECTED_FAILURE_REASON,
     UNREADABLE_REASON,
     Upload,
 )
-from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, StorageError, object_key
+from crossbid.ingestion.storage import (
+    DEFAULT_CONTENT_TYPE,
+    XML_CONTENT_TYPE,
+    StorageError,
+    object_key,
+)
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentRecord, DocumentStatus, ReadModelError
 from tests.conftest import (
@@ -53,6 +60,8 @@ from tests.conftest import (
     FakeStore,
     Harness,
     InMemoryRecords,
+    espd_request_bytes,
+    espd_request_xml,
     harness,
     upload,
 )
@@ -121,6 +130,27 @@ async def test_accept_mints_a_fresh_id_per_upload() -> None:
 
     assert first.id != second.id
     assert len(h.records.rows) == 2
+
+
+@pytest.mark.anyio
+async def test_accept_uses_the_id_the_caller_brought() -> None:
+    """S2.4.3's seed addresses a document by a `uuid5` of its filename, and the row and its
+    Storage key both have to be built from that id rather than from a fresh one."""
+    # Arrange
+    h = harness()
+    seeded = uuid.UUID("6f1f0c3a-1111-5111-8111-111111111111")
+
+    # Act
+    record = await h.pipeline.accept(
+        company_id=COMPANY_ID,
+        kind=DocumentKind.COMPANY_EVIDENCE,
+        upload=upload(),
+        document_id=seeded,
+    )
+
+    # Assert
+    assert record.id == seeded
+    assert str(seeded) in record.storage_path
 
 
 # -------------------------------------------------------------------------- happy path
@@ -415,3 +445,77 @@ async def test_aclose_releases_the_embedder_once() -> None:
     await h.pipeline.aclose()
 
     assert h.embedder.closed == 1
+
+
+# ------------------------------------------------------- the published ESPD request (DUME)
+
+
+def espd_upload(content: bytes | None = None) -> Upload:
+    return Upload(
+        filename="DUME_acheteur.xml",
+        content_type=XML_CONTENT_TYPE,
+        content=content if content is not None else espd_request_bytes(),
+    )
+
+
+@pytest.mark.anyio
+async def test_an_espd_request_is_stored_and_validated_but_never_parsed_as_a_pdf() -> None:
+    """S2.5.1: the one uploadable kind that is XML. No pages, no chunks, no embedding."""
+    # Arrange
+    h = harness()
+
+    # Act
+    final = await run(h, kind=DocumentKind.TENDER_ESPD_REQUEST, up=espd_upload())
+
+    # Assert
+    assert final.status is DocumentStatus.READY
+    assert final.pages == 0 and final.unread_pages == ()
+    assert h.parser.sources == []
+    assert h.writer.inserts == []
+    assert h.records.statuses_of(final.id) == [
+        DocumentStatus.UPLOADED,
+        DocumentStatus.PARSED,
+        DocumentStatus.READY,
+    ]
+    assert h.store.uploads[0]["content"] == espd_request_bytes()
+    assert h.store.uploads[0]["content_type"] == XML_CONTENT_TYPE
+
+
+@pytest.mark.anyio
+async def test_a_file_that_is_not_an_espd_request_fails_with_a_sentence_to_act_on() -> None:
+    """Reaching here means the upload boundary was bypassed (the seed, a script, a retry)."""
+    # Act
+    h = harness()
+    final = await run(h, kind=DocumentKind.TENDER_ESPD_REQUEST, up=espd_upload(b"<hello/>"))
+
+    # Assert
+    assert final.status is DocumentStatus.FAILED
+    assert final.failure_reason == NOT_AN_ESPD_REQUEST_REASON
+    assert final.failure_reason in FAILURE_REASONS
+
+
+@pytest.mark.anyio
+async def test_an_espd_request_naming_no_known_criterion_fails_rather_than_looking_ready(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Marking it `ready` would let a bid start on a file that can contribute nothing."""
+    # Arrange
+    stranger = espd_request_xml(
+        ("ffffffff-ffff-4fff-8fff-ffffffffffff", "CRITERION.EXCLUSION.X", "Inconnu", "?")
+    )
+
+    # Act
+    h = harness()
+    with caplog.at_level(logging.ERROR, logger="crossbid.ingestion.pipeline"):
+        final = await run(h, kind=DocumentKind.TENDER_ESPD_REQUEST, up=espd_upload(stranger))
+
+    # Assert
+    assert final.status is DocumentStatus.FAILED
+    assert final.failure_reason == NO_ESPD_CRITERIA_REASON
+    assert h.records.statuses_of(final.id) == [DocumentStatus.UPLOADED, DocumentStatus.FAILED]
+
+
+@pytest.mark.anyio
+async def test_an_espd_request_is_never_embedded_whatever_the_kinds_say() -> None:
+    """A DUME is a tender's file; `EMBEDDED_KINDS` is company evidence and stays that way."""
+    assert DocumentKind.TENDER_ESPD_REQUEST not in EMBEDDED_KINDS

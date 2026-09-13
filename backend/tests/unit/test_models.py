@@ -38,6 +38,7 @@ from crossbid.models import (
     Requirement,
     RequirementCategory,
     RequirementKind,
+    RequirementSource,
     RequirementStage,
     ReviewerStatus,
     RowStatus,
@@ -578,6 +579,38 @@ def test_pages_are_one_indexed() -> None:
     """Page 0 would not match what the reviewer's PDF viewer shows."""
     with pytest.raises(ValidationError):
         _requirement(page=0)
+
+
+def test_a_requirement_read_from_a_tender_document_defaults_to_that_source() -> None:
+    """The overwhelming majority of rows are extracted quotes, so they cost no argument."""
+    assert _requirement().source is RequirementSource.TENDER_DOCUMENT
+
+
+def test_an_espd_requirement_carries_no_page_and_says_why() -> None:
+    """S2.5.1: a DUME is XML, has no pages, and must not look page-anchored (ADR-0007)."""
+    # Act
+    requirement = _requirement(
+        source=RequirementSource.ESPD_REQUEST,
+        page=None,
+        document_name="DUME_acheteur.xml",
+        ecertis_criterion_id=CRITERION_IDS[0],
+    )
+
+    # Assert
+    assert requirement.page is None
+    assert requirement.source is RequirementSource.ESPD_REQUEST
+
+
+def test_an_espd_requirement_may_not_claim_a_page() -> None:
+    """A page number on an XML form is a citation a reviewer cannot follow."""
+    with pytest.raises(ValidationError, match="no pages"):
+        _requirement(source=RequirementSource.ESPD_REQUEST, page=3)
+
+
+def test_a_document_requirement_must_carry_its_page() -> None:
+    """The other half of the invariant: an extracted quote without a page cites nothing."""
+    with pytest.raises(ValidationError, match="page it was read from"):
+        _requirement(page=None)
 
 
 def test_a_contract_performance_requirement_is_expressible() -> None:

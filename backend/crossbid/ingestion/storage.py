@@ -81,6 +81,10 @@ FALLBACK_FILENAME: Final = "document"
 whose filename is legitimately all non-Latin characters, and the key is not the name."""
 
 DEFAULT_CONTENT_TYPE: Final = "application/pdf"
+XML_CONTENT_TYPE: Final = "application/xml"
+"""What a published ESPD request (DUME) is stored as — the only non-PDF kind (S2.5.1). The
+stored type is decided by the server after the bytes have been checked, never echoed from
+what the client declared, so these two constants are the complete list."""
 CACHE_CONTROL: Final = "private, max-age=0, no-store"
 """Stored on the object and returned with it. A signed URL is a public URL for as long as
 it lives, so no shared cache should keep a company document after it expires."""

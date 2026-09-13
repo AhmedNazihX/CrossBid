@@ -328,10 +328,19 @@ class CheckUpdate(TypedDict, total=False):
 
 
 class ParseUpdate(TypedDict, total=False):
-    """The partial state `parse_docs` returns: the pack, and what could not be read."""
+    """The partial state `parse_docs` returns: the pack, and what could not be read.
+
+    `requirements` is here because a published ESPD request (DUME) is parsed rather than
+    extracted: its criteria are already typed and already carry their eCertis id, so the
+    node that reads the file is also the node that knows them, and no model is involved
+    (S2.5.1). The channel appends, so these rows sit beside extraction's; the key is only
+    present when the pack actually held a DUME, because writing an empty list would say
+    "no requirements" one superstep before extraction says otherwise.
+    """
 
     documents: list[TenderDocument]
     extraction_problems: list[ExtractionProblem]
+    requirements: list[Requirement]
 
 
 class LifecycleUpdate(TypedDict, total=False):

@@ -97,7 +97,8 @@ function RequirementCard({
   const detailId = `${requirement.id}-evidence`
   const citation: Citation = {
     documentName: requirement.document_name,
-    page: requirement.page,
+    page: requirement.page ?? null,
+    criterionId: requirement.ecertis_criterion_id ?? undefined,
   }
   return (
     <article className="flex flex-col gap-2 rounded-lg border border-border-default bg-surface-card px-4 py-3.5 shadow-xs">

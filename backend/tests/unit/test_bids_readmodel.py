@@ -32,6 +32,7 @@ from crossbid.models.requirement import (
     Requirement,
     RequirementCategory,
     RequirementKind,
+    RequirementSource,
     RequirementStage,
     Threshold,
     ThresholdComparator,
@@ -524,6 +525,7 @@ async def test_fetch_requirements_revalidates_rows_from_the_table() -> None:
         "kind": "mandatory",
         "stage": "bid_eligibility",
         "checkable": "company_property",
+        "source": "tender_document",
         "source_text": row.source_text,
         "source_lang": "de",
         "document_name": row.document_name,
@@ -556,6 +558,7 @@ async def test_fetch_requirements_turns_a_criterion_uuid_back_into_a_string() ->
         "kind": "mandatory",
         "stage": "bid_eligibility",
         "checkable": "neither",
+        "source": "tender_document",
         "source_text": "Ausschlussgrund",
         "source_lang": "de",
         "document_name": "a.pdf",
@@ -571,6 +574,57 @@ async def test_fetch_requirements_turns_a_criterion_uuid_back_into_a_string() ->
 
     assert found.ecertis_criterion_id == CRITERION_IDS[0]
     assert found.threshold is None
+
+
+async def test_an_espd_requirement_is_written_with_no_page_and_its_own_source() -> None:
+    """S2.5.1: the DUME's criteria are rows too, and the column pair says where from."""
+    # Arrange
+    db = FakeDatabase()
+    row = requirement(
+        source=RequirementSource.ESPD_REQUEST,
+        page=None,
+        ecertis_criterion_id=CRITERION_IDS[0],
+        document_name="DUME_acheteur.xml",
+    )
+
+    # Act
+    await write_requirements(db, company_id=str(COMPANY_ID), rows=[row])
+
+    # Assert
+    [(_, params)] = db.conn.executed
+    assert params[0]["source"] == "espd_request"
+    assert params[0]["page"] is None
+    assert params[0]["ecertis_criterion_id"] == CRITERION_IDS[0]
+
+
+async def test_fetch_reads_an_espd_row_back_without_inventing_a_page() -> None:
+    """A row the table says has no page must not come back claiming one."""
+    # Arrange
+    record = {
+        "id": uuid.uuid4(),
+        "bid_id": BID_ID,
+        "category": "exclusion_ground",
+        "kind": "mandatory",
+        "stage": "bid_eligibility",
+        "checkable": "document_submission",
+        "source": "espd_request",
+        "source_text": "Corruption",
+        "source_lang": "fr",
+        "document_name": "DUME_acheteur.xml",
+        "page": None,
+        "translation": None,
+        "ecertis_criterion_id": uuid.UUID(CRITERION_IDS[0]),
+        "threshold": None,
+        "deadline": None,
+    }
+    db = FakeDatabase(Scripted([record]))
+
+    # Act
+    [found] = await fetch_requirements(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
+
+    # Assert
+    assert found.source is RequirementSource.ESPD_REQUEST
+    assert found.page is None
 
 
 # ------------------------------------------------------------------------- matrix rows

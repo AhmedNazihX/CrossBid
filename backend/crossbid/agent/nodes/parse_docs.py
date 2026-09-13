@@ -24,6 +24,17 @@ that is infrastructure, not input, so it raises and the runner marks the bid `fa
 holding the event loop for that long would stall every poll of `GET /bids/{id}` from the
 browser that is waiting on exactly this run. Files are parsed one after another — the
 constraint is the pool of one process, not latency, and 28 files parse in seconds.
+
+**4. A published ESPD request is read here and turned into requirements here (S2.5.1).** The
+one document in a pack that is not a PDF, and the only input in the whole system that states
+eCertis criterion ids rather than implying them. It never reaches the PDF parser and never
+becomes a `TenderDocument` — it has no pages, so there would be nothing for extraction to
+section — and instead its criteria come back as `Requirement`s with their
+`ecertis_criterion_id` already set, which is what makes `check_reqs` look up national
+evidence for them. The mapping is a table in `agent/espd_requirements.py`; no model is asked
+anything. A DUME that will not read is reported exactly like a PDF that will not open, and
+a criterion the register does not know is reported as `INVALID_CRITERION_ID` rather than
+dropped in silence.
 """
 
 from __future__ import annotations
@@ -36,6 +47,7 @@ from typing import Final, Optional
 import httpx
 from langchain_core.runnables import RunnableConfig
 
+from crossbid.agent.espd_requirements import requirements_from_espd
 from crossbid.agent.state import (
     BidState,
     ExtractionProblem,
@@ -43,6 +55,7 @@ from crossbid.agent.state import (
     ParseUpdate,
     TenderDocument,
 )
+from crossbid.ingestion.espd import EspdParseError, parse_espd_request
 from crossbid.ingestion.parser import Parser, ParserError
 from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
 from crossbid.ingestion.storage import (
@@ -50,6 +63,8 @@ from crossbid.ingestion.storage import (
     StorageError,
     company_document_store,
 )
+from crossbid.models.requirement import Requirement
+from crossbid.models.tender import DocumentKind
 from crossbid.readmodel.bids import BidDocumentRow, ConnectionSource, bid_documents
 from crossbid.settings import Settings
 
@@ -109,7 +124,13 @@ class DocumentParser:
 
         documents: list[TenderDocument] = []
         problems: list[ExtractionProblem] = []
+        requirements: list[Requirement] = []
         for row in rows:
+            if row.kind is DocumentKind.TENDER_ESPD_REQUEST:
+                found, reported = await self._read_espd(company_id, row, bid_id, language)
+                requirements.extend(found)
+                problems.extend(reported)
+                continue
             parsed = await self._parse_one(company_id, row, language)
             if parsed is None:
                 reason = ExtractionProblemReason.UNPARSEABLE_DOCUMENT
@@ -124,7 +145,47 @@ class DocumentParser:
                     len(parsed.parsed.unread_pages),
                     parsed.parsed.unread_pages,
                 )
-        return {"documents": documents, "extraction_problems": problems}
+        update: ParseUpdate = {"documents": documents, "extraction_problems": problems}
+        if requirements:
+            # Only when there are some: the channel appends, and an empty list written here
+            # would still be a write, one superstep before extraction adds its own rows.
+            update["requirements"] = requirements
+        return update
+
+    async def _read_espd(
+        self, company_id: str, row: BidDocumentRow, bid_id: str, language: str
+    ) -> tuple[tuple[Requirement, ...], tuple[ExtractionProblem, ...]]:
+        """A published DUME as requirements, plus what it could not contribute.
+
+        The parse is CPU work on a file a bidder uploaded, and it is bounded by
+        `safe_xml`'s size cap rather than by the document's ambitions; a 145 KB form takes
+        milliseconds, so it runs inline rather than in a thread the way pymupdf does.
+        """
+        content = await self._fetch(company_id, row)
+        try:
+            request = parse_espd_request(content)
+        except EspdParseError as exc:
+            # The message names the refusal, never the file's content (ADR-0008).
+            logger.warning("Bid document %s (%s) is not readable: %s", row.id, row.name, exc)
+            reason = ExtractionProblemReason.UNPARSEABLE_DOCUMENT
+            return (), (ExtractionProblem(reason=reason, document_name=row.name),)
+
+        found = requirements_from_espd(
+            request, bid_id=bid_id, document_name=row.name, source_lang=language
+        )
+        logger.info(
+            "Bid %s: %s declares %d ESPD criterion/criteria the register knows",
+            bid_id,
+            row.name,
+            len(found),
+        )
+        # One problem per criterion that could not be mapped — the ids themselves stay in
+        # the log, because a problem carries no document-derived text (ADR-0008).
+        missing = request.dropped_criterion_count + len(request.criteria) - len(found)
+        reason = ExtractionProblemReason.INVALID_CRITERION_ID
+        return found, tuple(
+            ExtractionProblem(reason=reason, document_name=row.name) for _ in range(missing)
+        )
 
     async def _parse_one(
         self, company_id: str, row: BidDocumentRow, language: str

@@ -469,7 +469,9 @@ def _opening_messages(
         DataBlock(
             text=requirement.source_text,
             label=requirement.document_name,
-            pages=(requirement.page,),
+            # Empty for a row read from a published ESPD request: a DUME is XML and has no
+            # pages (S2.5.1), and `DataBlock.pages` already means "empty when unknown".
+            pages=() if requirement.page is None else (requirement.page,),
         )
     )
     task = render(

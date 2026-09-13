@@ -19,9 +19,14 @@ Two calls, because the HTTP layer needs them at different moments:
   message quotes a URL; the bidder gets a sentence they can act on and nothing else.
 
 Every collaborator is a constructor argument typed as a `Protocol`, so the unit suite runs
-the real state machine over fakes and never opens a socket or a database. The concrete wiring
-(`CompanyDocumentStore`, `PyMuPDFParser`, `Chunker`, `EmbeddingsClient`, `ChunkVectorStore`,
-`DocumentsReadModel`) lives in `routers/documents.py`, the one place that has `Settings`.
+the real state machine over fakes and never opens a socket or a database. `build_pipeline` at
+the bottom of this module is the concrete wiring — `PyMuPDFParser`, `Chunker`,
+`EmbeddingsClient`, `ChunkVectorStore` — and it lives here rather than in
+`routers/documents.py` because the HTTP route is no longer its only caller: S2.4.3's demo seed
+drives a pipeline from a script and must drive the *same* one, or a seeded document would be
+chunked by different numbers from an uploaded one. `CompanyDocumentStore` and
+`DocumentsReadModel` stay arguments: the first needs Supabase credentials this module has no
+business reading, and the second is what the caller already holds.
 
 **Only company evidence is embedded at upload.** A company's evidence pack outlives any bid
 and is what `company_rag_search` reads, so its vectors go into `company_chunks` here. A
@@ -31,6 +36,16 @@ is `NOT NULL`, so there is nowhere to put its vectors yet. It is stored, parsed 
 counts and the scanned-PDF refusal below apply to every kind) and goes `parsed → ready`; the
 graph reads the file back from Storage and owns its vectors under the bid. `EMBEDDED_KINDS`
 is the one place that rule is written.
+
+**A published ESPD request takes the short path (S2.5.1).** `TENDER_ESPD_REQUEST` is the one
+kind that is not a PDF: it is stored, read by `ingestion/espd.py` — hardened XML, see
+`safe_xml` — and goes `parsed` (zero pages, nothing unread) straight to `ready`. It is never
+handed to the PDF parser, never chunked and never embedded. It **fails** when it is not a
+readable ESPD request, or when it names no criterion the eCertis register knows: both mean
+the file can contribute nothing to a bid, and a `ready` row would let Start be pressed on
+it. The upload route refuses the same two things earlier where it can (`routers/documents.py`
+sniffs the root element), but a seed, a script or a retry reaches `process` directly, so the
+check lives here as well as there.
 
 **A document with no readable page fails, deliberately.** The parser lists an image-only page
 instead of dropping it (S2.1.1), so a scanned PDF parses cleanly to N unread pages and zero
@@ -52,12 +67,22 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
-from crossbid.ingestion.chunker import Chunk
-from crossbid.ingestion.embeddings import ChunkStoreError, EmbeddedChunk, EmbeddingsError
+from crossbid.ingestion.chunker import Chunk, Chunker
+from crossbid.ingestion.embeddings import (
+    ChunkStoreError,
+    ChunkVectorStore,
+    ConnectionSource,
+    EmbeddedChunk,
+    EmbeddingsClient,
+    EmbeddingsError,
+)
+from crossbid.ingestion.espd import EspdParseError, parse_espd_request
 from crossbid.ingestion.parser import ParsedDocument, Parser, ParserError
+from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
 from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, StorageError, object_key
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentRecord
+from crossbid.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +101,14 @@ EMBED_FAILED_REASON: Final = (
     "The document text could not be indexed because the embeddings service did not answer. "
     "Try again later."
 )
+NOT_AN_ESPD_REQUEST_REASON: Final = (
+    "This file could not be read as an ESPD request (DUME). Upload the buyer's own ESPD "
+    "request XML, or upload the document as a tender document instead."
+)
+NO_ESPD_CRITERIA_REASON: Final = (
+    "This ESPD request names no criterion from the EU register, so nothing in it can be "
+    "checked. Upload the ESPD request the buyer published for this tender."
+)
 SAVE_FAILED_REASON: Final = "The document text could not be saved. Try again later."
 UNEXPECTED_FAILURE_REASON: Final = "Processing failed unexpectedly. Try again later."
 
@@ -83,6 +116,8 @@ FAILURE_REASONS: Final[tuple[str, ...]] = (
     STORE_FAILED_REASON,
     UNREADABLE_REASON,
     NO_READABLE_TEXT_REASON,
+    NOT_AN_ESPD_REQUEST_REASON,
+    NO_ESPD_CRITERIA_REASON,
     EMBED_FAILED_REASON,
     SAVE_FAILED_REASON,
     UNEXPECTED_FAILURE_REASON,
@@ -94,6 +129,10 @@ URL" is proven rather than hoped."""
 
 class NoReadableTextError(RuntimeError):
     """Every page parsed as unread, so there is nothing to chunk or embed."""
+
+
+class NoEspdCriteriaError(RuntimeError):
+    """The file is an ESPD request, but names no criterion the eCertis register knows."""
 
 
 # --------------------------------------------------------------------------- collaborators
@@ -204,10 +243,21 @@ class DocumentPipeline:
         self._records = records
 
     async def accept(
-        self, *, company_id: uuid.UUID, kind: DocumentKind, upload: Upload
+        self,
+        *,
+        company_id: uuid.UUID,
+        kind: DocumentKind,
+        upload: Upload,
+        document_id: uuid.UUID | None = None,
     ) -> DocumentRecord:
-        """Record the `uploaded` row and return it. No network; safe inside the request."""
-        document_id = uuid.uuid4()
+        """Record the `uploaded` row and return it. No network; safe inside the request.
+
+        The id is minted here unless the caller brings one. An upload has no id before this
+        call, so `routers/documents.py` never passes one; the S2.4.3 demo seed does, because
+        a `uuid5` of the filename is what lets a second run recognise the document it already
+        seeded — before a byte is stored and before an embedding is paid for.
+        """
+        document_id = uuid.uuid4() if document_id is None else document_id
         # The key the store will write to, computed before anything is stored, so the row
         # and the object agree from the first status on. The original filename goes into
         # `name`; the key's filename is sanitised and may not resemble it (S2.2.2).
@@ -254,6 +304,8 @@ class DocumentPipeline:
             content=upload.content,
             content_type=upload.content_type,
         )
+        if record.kind is DocumentKind.TENDER_ESPD_REQUEST:
+            return await self._accept_espd(record, upload)
         parsed = await asyncio.to_thread(
             self._parser.parse, upload.content, document_id=str(record.id)
         )
@@ -268,6 +320,33 @@ class DocumentPipeline:
             raise NoReadableTextError(f"document {record.id}: no page has a text layer")
         if record.kind in EMBEDDED_KINDS:
             record = await self._embed_and_write(record, parsed)
+        return await self._records.mark_ready(
+            company_id=record.company_id, document_id=record.id
+        )
+
+    async def _accept_espd(self, record: DocumentRecord, upload: Upload) -> DocumentRecord:
+        """Validate a stored DUME and take it to `ready`. No pages, no chunks, no vectors.
+
+        Parsing runs in a worker thread for the same reason pymupdf does: it is synchronous
+        work on a file a bidder chose the size of, and the poller waiting on this row is on
+        the event loop. `parse_espd_request` raises `EspdParseError` for anything that is
+        not one, and `_reason_for` turns both refusals into a sentence the bidder can act on.
+        """
+        request = await asyncio.to_thread(parse_espd_request, upload.content)
+        if not request.criteria:
+            raise NoEspdCriteriaError(
+                f"document {record.id}: no criterion of this ESPD request is in the register"
+            )
+        logger.info(
+            "document %s is an ESPD request declaring %d known criterion/criteria",
+            record.id,
+            len(request.criteria),
+        )
+        # `parsed` with zero pages is the honest count for an XML form, and it keeps the
+        # status sequence a poller sees the same for every kind.
+        record = await self._records.mark_parsed(
+            company_id=record.company_id, document_id=record.id, pages=0, unread_pages=()
+        )
         return await self._records.mark_ready(
             company_id=record.company_id, document_id=record.id
         )
@@ -303,8 +382,46 @@ def _reason_for(exc: Exception) -> str:
         return UNREADABLE_REASON
     if isinstance(exc, NoReadableTextError):
         return NO_READABLE_TEXT_REASON
+    if isinstance(exc, EspdParseError):
+        return NOT_AN_ESPD_REQUEST_REASON
+    if isinstance(exc, NoEspdCriteriaError):
+        return NO_ESPD_CRITERIA_REASON
     if isinstance(exc, EmbeddingsError):
         return EMBED_FAILED_REASON
     if isinstance(exc, ChunkStoreError):
         return SAVE_FAILED_REASON
     return UNEXPECTED_FAILURE_REASON
+
+
+# --------------------------------------------------------------------------------- wiring
+
+
+def build_pipeline(
+    settings: Settings,
+    *,
+    source: ConnectionSource,
+    store: DocumentStore,
+    records: DocumentRecords,
+) -> DocumentPipeline:
+    """The production pipeline: real parser, chunker, embeddings client and vector store.
+
+    Build one per batch of uploads and `aclose` it when the batch is done — the embeddings
+    client owns an HTTP connection pool and this function does not own its lifetime. The
+    chunker's encoder is left to its lazy default, so tiktoken's BPE table is fetched in
+    whatever background task or script is doing the work and never inside a request.
+
+    The chunk sizes come from `settings.runtime.ingestion` and from nowhere else, which is
+    the point of the function: an upload and a seed that chunked by different numbers would
+    put two incompatible corpora in one `company_chunks` table.
+    """
+    ingestion = settings.runtime.ingestion
+    return DocumentPipeline(
+        store=store,
+        parser=PyMuPDFParser(),
+        chunker=Chunker(
+            chunk_tokens=ingestion.chunk_tokens, overlap_tokens=ingestion.chunk_overlap
+        ),
+        embedder=EmbeddingsClient(settings),
+        chunk_writer=ChunkVectorStore(source),
+        records=records,
+    )

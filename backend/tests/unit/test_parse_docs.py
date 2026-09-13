@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -34,10 +34,13 @@ from crossbid.ingestion.storage import (
     SignedUrl,
     StorageError,
 )
+from crossbid.models.ecertis_criteria import CRITERION_IDS
+from crossbid.models.requirement import RequirementSource
 from crossbid.models.tender import DocumentKind
 from crossbid.readmodel.bids import BidDocumentRow
 from crossbid.readmodel.documents import DocumentStatus
 from crossbid.settings import Settings
+from tests.conftest import espd_request_bytes, espd_request_xml
 
 pytestmark = pytest.mark.anyio
 
@@ -49,13 +52,18 @@ STORAGE_HOST = "https://storage.test"
 # --------------------------------------------------------------------------------- fakes
 
 
-def row(name: str, *, document_id: str | None = None) -> BidDocumentRow:
+def row(
+    name: str,
+    *,
+    document_id: str | None = None,
+    kind: DocumentKind = DocumentKind.TENDER_DOCUMENT,
+) -> BidDocumentRow:
     identifier = document_id or str(uuid.uuid4())
     return BidDocumentRow(
         id=identifier,
         name=name,
         storage_path=f"{COMPANY_ID}/{identifier}/{name}",
-        kind=DocumentKind.TENDER_DOCUMENT,
+        kind=kind,
         status=DocumentStatus.READY,
         bid_id=BID_ID,
         pages=0,
@@ -94,11 +102,18 @@ class ScriptedParser:
 class Collaborators:
     """A loader and a fetcher that record what the node asked for."""
 
-    def __init__(self, rows: Sequence[BidDocumentRow], *, fetch_error: Exception | None = None):
+    def __init__(
+        self,
+        rows: Sequence[BidDocumentRow],
+        *,
+        fetch_error: Exception | None = None,
+        content: Mapping[str, bytes] | None = None,
+    ):
         self.rows = list(rows)
         self.loaded: list[tuple[str, str]] = []
         self.fetched: list[tuple[str, str]] = []
         self._fetch_error = fetch_error
+        self._content = dict(content or {})
 
     async def load(self, company_id: str, bid_id: str) -> Sequence[BidDocumentRow]:
         self.loaded.append((company_id, bid_id))
@@ -108,6 +123,8 @@ class Collaborators:
         self.fetched.append((company_id, document.id))
         if self._fetch_error is not None:
             raise self._fetch_error
+        if document.id in self._content:
+            return self._content[document.id]
         return f"%PDF-{document.name}".encode()
 
 
@@ -381,3 +398,129 @@ async def test_build_parse_docs_wires_the_read_model_loader(
     assert isinstance(node, DocumentParser)
     assert loaded == rows
     assert calls == [(db, COMPANY_ID, BID_ID)]
+
+
+# ------------------------------------------------------------------ the published DUME
+
+
+def espd_node(
+    *rows_and_content: tuple[BidDocumentRow, bytes],
+    extra: Sequence[BidDocumentRow] = (),
+    parser: ScriptedParser | None = None,
+) -> tuple[DocumentParser, Collaborators]:
+    """The node over a pack that includes one or more ESPD requests with their bytes."""
+    rows = [document for document, _ in rows_and_content] + list(extra)
+    collaborators = Collaborators(
+        rows, content={document.id: data for document, data in rows_and_content}
+    )
+    return (
+        DocumentParser(
+            load_documents=collaborators.load,
+            fetch=collaborators.fetch,
+            parser=parser or ScriptedParser({}),
+        ),
+        collaborators,
+    )
+
+
+async def test_a_published_dume_becomes_requirements_and_not_a_parsed_document() -> None:
+    """S2.5.1: the XML never reaches the PDF parser, and its criteria arrive already mapped."""
+    # Arrange
+    dume = row("DUME_acheteur.xml", kind=DocumentKind.TENDER_ESPD_REQUEST)
+    node, _ = espd_node((dume, espd_request_bytes()))
+
+    # Act
+    update = await node(state(source_language="fr"))
+
+    # Assert
+    assert update["documents"] == []
+    assert update["extraction_problems"] == []
+    rows = update["requirements"]
+    assert len(rows) == 30
+    assert all(row.ecertis_criterion_id is not None for row in rows)
+    assert all(row.source is RequirementSource.ESPD_REQUEST for row in rows)
+    assert all(row.page is None for row in rows)
+    assert all(row.source_lang == "fr" for row in rows)
+    assert all(row.bid_id == BID_ID for row in rows)
+    assert all(row.document_name == "DUME_acheteur.xml" for row in rows)
+
+
+async def test_a_pack_of_pdfs_and_a_dume_keeps_both_and_mixes_neither() -> None:
+    # Arrange
+    pdf = row("Reglement.pdf")
+    dume = row("DUME_acheteur.xml", kind=DocumentKind.TENDER_ESPD_REQUEST)
+    parser = ScriptedParser({pdf.id: parsed(pdf.id, "Article 1")})
+    node, collaborators = espd_node((dume, espd_request_bytes()), extra=[pdf], parser=parser)
+
+    # Act
+    update = await node(state(source_language="fr"))
+
+    # Assert
+    assert [document.name for document in update["documents"]] == ["Reglement.pdf"]
+    assert len(update["requirements"]) == 30
+    assert parser.sources == [b"%PDF-Reglement.pdf"]
+    assert collaborators.fetched == [(COMPANY_ID, dume.id), (COMPANY_ID, pdf.id)]
+
+
+async def test_a_pack_without_a_dume_writes_no_requirements() -> None:
+    """Extraction owns that channel too; parse_docs must not send it an empty list."""
+    # Arrange
+    pdf = row("Reglement.pdf")
+    parser = ScriptedParser({pdf.id: parsed(pdf.id, "Article 1")})
+    collaborators = Collaborators([pdf])
+    node = DocumentParser(
+        load_documents=collaborators.load, fetch=collaborators.fetch, parser=parser
+    )
+
+    # Act
+    update = await node(state())
+
+    # Assert
+    assert "requirements" not in update
+
+
+async def test_a_criterion_the_register_does_not_know_is_reported_to_the_reviewer() -> None:
+    """Dropped loudly: one problem per criterion that could not be mapped (ADR-0007)."""
+    # Arrange
+    dume = row("DUME_acheteur.xml", kind=DocumentKind.TENDER_ESPD_REQUEST)
+    data = espd_request_xml(
+        (CRITERION_IDS[0], "CRITERION.EXCLUSION.CONVICTIONS.FRAUD", "Fraude", "Fraude ?"),
+        ("ffffffff-ffff-4fff-8fff-ffffffffffff", "CRITERION.OTHER.X", "Inconnu", "?"),
+    )
+    node, _ = espd_node((dume, data))
+
+    # Act
+    update = await node(state(source_language="fr"))
+
+    # Assert
+    assert len(update["requirements"]) == 1
+    assert update["extraction_problems"] == [
+        ExtractionProblem(
+            reason=ExtractionProblemReason.INVALID_CRITERION_ID,
+            document_name="DUME_acheteur.xml",
+        )
+    ]
+
+
+async def test_a_file_that_is_not_a_readable_espd_request_is_reported_and_the_run_goes_on(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Same shape as an unopenable PDF: one bad upload must not lose the bid (S3.4.4)."""
+    # Arrange
+    dume = row("not_really.xml", kind=DocumentKind.TENDER_ESPD_REQUEST)
+    pdf = row("Reglement.pdf")
+    parser = ScriptedParser({pdf.id: parsed(pdf.id, "Article 1")})
+    node, _ = espd_node((dume, b"<hello/>"), extra=[pdf], parser=parser)
+
+    # Act
+    with caplog.at_level(logging.WARNING, logger="crossbid.agent.nodes.parse_docs"):
+        update = await node(state(source_language="fr"))
+
+    # Assert
+    assert update["extraction_problems"] == [
+        ExtractionProblem(
+            reason=ExtractionProblemReason.UNPARSEABLE_DOCUMENT, document_name="not_really.xml"
+        )
+    ]
+    assert [document.name for document in update["documents"]] == ["Reglement.pdf"]
+    assert "not_really.xml" in caplog.text

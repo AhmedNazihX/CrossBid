@@ -56,10 +56,16 @@ UNFINISHED_STATUSES: Final = frozenset(
 running — a human resumes it (S3.4.2) — and `COMPLETE` and `FAILED` are terminal."""
 
 TENDER_DOCUMENT_KINDS: Final = frozenset(
-    {DocumentKind.TENDER_DOCUMENT, DocumentKind.TENDER_NOTICE}
+    {
+        DocumentKind.TENDER_DOCUMENT,
+        DocumentKind.TENDER_NOTICE,
+        DocumentKind.TENDER_ESPD_REQUEST,
+    }
 )
 """What a bid may be started from. A company's own evidence pack is never parsed as a
-tender, however it was uploaded."""
+tender, however it was uploaded. The published ESPD request belongs to the tender like any
+other of its files — `parse_docs` reads it with the ESPD reader rather than the PDF parser
+(S2.5.1) — so leaving it out here would be the one way to upload a DUME and never use it."""
 
 
 class BidReadModelError(RuntimeError):
