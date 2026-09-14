@@ -2759,3 +2759,60 @@ pulling its weight is gone. **Milestone 1 is now held by S3.2.1's recall gate al
 that found those defects, and it is where **S7.4's screenshots** come from — a user guide needs
 stills, not video. Its header now says so, and it carries the warning that Frankfurt is no
 longer in the clean first-run state the script used to assume.
+
+---
+
+## ADR-0032 — The adversarial fixtures, and the attack this pipeline already drops
+
+**Date:** 2026-09-14 · **Stories:** S6.5 (unblocks S2.3.1, then S5.3) · **Status:** accepted
+
+S6.5 asks for "at least three PDFs, each planting one instruction in a different form (plain
+paragraph, white-on-white text, inside a table), with a manifest of page and planted text".
+Building them settled four things.
+
+**The pack is generated, not hand-placed.** `tests/fixtures/adversarial/documents.yaml` holds
+the prose; `scripts/build_adversarial_pack.py` renders the PDFs and derives `manifest.yaml`
+from the same source. A committed binary whose planted text nobody can grep is a fixture that
+rots the first time a line wraps differently: the guard's test then greps for a string the
+parser no longer produces and passes or fails for reasons unrelated to the guard. The builder
+closes that by re-parsing its own bytes with **`PyMuPDFParser` — the parser the ingestion
+pipeline itself uses** — and refusing to write a manifest that names a page whose text does not
+carry the instruction, compared under `extract_reqs`' own normalisation. This is the same
+generated-fixture shape as S6.3's demo pack (`--check`, byte-identical rebuilds, `no_new_id`).
+
+**Each document also carries decoys, and they are half the point.** A guard measured only
+against payloads has no precision, and every procurement document on earth says "der Bieter hat
+… einzureichen". Each fixture therefore plants exactly one attack among legitimate imperative
+sentences on the same pages, and the manifest lists both. S2.3.1 is answerable for flagging
+every plant *and* leaving every decoy alone; without the second half, a rule that flags the word
+"muss" would pass.
+
+**The literal white-on-white attack cannot reach the guard, and that is measured, not assumed.**
+`pymupdf4llm` drops white glyphs. `page.get_text()` returns the payload; `PyMuPDFParser` does
+not — and the chunker, the embeddings and every prompt are built from the latter. The same holds
+for PDF render mode 3 (invisible text) and for sub-point font sizes. So the textbook form of the
+attack is already dead in this pipeline, **by accident rather than by design**, and a fixture
+whose plant no guard can ever see would have quietly tested nothing at all.
+
+Two consequences, and the second is the reason this is an ADR rather than a code comment:
+
+1. **The attack the guard must actually catch is `covered_text`** — black glyphs painted first,
+   then hidden under an opaque white rectangle. Just as invisible to a reader (a test renders the
+   region and asserts every pixel is white), and fully present in what the parser reads. That is
+   the `EN_Tender_Specifications_Extract.pdf` plant.
+2. **The white-ink document is committed anyway, as a negative control.** It is recorded
+   `reaches_the_parser: false`, and the builder asserts *both* halves — present in the raw text
+   layer, absent from the parsed page. Swapping PyMuPDF for Docling, which may well keep white
+   text, then fails this build and says so, instead of silently re-opening a door we are
+   currently holding shut by luck. Docling is a stretch item in the plan, so this is not
+   hypothetical.
+
+The pack is therefore **four documents, not three** — the story's floor is "at least three", and
+the fourth is a control rather than a fourth attack. Forms: `paragraph` (de), `table_cell` (fr),
+`covered_text` (en), `white_ink` (de). Three languages, matching the golden tenders.
+
+**Every page says it is synthetic.** These files carry working injection payloads, so a footer on
+every page names this repository and the story, and `README.md` in the fixture directory says not
+to feed one to a real assistant. The footer is constant across every page of every document,
+plant or no plant, so it cannot become the signal a guard learns instead of the attack.
+

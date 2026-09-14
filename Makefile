@@ -12,7 +12,7 @@ FRONTEND := frontend
 COMPOSE  := docker compose -f infra/docker-compose.yml
 
 .PHONY: help dev dev-api dev-web up down logs install test test-live lint lint-backend \
-        lint-frontend format deps deps-check migrate seed-dev seed-demo demo-pack eval \
+        lint-frontend format deps deps-check migrate seed-dev seed-demo demo-pack adversarial-pack eval \
         build clean
 
 help: ## Show this help
@@ -96,6 +96,9 @@ seed-demo: ## Seed the demo GmbH: company, profile, and the ten documents, all `
 
 demo-pack: ## Rebuild the synthetic demo-company document pack (S6.3)
 	cd $(BACKEND) && uv run python scripts/build_demo_company_pack.py
+
+adversarial-pack: ## Rebuild the adversarial fixtures the injection guard is tested against (S6.5)
+	cd $(BACKEND) && uv run python scripts/build_adversarial_pack.py
 
 eval: ## Run the evaluation suite and write evaluations/REPORT.md
 	@test -f $(BACKEND)/scripts/run_eval.py \
