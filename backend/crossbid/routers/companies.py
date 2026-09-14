@@ -98,7 +98,7 @@ class CertificateResponse(BaseModel):
         """The held certificate plus the two flags, computed against one day."""
         return cls(
             **held.model_dump(),
-            is_expired=held.expires_on is not None and held.expires_on < today,
+            is_expired=held.is_expired_on(today),
             is_valid=held.is_valid_on(today),
         )
 

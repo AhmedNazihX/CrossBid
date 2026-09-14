@@ -379,9 +379,16 @@ class CheckUpdate(TypedDict, total=False):
 
 
 class ScoreUpdate(TypedDict, total=False):
-    """The partial state `score_verdict` returns: the verdict, and nothing else."""
+    """The partial state `score_verdict` returns: the verdict, and the flagged matrix.
+
+    `matrix_rows` is here because S3.4.4 hangs the reviewer notices off this node — it is the
+    only one holding the company profile and the whole matrix at once (`agent/flags.py`). The
+    rows come back through `merged_rows`, so they replace the lanes' versions rather than
+    doubling them, and a notice only ever changes a rationale.
+    """
 
     verdict: Verdict
+    matrix_rows: list[MatrixRow]
 
 
 class ReviewUpdate(TypedDict, total=False):

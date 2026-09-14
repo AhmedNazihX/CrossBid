@@ -253,7 +253,7 @@ PUBLISHED_SHAPE: Final[Mapping[str, frozenset[str]]] = {
             "unbuilt_tools",
         }
     ),
-    "models": frozenset({"extract", "cheap", "embed", "judge"}),
+    "models": frozenset({"extract", "cheap", "embed", "judge", "fallback"}),
     "agent": frozenset(
         {
             "extract_concurrency",
@@ -261,6 +261,7 @@ PUBLISHED_SHAPE: Final[Mapping[str, frozenset[str]]] = {
             "max_tool_calls_per_requirement",
             "run_budget_seconds",
             "run_budget_usd",
+            "llm_timeout_seconds",
         }
     ),
     "tools[]": frozenset({"name", "description", "external", "default_enabled", "enabled"}),

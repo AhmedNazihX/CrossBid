@@ -91,7 +91,7 @@ from crossbid.agent.state import (
     sections_of,
 )
 from crossbid.guards.wrap import DataBlock, DataWrapError, wrap_as_data
-from crossbid.llm import chat_model
+from crossbid.llm import chat_model, resilient
 from crossbid.models.ecertis_criteria import CRITERION_IDS, EcertisCriterionId
 from crossbid.models.requirement import (
     Checkability,
@@ -266,10 +266,21 @@ def structured_extractor(model: StructuredRunnable) -> SectionExtractor:
 
 
 def build_extract_reqs(settings: Settings) -> RequirementExtractor:
-    """The node as the graph wires it (S3.1.1), configured from settings."""
-    model = chat_model(ModelRole.EXTRACT, settings).with_structured_output(SectionExtraction)
+    """The node as the graph wires it (S3.1.1), configured from settings.
+
+    Both slugs are bound to the same schema and handed to `resilient`, so a section whose
+    call times out is retried once and then asked of the smaller model (S3.4.4). Binding
+    happens before the wrapper rather than inside it: `with_structured_output` is what makes
+    either model answer a `SectionExtraction`, and a wrapper that bound its own would have
+    to know this node's schema.
+    """
+    bound = (
+        chat_model(role, settings).with_structured_output(SectionExtraction)
+        for role in (ModelRole.EXTRACT, ModelRole.FALLBACK)
+    )
+    primary, fallback = bound
     return RequirementExtractor(
-        structured_extractor(model),
+        structured_extractor(resilient(primary, fallback)),
         section_pages=settings.runtime.ingestion.section_pages,
         concurrency=settings.runtime.agent.extract_concurrency,
         system_prompt=settings.runtime.system_prompt,

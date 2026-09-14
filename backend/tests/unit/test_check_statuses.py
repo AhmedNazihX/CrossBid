@@ -32,19 +32,23 @@ from typing import Any
 
 import pytest
 from langchain_core.messages import AIMessage
+from pydantic import ValidationError
 
 from crossbid.agent.nodes import check_reqs as check_reqs_module
 from crossbid.agent.nodes.check_loop import (
     CHECK_PROMPT_NAME,
     MAX_RATIONALE_CHARS,
     NOT_COMPANY_PROPERTY,
+    RE_ASKS_PER_VERDICT,
     UNCITED_SUPPORT,
     UNCITED_SUPPORT_ROOM,
+    VERDICT_RE_ASK,
     CheckedRequirement,
     check_requirement,
     matrix_row_id,
 )
 from crossbid.agent.nodes.check_reqs import RequirementChecker, openrouter_session
+from crossbid.agent.nodes.extract_reqs import RE_ASKS_PER_SECTION
 from crossbid.agent.prompts import load_prompt
 from crossbid.agent.state import BidState
 from crossbid.models.matrix import Evidence, MatrixRow, ReviewerStatus, RowStatus
@@ -491,8 +495,106 @@ async def test_the_schema_the_model_is_asked_for_is_the_one_the_loop_parses(
         answer = await ctx.verdict([])
         bound = sorted(ctx.tools)
 
-    # Assert -- one model, bound twice, and the answer comes back as the loop's own type
-    assert recorder.schemas == [CheckedRequirement]
-    assert recorder.tool_names == [bound]
+    # Assert -- the verdict schema is bound to the primary *and* to the fallback, so a
+    # timed-out verdict call is re-asked of a model that answers the same shape (S3.4.4).
+    assert recorder.schemas == [CheckedRequirement, CheckedRequirement]
+    # The same tools bound to both, for the same reason: a fallback that could not call the
+    # retrieval tools would answer without evidence.
+    assert recorder.tool_names == [bound, bound]
     assert isinstance(answer, CheckedRequirement)
     assert answer.status is RowStatus.UNSUPPORTED
+
+
+# ------------------------------------------------- S3.4.4: one re-ask when the shape is wrong
+
+
+SCHEMA_VIOLATION = ValidationError.from_exception_data("CheckedRequirement", [])
+
+
+def searching_tool() -> Any:
+    """The retrieval tool, scripted with one hit, so a cited verdict resolves to real bytes."""
+    tool, _queries = rag_tool(rag_result(hit()))
+    return tool
+
+
+async def test_a_verdict_that_does_not_validate_is_asked_once_more() -> None:
+    """The story's criterion, first half. The second answer stands, so the requirement is
+    not lost to a model that mis-shaped its first attempt."""
+    # Arrange -- the model searches, so the second verdict's citation resolves to a real hit
+    model = ScriptedModel(
+        [search_call(), answers()], [SCHEMA_VIOLATION, verdict(RowStatus.SUPPORTED)]
+    )
+    context = check_context(model, tools={"company_rag_search": searching_tool()})
+
+    # Act
+    row = await check_requirement(requirement(), context)
+
+    # Assert
+    assert model.verdicts_asked == RE_ASKS_PER_VERDICT + 1
+    assert row.status is RowStatus.SUPPORTED
+    assert row.evidence[0].quote == QUOTE
+
+
+async def test_the_re_ask_tells_the_model_what_was_wrong_and_quotes_nothing_back() -> None:
+    """ADR-0008: a `ValidationError` quotes the model's own output, which is derived from a
+    tender. The correction may name the structure and nothing else."""
+    # Arrange
+    model = ScriptedModel([answers()], [SCHEMA_VIOLATION, verdict()])
+    context = check_context(model, tools={"company_rag_search": searching_tool()})
+
+    # Act
+    await check_requirement(requirement(), context)
+
+    # Assert -- the second prompt is the first plus exactly the correction
+    first, second = model.verdict_prompts
+    assert len(second) == len(first) + 1
+    assert second[-1].content == VERDICT_RE_ASK
+
+
+async def test_a_second_schema_violation_lands_as_a_row_for_the_reviewer() -> None:
+    """The story's criterion, second half: re-asked once, then `partially_supported` — and
+    the requirement reaches a human rather than being lost."""
+    # Arrange
+    model = ScriptedModel([answers()], [SCHEMA_VIOLATION, SCHEMA_VIOLATION])
+    context = check_context(model, tools={"company_rag_search": searching_tool()})
+
+    # Act
+    row = await check_requirement(requirement(), context)
+
+    # Assert
+    assert model.verdicts_asked == RE_ASKS_PER_VERDICT + 1
+    assert row.status is RowStatus.PARTIALLY_SUPPORTED
+    assert "ValidationError" in row.agent_rationale
+
+
+async def test_a_verdict_that_validates_first_time_is_never_re_asked() -> None:
+    # Arrange
+    model = ScriptedModel([answers()], verdict())
+    context = check_context(model, tools={"company_rag_search": searching_tool()})
+
+    # Act
+    await check_requirement(requirement(), context)
+
+    # Assert
+    assert model.verdicts_asked == 1
+
+
+async def test_a_failure_that_is_not_a_schema_violation_is_not_re_asked() -> None:
+    """Route failures are retried and failed over one layer down, in `llm.ResilientModel`.
+    Re-asking them here as well would multiply two attempts into six for one requirement."""
+    # Arrange
+    model = ScriptedModel([answers()], RuntimeError("the provider refused the request"))
+    context = check_context(model, tools={"company_rag_search": searching_tool()})
+
+    # Act
+    row = await check_requirement(requirement(), context)
+
+    # Assert
+    assert model.verdicts_asked == 1
+    assert row.status is RowStatus.PARTIALLY_SUPPORTED
+
+
+def test_one_re_ask_is_the_same_number_extraction_uses() -> None:
+    """Both say "asked once more", and a reader comparing the two nodes should find the
+    same answer rather than two conventions."""
+    assert RE_ASKS_PER_VERDICT == RE_ASKS_PER_SECTION == 1

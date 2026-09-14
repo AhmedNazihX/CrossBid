@@ -931,10 +931,20 @@ class ScriptedModel:
     def __init__(
         self,
         turns: Sequence[AIMessage | Exception],
-        answer: CheckedRequirement | Exception = verdict(),
+        answer: CheckedRequirement | Exception | Sequence[CheckedRequirement | Exception] = (
+            verdict()
+        ),
     ) -> None:
         self._turns = list(turns)
-        self._answer = answer
+        # A sequence so S3.4.4's re-ask can be scripted: the verdict call may now happen
+        # twice for one requirement, and the second answer has to be able to differ from the
+        # first. A scalar is a script of one, and the last entry repeats — the same rule
+        # `turn` already follows, so the two seams behave alike.
+        self._answers: list[CheckedRequirement | Exception] = (
+            list(answer)
+            if isinstance(answer, Sequence) and not isinstance(answer, str)
+            else [answer]
+        )
         self.prompts: list[list[BaseMessage]] = []
         self.verdict_prompts: list[list[BaseMessage]] = []
         self.in_flight = 0
@@ -955,9 +965,14 @@ class ScriptedModel:
 
     async def verdict(self, messages: Sequence[BaseMessage]) -> CheckedRequirement:
         self.verdict_prompts.append(list(messages))
-        if isinstance(self._answer, Exception):
-            raise self._answer
-        return self._answer
+        answer = self._answers[min(len(self.verdict_prompts) - 1, len(self._answers) - 1)]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    @property
+    def verdicts_asked(self) -> int:
+        return len(self.verdict_prompts)
 
     @property
     def turns_taken(self) -> int:

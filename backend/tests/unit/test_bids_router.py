@@ -1069,3 +1069,33 @@ def test_two_edits_to_one_row_are_refused_by_the_contract(
     # Act / Assert
     response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
     assert response.status_code == 422
+
+
+# ---------------------------------------------------- S3.4.4: what the bid says went wrong
+
+
+def test_unread_pages_and_problems_are_both_listed_on_the_bid(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """S3.4.4's first criterion, at the layer a reviewer meets it. The two are different
+    facts and the response carries both: `unread_pages` is a per-document list of pages that
+    had no text layer, and `problems` is what parsing and extraction could not do at all —
+    a document with *no* readable page becomes an `unreadable_document` problem as well."""
+    # Arrange
+    unreadable = ExtractionProblem(
+        reason=ExtractionProblemReason.UNREADABLE_DOCUMENT,
+        document_name="Anlage_7_Scan.pdf",
+        pages=(1, 2, 3),
+    )
+    bid = read_model.add_bid(
+        status=BidStatus.AWAITING_REVIEW, problems=[unreadable.model_dump(mode="json")]
+    )
+    read_model.add_document(*document_row(bid_id=bid.id, name="Anlage_7_Scan.pdf"))
+
+    # Act
+    body = client.get(f"/bids/{bid.id}", headers=headers()).json()
+
+    # Assert
+    assert body["documents"][0]["unread_pages"] == [3]
+    assert body["problems"][0]["reason"] == "unreadable_document"
+    assert body["problems"][0]["pages"] == [1, 2, 3]

@@ -107,6 +107,10 @@ class ModelRole(StrEnum):
     CHEAP = "cheap"
     EMBED = "embed"
     JUDGE = "judge"
+    FALLBACK = "fallback"
+    """Where a role goes after a timed-out call and one retry (S3.4.4). A *different
+    vendor* on purpose: the failure a fallback has to survive is the primary provider being
+    slow or down, and a second OpenAI slug on the same route would be down with it."""
 
 
 class _Frozen(BaseModel):
@@ -122,6 +126,7 @@ class ModelSlugs(_Frozen):
     cheap: str
     embed: str
     judge: str
+    fallback: str
 
     def for_role(self, role: ModelRole) -> str:
         """The configured slug for `role`. Exhaustive by design: a new role must be mapped.
@@ -136,8 +141,10 @@ class ModelSlugs(_Frozen):
                 return self.cheap
             case ModelRole.EMBED:
                 return self.embed
-            case ModelRole.JUDGE:  # pragma: no branch -- the enum is closed
+            case ModelRole.JUDGE:
                 return self.judge
+            case ModelRole.FALLBACK:  # pragma: no branch -- the enum is closed
+                return self.fallback
 
 
 class IngestionSettings(_Frozen):
@@ -165,6 +172,12 @@ class AgentSettings(_Frozen):
     """S3.1.1: the wall-clock a run may take before the live test fails it (600)."""
     run_budget_usd: float = Field(gt=0)
     """S3.1.1: the OpenRouter-reported cost one bid may incur (2.50)."""
+    llm_timeout_seconds: float = Field(gt=0)
+    """S3.4.4: how long one model call may take before it counts as timed out.
+
+    A per-call bound, not a per-run one — `run_budget_seconds` is the latter. It has to be
+    generous enough for a dense extraction section returning `max_tokens` of structured
+    output and tight enough that a hung connection does not sit inside the run budget."""
 
 
 class EvaluationSettings(_Frozen):

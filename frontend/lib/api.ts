@@ -253,6 +253,8 @@ export interface components {
             run_budget_seconds: number;
             /** Run Budget Usd */
             run_budget_usd: number;
+            /** Llm Timeout Seconds */
+            llm_timeout_seconds: number;
         };
         /**
          * BidDocumentResponse
@@ -414,7 +416,8 @@ export interface components {
          * @description A certificate the company holds, with the expiry the matrix must respect.
          *
          *     An expired certificate is not evidence, which is why `expires_on` is not optional
-         *     decoration — the scorer reads it.
+         *     decoration: `GET /companies/me` flags it on the profile form, and `agent/flags.py` warns
+         *     on any matrix row that cites one (S3.4.4).
          */
         CertificateHeld: {
             /**
@@ -957,6 +960,8 @@ export interface components {
             embed: string;
             /** Judge */
             judge: string;
+            /** Fallback */
+            fallback: string;
         };
         /**
          * Requirement

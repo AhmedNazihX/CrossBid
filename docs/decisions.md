@@ -2393,3 +2393,86 @@ The SQL. `test_bids_readmodel.py` asserts the statements, including that the age
 still cannot name a reviewer column — a text assertion, so re-widening it to "fix" a future bug
 fails loudly. What this test adds is whether `graph._project` maps the *state* onto those
 writes faithfully, which is answerable offline and was where the defect actually was.
+
+---
+
+## ADR-0027 — Resilience: what is retried, what is re-asked, and what is only warned about
+
+**Date:** 2026-09-14 · **Stories:** S3.4.4 · **Status:** accepted
+
+The story reads as one theme and is five separate mechanisms. An audit of the code against
+its criteria before writing any of them found one already satisfied, two absent and two
+partial — which is why what follows is a set of placements rather than a feature.
+
+### Two failures, two layers, and the split is deliberate
+
+A **route** failure — a timed-out call, a dropped connection, a rate limit, a 5xx — is
+retried once and then reissued against a different model. A **schema** failure — an answer
+that does not validate — is re-asked once with a correction and then becomes a
+`partially_supported` row for the reviewer. They are handled one layer apart on purpose:
+
+- `llm.ResilientModel` owns the route, because a route failure is the same failure whatever
+  was being asked and the wrapper can know nothing about the question.
+- `check_loop._verdict_with_one_re_ask` owns the structure, because only that module can
+  write the correction, and the correction is the whole point of re-asking.
+
+Collapsing them would multiply: two attempts × two re-asks is six model calls for one
+requirement, against a $2.50 run budget and 258 requirements.
+
+**`ChatOpenAI` retries twice by itself.** `max_retries=0` is now set, and without it "one
+retry" would have been one of ours on top of two of langchain's — three times the latency
+before a fallback, and an `llm_timeout_seconds` that bounded a third of the real wait. This
+was the single most likely way for the story to be "done" and untrue.
+
+**The fallback is a different vendor.** `models.fallback` is
+`google/gemini-2.5-flash-lite`, not a second OpenAI slug. The failure a fallback exists to
+survive is the primary route being slow or down, and a second slug on the same route is down
+with it. It is also probed by `verify_configured_models`, because a fallback nobody checked
+is worth nothing: the one moment it is used is the moment the primary has already failed.
+
+### Two criteria are not about failure at all
+
+"No eCertis entry → flagged" and "an expired certificate → a warning with its date" describe
+a row that came back *looking* settled while something about it needs a human's eye. Both
+now live in `agent/flags.py`, applied by `score_verdict`.
+
+**`score_verdict` is the only node holding the profile and the whole matrix at once.** The
+obvious placement was a checking lane, and it would have meant threading the certificate list
+through `plan_checks`, the graph state, every lane's `Send` payload and `Bidder` for the
+benefit of one comparison. The scorer already fetches the profile for `tone` and the gap
+figures. The flagged rows go back on the `matrix_rows` channel, which S3.4.2 had already made
+a merge-by-id reducer, so they replace rather than double — a placement that would not have
+been available one story earlier.
+
+**Nothing is downgraded.** The status stays as checking left it. The story asks for a
+warning and the product is advisory: a reviewer told that the ISO 27001 certificate behind a
+`supported` row expired in March is better served than one whose row silently became
+`partially_supported` with the reason buried. A downgrade would also move the verdict on a
+fact the scorer never saw.
+
+**The certificate matcher is a heuristic, and it is stated rather than hidden.** There is no
+join to make — `CertificateHeld` carries a name and an expiry, `Evidence` carries a document
+id and a filename. Substring matching was tried first and fails on the real names:
+`ISO/IEC 27001:2022` normalises to `isoiec270012022` and `ISO_27001_Zertifikat.pdf` to
+`iso27001zertifikatpdf`, and neither contains the other — the one pairing that matters most
+would have been missed silently. Shared *tokens* work, because the signal in a certificate
+name is the standard number. The threshold is two and not one: `ISO 9001` against that same
+filename shares only `iso`, and warning there would send the reviewer after the wrong paper.
+`test_flags.py` is written as the matcher's specification — the pairings it must make and the
+ones it must refuse — and pins the threshold, because lowering it to one is the tempting fix
+when a pairing is missed.
+
+A proper join wants `document_id` on `CertificateHeld`. That is a profile story, not this one.
+
+### Corrected while here
+
+`CertificateHeld`'s docstring said "the scorer reads it" and the scorer did not: the only
+consumer of `expires_on` in the whole backend was `GET /companies/me`. It is true now.
+`is_expired_on` also joins `is_valid_on` on the model, and the two are **not** each other's
+negation — a certificate with no recorded expiry is neither valid nor expired, which is why
+the profile form warns about one group and this story flags only the other. The router's
+inline copy of that predicate now calls the model's.
+
+"Unread pages are listed on the bid" needed no code: the parser derives them, the pipeline
+stores them, and `GET /bids/{id}` returns them per document alongside the `problems` list. It
+gained a test at the layer a reviewer meets it, which is the only part that was missing.

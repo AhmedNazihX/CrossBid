@@ -74,7 +74,7 @@ from crossbid.agent.state import (
     bidder_language_of,
 )
 from crossbid.ingestion.embeddings import EmbeddingsClient
-from crossbid.llm import chat_model
+from crossbid.llm import chat_model, resilient
 from crossbid.models.company import CompanyProfile
 from crossbid.models.requirement import Requirement
 from crossbid.readmodel.bids import ConnectionSource
@@ -99,6 +99,10 @@ loop makes. Checking reads short passages and picks one of four words; it is not
 the expensive slug is there for. Recorded here rather than assumed: if a `check` role is
 ever added to `settings.default.yaml`, this constant is the one line to change.
 """
+
+FALLBACK_MODEL_ROLE: Final = ModelRole.FALLBACK
+"""Where a timed-out call goes after one retry (S3.4.4). A different vendor on purpose —
+see `llm.RETRYABLE` and the `fallback` entry in `settings.default.yaml`."""
 
 
 class CompanyLookup(Protocol):
@@ -259,6 +263,12 @@ def openrouter_session(settings: Settings, db: ConnectionSource) -> SessionBuild
     The two bindings are the same slug twice — tools bound for the loop's turns, the verdict
     schema bound for its answer. One `ChatOpenAI` is built and bound twice rather than built
     twice, so a settings change cannot give the loop and the answer different models.
+
+    S3.4.4 adds a second model alongside it and binds it the same two ways: each seam is
+    wrapped in `resilient`, so a timed-out turn *or* a timed-out verdict call is retried once
+    and then asked of the fallback slug. The wrapping is per binding because the two
+    bindings are different runnables; the pair still comes from one `chat_model` call each,
+    so neither seam can drift onto a different slug from the other.
     """
 
     @asynccontextmanager
@@ -281,9 +291,15 @@ def openrouter_session(settings: Settings, db: ConnectionSource) -> SessionBuild
             )
             tools = build_enabled_tools(context, settings)
             model = chat_model(CHECK_MODEL_ROLE, settings)
+            spare = chat_model(FALLBACK_MODEL_ROLE, settings)
             yield CheckContext(
-                turn=tool_turn(model.bind_tools(tools)),
-                verdict=structured_verdict(model.with_structured_output(CheckedRequirement)),
+                turn=tool_turn(resilient(model.bind_tools(tools), spare.bind_tools(tools))),
+                verdict=structured_verdict(
+                    resilient(
+                        model.with_structured_output(CheckedRequirement),
+                        spare.with_structured_output(CheckedRequirement),
+                    )
+                ),
                 tools={tool.name: tool for tool in tools},
                 max_tool_calls=settings.runtime.agent.max_tool_calls_per_requirement,
                 bidder=bidder,

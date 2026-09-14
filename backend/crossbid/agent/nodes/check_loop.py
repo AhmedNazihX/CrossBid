@@ -81,7 +81,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from crossbid.agent.prompts import render
 from crossbid.guards.wrap import DataBlock, wrap_as_data
@@ -110,6 +110,13 @@ the whole key.
 
 MAX_RATIONALE_CHARS: Final = 600
 """Two or three sentences. See the module docstring for why it is bounded at all."""
+
+RE_ASKS_PER_VERDICT: Final = 1
+"""One re-ask when the verdict does not validate, so a requirement costs at most two verdict
+calls (S3.4.4). The same number, and the same reason, as `extract_reqs.RE_ASKS_PER_SECTION`:
+the story says re-asked once, and the DE pack's 258 requirements are why it is not "until it
+gets it right". A second failure is not lost — it falls through to `check_requirement`'s
+handler and becomes a `partially_supported` row addressed to the reviewer."""
 
 UNKNOWN_COUNTRY: Final = "zz"
 """What an unresolved bidder country is looked up as. `lookup_evidence` normalises anything
@@ -314,6 +321,15 @@ UNCITED_SUPPORT: Final = (
 )
 NO_RATIONALE: Final = "The check returned no rationale, so there is nothing to show here."
 
+VERDICT_RE_ASK: Final = (
+    "Your answer could not be read as the requested structure. Answer again for the same "
+    "requirement, returning only the fields asked for: a status from the four allowed "
+    "values, a rationale, and references to retrieved passages by their two numbers."
+)
+"""Names the structure and nothing else. A note that quoted the model's own output back
+would feed text of untrusted origin into the next prompt outside a data block — the rule
+`extract_reqs.MODEL_ERROR_NOTE` states for the same reason."""
+
 UNCITED_SUPPORT_ROOM: Final = MAX_RATIONALE_CHARS - len(UNCITED_SUPPORT) - 1
 """What the model's own sentence gets when the downgrade's notice is appended to it.
 
@@ -395,7 +411,38 @@ async def _react(
             messages.append(message)
 
     messages.append(HumanMessage(content=_verdict_ask(len(searches), context.max_tool_calls)))
-    return await context.verdict(messages), tuple(searches)
+    return await _verdict_with_one_re_ask(messages, context), tuple(searches)
+
+
+async def _verdict_with_one_re_ask(
+    messages: list[BaseMessage], context: CheckContext
+) -> CheckedRequirement:
+    """The verdict call, re-asked once if the answer does not validate (S3.4.4).
+
+    Only a *schema* failure is re-asked. A timed-out call is already retried and failed over
+    one layer down, in `llm.ResilientModel`, and re-asking it here would multiply the two
+    into six attempts for one requirement. The split is deliberate: the route is the model
+    wrapper's problem and the structure is this module's, because only this module can write
+    the correction.
+
+    The second failure is not caught here. It propagates to `check_requirement`, which turns
+    it into a `partially_supported` row naming the exception's type — which is the story's
+    "then the row is partially_supported", and keeping it in one place means a third failure
+    mode later cannot get a different answer.
+    """
+    for ask in range(RE_ASKS_PER_VERDICT + 1):
+        try:
+            return await context.verdict(messages)
+        except ValidationError as exc:
+            if ask == RE_ASKS_PER_VERDICT:
+                raise
+            # `type(exc).__name__` only: a `ValidationError` quotes the model's own output,
+            # which is derived from a tender (ADR-0008).
+            logger.warning(
+                "A verdict did not validate (%s); asking once more", type(exc).__name__
+            )
+            messages = [*messages, HumanMessage(content=VERDICT_RE_ASK)]
+    raise CheckError("unreachable: the loop either returns or raises")  # pragma: no cover
 
 
 async def _run_call(

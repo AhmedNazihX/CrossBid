@@ -9,18 +9,24 @@ Fixtures are module-local: `conftest.py` is shared ground and this story does no
 
 from __future__ import annotations
 
+import logging
+
+import httpx
+import openai
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 
 from crossbid.llm import (
     CHAT_ROLES,
+    LANGCHAIN_RETRIES,
     OPENROUTER_BASE_URL,
     PROBE_MAX_TOKENS,
     USAGE_ACCOUNTING_EXTRA_BODY,
     LlmError,
     chat_model,
     probe_chat_model,
+    resilient,
     verify_configured_models,
 )
 from crossbid.settings import ModelRole, Settings, load_settings
@@ -114,7 +120,12 @@ def test_the_key_does_not_leak_into_the_model_repr(settings: Settings) -> None:
 def test_chat_roles_excludes_the_embedding_role() -> None:
     # Assert
     assert ModelRole.EMBED not in CHAT_ROLES
-    assert set(CHAT_ROLES) == {ModelRole.EXTRACT, ModelRole.CHEAP, ModelRole.JUDGE}
+    assert set(CHAT_ROLES) == {
+        ModelRole.EXTRACT,
+        ModelRole.CHEAP,
+        ModelRole.JUDGE,
+        ModelRole.FALLBACK,
+    }
 
 
 # ------------------------------------------- ADR-0005: a configured slug may still 404
@@ -151,6 +162,9 @@ def test_verification_probes_every_chat_slug_when_switched_on(
         ("openai/gpt-5.6-terra", PROBE_MAX_TOKENS),
         ("openai/gpt-5.6-luna", PROBE_MAX_TOKENS),
         ("anthropic/claude-haiku-4.5", PROBE_MAX_TOKENS),
+        # The fallback slug is probed too: a fallback nobody checked is worth nothing,
+        # because the one moment it is used is the moment the primary has already failed.
+        ("google/gemini-2.5-flash-lite", PROBE_MAX_TOKENS),
     ]
 
 
@@ -195,3 +209,160 @@ def test_the_probe_sends_a_single_token(
 
     # Assert
     assert len(calls) == 1
+
+
+# ------------------------------------------------------- S3.4.4: one retry, then the spare
+
+
+class ScriptedRunnable:
+    """A bound runnable, scripted. An `Exception` in the script is raised, not returned."""
+
+    def __init__(self, *script: object) -> None:
+        self.script = list(script)
+        self.calls = 0
+
+    async def ainvoke(self, messages: object, /) -> object:
+        self.calls += 1
+        answer = self.script.pop(0) if self.script else "exhausted"
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+
+TIMEOUT = openai.APITimeoutError(request=httpx.Request("POST", "https://openrouter.ai"))
+
+
+@pytest.mark.anyio
+async def test_a_call_that_works_first_time_never_touches_the_fallback() -> None:
+    # Arrange
+    primary, fallback = ScriptedRunnable("answered"), ScriptedRunnable()
+
+    # Act
+    answer = await resilient(primary, fallback).ainvoke([])
+
+    # Assert
+    assert answer == "answered"
+    assert (primary.calls, fallback.calls) == (1, 0)
+
+
+@pytest.mark.anyio
+async def test_a_timeout_is_retried_once_on_the_same_model() -> None:
+    # Arrange
+    primary, fallback = ScriptedRunnable(TIMEOUT, "answered"), ScriptedRunnable()
+
+    # Act
+    answer = await resilient(primary, fallback).ainvoke([])
+
+    # Assert
+    assert answer == "answered"
+    assert (primary.calls, fallback.calls) == (2, 0)
+
+
+@pytest.mark.anyio
+async def test_a_second_timeout_falls_back_to_the_smaller_model() -> None:
+    """The story's criterion, end to end: one retry, then the smaller model."""
+    # Arrange
+    primary = ScriptedRunnable(TIMEOUT, TIMEOUT)
+    fallback = ScriptedRunnable("answered by the spare")
+
+    # Act
+    answer = await resilient(primary, fallback).ainvoke([])
+
+    # Assert
+    assert answer == "answered by the spare"
+    assert (primary.calls, fallback.calls) == (2, 1)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "failure",
+    [
+        TIMEOUT,
+        openai.APIConnectionError(request=httpx.Request("POST", "https://openrouter.ai")),
+        httpx.ConnectTimeout("too slow"),
+        httpx.ReadError("the connection went away"),
+        TimeoutError(),
+    ],
+)
+async def test_every_route_failure_moves_the_call_along(failure: Exception) -> None:
+    # Arrange
+    primary = ScriptedRunnable(failure, failure)
+    fallback = ScriptedRunnable("answered by the spare")
+
+    # Act / Assert
+    assert await resilient(primary, fallback).ainvoke([]) == "answered by the spare"
+
+
+@pytest.mark.anyio
+async def test_a_reproducible_failure_is_raised_at_once_and_never_retried() -> None:
+    """A refused slug or a malformed request answers the same way three times; retrying it
+    spends the run budget to learn nothing."""
+    # Arrange
+    primary = ScriptedRunnable(ValueError("that model is not available on this account"))
+    fallback = ScriptedRunnable("answered by the spare")
+
+    # Act / Assert
+    with pytest.raises(ValueError, match="not available"):
+        await resilient(primary, fallback).ainvoke([])
+    assert (primary.calls, fallback.calls) == (1, 0)
+
+
+@pytest.mark.anyio
+async def test_the_fallbacks_own_failure_is_what_surfaces() -> None:
+    """It is the most recent fact about the call; the primary's timeout is in the log."""
+    # Arrange
+    primary = ScriptedRunnable(TIMEOUT, TIMEOUT)
+    fallback = ScriptedRunnable(RuntimeError("the spare is down too"))
+
+    # Act / Assert
+    with pytest.raises(RuntimeError, match="the spare is down too"):
+        await resilient(primary, fallback).ainvoke([])
+
+
+@pytest.mark.anyio
+async def test_each_attempt_is_logged_by_type_and_never_by_message(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """ADR-0008: a provider's message can quote the request, which carries tender text."""
+    # Arrange
+    primary = ScriptedRunnable(TIMEOUT, TIMEOUT)
+
+    # Act
+    with caplog.at_level(logging.WARNING, logger="crossbid.llm"):
+        await resilient(primary, ScriptedRunnable("ok")).ainvoke([])
+
+    # Assert
+    assert "APITimeoutError" in caplog.text
+    assert "retrying once" in caplog.text
+    assert "falling back to the smaller model" in caplog.text
+
+
+def test_the_model_carries_the_configured_timeout_and_does_not_retry_itself(
+    settings: Settings,
+) -> None:
+    """`ChatOpenAI` retries twice by default. Left on, "one retry" would be one of ours on
+    top of two of langchain's, and `llm_timeout_seconds` would bound a third of the wait."""
+    # Act
+    model = chat_model(ModelRole.EXTRACT, settings)
+
+    # Assert
+    assert model.request_timeout == settings.runtime.agent.llm_timeout_seconds
+    assert model.max_retries == LANGCHAIN_RETRIES == 0
+
+
+def test_the_fallback_role_resolves_to_a_different_vendor(settings: Settings) -> None:
+    """The failure a fallback exists to survive is the primary route being slow or down; a
+    second OpenAI slug shares that route."""
+    # Arrange
+    slugs = settings.runtime.models
+
+    # Act / Assert
+    assert slugs.for_role(ModelRole.FALLBACK).split("/")[0] not in {
+        slugs.for_role(ModelRole.EXTRACT).split("/")[0],
+        slugs.for_role(ModelRole.CHEAP).split("/")[0],
+    }
+
+
+def test_the_fallback_slug_is_one_of_the_verified_models(settings: Settings) -> None:
+    """ADR-0005: presence in OpenRouter's catalogue does not mean usable on this account."""
+    assert settings.runtime.models.fallback in settings.runtime.available_models

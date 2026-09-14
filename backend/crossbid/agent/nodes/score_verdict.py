@@ -17,17 +17,28 @@ benefit of one node.
 `plan_checks` makes about the country, and for the same reason: a company row that has
 drifted out of its schema must not lose a bidder the matrix they paid for. The rules run
 unchanged, `actual` goes unstated, the tone falls back to `plain`, and the log says why.
+
+**S3.4.4 hangs the reviewer notices here for one reason: this is the only node that holds
+the profile and the whole matrix at once.** `agent/flags.py` warns on a row whose criterion
+eCertis had no national entry for, and on one citing a certificate the bidder's profile says
+has lapsed. Putting it here rather than in a checking lane avoided threading the certificate
+list through `plan_checks`, the graph state, every lane's `Send` payload and `Bidder` for the
+benefit of one comparison — and the node already fetches the row the comparison needs. The
+flagged rows go back on the `matrix_rows` channel, which S3.4.2 made a merge-by-id reducer,
+so they replace rather than double.
 """
 
 from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from datetime import UTC, date, datetime
 from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
 
+from crossbid.agent.flags import flag_rows
 from crossbid.agent.nodes.check_reqs import CompanyLookup
 from crossbid.agent.scoring import score
 from crossbid.agent.state import BidState, ScoreUpdate, bidder_language_of
@@ -42,6 +53,14 @@ logger = logging.getLogger(__name__)
 DEFAULT_TONE = Tone.PLAIN
 """How the explanation is written when the company's own setting cannot be read."""
 
+Clock = Callable[[], date]
+
+
+def _today() -> date:
+    """The day a certificate's expiry is judged against. UTC, because a bid run has no
+    other timezone and a border-crossing product must not have one per bidder."""
+    return datetime.now(UTC).date()
+
 
 class VerdictScorer:
     """The `score_verdict` node: the matrix, the profile, and the rules. No model.
@@ -51,8 +70,9 @@ class VerdictScorer:
     state, so one instance serves every bid.
     """
 
-    def __init__(self, companies: CompanyLookup) -> None:
+    def __init__(self, companies: CompanyLookup, *, clock: Clock = _today) -> None:
         self._companies = companies
+        self._clock = clock
 
     async def __call__(
         self,
@@ -62,8 +82,16 @@ class VerdictScorer:
         # injected (CLAUDE.md).
         config: Optional[RunnableConfig] = None,  # noqa: UP045
     ) -> ScoreUpdate:
-        """The bid's verdict, scored from the state's own requirements and matrix rows."""
-        return {"verdict": await self.verdict_for(state)}
+        """The bid's verdict, and the matrix with the reviewer's notices on it.
+
+        The rows are flagged *before* scoring and the scorer sees the flagged ones, which
+        costs nothing — a notice changes a rationale and never a status (`flags.py`,
+        decision 2) — and means the checkpoint never holds two versions of a row within one
+        superstep.
+        """
+        profile = await self._profile(state.get("company_id", ""))
+        rows = flag_rows(state.get("matrix_rows", []), profile=profile, today=self._clock())
+        return {"verdict": self._score(state, rows, profile), "matrix_rows": rows}
 
     async def verdict_for(
         self, state: BidState, rows: Sequence[MatrixRow] | None = None
@@ -77,9 +105,17 @@ class VerdictScorer:
         rule the agent was measured against.
         """
         profile = await self._profile(state.get("company_id", ""))
+        return self._score(
+            state, state.get("matrix_rows", []) if rows is None else rows, profile
+        )
+
+    def _score(
+        self, state: BidState, rows: Sequence[MatrixRow], profile: CompanyProfile | None
+    ) -> Verdict:
+        """The rules, over rows the caller has already chosen. No I/O; see `agent/scoring`."""
         verdict = score(
             state.get("requirements", []),
-            state.get("matrix_rows", []) if rows is None else rows,
+            rows,
             language=bidder_language_of(state),
             tone=profile.tone if profile is not None else DEFAULT_TONE,
             profile=profile,

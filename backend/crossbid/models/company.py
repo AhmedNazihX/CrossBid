@@ -50,7 +50,8 @@ class CertificateHeld(BaseModel):
     """A certificate the company holds, with the expiry the matrix must respect.
 
     An expired certificate is not evidence, which is why `expires_on` is not optional
-    decoration — the scorer reads it.
+    decoration: `GET /companies/me` flags it on the profile form, and `agent/flags.py` warns
+    on any matrix row that cites one (S3.4.4).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -67,6 +68,17 @@ class CertificateHeld(BaseModel):
         if self.expires_on is None:
             return False
         return self.expires_on >= when
+
+    def is_expired_on(self, when: date) -> bool:
+        """Expired, which is **not** the negation of `is_valid_on`.
+
+        A certificate with no recorded expiry is neither valid nor expired: the profile
+        cannot claim validity without a date, and it cannot claim lapse either. Keeping the
+        two as separate questions is what lets `GET /companies/me` warn about the first
+        group and S3.4.4 flag only the second — a row cited by an undated certificate is not
+        a row to warn a reviewer about.
+        """
+        return self.expires_on is not None and self.expires_on < when
 
 
 class TurnoverYear(BaseModel):
