@@ -9,11 +9,14 @@ SHELL := /bin/bash
 
 BACKEND  := backend
 FRONTEND := frontend
-COMPOSE  := docker compose -f infra/docker-compose.yml
+# `--env-file .env` is not optional: Compose resolves a bare `.env` relative to the compose
+# file's own directory (infra/), which holds only .env.example, so without this every
+# ${VAR} in docker-compose.yml is unset and `make dev` fails on the first required one.
+COMPOSE  := docker compose --env-file .env -f infra/docker-compose.yml
 
 .PHONY: help dev dev-api dev-web up down logs install test test-live lint lint-backend \
         lint-frontend format deps deps-check migrate seed-dev seed-demo demo-pack adversarial-pack eval \
-        build clean
+        build clean require-env
 
 help: ## Show this help
 	@echo "Crossbid — available targets:"
@@ -24,18 +27,19 @@ help: ## Show this help
 
 # ---------------------------------------------------------------- development
 
-dev: ## Start the whole stack in Docker (db + api + web)
+require-env:
 	@test -f .env || { echo "No .env found. Run: cp infra/.env.example .env"; exit 1; }
+
+dev: require-env ## Start the whole stack in Docker (db + api + web)
 	$(COMPOSE) up --build
 
-up: ## Start the stack detached
-	@test -f .env || { echo "No .env found. Run: cp infra/.env.example .env"; exit 1; }
+up: require-env ## Start the stack detached
 	$(COMPOSE) up --build -d
 
-down: ## Stop the stack (keeps the database volume)
+down: require-env ## Stop the stack (keeps the database volume)
 	$(COMPOSE) down
 
-logs: ## Follow stack logs
+logs: require-env ## Follow stack logs
 	$(COMPOSE) logs -f
 
 dev-api: ## Run the API on the host with reload, against the Compose database
@@ -107,7 +111,7 @@ eval: ## Run the evaluation suite and write evaluations/REPORT.md
 
 # ---------------------------------------------------------------- build
 
-build: ## Build both Docker images
+build: require-env ## Build both Docker images
 	$(COMPOSE) build
 
 clean: ## Remove build artefacts and caches (keeps .env and the database volume)

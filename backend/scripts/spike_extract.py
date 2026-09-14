@@ -200,11 +200,16 @@ class Keep(BaseModel):
 
 
 def load_env() -> str:
-    """Return the OpenRouter key from the environment or backend/.env."""
+    """Return the OpenRouter key from the environment or the repository-root `.env`.
+
+    The root file, not `backend/.env`: this spike predates `settings.py` and was the only
+    thing that ever read a backend-local one, which left a second copy of a live key that
+    nothing else consulted and that drifted the first time the key was rotated.
+    """
     key = os.getenv("OPENROUTER_API_KEY")
     if key:
         return key
-    env_file = BACKEND / ".env"
+    env_file = BACKEND.parent / ".env"
     if env_file.is_file():
         for line in env_file.read_text(encoding="utf-8").splitlines():
             line = line.strip()
