@@ -260,6 +260,18 @@ class RuntimeSettings(_Frozen):
     """Offline gates (S3.2.3). Deliberately *not* published by `GET /dev/settings`: it is
     a maintainer's scoring threshold, not a knob the developer panel changes."""
     enabled_tools: tuple[str, ...]
+    confirm_flagged_chunks: bool = True
+    """S5.3: ask the cheap model to confirm what the injection scanner flagged.
+
+    On by default, because the cost of leaving it off is the one the story names — a false
+    positive silently withholding a bidder's own evidence. Switchable because the review
+    needs a key and a network, and the heuristic alone is the offline behaviour: an operator
+    running without OpenRouter gets the guard, just not the second opinion.
+
+    Not in `AppSettingsRow`. Turning a guard's second opinion off from a browser is not a
+    preference, and the failure it would cause — legitimate evidence withheld, a requirement
+    answered `unsupported`, no error anywhere — is invisible from the panel that turned it
+    off."""
 
     @model_validator(mode="after")
     def _every_chat_slug_is_verified(self) -> RuntimeSettings:

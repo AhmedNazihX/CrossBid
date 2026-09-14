@@ -27,6 +27,7 @@ import pytest
 
 from crossbid.ingestion.chunker import Chunk
 from crossbid.ingestion.embeddings import ChunkStoreError, EmbeddingsError
+from crossbid.ingestion.injection_review import InjectionConfirmer, confirm_every_finding
 from crossbid.ingestion.parser import ParsedDocument, ParserError
 from crossbid.ingestion.pipeline import (
     EMBED_FAILED_REASON,
@@ -557,9 +558,16 @@ class OneChunkPerPage:
 
 
 async def guarded(
-    pages: list[str], kind: DocumentKind = DocumentKind.COMPANY_EVIDENCE
+    pages: list[str],
+    kind: DocumentKind = DocumentKind.COMPANY_EVIDENCE,
+    *,
+    confirm: InjectionConfirmer = confirm_every_finding,
 ) -> tuple[DocumentRecord, Harness]:
-    """The real pipeline over the shared fakes, with the page-per-chunk chunker."""
+    """The real pipeline over the shared fakes, with the page-per-chunk chunker.
+
+    `confirm` defaults to the no-model policy, so every test here that does not mention
+    S5.3 measures the heuristic's own verdict.
+    """
     h = harness(pages=pages)
     pipeline = DocumentPipeline(
         store=h.store,
@@ -568,6 +576,7 @@ async def guarded(
         embedder=h.embedder,
         chunk_writer=h.writer,
         records=h.records,
+        confirm=confirm,
     )
     accepted = await pipeline.accept(company_id=COMPANY_ID, kind=kind, upload=upload())
     return await pipeline.process(accepted, upload()), h
@@ -630,6 +639,95 @@ async def test_an_ordinary_document_flags_nothing() -> None:
     assert stored_texts(h) == [ORDINARY, ORDINARY]
 
 
+# ------------------------------------------------------- the model's second opinion (S5.3)
+
+
+async def release_everything(_text: str, _signals: object) -> bool:
+    """A review that calls every flag a false positive."""
+    return False
+
+
+async def keep_everything(_text: str, _signals: object) -> bool:
+    return True
+
+
+@pytest.mark.anyio
+async def test_a_released_chunk_reaches_the_corpus_in_document_order() -> None:
+    """The story's whole point: a blunt heuristic must not hide a bidder's own evidence.
+
+    Order is asserted with the released chunk in the middle, because `kept` is rebuilt from
+    the full chunk list rather than by appending releases to the end — a chunk carries the
+    pages it came from, and two retrieved chunks should read in the order they were written.
+    """
+    _record, h = await guarded([ORDINARY, PLANTED, ORDINARY], confirm=release_everything)
+
+    assert stored_texts(h) == [ORDINARY, PLANTED, ORDINARY]
+
+
+@pytest.mark.anyio
+async def test_a_released_chunk_is_not_left_on_the_document_as_flagged() -> None:
+    """`flagged_chunks` is what the bidder is shown. A number that survived review would
+    tell them evidence was withheld when it was not."""
+    record, _ = await guarded([ORDINARY, PLANTED], confirm=release_everything)
+
+    assert record.flagged_chunks == ()
+
+
+@pytest.mark.anyio
+async def test_a_confirmed_chunk_is_withheld_exactly_as_before() -> None:
+    """Review only ever releases; a confirmation changes nothing about the outcome."""
+    record, h = await guarded([ORDINARY, PLANTED], confirm=keep_everything)
+
+    assert record.flagged_chunks == (2,)
+    assert stored_texts(h) == [ORDINARY]
+
+
+@pytest.mark.anyio
+async def test_only_flagged_chunks_are_reviewed() -> None:
+    """The model never sees the corpus. Cost is bounded by the scanner's precision, and on
+    an honest upload the expected number of calls is zero (ADR-0049)."""
+    # Arrange
+    seen: list[str] = []
+
+    async def record_calls(text: str, _signals: object) -> bool:
+        seen.append(text)
+        return True
+
+    # Act
+    await guarded([ORDINARY, PLANTED, ORDINARY], confirm=record_calls)
+
+    # Assert
+    assert seen == [PLANTED]
+
+
+@pytest.mark.anyio
+async def test_an_ordinary_upload_asks_the_model_nothing() -> None:
+    # Arrange
+    calls: list[str] = []
+
+    async def record_calls(text: str, _signals: object) -> bool:
+        calls.append(text)  # pragma: no cover - the assertion is that this never runs
+        return True
+
+    # Act
+    await guarded([ORDINARY, ORDINARY], confirm=record_calls)
+
+    # Assert
+    assert calls == []
+
+
+@pytest.mark.anyio
+async def test_a_release_says_so_in_the_log(caplog: pytest.LogCaptureFixture) -> None:
+    """A chunk the scanner refused and the model let through is worth one line: it is the
+    evidence that the heuristic needs tuning, and the only place that pair is visible."""
+    with caplog.at_level(logging.INFO, logger="crossbid.ingestion.pipeline"):
+        await guarded([PLANTED], confirm=release_everything)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("released by review" in message for message in messages)
+
+
+@pytest.mark.anyio
 @pytest.mark.anyio
 async def test_the_withheld_chunk_is_logged_with_its_signals(
     caplog: pytest.LogCaptureFixture,

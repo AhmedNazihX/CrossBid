@@ -44,6 +44,7 @@ from crossbid.agent.nodes.check_loop import (
 from crossbid.db import Database
 from crossbid.ingestion.chunker import Chunker
 from crossbid.ingestion.embeddings import EmbeddedChunk
+from crossbid.ingestion.injection_review import InjectionConfirmer, confirm_every_finding
 from crossbid.ingestion.parser import DocumentSource, ParsedDocument, ParsedPage
 from crossbid.ingestion.pipeline import DocumentPipeline, Upload
 from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
@@ -823,8 +824,13 @@ def harness(
     embedder: FakeEmbedder | None = None,
     writer: FakeChunkWriter | None = None,
     records: InMemoryRecords | None = None,
+    confirm: InjectionConfirmer | None = None,
 ) -> Harness:
-    """The pipeline over fakes. Pass a fake to make one collaborator fail or observe."""
+    """The pipeline over fakes. Pass a fake to make one collaborator fail or observe.
+
+    `confirm` defaults to `confirm_every_finding` — the heuristic alone, no model — so a
+    test that says nothing about S5.3 measures what the scanner decided and nothing else.
+    """
     store = store if store is not None else FakeStore()
     parser = parser if parser is not None else FakeParser(pages)
     embedder = embedder if embedder is not None else FakeEmbedder()
@@ -839,6 +845,7 @@ def harness(
         embedder=embedder,
         chunk_writer=writer,
         records=records,
+        confirm=confirm_every_finding if confirm is None else confirm,
     )
     return Harness(store, parser, embedder, writer, records, pipeline)
 

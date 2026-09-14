@@ -105,6 +105,14 @@ limits:
 evaluation:
   recall_threshold: 0.9
 
+# S5.3 -- a cheap-model second opinion on every chunk the injection scanner flags, so a
+# false positive does not silently withhold a bidder's own evidence. Only flagged chunks are
+# reviewed, and the scanner flagged none of 351 real tender chunks (ADR-0049), so the
+# expected cost on an honest upload is zero calls. Set to false to run the heuristic alone,
+# which is what a deployment without an OpenRouter key gets. A failed review keeps the chunk
+# withheld: the safe direction for a guard is the one that keeps the gate shut.
+confirm_flagged_chunks: true
+
 enabled_tools:
   - company_rag_search
   - tender_rag_search

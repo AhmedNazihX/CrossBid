@@ -30,6 +30,13 @@ to either is behaviour by construction, and cannot be a secret arriving by accid
 `ENV`, `AUTH_MODE` and `WEB_ORIGIN` are non-secret but still deployment facts an operator
 cannot change from a panel, so they stay out too.
 
+*`confirm_flagged_chunks`.* S5.3's second opinion, and it stays out for the same reason
+`system_prompt` does: it is a defence, and its *state* is worth as much to an attacker as
+its wording. A route with no authentication in front of it announcing that the model review
+is switched off tells anyone who can put a PDF into the pipeline that the only thing between
+them and the corpus is a list of regular expressions. Its value is in the YAML for whoever
+deploys it, and in the log line a release writes.
+
 *`system_prompt`.* It is the injection defence's standing text (S2.3.2, ADR-0009): the
 rules that tell the model a data block is data. Printing it on a route with no
 authentication behind it hands anyone who can get a PDF into the pipeline the exact wording

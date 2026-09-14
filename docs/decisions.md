@@ -4014,3 +4014,84 @@ differ in one input and three strings, so a separate component would have copied
 the error handling and the sent state to change a verb. `Card` moved to `auth-card.tsx` when
 the second screen needed the same frame — shared rather than copied, so the two cannot drift
 apart by a padding value.
+
+---
+
+## ADR-0054 — A second opinion that may only ever say "let it through"
+
+**Date:** 2026-09-14 · **Stories:** S5.3 · **Status:** accepted
+
+`guards/injection.py` decides suspicion with regular expressions, and it is deliberately
+blunt: it runs on every chunk of every upload, before a cent is spent, with the network
+unplugged. Bluntness costs precision, and the cost of a false positive is specific and
+silent — a legitimate paragraph of the bidder's own evidence never reaches the corpus, a
+requirement it would have satisfied comes back `unsupported`, and nothing anywhere says why.
+S5.3 is the cheap model that stops that.
+
+### It may only release, never flag
+
+The confirmer is asked **only** about chunks the scanner already flagged, and its answer can
+only subtract. A chunk the heuristic passed is never seen by a model, which makes three
+things true at once: the guard's offline guarantee survives (the scanner alone still decides
+what is suspicious), the cost is bounded by the scanner's precision rather than by corpus
+size, and an attack on the classifier cannot *add* a false flag because the classifier is
+never consulted about innocent text.
+
+The measured consequence: ADR-0049 found 351 chunks of real DE/FR/EN tender prose producing
+zero flags, so **the expected number of model calls on an honest upload is zero**. The bill
+for a poisoned one is proportional to how much of it is poisoned.
+
+### A failure keeps the gate shut
+
+Timeout, provider down, malformed output, an answer of the wrong type, a passage that cannot
+be wrapped — every one of them leaves the flag standing. This is the **opposite** of the
+totality rule the ReAct tools follow (S3.3.1), where a third party being down must not end a
+paid run, and the asymmetry is the decision: there, degrading costs a thinner answer; here it
+would admit text something already called an attack. A guard degrades towards the closed
+gate. Five parametrised tests pin it, one per failure mode.
+
+### The classifier's own input is the hostile one
+
+This is the only prompt in the system whose input is *known* to be an attack — something
+already decided it probably is. Sending it as prose would be the attack working on the
+classifier instead of the agent, so the passage goes inside `wrap_as_data`'s block exactly as
+extraction's pages do (S2.3.2, ADR-0009), and a passage that could forge the delimiters is
+kept withheld **without asking** — reviewing text inside a block that text controls is the
+one thing not to do. A test asserts the passage appears inside the block and nowhere else.
+
+**The answer is a boolean and nothing else.** No reason, no quote, no summary. ADR-0008's
+rule is that an error built from untrusted input is how untrusted input escapes, and a "why"
+field would be model-written text derived from an attack, travelling to a log and a screen.
+The reviewer already has the scanner's excerpt, which is *our* text about theirs; nothing the
+model could add would be safe to repeat. What the model is told about the suspicion is the
+signal *names* — members of a closed enum we wrote — so the question is specific without a
+syllable of the document being quoted outside the block.
+
+### Where it lives, and what is not switchable from a browser
+
+Not in `guards/`: that package imports nothing else from `crossbid` (`test_wrap.py` enforces
+it) so every prompt builder can sit above it, and asking a model needs settings and a client.
+The model half is `ingestion/injection_review.py`; the pure half stays where everything can
+reach it.
+
+`confirm_flagged_chunks` is a `RuntimeSettings` field, on by default, and deliberately **not**
+in `AppSettingsRow`. Turning a guard's second opinion off from a browser is not a preference,
+and the failure it causes — evidence withheld, a requirement answered `unsupported`, no error
+anywhere — is invisible from the panel that turned it off. It is also not in
+`GET /dev/settings`, for the reason `system_prompt` is not: an unauthenticated route
+announcing that the model review is off tells anyone who can get a PDF into the pipeline that
+the only thing in their way is a list of regular expressions.
+
+Off is a real configuration, not a broken one — `confirm_every_finding` is the named policy a
+deployment without an OpenRouter key runs, and it agrees with the scanner always.
+
+### `kept` is rebuilt, not patched
+
+Released chunks are not appended back onto the first partition's list; the whole chunk list is
+re-walked and everything not still withheld is kept. A chunk carries the pages it came from,
+and a reviewer reading two retrieved chunks expects the earlier page first — appending would
+have put a released chunk after every chunk that followed it in the document.
+
+Reviews run in sequence, not under `gather`: the expected count is zero, so there is no
+latency to win, and a poisoned document is precisely where a burst of concurrent calls would
+be the wrong reflex.
