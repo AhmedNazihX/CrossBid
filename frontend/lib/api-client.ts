@@ -18,16 +18,17 @@
  * pushed through every hook and screen to take effect. A caller may still pass `token`
  * explicitly, which wins.
  *
- * The S0.3.1 dev bridge still stands in where sign-in is not configured: when
- * `NEXT_PUBLIC_DEV_COMPANY_ID` is set at build time, every call also carries
- * `X-Dev-Company: <uuid>`, which the API believes only under `AUTH_MODE=dev`. That header is
- * attached here and nowhere else; when the variable is unset nothing is sent and the API's
- * own 401 `detail` reaches the screen.
+ * The S0.3.1 dev bridge still stands in under `NEXT_PUBLIC_AUTH_MODE=dev`: every call then
+ * carries `X-Dev-Company: <uuid>`, which the API believes only under its own
+ * `AUTH_MODE=dev`. That header is attached here and nowhere else, and **only in dev mode** —
+ * sending it alongside a real session would be a second, self-asserted claim about who is
+ * calling, sitting next to a verified one.
  *
  * Deliberately not here — React hooks and caching belong to E4 (the 2 s poll lives in
  * `./use-polling.ts`, S4.2.2).
  */
 import type { paths } from './api'
+import { AUTH_MODE, DEV_COMPANY_ID } from './auth-mode'
 
 /** Used when `NEXT_PUBLIC_API_URL` is absent, i.e. local development. */
 const DEFAULT_API_BASE_URL = 'http://localhost:8000'
@@ -37,15 +38,6 @@ export const TRANSPORT_ERROR_STATUS = 0
 
 /** The S0.3.1 dev-bridge header; must match `crossbid.auth.DEV_COMPANY_HEADER`. */
 export const DEV_COMPANY_HEADER = 'X-Dev-Company'
-
-/**
- * Company id sent as `X-Dev-Company` on every request, or `undefined` to send nothing.
- *
- * Read once at module load: `NEXT_PUBLIC_*` is inlined at build time, so the value cannot
- * change while the app runs. Whitespace-only counts as unset, because Compose passes the
- * variable through as an empty string when `.env` leaves it blank.
- */
-export const DEV_COMPANY_ID = readOptionalEnv(process.env.NEXT_PUBLIC_DEV_COMPANY_ID)
 
 /**
  * Base URL of the API, without a trailing slash.
@@ -304,18 +296,19 @@ function buildHeaders(
     Accept: 'application/json',
     ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
     ...bearer(options.token ?? accessToken),
-    ...(DEV_COMPANY_ID === undefined ? {} : { [DEV_COMPANY_HEADER]: DEV_COMPANY_ID }),
+    ...devCompany(),
     ...options.headers,
   }
 }
 
-function bearer(token: string | undefined): Record<string, string> {
-  return token === undefined ? {} : { Authorization: `Bearer ${token}` }
+function devCompany(): Record<string, string> {
+  return AUTH_MODE === 'dev' && DEV_COMPANY_ID !== undefined
+    ? { [DEV_COMPANY_HEADER]: DEV_COMPANY_ID }
+    : {}
 }
 
-function readOptionalEnv(value: string | undefined): string | undefined {
-  const trimmed = value?.trim() ?? ''
-  return trimmed.length === 0 ? undefined : trimmed
+function bearer(token: string | undefined): Record<string, string> {
+  return token === undefined ? {} : { Authorization: `Bearer ${token}` }
 }
 
 function buildUrl(pathTemplate: string, pathParams: unknown, query: unknown): string {

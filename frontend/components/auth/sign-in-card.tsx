@@ -33,6 +33,7 @@ import { useSession } from '@/components/auth/session-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Notice } from '@/components/ui/notice'
+import { AUTH_MODE, configurationProblem } from '@/lib/auth-mode'
 import { safeNextPath } from '@/lib/safe-next-path'
 
 type Stage = 'form' | 'sending' | 'sent'
@@ -67,10 +68,18 @@ export function SignInCard() {
   if (status === 'disabled') {
     return (
       <Card>
-        <Notice title="Sign-in is not configured for this build">
-          This copy runs on the development bridge: it names its company with a header instead
-          of a session. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY and
-          rebuild to turn sign-in on.
+        <Notice
+          tone={configurationProblem === undefined ? 'neutral' : 'danger'}
+          title={
+            configurationProblem === undefined
+              ? 'This build does not sign people in'
+              : 'This build cannot sign people in'
+          }
+        >
+          {configurationProblem ??
+            `NEXT_PUBLIC_AUTH_MODE=${AUTH_MODE}: this copy names its company with a header ` +
+              'instead of a session. Set NEXT_PUBLIC_AUTH_MODE=supabase in ' +
+              'frontend/.env.local and restart the dev server to turn sign-in on.'}
         </Notice>
         <Button asChild variant="secondary" fullWidth>
           <Link href="/dashboard">Continue to the dashboard</Link>

@@ -22,7 +22,8 @@ import type { Session } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { setAccessToken } from '@/lib/api-client'
-import { authCallbackUrl, getSupabaseClient, isAuthEnabled } from '@/lib/supabase'
+import { isAuthEnabled } from '@/lib/auth-mode'
+import { authCallbackUrl, getSupabaseClient } from '@/lib/supabase'
 
 export type SessionStatus = 'loading' | 'signedIn' | 'signedOut' | 'disabled'
 

@@ -68,6 +68,9 @@ services:
       # of these requires a rebuild (`make build`), not just a restart.
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        # Derived from AUTH_MODE so the browser cannot end up in a different mode from the
+        # API it talks to: one variable in .env moves both halves (S4.1.1).
+        NEXT_PUBLIC_AUTH_MODE: ${AUTH_MODE:-dev}
         NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL:-}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
         NEXT_PUBLIC_DEV_COMPANY_ID: ${NEXT_PUBLIC_DEV_COMPANY_ID:-}

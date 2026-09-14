@@ -2968,7 +2968,14 @@ dev bridge it is never fetched at all.
 
 The session lives in `localStorage`, which is what `supabase-js` does and what
 `.claude/rules/react/security.md` warns against: an XSS would be able to read the token.
-The httpOnly-cookie alternative is `@supabase/ssr`, the option not taken above. What holds
+
+> **Amended 2026-09-14 (ADR-0035).** The sentence that stood here — "the httpOnly-cookie
+> alternative is `@supabase/ssr`" — was wrong, and the correction matters because it was the
+> premise of a decision. `@supabase/ssr@0.12.7`'s `createBrowserClient` stores the session
+> with `document.cookie` (`dist/main/cookies.js`, `documentCookieSetAll`), which JavaScript
+> can read exactly as it can read `localStorage`. Only a cookie written by a *server* can be
+> `httpOnly`, and this app's browser has to hold a readable bearer token anyway to call
+> FastAPI cross-origin. See ADR-0035 for what actually reduces the risk. What holds
 the risk down meanwhile: the app has no `dangerouslySetInnerHTML` anywhere, access tokens
 are one-hour and rotated, and the API authorises every request against the company the token
 resolves to rather than against anything the client claims. Worth revisiting if the app ever
@@ -2982,3 +2989,71 @@ disabled submit; the dev bridge renders the full shell with no redirect at all, 
 before. Not verifiable here: that the mail arrives and the link signs you in. That needs
 `http://localhost:3000/auth/callback` on the project's redirect allow-list and a real inbox,
 so it is the user's to confirm.
+
+---
+
+## ADR-0035 — One named switch, and what `@supabase/ssr` would and would not buy
+
+**Date:** 2026-09-14 · **Stories:** S4.1.1 (amends ADR-0034) · **Status:** accepted
+
+Two things, both found by the user trying to turn sign-in on and getting neither a redirect
+nor an email.
+
+### The switch was implicit, and that was the defect
+
+ADR-0034 decided the browser signs people in when the Supabase values are set **and**
+`NEXT_PUBLIC_DEV_COMPANY_ID` is not. Turning sign-in on therefore meant *deleting* a line —
+in `frontend/.env.local`, a file Next insists on and the API never reads, while the variable
+of the same name also sits in the root `.env`, which Next never reads. The user commented out
+the root one, restarted, and got: `/dashboard` not redirecting, and no email. Both were the
+same fault. In dev-bridge mode `isAuthEnabled` is false, so the guard renders through *and*
+the login page shows a notice instead of a form — there was never a form to submit, so
+nothing was ever sent.
+
+**An implicit switch fails silently by construction.** Getting it wrong looked exactly like
+getting it right: the app came up, every screen rendered, and the only symptom was the
+absence of a redirect nobody had seen work yet.
+
+So the rule is now a variable that says what it is: **`NEXT_PUBLIC_AUTH_MODE`, named after
+the `AUTH_MODE` the API reads, taking the same two values**. One line in each half, spelled
+the same way, and `infra/docker-compose.yml` derives the browser's from the API's
+(`${AUTH_MODE:-dev}`) so a Compose stack cannot have them disagree at all. Defaulting to
+`dev` — and treating an unreadable value as `dev` — keeps a checkout that has never heard of
+the variable working, and means a typo can never be the thing that decides a deployment is
+authenticated.
+
+The other half of the fix is that a mode which *cannot* work says so. `configurationProblem`
+names the missing variable on the login screen in the danger tint, rather than falling back
+to the bridge and looking normal. `X-Dev-Company` is also now sent only in `dev` mode: under
+a real session it would be a second, self-asserted claim about who is calling, sitting beside
+a verified one.
+
+### `@supabase/ssr` does not do what ADR-0034 said it did
+
+The user asked to switch to `@supabase/ssr` on the strength of that ADR's closing note.
+Checking the package before acting on it showed the note was wrong.
+
+**Measured, in `@supabase/ssr@0.12.7`:** `createBrowserClient` falls through to
+`documentCookieGetAll` / `documentCookieSetAll` in `dist/main/cookies.js`, which read and
+write `document.cookie`. There is no `httpOnly` anywhere in that path, and there cannot be:
+`httpOnly` is a flag a *server* sets on a `Set-Cookie` header, and a cookie the browser wrote
+itself is by definition readable by the script that wrote it. Swapping the library would move
+the session from `localStorage` to a JavaScript-readable cookie — no less exposed to an XSS,
+and now also attached to every same-origin request, which is CSRF surface `localStorage` does
+not have.
+
+**Genuinely httpOnly is available, but it costs the boundary.** It needs the session set
+server-side: `app/auth/callback/route.ts` doing `exchangeCodeForSession`, middleware
+refreshing, `createServerClient` over Next's `cookies()`. And then the browser can no longer
+read the access token — which it must, because it calls FastAPI on another origin with
+`Authorization: Bearer`. Closing that gap means routing every API call through Next as a
+backend-for-frontend, which contradicts the plan's own boundary ("two processes on two
+origins… the browser calls FastAPI directly") and puts a proxy hop in front of uploads, the
+2 s poll and the signed-URL viewer.
+
+**So the risk is reduced by making XSS harder, not by moving where the token sits.** What
+holds today: no `dangerouslySetInnerHTML` anywhere in the app, access tokens of one hour that
+rotate, and an API that authorises against the company the *token* resolves to rather than
+anything the client claims. What is worth adding is a Content-Security-Policy, which is the
+control that actually addresses the threat; it is not in this story and is recorded here as
+the open item. Revisit the BFF shape only if the app ever renders untrusted HTML.

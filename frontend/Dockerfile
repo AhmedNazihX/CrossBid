@@ -18,11 +18,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # present here, not at run time. Passing them as `environment:` in Compose has no effect
 # on the client bundle. Consequence: the image is environment-specific.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_AUTH_MODE=dev
 ARG NEXT_PUBLIC_SUPABASE_URL=
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# Dev-only tenant id sent as X-Dev-Company until sign-in lands (S4.1.1); see infra/.env.example.
+# Dev-only tenant id sent as X-Dev-Company under NEXT_PUBLIC_AUTH_MODE=dev; see infra/.env.example.
 ARG NEXT_PUBLIC_DEV_COMPANY_ID=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_AUTH_MODE=$NEXT_PUBLIC_AUTH_MODE \
     NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
     NEXT_PUBLIC_DEV_COMPANY_ID=$NEXT_PUBLIC_DEV_COMPANY_ID
