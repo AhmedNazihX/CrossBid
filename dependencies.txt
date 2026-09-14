@@ -8,7 +8,7 @@
 #          transitive = pulled in by a direct dependency
 #          dev = build, lint, test, or type-check tooling only
 #
-# 597 packages: 99 backend, 498 frontend
+# 605 packages: 99 backend, 506 frontend
 
 
 ## backend (99)
@@ -113,7 +113,7 @@ xxhash                                       4.0.1           transitive
 yarl                                         1.24.5          transitive
 zstandard                                    0.25.0          transitive
 
-## frontend (498)
+## frontend (506)
 
 @alloc/quick-lru                             5.3.0           dev
 @babel/code-frame                            7.29.7          dev
@@ -252,6 +252,13 @@ zstandard                                    0.25.0          transitive
 @redocly/openapi-core                        1.34.20         dev
 @rtsao/scc                                   1.1.0           dev
 @rushstack/eslint-patch                      1.16.1          dev
+@supabase/auth-js                            2.116.0         transitive
+@supabase/functions-js                       2.116.0         transitive
+@supabase/phoenix                            0.4.5           transitive
+@supabase/postgrest-js                       2.116.0         transitive
+@supabase/realtime-js                        2.116.0         transitive
+@supabase/storage-js                         2.116.0         transitive
+@supabase/supabase-js                        2.116.0         direct
 @swc/helpers                                 0.5.15          transitive
 @tailwindcss/node                            4.3.3           dev
 @tailwindcss/oxide                           4.3.3           dev
@@ -428,6 +435,7 @@ has-symbols                                  1.1.0           dev
 has-tostringtag                              1.0.2           dev
 hasown                                       2.0.4           dev
 https-proxy-agent                            7.0.6           dev
+iceberg-js                                   0.8.1           transitive
 ignore                                       5.3.2           dev
 ignore                                       7.0.9           dev
 import-fresh                                 3.3.1           dev

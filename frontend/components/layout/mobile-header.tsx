@@ -13,6 +13,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { AccountBlock } from '@/components/auth/account-block'
+
 import { AdvisoryNote } from './advisory-note'
 import { NavGroups } from './nav-groups'
 
@@ -68,6 +70,7 @@ export function MobileHeader() {
             <div className="flex-1" />
             <div className="mt-6">
               <AdvisoryNote />
+              <AccountBlock />
             </div>
           </SheetContent>
         </Sheet>

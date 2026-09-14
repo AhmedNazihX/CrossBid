@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
+import { SessionProvider } from '@/components/auth/session-provider'
+
 /**
  * Geist and Geist Mono, the design system's single family (`tokens/fonts.css` lists the
  * same weights: 400/500/600/700 sans, 400/500 mono). `next/font` self-hosts them, so the
@@ -32,7 +34,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   )
 }

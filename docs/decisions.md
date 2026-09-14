@@ -2901,3 +2901,84 @@ header value and quietly break the one-company-per-user rule.
 dependency of `supabase-auth`, so nothing new entered the environment — but a module that
 imports a package has to declare it, or the day `supabase` drops it the failure is an
 ImportError in the auth path.
+
+---
+
+## ADR-0034 — Sign-in in the browser, and the switch that keeps the two halves honest
+
+**Date:** 2026-09-14 · **Stories:** S4.1.1 (unblocks S4.2.1, S4.3.1) · **Status:** accepted
+
+The backend half landed in ADR-0033. This is the browser's, and four decisions in it are
+worth the reading time.
+
+**`@supabase/supabase-js`, not `@supabase/ssr`.** The user's call, on the shape the app
+already has: 33 client components, no server-side data fetching, and every request going to
+FastAPI with a bearer token read in the browser. Cookie-backed sessions would buy a
+middleware guard that renders before the redirect, and nothing else — there is no server
+render here that needs to know who is signed in. So the guard is a client one
+(`RequireSession`) and the cost is a brief "Loading…" rather than a flash of protected
+content, because `loading` and `signedOut` are kept as different states. Collapsing them
+would bounce every returning visitor to the login page before their session had come out of
+storage.
+
+**No artboard, and that is recorded rather than quietly done.** ADR-0014 says every UI
+component cites the artboard it implements. The canvas draws the six screens that existed
+when the user confirmed it; sign-in was S4.1.1's to design. Drafting a seventh artboard and
+waiting for a review round was the alternative; the user chose to build from the primitives
+the artboards already fixed — `Input`, `Button`, `Notice`, the marketing page's canvas and
+brand lockup — so the screen invents no spacing, colour or type of its own. **This is the
+one component in the app that cites no artboard**, and it is the exception, not a new rule.
+The sidebar's account block does cite one: it is the block `ui_kits/app/Shell.jsx` draws at
+the foot of `Sidebar`, which `AdvisoryNote` has been standing in for since S4.1.2.
+
+**The dev bridge wins over session mode, and that is load-bearing.** The browser signs people
+in only when both `NEXT_PUBLIC_SUPABASE_*` values are set **and** `NEXT_PUBLIC_DEV_COMPANY_ID`
+is not. Found while wiring it: `infra/docker-compose.yml` has passed the two Supabase values
+as build args since S0.1, derived from the same `.env` the API reads — so a `make dev` stack
+running `AUTH_MODE=dev` would have booted a browser in session mode against it, and **every
+screen would have 401'd**: the browser sending a token the API ignores, and withholding the
+header it actually wants. The backend has one switch for this and now so does the browser;
+clearing `NEXT_PUBLIC_DEV_COMPANY_ID` is how you throw it.
+
+**The client is a dynamic import.** `SessionProvider` sits in the root layout so one session
+serves every route — which put ~80 kB of auth client into the first load of *every* page,
+the marketing page included. Measured: `/login` went 194 kB → 129 kB and `/auth/callback`
+187 kB → 122 kB once the import moved behind `getSupabaseClient()`, and a grep of the built
+chunks confirms Supabase now lands in its own two rather than in the shared bundle. On the
+dev bridge it is never fetched at all.
+
+### Smaller things that are still decisions
+
+- **`?next=` is re-validated on arrival.** It travels to Supabase inside `emailRedirectTo`
+  and comes back on the callback URL, so by the time it is read it is attacker-supplied.
+  `safeNextPath` accepts only a same-site absolute path — `//evil.example` and `/\evil` are
+  the two shapes that look like paths and are not. Without that, a crafted link sends
+  someone who has just proved their identity to a page of the attacker's choosing.
+- **The address is never confirmed or denied.** Supabase answers the same for a known and an
+  unknown email and so does the screen: "if that address has an account". Anything else is
+  an account-enumeration oracle.
+- **Supabase's own error text is shown, not paraphrased.** The one users actually hit is the
+  rate limit ("you can only request this once every 60 seconds"), and turning that into
+  "something went wrong" would hide the only instruction that helps.
+- **The token subscription is attached before the first `getSession`.** The magic-link
+  exchange can finish while that read is in flight, and a listener attached afterwards would
+  miss the single event that matters on the callback page.
+
+### Known limitation, stated rather than buried
+
+The session lives in `localStorage`, which is what `supabase-js` does and what
+`.claude/rules/react/security.md` warns against: an XSS would be able to read the token.
+The httpOnly-cookie alternative is `@supabase/ssr`, the option not taken above. What holds
+the risk down meanwhile: the app has no `dangerouslySetInnerHTML` anywhere, access tokens
+are one-hour and rotated, and the API authorises every request against the company the token
+resolves to rather than against anything the client claims. Worth revisiting if the app ever
+renders untrusted HTML.
+
+### What is verified, and what needs a mailbox
+
+Verified in a browser: a signed-out visitor asking for `/dashboard` lands on
+`/login?next=%2Fdashboard`; the login screen renders with a labelled, autofocused field and a
+disabled submit; the dev bridge renders the full shell with no redirect at all, exactly as
+before. Not verifiable here: that the mail arrives and the link signs you in. That needs
+`http://localhost:3000/auth/callback` on the project's redirect allow-list and a real inbox,
+so it is the user's to confirm.

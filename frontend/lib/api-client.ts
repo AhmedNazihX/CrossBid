@@ -11,15 +11,21 @@
  * `Authorization: Bearer <jwt>`, cookies are never sent, and a non-2xx answer becomes an
  * `ApiError` rather than a silently-undefined payload.
  *
- * Until magic-link sign-in lands (S4.1.1) there is no JWT. The S0.3.1 dev bridge stands in:
- * when `NEXT_PUBLIC_DEV_COMPANY_ID` is set at build time, every call also carries
- * `X-Dev-Company: <uuid>`, which the API believes only under `AUTH_MODE=dev`. That header is
- * attached here and nowhere else, so removing the bridge is a one-line change; when the
- * variable is unset nothing is sent and the API's own 401 `detail` reaches the screen.
+ * The token comes from `SessionProvider` (S4.1.1), which calls `setAccessToken` on every
+ * Supabase auth change. It is held in a module variable rather than threaded through every
+ * call site for the same reason `DEV_COMPANY_ID` is: a bearer token is a property of the
+ * tab, not of one request, and a refresh that replaced it would otherwise have to be
+ * pushed through every hook and screen to take effect. A caller may still pass `token`
+ * explicitly, which wins.
  *
- * Deliberately not here — each belongs to a later story:
- * - where the token comes from (Supabase session) -> S4.1; callers pass `token`
- * - React hooks and caching -> E4 (the 2 s poll lives in `./use-polling.ts`, S4.2.2)
+ * The S0.3.1 dev bridge still stands in where sign-in is not configured: when
+ * `NEXT_PUBLIC_DEV_COMPANY_ID` is set at build time, every call also carries
+ * `X-Dev-Company: <uuid>`, which the API believes only under `AUTH_MODE=dev`. That header is
+ * attached here and nowhere else; when the variable is unset nothing is sent and the API's
+ * own 401 `detail` reaches the screen.
+ *
+ * Deliberately not here — React hooks and caching belong to E4 (the 2 s poll lives in
+ * `./use-polling.ts`, S4.2.2).
  */
 import type { paths } from './api'
 
@@ -51,6 +57,18 @@ export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_BASE
   /\/+$/,
   ''
 )
+
+let accessToken: string | undefined
+
+/**
+ * Set the bearer token every later request carries, or clear it with `undefined`.
+ *
+ * Called only by `SessionProvider`. Exported rather than assigned so that the one writer
+ * is greppable: a second caller would be a second source of truth for who is signed in.
+ */
+export function setAccessToken(token: string | undefined): void {
+  accessToken = token
+}
 
 /** HTTP methods the client supports. `options`, `head` and `trace` are not used. */
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
@@ -110,7 +128,10 @@ export type MultipartBody<P extends keyof paths, M extends HttpMethod> = Multipa
 >
 
 export interface RequestOptions<P extends keyof paths, M extends HttpMethod> {
-  /** Supabase JWT. Omitted only for public routes such as `GET /health`. */
+  /**
+   * Supabase JWT. Normally omitted: the signed-in session's token is attached for you
+   * (`setAccessToken`). Pass one to override it for a single call.
+   */
   token?: string
   /** Path placeholder values. A placeholder left unfilled throws before any request. */
   path?: PathParams<P, M>
@@ -282,10 +303,14 @@ function buildHeaders(
   return {
     Accept: 'application/json',
     ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
-    ...(options.token === undefined ? {} : { Authorization: `Bearer ${options.token}` }),
+    ...bearer(options.token ?? accessToken),
     ...(DEV_COMPANY_ID === undefined ? {} : { [DEV_COMPANY_HEADER]: DEV_COMPANY_ID }),
     ...options.headers,
   }
+}
+
+function bearer(token: string | undefined): Record<string, string> {
+  return token === undefined ? {} : { Authorization: `Bearer ${token}` }
 }
 
 function readOptionalEnv(value: string | undefined): string | undefined {

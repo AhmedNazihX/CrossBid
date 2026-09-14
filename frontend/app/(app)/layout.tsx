@@ -1,3 +1,4 @@
+import { RequireSession } from '@/components/auth/require-session'
 import { MobileHeader } from '@/components/layout/mobile-header'
 import { MAIN_CONTENT_ID } from '@/components/layout/nav-items'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -11,8 +12,9 @@ import { SkipToContent } from '@/components/layout/skip-to-content'
  * `WorkspacePhone.dc.html` draws it.
  *
  * Every route in the `(app)` group renders inside it. The route group adds no URL segment:
- * `app/(app)/dashboard/page.tsx` is `/dashboard`. There is no session check here yet — the
- * redirect for a signed-out visitor is S4.1.1.
+ * `app/(app)/dashboard/page.tsx` is `/dashboard`. `RequireSession` (S4.1.1) is what stands
+ * in front of all of them: a signed-out visitor is sent to `/login` carrying the path they
+ * asked for, and on the dev bridge it renders straight through.
  */
 export default function AppLayout({
   children,
@@ -20,15 +22,17 @@ export default function AppLayout({
   children: React.ReactNode
 }>) {
   return (
-    <div className="flex min-h-screen flex-col bg-surface-canvas shell:flex-row">
-      <SkipToContent />
-      <Sidebar />
-      <MobileHeader />
-      <main id={MAIN_CONTENT_ID} className="min-w-0 flex-1 shell:py-7 shell:pr-7">
-        <div className="flex min-h-full flex-col px-4 py-5 shell:min-h-[calc(100vh-56px)] shell:rounded-[14px] shell:border shell:border-border-default shell:bg-surface-card shell:p-8 shell:shadow-xs">
-          {children}
-        </div>
-      </main>
-    </div>
+    <RequireSession>
+      <div className="flex min-h-screen flex-col bg-surface-canvas shell:flex-row">
+        <SkipToContent />
+        <Sidebar />
+        <MobileHeader />
+        <main id={MAIN_CONTENT_ID} className="min-w-0 flex-1 shell:py-7 shell:pr-7">
+          <div className="flex min-h-full flex-col px-4 py-5 shell:min-h-[calc(100vh-56px)] shell:rounded-[14px] shell:border shell:border-border-default shell:bg-surface-card shell:p-8 shell:shadow-xs">
+            {children}
+          </div>
+        </main>
+      </div>
+    </RequireSession>
   )
 }

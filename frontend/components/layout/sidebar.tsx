@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
+import { AccountBlock } from '@/components/auth/account-block'
+
 import { AdvisoryNote } from './advisory-note'
 import { NavGroups } from './nav-groups'
 
@@ -32,6 +34,7 @@ export function Sidebar() {
       <NavGroups />
       <div className="flex-1" />
       <AdvisoryNote />
+      <AccountBlock />
     </aside>
   )
 }

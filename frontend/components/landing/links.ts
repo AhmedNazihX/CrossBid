@@ -9,11 +9,8 @@
 /** The start step of the bid flow (`NewBid.dc.html`). */
 export const ANALYSE_HREF = '/bids/new'
 
-/**
- * Sign-in is S4.1.1. Until it lands there is no session, so "Sign in" opens the shell
- * directly — the same door the placeholder page used.
- */
-export const SIGN_IN_HREF = '/dashboard'
+/** The magic-link sign-in page (S4.1.1). */
+export const SIGN_IN_HREF = '/login'
 
 /**
  * No booking or contact route exists yet, so "Book a demo" and "Talk to the team" anchor

@@ -13,6 +13,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "cn": "^0.2.6",
     "next": "15.5.25",
     "radix-ui": "^1.6.7",
