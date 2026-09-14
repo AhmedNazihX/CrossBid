@@ -92,20 +92,28 @@ from crossbid.readmodel.bids import (
 )
 from crossbid.readmodel.matrix import write_matrix_rows, write_reviewed_rows
 from crossbid.readmodel.requirements import write_requirements
+from crossbid.readmodel.usage import DatabaseUsageSink
 from crossbid.settings import Settings
+from crossbid.usage import UsageNode, UsageRecorder, UsageSink, recording_usage
 
 logger = logging.getLogger(__name__)
 
-PARSE_DOCS: Final = "parse_docs"
-EXTRACT_REQS: Final = "extract_reqs"
-PLAN_CHECKS: Final = "plan_checks"
-CHECK_REQS: Final = "check_reqs"
-SCORE_VERDICT: Final = "score_verdict"
-AWAIT_REVIEW: Final = "await_review"
-APPLY_REVIEW: Final = "apply_review"
-FINALIZE: Final = "finalize"
+PARSE_DOCS: Final = UsageNode.PARSE_DOCS.value
+EXTRACT_REQS: Final = UsageNode.EXTRACT_REQS.value
+PLAN_CHECKS: Final = UsageNode.PLAN_CHECKS.value
+CHECK_REQS: Final = UsageNode.CHECK_REQS.value
+SCORE_VERDICT: Final = UsageNode.SCORE_VERDICT.value
+AWAIT_REVIEW: Final = UsageNode.AWAIT_REVIEW.value
+APPLY_REVIEW: Final = UsageNode.APPLY_REVIEW.value
+FINALIZE: Final = UsageNode.FINALIZE.value
 """Node names. `AWAIT_REVIEW` is what `aget_state().next` reports while a bid is parked,
-and S3.4.2 resumes by that name."""
+and S3.4.2 resumes by that name.
+
+They are read off `UsageNode` rather than written out again, because `llm_usage.node` is
+the same vocabulary (S5.2) and the column is free text. Renaming a node under two
+independent lists of strings would split that node's costs across two labels in
+`/dev/costs` with nothing failing; here the enum is the single source and a new node does
+not type-check until it is named in both places."""
 
 INTERRUPT_BID_ID: Final = "bid_id"
 INTERRUPT_REQUIREMENTS: Final = "requirements"
@@ -254,12 +262,30 @@ class ReadModelProjection:
 # ------------------------------------------------------------------------------- stages
 
 
-def stage(status: BidStatus, node: BidNode, projection: RunProjection) -> StageNode:
-    """`node`, wrapped so the read model learns the stage on entry and its output on exit.
+def stage(
+    name: UsageNode,
+    status: BidStatus,
+    node: BidNode,
+    projection: RunProjection,
+    usage: UsageSink,
+) -> StageNode:
+    """`node`, wrapped so the read model learns the stage and the cost table learns the node.
 
     See decisions 1 and 3 in the module docstring. Everything inside — the status write, the
     node, the projection — is under the one `except`, so a failed *write* names the stage as
     well: "parsing failed: OperationalError" is a better dashboard line than a traceback.
+
+    **The usage scope is opened here rather than inside the nodes that spend (S5.2).** Three
+    nodes call a model today and the others do not, but the wrapper every node already goes
+    through is the only place where forgetting is impossible: a node added later is
+    attributed the moment it starts spending, and a node that stops spending simply stops
+    producing rows. The scope carries the bid, the tenant and this node's name, and
+    `crossbid.usage` explains why it travels in a context variable instead of an argument —
+    in short, because `check_loop` invokes its model with no `RunnableConfig` to put it in.
+
+    `name` is a `UsageNode` rather than the node's string so that the graph's vocabulary and
+    the cost table's are one closed set; `status` cannot serve instead, because `plan_checks`
+    and `check_reqs` share `BidStatus.CHECKING` and their costs are nothing alike.
     """
 
     async def run(
@@ -271,9 +297,13 @@ def stage(status: BidStatus, node: BidNode, projection: RunProjection) -> StageN
     ) -> dict[str, Any]:
         try:
             bid_id, company_id = _identity_of(state)
-            await projection.set_status(company_id=company_id, bid_id=bid_id, status=status)
-            update = await node(state, config)
-            await _project(projection, state, update, bid_id=bid_id, company_id=company_id)
+            recorder = UsageRecorder(
+                sink=usage, company_id=company_id, bid_id=bid_id, node=name
+            )
+            with recording_usage(recorder):
+                await projection.set_status(company_id=company_id, bid_id=bid_id, status=status)
+                update = await node(state, config)
+                await _project(projection, state, update, bid_id=bid_id, company_id=company_id)
         except GraphBubbleUp:
             raise  # `interrupt()` and friends: LangGraph's control flow, not a failure.
         except Exception as exc:
@@ -435,6 +465,7 @@ def build_graph(
     score_verdict: BidNode | None = None,
     apply_review: BidNode | None = None,
     projection: RunProjection | None = None,
+    usage: UsageSink | None = None,
     checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """The compiled outer graph — a deterministic workflow with a human interrupt.
@@ -443,10 +474,11 @@ def build_graph(
     `agent.check_concurrency` `→ score_verdict → await_review → apply_review → finalize →
     END`, compiled on the process checkpointer
     so that a run interrupted by a restart continues from its last completed node
-    (`runner.resume_unfinished_runs`). The eight keyword seams exist for tests, which run the
-    real wiring over fake nodes, a recording projection and a `MemorySaver`; production
-    passes none of them. Building the real `parse_docs` raises `StorageError` when Storage
-    is not configured — see `build_parse_docs` — and that is left to the caller to answer.
+    (`runner.resume_unfinished_runs`). The nine keyword seams exist for tests, which run the
+    real wiring over fake nodes, a recording projection, a recording usage sink and a
+    `MemorySaver`; production passes none of them. Building the real `parse_docs` raises
+    `StorageError` when Storage is not configured — see `build_parse_docs` — and that is
+    left to the caller to answer.
     """
     parse = parse_docs if parse_docs is not None else build_parse_docs(settings, db)
     extract = extract_reqs if extract_reqs is not None else build_extract_reqs(settings)
@@ -455,20 +487,42 @@ def build_graph(
     scorer = score_verdict if score_verdict is not None else build_score_verdict(db)
     applier = apply_review if apply_review is not None else build_apply_review(db)
     project = projection if projection is not None else ReadModelProjection(db)
+    spend = usage if usage is not None else DatabaseUsageSink(db)
     saver = checkpointer if checkpointer is not None else db.checkpointer
     concurrency = settings.runtime.agent.check_concurrency
 
     builder: StateGraph[BidState] = StateGraph(BidState)
     # Workflow nodes: fixed order, no model chooses the next step. `check_reqs` is the one
     # agentic node, reached by a `Send` per lane; the interrupt stays last before F3.4.
-    builder.add_node(PARSE_DOCS, stage(BidStatus.PARSING, parse, project))
-    builder.add_node(EXTRACT_REQS, stage(BidStatus.EXTRACTING, extract, project))
-    builder.add_node(PLAN_CHECKS, stage(BidStatus.CHECKING, plan, project))
-    builder.add_node(CHECK_REQS, stage(BidStatus.CHECKING, check, project))
-    builder.add_node(SCORE_VERDICT, stage(BidStatus.SCORING, scorer, project))
-    builder.add_node(AWAIT_REVIEW, stage(BidStatus.AWAITING_REVIEW, _request_review, project))
-    builder.add_node(APPLY_REVIEW, stage(BidStatus.APPLYING_REVIEW, applier, project))
-    builder.add_node(FINALIZE, stage(BidStatus.COMPLETE, finalize, project))
+    builder.add_node(
+        PARSE_DOCS, stage(UsageNode.PARSE_DOCS, BidStatus.PARSING, parse, project, spend)
+    )
+    builder.add_node(
+        EXTRACT_REQS,
+        stage(UsageNode.EXTRACT_REQS, BidStatus.EXTRACTING, extract, project, spend),
+    )
+    builder.add_node(
+        PLAN_CHECKS, stage(UsageNode.PLAN_CHECKS, BidStatus.CHECKING, plan, project, spend)
+    )
+    builder.add_node(
+        CHECK_REQS, stage(UsageNode.CHECK_REQS, BidStatus.CHECKING, check, project, spend)
+    )
+    builder.add_node(
+        SCORE_VERDICT, stage(UsageNode.SCORE_VERDICT, BidStatus.SCORING, scorer, project, spend)
+    )
+    builder.add_node(
+        AWAIT_REVIEW,
+        stage(
+            UsageNode.AWAIT_REVIEW, BidStatus.AWAITING_REVIEW, _request_review, project, spend
+        ),
+    )
+    builder.add_node(
+        APPLY_REVIEW,
+        stage(UsageNode.APPLY_REVIEW, BidStatus.APPLYING_REVIEW, applier, project, spend),
+    )
+    builder.add_node(
+        FINALIZE, stage(UsageNode.FINALIZE, BidStatus.COMPLETE, finalize, project, spend)
+    )
     builder.add_edge(START, PARSE_DOCS)
     builder.add_edge(PARSE_DOCS, EXTRACT_REQS)
     builder.add_edge(EXTRACT_REQS, PLAN_CHECKS)

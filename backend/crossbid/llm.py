@@ -14,6 +14,13 @@ before -- the picker cannot offer a model that would not (ADR-0005).
 response, which S5.2's per-node cost accounting reads. It is set here once so that no call
 site can forget it.
 
+**S5.2 attaches its two instruments here for the same reason.** Every model built for a role
+carries `USAGE_CALLBACK`, which records what the response cost against whatever bid and node
+are in scope (`crossbid.usage`), and `metadata={"model_role": ...}`, which is what puts the
+role on the LangSmith run. Neither can be attached at a call site: `with_structured_output`
+consumes the `AIMessage` the token counts arrive on, so nothing above this factory can see
+them, and a node that had to report its own spend could forget and then appear free.
+
 **S3.4.4 adds the resilience, and it lives here rather than at each call site.** A model
 call that times out is retried once and then reissued against the `fallback` slug
 (`ResilientModel`). Two details make that sentence true rather than approximately true.
@@ -41,6 +48,7 @@ import openai
 from langchain_openai import ChatOpenAI
 
 from crossbid.settings import CHAT_MODEL_ROLES, ModelRole, Settings
+from crossbid.usage import UsageCallbackHandler
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +61,29 @@ USAGE_ACCOUNTING_EXTRA_BODY: Final[Mapping[str, Any]] = MappingProxyType(
 Read-only so that no caller can extend one model's body and affect the next."""
 
 PROBE_MAX_TOKENS: Final = 1
+
+MODEL_ROLE_METADATA_KEY: Final = "model_role"
+"""What every traced call is tagged with, so a LangSmith run says which *role* it served.
+
+S5.2's other half. `bid_run_config` already stamps `bid_id` on the run (S0.3.3), and
+LangGraph names the node, so a trace could always answer "which bid" and "which step". It
+could not answer "which role", and ADR-0050 is why that stopped being inferable: roles are
+switchable per deployment, two of them may sit on the same slug, and a fallback answers
+under the slug of a role that was never asked. The role is a fact only the factory knows,
+so the factory is where it is written down.
+
+It is metadata rather than a column on `llm_usage`: a role is configuration, not history,
+and a report keyed on it would mean something different before and after a switch. The
+table records the model that answered; the trace records the intent behind the call."""
+
+USAGE_CALLBACK: Final = UsageCallbackHandler()
+"""S5.2's cost capture, attached to every model built for a role.
+
+One stateless instance for the process: the attribution it records comes from the context
+in force when a response lands (`crossbid.usage`), never from construction, so there is
+nothing per-model to hold. Attaching it here rather than at the call sites is the point --
+`with_structured_output` hides the token counts from everything above it, and a node that
+had to report its own spend could forget and appear free."""
 
 LANGCHAIN_RETRIES: Final = 0
 """`ChatOpenAI` retries twice of its own accord. Switched off so that `ResilientModel` is
@@ -99,6 +130,7 @@ def chat_model(
     return _model_for_slug(
         settings.runtime.models.for_role(role),
         settings,
+        role=role,
         temperature=temperature,
         max_tokens=max_tokens,
     )
@@ -108,6 +140,7 @@ def _model_for_slug(
     slug: str,
     settings: Settings,
     *,
+    role: ModelRole | None = None,
     temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> ChatOpenAI:
@@ -117,10 +150,19 @@ def _model_for_slug(
     into it, which CLAUDE.md forbids. Everything above the factory asks for a role; the
     only caller here is the verification below, which walks `available_models` -- a list of
     slugs an operator *may* switch to and which therefore has no role of its own yet.
+
+    **`role is None` is what says "this call belongs to nobody", and it switches off both
+    of S5.2's instruments.** The one roleless caller is the startup probe: it runs before
+    any request, so there is no tenant to charge a row to and no bid to attribute it against
+    -- the cost capture would find no scope and warn on every boot, turning the signal that
+    means "a node is missing its instrumentation" into noise that means nothing. A one-token
+    probe is also the one call whose cost nobody is asking about.
     """
     runtime = settings.runtime
     return ChatOpenAI(
         model=slug,
+        metadata=None if role is None else {MODEL_ROLE_METADATA_KEY: role.value},
+        callbacks=None if role is None else [USAGE_CALLBACK],
         api_key=settings.env.openrouter_api_key,
         base_url=OPENROUTER_BASE_URL,
         temperature=runtime.temperature if temperature is None else temperature,

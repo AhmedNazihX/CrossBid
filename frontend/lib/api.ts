@@ -254,6 +254,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dev/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tokens and cost per bid and node
+         * @description What this company's runs have spent, per node and per bid. Outside production only.
+         *
+         *     The total is summed from `by_node` rather than asked of the database separately: that
+         *     breakdown is never truncated, so the sum is exact, and a total from its own statement
+         *     could disagree with the lines beneath it if a run wrote a row between the two queries.
+         *     `by_bid` is the one list with a limit, which is why it is not what the total comes from.
+         */
+        get: operations["read_dev_costs_dev_costs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tenders/search": {
         parameters: {
             query?: never;
@@ -302,6 +327,34 @@ export interface paths {
          *     nothing" is one state in the database rather than two.
          */
         post: operations["post_feedback_bids__bid_id__feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bids/{bid_id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask a question about this bid
+         * @description Answer one question about this bid, with a document and a page behind every claim.
+         *
+         *     The conversation continues on `bid:{id}:chat`, so a follow-up question reaches an agent
+         *     that remembers the last one; the citations, though, are only ever resolved against the
+         *     searches made for *this* question (`agent/chat_graph.py`).
+         *
+         *     An answer that cites nothing comes back with an empty `citations` list and a sentence
+         *     saying it is unverified, rather than as an error — the bidder is told what the agent
+         *     could and could not back up, which is the whole point of the route.
+         */
+        post: operations["ask_about_bid_bids__bid_id__chat_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -493,6 +546,42 @@ export interface components {
             /** Updated At */
             updated_at?: string | null;
         };
+        /**
+         * BidUsage
+         * @description One bid's whole spend, across every node and model it used.
+         */
+        BidUsage: {
+            /**
+             * Calls
+             * @description Model responses counted, one row per response
+             */
+            calls: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /**
+             * Cost Usd
+             * @description What OpenRouter charged, as OpenRouter reported it — never a local rate
+             */
+            cost_usd: number;
+            /**
+             * Unpriced Calls
+             * @description Calls that moved tokens and reported no cost, so cost_usd is a lower bound. Non-zero means the provider stopped pricing responses, or the calls were smaller than the stored sixth decimal place.
+             */
+            unpriced_calls: number;
+            /**
+             * Bid Id
+             * @description The bid, or null for spend that belongs to no run (S5.6 writes those)
+             */
+            bid_id?: string | null;
+            /**
+             * Last Call At
+             * Format: date-time
+             * @description The most recent model call charged to it
+             */
+            last_call_at: string;
+        };
         /** Body_upload_document_documents_post */
         Body_upload_document_documents_post: {
             /**
@@ -578,6 +667,37 @@ export interface components {
             is_valid: boolean;
         };
         /**
+         * ChatQuestion
+         * @description What the bidder wants to know about this bid.
+         */
+        ChatQuestion: {
+            /**
+             * Question
+             * @description The question, in any language. Answered only from this tender's documents, your own documents and this bid's compliance matrix
+             */
+            question: string;
+        };
+        /**
+         * ChatRole
+         * @description Who said it.
+         * @enum {string}
+         */
+        ChatRole: "user" | "assistant";
+        /**
+         * ChatTurn
+         * @description One turn of "ask the tender". Runs on its own thread, `bid:{id}:chat`.
+         */
+        ChatTurn: {
+            role: components["schemas"]["ChatRole"];
+            /** Content */
+            content: string;
+            /**
+             * Citations
+             * @default []
+             */
+            citations: components["schemas"]["Citation"][];
+        };
+        /**
          * Checkability
          * @description Whether evidence can settle this requirement at all.
          *
@@ -588,6 +708,20 @@ export interface components {
          * @enum {string}
          */
         Checkability: "company_property" | "document_submission" | "neither";
+        /**
+         * Citation
+         * @description Where a chat answer got its facts. No uncited claims in chat either.
+         */
+        Citation: {
+            /** Document Id */
+            document_id: string;
+            /** Document Name */
+            document_name: string;
+            /** Page */
+            page: number;
+            /** Quote */
+            quote?: string | null;
+        };
         /**
          * CompanyProfile
          * @description The bidder, as the matrix sees them.
@@ -718,6 +852,28 @@ export interface components {
          * @enum {string}
          */
         Decision: "go" | "conditional" | "no_go" | "insufficient_evidence";
+        /**
+         * DevCostsResponse
+         * @description Where the money went: one total, the same rows split two ways.
+         *
+         *     Both breakdowns and the total are the same five numbers (`UsageTotals`), so the panel
+         *     adds them up identically wherever it shows them, and `by_node` is what the story asks
+         *     for by name — tokens and cost per node, with the provider used.
+         */
+        DevCostsResponse: {
+            /** @description Every chat completion in scope. Embeddings are not counted: they are bought from the same provider but are not recorded in llm_usage — see crossbid/usage.py */
+            total: components["schemas"]["UsageTotals"];
+            /**
+             * By Node
+             * @description Per graph node and per model that answered, dearest first. A node appears twice when a call fell back to the other vendor mid-run
+             */
+            by_node: components["schemas"]["NodeUsage"][];
+            /**
+             * By Bid
+             * @description Per bid, most recently active first, newest `limit` runs only
+             */
+            by_bid: components["schemas"]["BidUsage"][];
+        };
         /**
          * DevSettingsResponse
          * @description The developer panel's read model. Runtime settings only — never the environment.
@@ -1139,6 +1295,51 @@ export interface components {
             fallback: string;
         };
         /**
+         * NodeUsage
+         * @description One node's spend on one model. Grouped by model as well as node on purpose.
+         *
+         *     The `fallback` role means a single logical call can be answered by two different
+         *     vendors: the primary times out, `llm.ResilientModel` reissues, and the tokens are bought
+         *     twice from two places. `model` is read off the provider's own response (`usage.CallUsage`),
+         *     so a node that fell back shows two lines whose totals add up, rather than one line
+         *     claiming the configured slug did all of it.
+         */
+        NodeUsage: {
+            /**
+             * Calls
+             * @description Model responses counted, one row per response
+             */
+            calls: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /**
+             * Cost Usd
+             * @description What OpenRouter charged, as OpenRouter reported it — never a local rate
+             */
+            cost_usd: number;
+            /**
+             * Unpriced Calls
+             * @description Calls that moved tokens and reported no cost, so cost_usd is a lower bound. Non-zero means the provider stopped pricing responses, or the calls were smaller than the stored sixth decimal place.
+             */
+            unpriced_calls: number;
+            node: components["schemas"]["UsageNode"];
+            /** @description Where the tokens were bought */
+            provider: components["schemas"]["Provider"];
+            /**
+             * Model
+             * @description The slug that answered, as the response reported it
+             */
+            model: string;
+        };
+        /**
+         * Provider
+         * @description Where the tokens are bought.
+         * @enum {string}
+         */
+        Provider: "openrouter" | "openai" | "anthropic";
+        /**
          * Rating
          * @description A thumb, in the values the column already stores: `check (rating in (-1, 1))`.
          *
@@ -1511,6 +1712,50 @@ export interface components {
             currency: string;
             /** Field Of Activity */
             field_of_activity?: string | null;
+        };
+        /**
+         * UsageNode
+         * @description The closed set of values `llm_usage.node` may hold: the graph's own node names.
+         *
+         *     A `StrEnum` rather than a string at each call site, and the graph's node-name constants
+         *     are defined *from* it (`agent/graph.py`), so the two cannot drift. That matters more
+         *     than it looks: a renamed node under free strings would silently split one node's costs
+         *     across two rows in the report, and nothing would fail. Here, adding a node to the graph
+         *     does not type-check until it is named here as well — which is the moment to ask whether
+         *     it spends money.
+         *
+         *     Every stage is listed, not only the three that call a model today. A node that starts
+         *     spending later is attributed the moment it does, with nobody remembering to come back.
+         * @enum {string}
+         */
+        UsageNode: "parse_docs" | "extract_reqs" | "plan_checks" | "check_reqs" | "score_verdict" | "await_review" | "apply_review" | "finalize";
+        /**
+         * UsageTotals
+         * @description Tokens, calls and money over some set of `llm_usage` rows.
+         *
+         *     The base of both breakdowns and the shape of the grand total, so the panel adds up the
+         *     same five numbers wherever it shows them.
+         */
+        UsageTotals: {
+            /**
+             * Calls
+             * @description Model responses counted, one row per response
+             */
+            calls: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /**
+             * Cost Usd
+             * @description What OpenRouter charged, as OpenRouter reported it — never a local rate
+             */
+            cost_usd: number;
+            /**
+             * Unpriced Calls
+             * @description Calls that moved tokens and reported no cost, so cost_usd is a lower bound. Non-zero means the provider stopped pricing responses, or the calls were smaller than the stored sixth decimal place.
+             */
+            unpriced_calls: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1936,6 +2181,40 @@ export interface operations {
             };
         };
     };
+    read_dev_costs_dev_costs_get: {
+        parameters: {
+            query?: {
+                /** @description Narrow every figure to one run. Another company's returns nothing */
+                bid_id?: string | null;
+                /** @description How many bids to list in by_bid; by_node and total are never truncated */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevCostsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     search_tenders_tenders_search_get: {
         parameters: {
             query?: {
@@ -2030,6 +2309,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeedbackRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_about_bid_bids__bid_id__chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatQuestion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatTurn"];
                 };
             };
             /** @description Validation Error */

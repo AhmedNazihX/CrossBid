@@ -36,8 +36,13 @@ runs before the first resume and its `StorageError` stops startup (ADR-0010: the
 without a database, but not with a broken one).
 
 The story's two limits — ten minutes to `awaiting_review`, $2.50 of OpenRouter cost —
-are `RunBudget`. The runner measures wall clock and warns past the budget; the `live` test
-asserts both against the DE pack. The values are meant to live in
+are `RunBudget`. The runner measures wall clock around the invocation and reads the cost
+back out of `llm_usage` once the run stops, warning past either budget; the `live` test
+asserts both against the DE pack. The cost is read rather than measured because the
+runner is the wrong place to see it: the money is spent inside the nodes, and S5.2 records
+each call where it happens (`crossbid/usage.py`). Reading the table is also what makes the
+figure survive a restart — a run resumed from its checkpoint reports what the whole bid
+cost, not what this process happened to watch. The values are meant to live in
 `settings.default.yaml` under `agent.run_budget_seconds` and `agent.run_budget_usd`, and
 `RunBudget.from_settings` reads them from there once they exist, falling back to the
 constants here until then.
@@ -66,6 +71,7 @@ from crossbid.readmodel.bids import (
     release_bid_to_review,
     unfinished_bids,
 )
+from crossbid.readmodel.usage import fetch_usage_by_node, totals_of
 from crossbid.settings import Settings, bid_run_config
 
 logger = logging.getLogger(__name__)
@@ -244,8 +250,12 @@ class BidRunner:
             reason = failure_reason_of(exc)
             logger.exception("Bid %s: %s", bid.id, reason)
             await self._record_failure(bid, reason)
-            return
-        self._report_elapsed(bid, self._clock() - started)
+        else:
+            self._report_elapsed(bid, self._clock() - started)
+        # Outside the branch on purpose: a run that failed in `check_reqs` has already
+        # bought most of what a finished one would, and that is the run whose bill an
+        # operator most wants to see.
+        await self._report_cost(bid)
 
     async def _input_for(
         self, bid: BidRow, config: RunnableConfig, *, resume: bool
@@ -294,6 +304,49 @@ class BidRunner:
             )
             return
         logger.info("Bid %s: run parked after %.0fs", bid.id, elapsed)
+
+    async def _report_cost(self, bid: BidRow) -> None:
+        """What the run actually bought, against `budget.usd`. Never raises (S5.2).
+
+        Summed from `llm_usage` rather than accumulated in memory, so the figure is the same
+        one `GET /dev/costs` shows and a resumed run reports the whole bid rather than the
+        slice this process saw. `unpriced_calls` rides along in both messages because a
+        total with unpriced calls behind it is a lower bound, and a budget compared against
+        a lower bound can pass for the wrong reason.
+
+        A read that fails is logged and nothing else: the run is already over, the bid's
+        status is already written, and refusing to finish a task over a cost report would
+        trade a number for a state machine.
+        """
+        try:
+            lines = await fetch_usage_by_node(
+                self._db, company_id=bid.company_id, bid_id=bid.id
+            )
+        except Exception:
+            logger.exception("Bid %s: could not read what the run cost", bid.id)
+            return
+        spent = totals_of(lines)
+        tokens = spent.input_tokens + spent.output_tokens
+        if spent.cost_usd > self._budget.usd:
+            logger.warning(
+                "Bid %s: run cost $%.4f, over the $%.2f budget "
+                "(%d call(s), %d tokens, %d unpriced)",
+                bid.id,
+                spent.cost_usd,
+                self._budget.usd,
+                spent.calls,
+                tokens,
+                spent.unpriced_calls,
+            )
+            return
+        logger.info(
+            "Bid %s: run cost $%.4f (%d call(s), %d tokens, %d unpriced)",
+            bid.id,
+            spent.cost_usd,
+            spent.calls,
+            tokens,
+            spent.unpriced_calls,
+        )
 
 
 def build_runner(db: Database, settings: Settings) -> BidRunner:

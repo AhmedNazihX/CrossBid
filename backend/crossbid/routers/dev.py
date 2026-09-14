@@ -1,4 +1,34 @@
-"""S1.4.1 — `GET /dev/settings`: the tools that exist, and the knobs behind them.
+"""The developer routes: what the agent is configured to do, and what it has spent.
+
+`GET /dev/settings` is S1.4.1 and `GET /dev/costs` is S5.2. They share the router because
+they share both gates and the panel that reads them (S4.6.2); they differ in one way that
+is worth stating before the rest, because it is the exception to the rule below.
+
+**`/dev/costs` is tenant-scoped and `/dev/settings` is not.** Settings are a property of the
+process — the same answer for everyone who may see it — so the route takes no tenant and
+deliberately ignores `X-Dev-Company`, which is self-asserted and authorises nothing. Costs
+are a property of a *company's* runs, so the costs route adds `current_company` as a
+dependency of its own and every statement behind it carries `company_id`
+(`readmodel/usage.py`). Being a developer is not a key to another tenant's spend: the
+`DEVELOPER_EMAILS` check says who may look at the panel, not whose numbers it shows.
+
+The rule about the settings response — assembled from `RuntimeSettings` alone, so a secret
+cannot arrive by accident — has a counterpart rather than an exception on the costs route.
+That response is assembled from `llm_usage` rows alone, and the table has no column that
+could hold a key, a prompt or a line of a tender: it stores a node name, a provider, a slug,
+two token counts and a number of dollars. Nothing is copied onto it from settings or from a
+document, which is what keeps the same guarantee without repeating the same argument.
+
+**A bid id is not a capability, and the route must not become an oracle for one.**
+`?bid_id=` narrows the answer to one run, and a bid belonging to another company answers
+**200 with an empty report**, never 404 — the statements are scoped by company, so there is
+nothing to find, and a 404 that appeared only for ids that do not exist anywhere would tell
+a caller which ids do. `routers/feedback.py`'s `GET` is shaped the same way for the same
+reason.
+
+---
+
+S1.4.1 — `GET /dev/settings`: the tools that exist, and the knobs behind them.
 
 What the developer panel (S4.6.2) reads before it can offer to change anything: every tool
 manifest the registry discovered with an `enabled` flag beside it, the configured names no
@@ -67,13 +97,25 @@ must not depend on which environment the API was booted in — and answers 404 t
 
 from __future__ import annotations
 
+import uuid
 from typing import Final
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from crossbid.auth import require_developer
-from crossbid.main import get_app_settings
+from crossbid.auth import CompanyContext, current_company, require_developer
+from crossbid.db import Database
+from crossbid.main import get_app_settings, get_database
+from crossbid.readmodel.usage import (
+    DEFAULT_BID_LIMIT,
+    MAX_BID_LIMIT,
+    BidUsage,
+    NodeUsage,
+    UsageTotals,
+    fetch_usage_by_bid,
+    fetch_usage_by_node,
+    totals_of,
+)
 from crossbid.settings import (
     CHAT_MODEL_ROLES,
     AgentSettings,
@@ -85,7 +127,8 @@ from crossbid.settings import (
 from crossbid.tools.registry import enabled_tool_names, manifests, unbuilt_tool_names
 
 DEV_SETTINGS_PATH: Final = "/dev/settings"
-"""The full path, so a test states it once rather than reassembling the prefix."""
+DEV_COSTS_PATH: Final = "/dev/costs"
+"""The full paths, so a test states them once rather than reassembling the prefix."""
 
 NOT_FOUND_DETAIL: Final = "Not Found"
 """Starlette's own 404 body, copied so the refusal reads exactly like an unknown path."""
@@ -190,3 +233,64 @@ async def read_dev_settings(
         tools=_describe_tools(settings),
         unbuilt_tools=unbuilt_tool_names(settings),
     )
+
+
+# ------------------------------------------------------------------------------- costs
+
+
+class DevCostsResponse(BaseModel):
+    """Where the money went: one total, the same rows split two ways.
+
+    Both breakdowns and the total are the same five numbers (`UsageTotals`), so the panel
+    adds them up identically wherever it shows them, and `by_node` is what the story asks
+    for by name — tokens and cost per node, with the provider used.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    total: UsageTotals = Field(
+        description=(
+            "Every chat completion in scope. Embeddings are not counted: they are bought "
+            "from the same provider but are not recorded in llm_usage — see crossbid/usage.py"
+        )
+    )
+    by_node: tuple[NodeUsage, ...] = Field(
+        description=(
+            "Per graph node and per model that answered, dearest first. A node appears "
+            "twice when a call fell back to the other vendor mid-run"
+        )
+    )
+    by_bid: tuple[BidUsage, ...] = Field(
+        description="Per bid, most recently active first, newest `limit` runs only"
+    )
+
+
+@router.get(
+    "/costs", response_model=DevCostsResponse, summary="Tokens and cost per bid and node"
+)
+async def read_dev_costs(
+    bid_id: uuid.UUID | None = Query(
+        default=None,
+        description="Narrow every figure to one run. Another company's returns nothing",
+    ),
+    limit: int = Query(
+        default=DEFAULT_BID_LIMIT,
+        ge=1,
+        le=MAX_BID_LIMIT,
+        description="How many bids to list in by_bid; by_node and total are never truncated",
+    ),
+    company: CompanyContext = Depends(current_company),
+    db: Database = Depends(get_database),
+) -> DevCostsResponse:
+    """What this company's runs have spent, per node and per bid. Outside production only.
+
+    The total is summed from `by_node` rather than asked of the database separately: that
+    breakdown is never truncated, so the sum is exact, and a total from its own statement
+    could disagree with the lines beneath it if a run wrote a row between the two queries.
+    `by_bid` is the one list with a limit, which is why it is not what the total comes from.
+    """
+    company_id = company.company_id
+    scope = None if bid_id is None else str(bid_id)
+    by_node = await fetch_usage_by_node(db, company_id=company_id, bid_id=scope)
+    by_bid = await fetch_usage_by_bid(db, company_id=company_id, bid_id=scope, limit=limit)
+    return DevCostsResponse(total=totals_of(by_node), by_node=by_node, by_bid=by_bid)

@@ -4167,3 +4167,78 @@ Two concurrent chat requests on one bid both write the same thread, and LangGrap
 last-write-wins. Acceptable for one bidder with one browser tab, and a lock the story did not
 ask for was not invented.
 
+---
+
+## ADR-0056 — Cost is captured where it cannot be forgotten, and never computed
+
+**Date:** 2026-09-14 · **Stories:** S5.2 · **Status:** accepted
+
+`llm_usage` has been in `0001_init.sql` since the first migration and nothing had ever written
+to it. S5.2 fills it and answers `GET /dev/costs`. No migration was needed; the table was
+right as declared.
+
+### A callback, not a wrapper and not self-reporting
+
+**A wrapper cannot see the cost.** Every expensive call goes through
+`with_structured_output(...)`, which returns a parsed Pydantic object — the `AIMessage`
+carrying the token counts and OpenRouter's cost has already been consumed. `ResilientModel` is
+exactly such a wrapper and is blind to it. The callback runs inside `BaseChatModel.agenerate`,
+below every binding, and is attached in `_model_for_slug` — the one factory every role-built
+model comes from.
+
+**Per-node self-reporting was rejected on its failure mode**: a node that forgets to report
+costs *nothing*, and a cheap-looking node is indistinguishable from an instrumented one. With
+capture in the factory the row cannot be lost by a call site; only the *attribution* can, and
+an unattributed call is a `WARNING` naming the model and the tokens. Missing instrumentation
+is visible rather than invisible, which was the design constraint.
+
+**Attribution is ambient**, a `ContextVar` opened by `stage()`. `check_loop` invokes its model
+with no `RunnableConfig`, so there is nowhere to thread a scope through; a `ContextVar`
+propagates into `asyncio.gather` tasks and into each `Send` lane. Opening it in the stage
+wrapper rather than in the three spending nodes is what makes forgetting structurally
+impossible — and `UsageNode` is now the graph's own vocabulary, so adding a node does not type
+check until it is named there. Under two independent string lists, renaming a node would split
+its costs across two labels with nothing failing.
+
+### Read the price, never compute it
+
+`cost_usd` is OpenRouter's own figure off the wire (`llm_output["token_usage"]`, verified by
+reading langchain-openai 1.6.2's `_create_chat_result`), built as `Decimal(str(value))` and
+never `Decimal(float)`. There is no rate table anywhere, which is what keeps ADR-0050 from
+breaking the report: switching a role's slug changes future rows, never the meaning of past
+ones.
+
+**An absent cost is `None`, never a silent zero.** The column is `not null default 0`, so an
+unpriced row must store 0 — and both read statements therefore carry
+`count(*) filter (where cost_usd = 0 and input_tokens + output_tokens > 0) as unpriced_calls`,
+surfaced on every total and every line. A total with a non-zero `unpriced_calls` reads as a
+lower bound rather than as a number. A silent 0 would have made the graded figure wrong in the
+direction that looks fine.
+
+**`model` is the slug that answered**, not the one configured, so a node that fell back shows
+two lines whose totals add up. The role is LangSmith metadata, not a column: a role is
+configuration, history is history.
+
+### Scope, and what the route will not say
+
+`current_company` on the route, `company_id` in every statement, asserted over
+`SCOPED_STATEMENTS` *and* over the SQL the route actually sends. Another company's `bid_id`
+returns **200 with an empty report** rather than 404, following `routers/feedback.py`: a route
+that answered differently for a real id would be an id oracle. The write follows the same
+file's `insert … select from bids` — the tenant is proved and `company_id` is written from the
+matched row, so scope and value cannot disagree.
+
+`_report_cost` in the runner now sums a finished run and warns past `budget.usd`, closing a
+gap where `RunBudget.usd` existed and nothing ever compared against it.
+
+### Embeddings are out, and said so out loud
+
+Three reasons: the only embedding spend attached to a bid is a RAG query vector inside
+`check_reqs`, tens of tokens against chat calls of thousands on a $1.38 run; `llm_usage.bid_id`
+is what makes "cost per bid" answerable and upload spend has no bid; and decisively, whether
+OpenRouter returns `cost` on `/embeddings` has never been probed on this account, so rows
+priced 0 for a missing field would poison `unpriced_calls` — the one signal that says a total
+is incomplete. The route's own field description says it covers chat completions.
+
+S5.3's injection review is left unattributed deliberately: it has a tenant but no bid and no
+graph node, so it exercises `_warn_unattributed` on a real case rather than a hypothetical.

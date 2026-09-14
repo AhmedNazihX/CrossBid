@@ -25,15 +25,26 @@ type is not an authorisation to check against.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import uuid
+from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any, Final
 
 import pytest
+from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
 from crossbid.auth import DEV_COMPANY_HEADER
-from crossbid.main import create_app
-from crossbid.routers.dev import DEV_SETTINGS_PATH, NOT_FOUND_DETAIL
+from crossbid.main import create_app, get_database
+from crossbid.readmodel.usage import (
+    MAX_BID_LIMIT,
+    SELECT_USAGE_BY_BID,
+    SELECT_USAGE_BY_NODE,
+    TENANT_PARAMETER,
+)
+from crossbid.routers.dev import DEV_COSTS_PATH, DEV_SETTINGS_PATH, NOT_FOUND_DETAIL
+from crossbid.routers.dev import router as dev_router
 from crossbid.settings import (
     CHAT_MODEL_ROLES,
     AppSettingsRow,
@@ -326,3 +337,365 @@ def test_the_route_publishes_exactly_the_pinned_shape(client: TestClient) -> Non
 
     # Assert
     assert _key_paths(body) == dict(PUBLISHED_SHAPE)
+
+
+# ---------------------------------------------------------- S5.2: where the money went
+
+# `/dev/costs` is the first route on this router that answers about a *tenant's* data, and
+# the group below is mostly about that difference. `/dev/settings` is a property of the
+# process and deliberately ignores `X-Dev-Company`; costs are a property of a company's
+# runs, so the route adds `current_company` and every statement behind it carries
+# `company_id`. Being on `DEVELOPER_EMAILS` says who may open the panel, not whose numbers
+# it shows. The real read model runs over `conftest`'s recording connection here, so what
+# is asserted is the SQL the route actually sends.
+
+COSTS_PATH = DEV_COSTS_PATH
+COMPANY_ID = str(uuid.UUID("11111111-1111-4111-8111-111111111111"))
+OTHER_COMPANY_ID = str(uuid.UUID("22222222-2222-4222-8222-222222222222"))
+COST_BID_ID = str(uuid.UUID("33333333-3333-4333-8333-333333333333"))
+NODE_MODEL = "openai/gpt-5.6-terra"
+FALLBACK_MODEL = "google/gemini-2.5-flash"
+COST_NOW = datetime(2026, 9, 14, 10, 30, tzinfo=UTC)
+
+
+class RowsPerStatement:
+    """A connection source that answers each statement with rows of its own shape.
+
+    The two readers return different columns, and `conftest`'s `FakeConnectionSource`
+    answers one fixed row set for everything it is asked. Rather than reshape shared
+    ground for one story, this keeps a statement-to-rows mapping and records what it was
+    asked -- which is also what lets the tenant assertions read the real SQL.
+    """
+
+    def __init__(self, rows: Mapping[str, Sequence[Mapping[str, Any]]]) -> None:
+        self.rows = rows
+        self.asked: list[tuple[str, Any]] = []
+
+    def connection(self) -> Any:
+        source = self
+
+        class _Cursor:
+            def __init__(self, rows: Sequence[Mapping[str, Any]]) -> None:
+                self._rows = rows
+
+            async def fetchall(self) -> list[Mapping[str, Any]]:
+                return list(self._rows)
+
+        class _Connection:
+            async def execute(self, sql: str, params: Any = None) -> _Cursor:
+                source.asked.append((sql, params))
+                return _Cursor(source.rows.get(sql, ()))
+
+        class _Borrow:
+            async def __aenter__(self) -> _Connection:
+                return _Connection()
+
+            async def __aexit__(self, *_exc: object) -> None:
+                return None
+
+        return _Borrow()
+
+
+def cost_rows(
+    *, node: Sequence[Mapping[str, Any]] = (), bid: Sequence[Mapping[str, Any]] = ()
+) -> RowsPerStatement:
+    return RowsPerStatement({SELECT_USAGE_BY_NODE: node, SELECT_USAGE_BY_BID: bid})
+
+
+def node_row(**overrides: Any) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "node": "check_reqs",
+        "provider": "openrouter",
+        "model": NODE_MODEL,
+        "calls": 42,
+        "input_tokens": 90_000,
+        "output_tokens": 12_000,
+        "cost_usd": Decimal("1.200000"),
+        "unpriced_calls": 0,
+    }
+    return row | overrides
+
+
+def bid_usage_row(**overrides: Any) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "bid_id": uuid.UUID(COST_BID_ID),
+        "last_call_at": COST_NOW,
+        "calls": 49,
+        "input_tokens": 100_000,
+        "output_tokens": 14_000,
+        "cost_usd": Decimal("1.380000"),
+        "unpriced_calls": 0,
+    }
+    return row | overrides
+
+
+def costs_api(settings: Settings, db: object) -> TestClient:
+    """The real dev router on a bare app with only the database dependency replaced."""
+    app = FastAPI()
+    app.state.settings = settings
+    app.state.db = None
+    app.include_router(dev_router)
+    app.dependency_overrides[get_database] = lambda: db
+    return TestClient(app)
+
+
+def read_costs(
+    db: RowsPerStatement, settings: Settings, query: str = "", company: str = COMPANY_ID
+) -> dict[str, Any]:
+    with costs_api(settings, db) as api:
+        response = api.get(f"{COSTS_PATH}{query}", headers={DEV_COMPANY_HEADER: company})
+    assert response.status_code == 200, response.text
+    body: dict[str, Any] = response.json()
+    return body
+
+
+def test_the_costs_route_is_registered(client: TestClient) -> None:
+    """`frontend/lib/api.ts` is generated from this schema, so the route has to be in it."""
+    schema = client.get("/openapi.json").json()
+
+    assert set(schema["paths"][COSTS_PATH]) == {"get"}
+
+
+def test_it_reports_tokens_and_cost_per_node_with_the_provider_used(
+    offline_settings: Settings,
+) -> None:
+    """The story's own acceptance criterion, word for word."""
+    # Arrange
+    db = cost_rows(node=[node_row()], bid=[bid_usage_row()])
+
+    # Act
+    body = read_costs(db, offline_settings)
+
+    # Assert
+    [line] = body["by_node"]
+    assert (line["node"], line["provider"], line["model"]) == (
+        "check_reqs",
+        "openrouter",
+        NODE_MODEL,
+    )
+    assert (line["input_tokens"], line["output_tokens"]) == (90_000, 12_000)
+    assert line["cost_usd"] == 1.2
+
+
+def test_a_node_that_fell_back_shows_both_models_and_the_total_is_their_sum(
+    offline_settings: Settings,
+) -> None:
+    """One logical call can be answered by two vendors (S3.4.4); the honest report says so."""
+    # Arrange
+    db = cost_rows(
+        node=[
+            node_row(),
+            node_row(model=FALLBACK_MODEL, calls=2, cost_usd=Decimal("0.180000")),
+        ]
+    )
+
+    # Act
+    body = read_costs(db, offline_settings)
+
+    # Assert
+    assert [line["model"] for line in body["by_node"]] == [NODE_MODEL, FALLBACK_MODEL]
+    assert body["total"] == {
+        "calls": 44,
+        "input_tokens": 180_000,
+        "output_tokens": 24_000,
+        "cost_usd": 1.38,
+        "unpriced_calls": 0,
+    }
+
+
+def test_the_total_says_when_it_is_only_a_lower_bound(offline_settings: Settings) -> None:
+    """A zero that means "the provider did not price it" must not read as "free"."""
+    # Arrange
+    db = cost_rows(node=[node_row(unpriced_calls=5)])
+
+    # Act
+    body = read_costs(db, offline_settings)
+
+    # Assert
+    assert body["total"]["unpriced_calls"] == 5
+
+
+def test_it_lists_what_each_bid_spent(offline_settings: Settings) -> None:
+    # Arrange
+    db = cost_rows(node=[node_row()], bid=[bid_usage_row()])
+
+    # Act
+    body = read_costs(db, offline_settings)
+
+    # Assert
+    [run] = body["by_bid"]
+    assert run["bid_id"] == COST_BID_ID
+    assert run["cost_usd"] == 1.38
+    assert run["last_call_at"].startswith("2026-09-14T10:30")
+
+
+def test_a_company_that_has_spent_nothing_gets_an_empty_report_not_an_error(
+    offline_settings: Settings,
+) -> None:
+    # Act
+    body = read_costs(cost_rows(), offline_settings)
+
+    # Assert
+    assert body["by_node"] == [] and body["by_bid"] == []
+    assert body["total"]["cost_usd"] == 0.0
+
+
+# ------------------------------------------------------------- the tenant, and the oracle
+
+
+def test_every_statement_is_scoped_to_the_caller_and_nothing_else(
+    offline_settings: Settings,
+) -> None:
+    """Application-level isolation is the only isolation there is (ADR-0009), so the scope
+    has to be in the SQL the route sends rather than in a filter afterwards."""
+    # Arrange
+    db = cost_rows(node=[node_row()], bid=[bid_usage_row()])
+
+    # Act
+    read_costs(db, offline_settings, company=OTHER_COMPANY_ID)
+
+    # Assert
+    assert len(db.asked) == 2
+    for sql, params in db.asked:
+        assert TENANT_PARAMETER in sql
+        assert params["company_id"] == OTHER_COMPANY_ID
+
+
+def test_another_companys_bid_id_answers_an_empty_report_rather_than_a_404(
+    offline_settings: Settings,
+) -> None:
+    """A 404 only for ids that exist nowhere would tell a caller which ids exist. The
+    statements are scoped by company, so there is simply nothing to find."""
+    # Arrange -- the statements match nothing, which is what a foreign bid id produces
+    db = cost_rows()
+
+    # Act
+    with costs_api(offline_settings, db) as api:
+        response = api.get(
+            f"{COSTS_PATH}?bid_id={COST_BID_ID}", headers={DEV_COMPANY_HEADER: COMPANY_ID}
+        )
+
+    # Assert
+    assert response.status_code == 200
+    assert response.json()["by_bid"] == []
+    assert all(params["bid_id"] == COST_BID_ID for _sql, params in db.asked)
+
+
+def test_a_bid_filter_narrows_every_figure_including_the_total(
+    offline_settings: Settings,
+) -> None:
+    # Arrange
+    db = cost_rows(node=[node_row()], bid=[bid_usage_row()])
+
+    # Act
+    read_costs(db, offline_settings, query=f"?bid_id={COST_BID_ID}")
+
+    # Assert
+    assert [params["bid_id"] for _sql, params in db.asked] == [COST_BID_ID, COST_BID_ID]
+
+
+def test_the_costs_route_needs_a_tenant_where_settings_does_not(
+    offline_settings: Settings,
+) -> None:
+    """The deliberate difference from `/dev/settings`: developer is not a key to a tenant."""
+    # Act
+    with costs_api(offline_settings, cost_rows()) as api:
+        refused = api.get(COSTS_PATH)
+
+    # Assert
+    assert refused.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_the_bid_list_is_bounded_and_the_bound_is_checked(
+    offline_settings: Settings,
+) -> None:
+    """An unbounded `group by` over every bid a company ever ran grows with the product."""
+    # Arrange
+    db = cost_rows(bid=[bid_usage_row()])
+
+    # Act
+    read_costs(db, offline_settings, query="?limit=5")
+    with costs_api(offline_settings, db) as api:
+        refused = api.get(
+            f"{COSTS_PATH}?limit={MAX_BID_LIMIT + 1}",
+            headers={DEV_COMPANY_HEADER: COMPANY_ID},
+        )
+
+    # Assert
+    assert db.asked[1][1]["limit"] == 5
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+def test_costs_are_not_reachable_in_production_either(
+    production_settings: Settings,
+) -> None:
+    """The environment gate is on the router, so it covers a route added to it later."""
+    # Act
+    with costs_api(production_settings, cost_rows()) as api:
+        refused = api.get(COSTS_PATH, headers={DEV_COMPANY_HEADER: COMPANY_ID})
+
+    # Assert
+    assert refused.status_code == status.HTTP_404_NOT_FOUND
+    assert refused.json() == {"detail": NOT_FOUND_DETAIL}
+
+
+def test_the_costs_response_carries_no_secret(offline_settings: Settings) -> None:
+    """The counterpart of the settings rule: this response is assembled from `llm_usage`
+    rows alone, and the table has no column that could hold a key or a line of a tender."""
+    # Arrange
+    db = cost_rows(node=[node_row()], bid=[bid_usage_row()])
+
+    # Act
+    with costs_api(offline_settings, db) as api:
+        raw = api.get(COSTS_PATH, headers={DEV_COMPANY_HEADER: COMPANY_ID}).text
+
+    # Assert
+    for secret in (FAKE_OPENROUTER_KEY, FAKE_ENCRYPTION_KEY):
+        assert secret not in raw
+
+
+COSTS_SHAPE: Final[Mapping[str, frozenset[str]]] = {
+    "": frozenset({"total", "by_node", "by_bid"}),
+    "total": frozenset(
+        {"calls", "input_tokens", "output_tokens", "cost_usd", "unpriced_calls"}
+    ),
+    "by_node[]": frozenset(
+        {
+            "node",
+            "provider",
+            "model",
+            "calls",
+            "input_tokens",
+            "output_tokens",
+            "cost_usd",
+            "unpriced_calls",
+        }
+    ),
+    "by_bid[]": frozenset(
+        {
+            "bid_id",
+            "last_call_at",
+            "calls",
+            "input_tokens",
+            "output_tokens",
+            "cost_usd",
+            "unpriced_calls",
+        }
+    ),
+}
+"""Every key this route may put on the wire, pinned for the reason the settings shape is:
+`NodeUsage` and `BidUsage` inherit `UsageTotals` whole, so a field added to the base would
+be published the moment it was added, reviewed by nobody."""
+
+
+def test_the_costs_route_publishes_exactly_the_pinned_shape(
+    offline_settings: Settings,
+) -> None:
+    # Arrange
+    db = cost_rows(node=[node_row()], bid=[bid_usage_row()])
+
+    # Act
+    body = read_costs(db, offline_settings)
+
+    # Assert
+    assert _key_paths(body) == dict(COSTS_SHAPE)

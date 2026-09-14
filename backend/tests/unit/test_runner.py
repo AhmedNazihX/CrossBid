@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
 
@@ -36,7 +37,9 @@ from crossbid.models.review import ReviewSubmission
 from crossbid.models.tender import BidStatus
 from crossbid.models.verdict import Decision, Verdict
 from crossbid.readmodel.bids import BidRow, thread_id_of
+from crossbid.readmodel.usage import SELECT_USAGE_BY_NODE
 from crossbid.settings import Settings, bid_run_config
+from tests.conftest import FakeConnectionSource
 
 pytestmark = pytest.mark.anyio
 
@@ -93,12 +96,36 @@ class RecordingProjection:
         self.reviews.append(record)
 
 
-class FakeDatabase:
-    def __init__(self) -> None:
-        self.checkpointer = MemorySaver()
+USAGE_ROWS: tuple[dict[str, Any], ...] = (
+    {
+        "node": "check_reqs",
+        "provider": "openrouter",
+        "model": "openai/gpt-5.6-terra",
+        "calls": 49,
+        "input_tokens": 100_000,
+        "output_tokens": 14_000,
+        "cost_usd": Decimal("1.380000"),
+        "unpriced_calls": 0,
+    },
+)
+"""What `llm_usage` holds after the measured DE pack run: $1.38 over 49 calls."""
 
-    def connection(self) -> Any:  # pragma: no cover -- never borrowed in these tests
-        raise AssertionError("the runner must not borrow a connection here")
+
+class FakeDatabase:
+    """The checkpointer, plus the one connection the runner now borrows.
+
+    S5.2 made the runner a *reader*: when a run stops it sums the bid's `llm_usage` rows and
+    compares the total with `budget.usd`. The lent connection answers `rows` for whatever it
+    is asked, and `usage.log` is what the tests assert against -- the runner must borrow for
+    the cost read and for nothing else, which is what the old `raise` here used to say.
+    """
+
+    def __init__(self, rows: Any = USAGE_ROWS) -> None:
+        self.checkpointer = MemorySaver()
+        self.usage = FakeConnectionSource(rows)
+
+    def connection(self) -> Any:
+        return self.usage.connection()
 
 
 async def quiet_parse(state: BidState, config: RunnableConfig | None = None) -> Any:
@@ -206,8 +233,8 @@ def failures(monkeypatch: pytest.MonkeyPatch) -> FailureRecorder:
     return recorder
 
 
-def runner_for(graph: Any, **kwargs: Any) -> BidRunner:
-    return BidRunner(lambda: graph, FakeDatabase(), **kwargs)
+def runner_for(graph: Any, *, db: Any = None, **kwargs: Any) -> BidRunner:
+    return BidRunner(lambda: graph, db if db is not None else FakeDatabase(), **kwargs)
 
 
 # ---------------------------------------------------------------------------- starting
@@ -266,6 +293,108 @@ async def test_the_task_is_named_after_the_bid(
 
     assert task.get_name() == f"bid-run:{bid.id}"
     await task
+
+
+# ------------------------------------------------------------------------- what it cost
+
+
+class UnreadableDatabase(FakeDatabase):
+    """A pool that cannot lend a connection, so the cost read fails after the run does not."""
+
+    def connection(self) -> Any:
+        raise OSError("database unreachable")
+
+
+async def test_a_parked_run_reports_what_it_bought(
+    offline_settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """S5.2's budget half: the figure is summed from `llm_usage`, not measured in flight,
+    so a resumed run reports the whole bid rather than the slice this process watched."""
+    # Arrange
+    db = FakeDatabase()
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection()), db=db
+    )
+    bid = bid_row()
+
+    # Act
+    with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
+        await runner.start(bid)
+
+    # Assert -- one borrow, for the per-node read, scoped to this bid
+    statement = db.usage.only
+    assert statement.sql == SELECT_USAGE_BY_NODE
+    assert statement.params == {"company_id": COMPANY_ID, "bid_id": bid.id}
+    assert f"Bid {bid.id}: run cost $1.3800 (49 call(s), 114000 tokens, 0 unpriced)" in (
+        caplog.text
+    )
+
+
+async def test_a_run_over_the_dollar_budget_is_a_warning_naming_both_numbers(
+    offline_settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The story's second limit. $2.50 is what the plan holds a DE-pack run to."""
+    # Arrange
+    dear = [dict(USAGE_ROWS[0]) | {"cost_usd": Decimal("3.500000"), "unpriced_calls": 2}]
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection()),
+        db=FakeDatabase(dear),
+    )
+    bid = bid_row()
+
+    # Act
+    with caplog.at_level(logging.WARNING, logger="crossbid.agent.runner"):
+        await runner.start(bid)
+
+    # Assert
+    [record] = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert record.getMessage() == (
+        f"Bid {bid.id}: run cost $3.5000, over the $2.50 budget "
+        "(49 call(s), 114000 tokens, 2 unpriced)"
+    )
+
+
+async def test_a_crashed_run_still_reports_what_it_had_already_bought(
+    offline_settings: Settings, failures: FailureRecorder, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A run that died in `check_reqs` has spent most of what a finished one would, and is
+    the run whose bill somebody most wants to see."""
+    # Arrange
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection(), extract=crashing)
+    )
+    bid = bid_row()
+
+    # Act
+    with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
+        await runner.start(bid)
+
+    # Assert
+    assert failures.calls == [(COMPANY_ID, bid.id, "extracting failed: RuntimeError")]
+    assert f"Bid {bid.id}: run cost $1.3800" in caplog.text
+
+
+async def test_a_cost_read_that_fails_is_logged_and_changes_nothing_else(
+    offline_settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The run is over and its status is written; refusing to finish the task over a cost
+    report would trade a number for a state machine."""
+    # Arrange
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection()),
+        db=UnreadableDatabase(),
+    )
+    bid = bid_row()
+
+    # Act
+    with caplog.at_level(logging.ERROR, logger="crossbid.agent.runner"):
+        await runner.start(bid)
+
+    # Assert
+    [record] = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert record.getMessage() == f"Bid {bid.id}: could not read what the run cost"
+    assert record.exc_info is not None
+    assert runner.running == frozenset()
 
 
 # ---------------------------------------------------------------------------- crashing

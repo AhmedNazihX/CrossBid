@@ -25,6 +25,7 @@ from crossbid.agent.graph import (
     INTERRUPT_BID_ID,
     INTERRUPT_PROBLEMS,
     INTERRUPT_REQUIREMENTS,
+    PARSE_DOCS,
     SCORE_VERDICT,
     ReadModelProjection,
     StageError,
@@ -48,6 +49,7 @@ from crossbid.models.tender import BidStatus
 from crossbid.models.verdict import Decision, Gap, GapSeverity, Verdict
 from crossbid.readmodel.bids import BidRow, thread_id_of
 from crossbid.settings import Settings, bid_run_config
+from crossbid.usage import UsageEvent, UsageNode, UsageRecorder, current_recorder
 
 pytestmark = pytest.mark.anyio
 
@@ -182,6 +184,31 @@ class FakeDatabase:
 
     def connection(self) -> Any:  # pragma: no cover -- never borrowed in these tests
         raise AssertionError("the graph must not borrow a connection here")
+
+
+class RecordingUsageSink:
+    """Stands in for `readmodel.usage.DatabaseUsageSink`; keeps what it was handed."""
+
+    def __init__(self) -> None:
+        self.events: list[UsageEvent] = []
+
+    async def record(self, event: UsageEvent) -> None:
+        self.events.append(event)
+
+
+def scope_watching_node(seen: list[UsageRecorder | None]) -> Any:
+    """A node that records the usage scope it was run inside, and nothing else.
+
+    A model call is not needed to prove the attribution: what S5.2 wires here is the scope
+    the stage opens, and a node that reads it sees exactly what a model call underneath it
+    would (`crossbid.usage`).
+    """
+
+    async def node(state: BidState, config: RunnableConfig | None = None) -> Any:
+        seen.append(current_recorder())
+        return {}
+
+    return node
 
 
 def parse_node(*, problems: Sequence[ExtractionProblem] = ()) -> Any:
@@ -775,8 +802,99 @@ async def test_the_checkpoint_after_a_crash_resumes_at_the_failed_node(
 
 
 async def test_stage_carries_the_stage_name_for_traces(offline_settings: Settings) -> None:
-    wrapped = stage(BidStatus.PARSING, parse_node(), RecordingProjection())
+    wrapped = stage(
+        UsageNode.PARSE_DOCS,
+        BidStatus.PARSING,
+        parse_node(),
+        RecordingProjection(),
+        RecordingUsageSink(),
+    )
     assert wrapped.__name__ == "parsing_stage"
+
+
+async def test_a_stage_runs_its_node_inside_a_scope_naming_the_bid_and_the_node() -> None:
+    """S5.2: every model call a node makes is attributed without the node taking part."""
+    # Arrange
+    seen: list[UsageRecorder | None] = []
+    sink = RecordingUsageSink()
+    wrapped = stage(
+        UsageNode.EXTRACT_REQS,
+        BidStatus.EXTRACTING,
+        scope_watching_node(seen),
+        RecordingProjection(),
+        sink,
+    )
+
+    # Act
+    await wrapped({"bid_id": BID_ID, "company_id": COMPANY_ID})
+
+    # Assert
+    [recorder] = seen
+    assert recorder is not None
+    assert (recorder.node, recorder.bid_id, recorder.company_id) == (
+        UsageNode.EXTRACT_REQS,
+        BID_ID,
+        COMPANY_ID,
+    )
+    assert recorder.sink is sink
+
+
+async def test_the_scope_is_closed_again_when_the_stage_returns() -> None:
+    """A scope that outlived its node would charge the next bid's calls to this one."""
+    # Arrange
+    wrapped = stage(
+        UsageNode.FINALIZE,
+        BidStatus.COMPLETE,
+        scope_watching_node([]),
+        RecordingProjection(),
+        RecordingUsageSink(),
+    )
+
+    # Act
+    await wrapped({"bid_id": BID_ID, "company_id": COMPANY_ID})
+
+    # Assert
+    assert current_recorder() is None
+
+
+async def test_every_node_of_a_whole_run_is_attributed_to_itself(
+    offline_settings: Settings,
+) -> None:
+    """The point of putting the scope in the wrapper: no node opts in, and none can forget."""
+    # Arrange
+    seen: list[UsageRecorder | None] = []
+    watcher = scope_watching_node(seen)
+    graph = build_graph(
+        offline_settings,
+        FakeDatabase(),  # type: ignore[arg-type]
+        parse_docs=watcher,
+        extract_reqs=watcher,
+        plan_checks=watcher,
+        check_reqs=watcher,
+        score_verdict=watcher,
+        apply_review=watcher,
+        projection=RecordingProjection(),
+        usage=RecordingUsageSink(),
+        checkpointer=MemorySaver(),
+    )
+
+    # Act -- no requirements, so the fan-out is skipped and the run parks at the interrupt
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+
+    # Assert -- one scope per stage that ran, each naming its own node
+    assert [r.node for r in seen if r is not None] == [
+        UsageNode.PARSE_DOCS,
+        UsageNode.EXTRACT_REQS,
+        UsageNode.PLAN_CHECKS,
+        UsageNode.SCORE_VERDICT,
+    ]
+    assert len(seen) == 4
+
+
+def test_the_graphs_node_names_are_the_cost_tables_vocabulary() -> None:
+    """One closed set, so a renamed node cannot split its own costs across two labels."""
+    assert UsageNode.PARSE_DOCS.value == PARSE_DOCS
+    assert UsageNode.AWAIT_REVIEW.value == AWAIT_REVIEW
 
 
 # --------------------------------------------------------------------- building for real

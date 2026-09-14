@@ -19,9 +19,11 @@ from langchain_openai import ChatOpenAI
 
 from crossbid.llm import (
     LANGCHAIN_RETRIES,
+    MODEL_ROLE_METADATA_KEY,
     OPENROUTER_BASE_URL,
     PROBE_MAX_TOKENS,
     USAGE_ACCOUNTING_EXTRA_BODY,
+    USAGE_CALLBACK,
     LlmError,
     chat_model,
     probe_chat_model,
@@ -75,6 +77,53 @@ def test_usage_accounting_is_requested(settings: Settings) -> None:
     assert model.extra_body is not None
     assert dict(model.extra_body) == {"usage": {"include": True}}
     assert USAGE_ACCOUNTING_EXTRA_BODY == {"usage": {"include": True}}
+
+
+@pytest.mark.parametrize("role", list(CHAT_MODEL_ROLES))
+def test_every_model_built_for_a_role_captures_what_it_spends(
+    settings: Settings, role: ModelRole
+) -> None:
+    """S5.2 attaches the capture in the factory because nothing above it can see the cost:
+    `with_structured_output` consumes the message the token counts arrive on."""
+    # Act
+    model = chat_model(role, settings)
+
+    # Assert
+    assert model.callbacks == [USAGE_CALLBACK]
+
+
+@pytest.mark.parametrize("role", list(CHAT_MODEL_ROLES))
+def test_every_model_built_for_a_role_says_which_role_on_its_traces(
+    settings: Settings, role: ModelRole
+) -> None:
+    """The LangSmith half of S5.2. `bid_run_config` puts the bid on the run and LangGraph
+    names the node; the role is the one fact only this factory knows (ADR-0050)."""
+    # Act
+    model = chat_model(role, settings)
+
+    # Assert
+    assert model.metadata is not None
+    assert model.metadata[MODEL_ROLE_METADATA_KEY] == role.value
+
+
+def test_the_startup_probe_is_attributed_to_nobody_and_traced_as_nothing(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings
+) -> None:
+    """A one-token probe runs before any request: there is no tenant to charge and no bid
+    to attribute it to, so warning about it on every boot would drown the signal that a
+    node is missing its instrumentation."""
+    # Arrange
+    probed: list[ChatOpenAI] = []
+    monkeypatch.setenv("VERIFY_MODEL_SLUGS", "true")
+    verified = load_settings(env_file=None)
+
+    # Act
+    verify_configured_models(verified, probe=probed.append)
+
+    # Assert
+    assert probed, "the walk must have probed something"
+    assert all(model.callbacks is None for model in probed)
+    assert all(MODEL_ROLE_METADATA_KEY not in (model.metadata or {}) for model in probed)
 
 
 @pytest.mark.parametrize(
