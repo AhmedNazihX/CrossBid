@@ -51,7 +51,15 @@ from urllib.parse import parse_qsl, urlsplit
 import yaml
 from langchain_core.runnables import RunnableConfig
 from langsmith import utils as langsmith_utils
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR: Final = Path(__file__).resolve().parents[1]
@@ -112,6 +120,28 @@ class ModelRole(StrEnum):
     """Where a role goes after a timed-out call and one retry (S3.4.4). A *different
     vendor* on purpose: the failure a fallback has to survive is the primary provider being
     slow or down, and a second OpenAI slug on the same route would be down with it."""
+
+
+CHAT_MODEL_ROLES: Final = tuple(role for role in ModelRole if role is not ModelRole.EMBED)
+"""The roles that name a chat model -- every role but `embed`, and S5.1's switchable set.
+
+Written as "everything except" rather than as a hand-listed tuple so that a role added
+later is covered by the verified-slug rule below without anyone remembering to add it here.
+The failure worth designing against is an unprobed slug reaching a bid, not a new role
+being caught by a rule it turns out not to need.
+
+`embed` is the exception because an embedding model is not interchangeable with a chat one
+in any of the three ways that matter. It cannot be probed with a chat call (S2.2.1 verifies
+its own). Its vector width is pinned to the `vector(1536)` columns of
+`migrations/0001_init.sql` (ADR-0004). And a corpus half-embedded by one model and half by
+another still compares without error and ranks nonsense first, so the change an operator
+would be making is not "try a different model" but "re-embed everything" --
+`ingestion/embeddings.py` measures every returned vector for exactly that reason.
+
+`fallback` *is* in the set, and that is what makes `llm.verify_configured_models` probe it:
+a fallback slug nobody checked is worth nothing, because the one moment it is used is the
+moment the primary has already failed.
+"""
 
 
 class _Frozen(BaseModel):
@@ -216,7 +246,9 @@ class RuntimeSettings(_Frozen):
     models: ModelSlugs
     available_models: tuple[str, ...] = Field(min_length=1)
     """The picker list of S4.6.2: the *verified* set, never OpenRouter's own catalogue
-    (ADR-0005)."""
+    (ADR-0005). Chat slugs only, and deliberately not a column of `AppSettingsRow`: the
+    list of what has been probed is a finding, not a preference, so it may not be widened
+    from a browser."""
     temperature: float = Field(ge=0.0, le=2.0)
     max_tokens: int = Field(gt=0)
     system_prompt: str | None = None
@@ -228,6 +260,38 @@ class RuntimeSettings(_Frozen):
     """Offline gates (S3.2.3). Deliberately *not* published by `GET /dev/settings`: it is
     a maintainer's scoring threshold, not a knob the developer panel changes."""
     enabled_tools: tuple[str, ...]
+
+    @model_validator(mode="after")
+    def _every_chat_slug_is_verified(self) -> RuntimeSettings:
+        """S5.1: a chat role may only name a slug this account is known to answer on.
+
+        ADR-0005 is why this is a validator and not a comment. `anthropic/claude-sonnet-5`
+        is in OpenRouter's catalogue, advertises structured outputs, and returns HTTP 404
+        here -- and the plan had named it for two jobs before a live call said otherwise.
+        A slug arriving through the `app_settings` row is the same hazard with a shorter
+        fuse: it is typed into a browser, and without this the first thing to notice would
+        be a bid failing mid-run, after the upload and the parse have already been paid for.
+
+        `available_models` is the probed list, every member of which both answers and
+        returns valid structured output, so constraining the switch to it is what makes
+        S5.1's "structured output still validates" true by construction rather than by
+        luck. `CHAT_MODEL_ROLES` says why `embed` is exempt.
+        """
+        offered = set(self.available_models)
+        wrong = [
+            f"{role.value} = '{slug}'"
+            for role in CHAT_MODEL_ROLES
+            if (slug := self.models.for_role(role)) not in offered
+        ]
+        if wrong:
+            raise ValueError(
+                "Every chat role must name a slug from available_models, and these do "
+                f"not: {', '.join(wrong)}. A slug can be listed in OpenRouter's catalogue "
+                "and still be refused by this account's data policy (ADR-0005), so a role "
+                "may only be switched to one of the verified slugs: "
+                f"{', '.join(self.available_models)}."
+            )
+        return self
 
 
 class EnvSettings(BaseSettings):
@@ -335,6 +399,11 @@ def _describe(error: Mapping[str, Any], rename: Callable[[str], str]) -> str:
     # Our own validators already read as sentences, so pydantic's prefix is dropped and
     # the name runs straight into the message: "OPENROUTER_API_KEY is set but blank".
     message = str(error["msg"]).removeprefix(VALUE_ERROR_PREFIX)
+    if not name:
+        # A whole-model validator (`_every_chat_slug_is_verified`) has an empty location,
+        # because what is wrong is the combination and not one field. Its message is a
+        # sentence of its own, so there is nothing to join it to.
+        return message
     separator = " " if error["type"] == "value_error" else ": "
     return f"{name}{separator}{message}"
 
@@ -482,7 +551,13 @@ class AppSettingsRow(_Frozen):
 
     Every column is optional and a NULL one means "keep the YAML default", so the
     developer panel can change one value without restating the rest. `models` mirrors the
-    `jsonb` column and may be partial: `{"judge": "..."}` replaces only the judge slug.
+    `jsonb` column and may be partial: `{"judge": "..."}` replaces only the judge slug --
+    S5.1's per-role switch, and the merged result is validated against `available_models`
+    like any other configuration, so a role cannot be switched to a slug nobody probed.
+
+    There is no `available_models` column, deliberately: the verified list is the outcome
+    of live calls (ADR-0005), so widening it is a code change with a probe behind it and
+    not a value somebody types into a browser.
 
     Defined here rather than in `models/` because it is a settings concern that nothing
     above the settings layer ever sees; `models/` holds the domain objects the API and the

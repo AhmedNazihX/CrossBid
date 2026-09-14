@@ -3812,4 +3812,45 @@ that is where chunks are made. It is not: extraction reads `parsed.pages`, never
 plant in a tender PDF would have sailed past a scanner that only ever saw the embed path. The
 lesson is that "where the text is chunked" and "where the text reaches a model" are two
 different places in this codebase, and a guard has to be installed at both.
+---
+
+## ADR-0050 — A role may only be switched to a slug someone probed
+
+**Date:** 2026-09-14 · **Stories:** S5.1 · **Status:** accepted
+
+S5.1 makes the model per *role* switchable — `extract`, `check`, `judge`, `fallback` — so the
+multi-model comparison the brief asks for is a configuration change rather than a code change.
+The decision is not that switching is possible; it is what a role is allowed to be switched to.
+
+**`RuntimeSettings` refuses a chat role naming a slug outside `available_models`.** A validator,
+not a comment, because ADR-0005 is a story about exactly this: `anthropic/claude-sonnet-5` is in
+OpenRouter's catalogue, advertises structured outputs, and returns HTTP 404 on this account —
+and the plan had named it for two jobs before a live call said otherwise. A slug arriving
+through the `app_settings` row is the same hazard with a shorter fuse, because it is typed into
+a browser. Without the validator the first symptom would be a bid failing mid-run, after the
+upload and the parse had already been paid for. Since every member of `available_models` was
+confirmed to answer *and* to return valid structured output, constraining the switch to that
+list is what makes "structured output still validates after a switch" true by construction.
+
+**There is no `available_models` column.** The verified list is the outcome of live calls, so
+widening it is a code change with a probe behind it, never a value somebody types into a
+browser. `CHAT_MODEL_ROLES` is written as "every role except `embed`" so a role added later is
+covered without anyone remembering. `embed` is exempt because an embedding model is not
+interchangeable with a chat one in any way that matters: it cannot be probed with a chat call,
+its width is pinned to the `vector(1536)` columns (ADR-0004), and a corpus half-embedded by two
+models still compares without error and ranks nonsense first.
+
+**`fallback` is in the probed set**, which is the point: the one moment a fallback is used is
+the moment the primary has already failed, so an unchecked fallback slug is worth nothing.
+
+### The check that documented itself and never ran
+
+`verify_configured_models` existed, guarded itself behind `VERIFY_MODEL_SLUGS`, and **nothing
+called it** — not `main.py`, not `scripts/`. Its docstring and `settings.default.yaml` both
+told an operator to set the variable "on one boot", and setting it did nothing at all. ADR-0005
+had concluded that startup should fail fast on a slug that does not answer, and that conclusion
+had been written down rather than wired. It now runs in the lifespan, before the pool is opened
+so a bad slug stops the boot rather than being discovered by a bid, and two tests in
+`test_main.py` pin both the call and its ordering. A self-guarding function is easy to leave
+unwired precisely because it never complains: the guard makes the missing caller silent.
 

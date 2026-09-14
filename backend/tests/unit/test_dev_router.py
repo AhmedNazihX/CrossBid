@@ -35,6 +35,7 @@ from crossbid.auth import DEV_COMPANY_HEADER
 from crossbid.main import create_app
 from crossbid.routers.dev import DEV_SETTINGS_PATH, NOT_FOUND_DETAIL
 from crossbid.settings import (
+    CHAT_MODEL_ROLES,
     AppSettingsRow,
     ModelRole,
     Settings,
@@ -161,6 +162,22 @@ def test_it_reports_the_model_slug_for_every_role(
     assert body["available_models"] == list(offline_settings.runtime.available_models)
 
 
+def test_it_says_which_roles_the_verified_list_applies_to(
+    client: TestClient, offline_settings: Settings
+) -> None:
+    """S5.1: `models` carries five roles and `available_models` is a chat list, so a panel
+    left to pair them itself would offer a chat slug for `embed`."""
+    # Act
+    body = fetch(client)
+
+    # Assert
+    assert body["switchable_roles"] == [role.value for role in CHAT_MODEL_ROLES]
+    assert ModelRole.EMBED.value not in body["switchable_roles"]
+    assert set(body["switchable_roles"]) < set(body["models"])
+    for role in body["switchable_roles"]:
+        assert body["models"][role] in body["available_models"]
+
+
 def test_it_reports_the_knobs_and_the_budgets(
     client: TestClient, offline_settings: Settings
 ) -> None:
@@ -254,6 +271,7 @@ PUBLISHED_SHAPE: Final[Mapping[str, frozenset[str]]] = {
         {
             "models",
             "available_models",
+            "switchable_roles",
             "temperature",
             "max_tokens",
             "system_prompt_set",
@@ -277,8 +295,8 @@ PUBLISHED_SHAPE: Final[Mapping[str, frozenset[str]]] = {
 }
 """Every key this route may put on the wire, pinned so growth is a decision and not a drift.
 
-`DevSettingsResponse` names its eight fields one by one, so nothing reaches a caller by
-accident today. Two of those eight are a different matter: `models` and `agent` embed
+`DevSettingsResponse` names its nine fields one by one, so nothing reaches a caller by
+accident today. Two of those nine are a different matter: `models` and `agent` embed
 `ModelSlugs` and `AgentSettings` *whole*, and a field added to either would be published the
 moment it was added, reviewed by nobody. `test_the_response_carries_no_secret_and_no_prompt`
 would not catch it either — that test can only look for secrets whose value it already knows.

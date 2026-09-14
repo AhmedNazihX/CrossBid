@@ -24,6 +24,7 @@ from pydantic import ValidationError
 
 from crossbid import settings as settings_module
 from crossbid.settings import (
+    CHAT_MODEL_ROLES,
     MAX_SIGNED_URL_TTL_SECONDS,
     TRACING_FLAG_ENV_VARS,
     AppSettingsRow,
@@ -786,6 +787,129 @@ def test_fetching_the_row_is_the_seam_that_waits_for_the_database() -> None:
     # Act / Assert -- S0.2.1 is blocked on a Supabase project; nothing is faked here
     with pytest.raises(NotImplementedError, match=r"S0\.2\.3"):
         fetch_app_settings_row()
+
+
+# ------------------------------------- S5.1: a role only switches to a verified slug
+
+UNVERIFIED_SLUG = "anthropic/claude-sonnet-5"
+"""In OpenRouter's catalogue, advertised as supporting structured outputs, and HTTP 404 on
+this account (ADR-0005). The plan named it for two jobs before a live call said otherwise,
+which is why it is the slug these tests push at the switch."""
+
+
+def test_every_configured_chat_slug_is_on_the_verified_list(valid_env: None) -> None:
+    """The committed defaults satisfy their own rule; an operator's switch is bounded by
+    the same list this asserts."""
+    # Act
+    runtime = load().runtime
+
+    # Assert
+    for role in CHAT_MODEL_ROLES:
+        assert runtime.models.for_role(role) in runtime.available_models
+
+
+def test_the_verified_list_offers_three_vendors(valid_env: None) -> None:
+    """S5.1 is "among OpenAI, Anthropic, and Google slugs", so the list has to hold all
+    three for the story's comparison to be a configuration change."""
+    # Act
+    offered = load().runtime.available_models
+
+    # Assert
+    assert {slug.split("/")[0] for slug in offered} == {"openai", "anthropic", "google"}
+
+
+def test_the_embedding_slug_is_exempt_from_the_verified_list(valid_env: None) -> None:
+    """`available_models` is a chat list. The embed slug is pinned to the stored vectors'
+    width (ADR-0004), so it is not a picker choice and not measured against the picker."""
+    # Act
+    runtime = load().runtime
+
+    # Assert
+    assert ModelRole.EMBED not in CHAT_MODEL_ROLES
+    assert runtime.models.embed not in runtime.available_models
+
+
+def test_a_defaults_file_naming_an_unverified_slug_is_refused(
+    valid_env: None, tmp_path: Path
+) -> None:
+    """ADR-0005's process lesson, enforced: a slug nobody probed never reaches a bid."""
+    # Arrange -- the committed YAML with one slug swapped, so nothing else can be the cause
+    raw = yaml.safe_load(settings_module.DEFAULTS_FILE.read_text(encoding="utf-8"))
+    raw["models"]["judge"] = UNVERIFIED_SLUG
+    path = tmp_path / "settings.default.yaml"
+    path.write_text(yaml.safe_dump(raw), encoding="utf-8")
+
+    # Act / Assert
+    with pytest.raises(SettingsError) as caught:
+        load(defaults_file=path)
+
+    # Assert -- the message names the role, the slug, the ADR and what may be picked instead
+    message = str(caught.value)
+    assert f"judge = '{UNVERIFIED_SLUG}'" in message
+    assert "ADR-0005" in message
+    assert "anthropic/claude-haiku-4.5" in message
+    # A whole-model error has no field location, so it reads as a sentence of its own
+    # rather than trailing an empty name and a stray space.
+    assert "is invalid: Every chat role" in message
+
+
+def test_a_role_switched_to_a_verified_slug_is_what_the_next_bid_runs_on(
+    valid_env: None,
+) -> None:
+    """S5.1's criterion, at the seam that carries it: the row wins over the YAML, and the
+    object every node builds its model from is the merged one."""
+    # Arrange
+    settings = load()
+    row = AppSettingsRow(models={ModelRole.EXTRACT: "google/gemini-2.5-flash"})
+
+    # Act
+    switched = apply_app_settings_row(settings, row)
+
+    # Assert
+    assert switched.runtime.models.for_role(ModelRole.EXTRACT) == "google/gemini-2.5-flash"
+    assert switched.runtime.models.cheap == settings.runtime.models.cheap
+
+
+def test_a_role_switched_to_an_unverified_slug_is_refused(valid_env: None) -> None:
+    """The hazard with the shorter fuse: a slug typed into a panel would otherwise be found
+    out by a bid failing mid-run, after the upload and the parse are already paid for."""
+    # Arrange
+    settings = load()
+    row = AppSettingsRow(models={ModelRole.JUDGE: UNVERIFIED_SLUG})
+
+    # Act / Assert
+    with pytest.raises(SettingsError) as caught:
+        apply_app_settings_row(settings, row)
+
+    # Assert
+    message = str(caught.value)
+    assert "app_settings" in message
+    assert UNVERIFIED_SLUG in message
+    assert "ADR-0005" in message
+
+
+def test_the_verified_list_cannot_be_widened_from_the_row(valid_env: None) -> None:
+    """The list is the outcome of live calls, not a preference: widening it is a code
+    change with a probe behind it, so there is no column to type it into."""
+    # Act / Assert
+    with pytest.raises(ValidationError):
+        AppSettingsRow.model_validate({"available_models": [UNVERIFIED_SLUG]})
+
+
+def test_switching_the_embedding_slug_is_not_measured_against_the_chat_list(
+    valid_env: None,
+) -> None:
+    """The exemption is real, and `ingestion/embeddings.py` is what catches a wrong one:
+    every returned vector is measured against `embed_dimensions` before it is stored."""
+    # Arrange
+    settings = load()
+    row = AppSettingsRow(models={ModelRole.EMBED: "openai/text-embedding-3-large"})
+
+    # Act
+    switched = apply_app_settings_row(settings, row)
+
+    # Assert
+    assert switched.runtime.models.embed == "openai/text-embedding-3-large"
 
 
 # ------------------------------------------------------------------- role resolution

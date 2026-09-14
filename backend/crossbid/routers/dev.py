@@ -5,6 +5,13 @@ manifest the registry discovered with an `enabled` flag beside it, the configure
 module provides yet, and the runtime an operator tunes — model slug per role, temperature,
 max tokens, the two concurrency limits and the run budgets.
 
+**`switchable_roles` is here for S5.1, and it is not decoration.** `models` carries a slug
+for all five roles and `available_models` is a *chat* list, so a panel that rendered one
+picker per role from the two together would offer `openai/gpt-5.6-terra` for `embed` — a
+switch the loader refuses and which, were it accepted, would leave the corpus half-embedded
+by one model and half by another. The backend knows which roles the list applies to, so it
+says so rather than leaving the frontend to infer it from a slug's name.
+
 **Why `enabled` is computed here and not read off the manifest.** `MANIFEST.default_enabled`
 is a claim about `settings.default.yaml`; `settings.runtime.enabled_tools` is what this
 process will actually bind (`tools/registry.py`). They agree until an operator changes the
@@ -60,7 +67,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.auth import require_developer
 from crossbid.main import get_app_settings
-from crossbid.settings import AgentSettings, Environment, ModelSlugs, Settings
+from crossbid.settings import (
+    CHAT_MODEL_ROLES,
+    AgentSettings,
+    Environment,
+    ModelRole,
+    ModelSlugs,
+    Settings,
+)
 from crossbid.tools.registry import enabled_tool_names, manifests, unbuilt_tool_names
 
 DEV_SETTINGS_PATH: Final = "/dev/settings"
@@ -110,6 +124,12 @@ class DevSettingsResponse(BaseModel):
     available_models: tuple[str, ...] = Field(
         description="Slugs the picker may offer: the verified set, not OpenRouter's catalogue"
     )
+    switchable_roles: tuple[ModelRole, ...] = Field(
+        description=(
+            "The roles available_models applies to. Every role but embed, whose slug is "
+            "pinned to the stored vectors' width and is not a picker choice."
+        )
+    )
     temperature: float
     max_tokens: int
     system_prompt_set: bool = Field(
@@ -155,6 +175,7 @@ async def read_dev_settings(
     return DevSettingsResponse(
         models=runtime.models,
         available_models=runtime.available_models,
+        switchable_roles=CHAT_MODEL_ROLES,
         temperature=runtime.temperature,
         max_tokens=runtime.max_tokens,
         system_prompt_set=runtime.system_prompt is not None,

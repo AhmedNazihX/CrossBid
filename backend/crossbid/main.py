@@ -3,7 +3,10 @@
 Startup order, in `lifespan`:
 
 1. Settings are loaded (or refused, S0.3.2) and tracing is switched on or off (S0.3.3).
-2. If `DATABASE_URL` is set, the pool is opened and LangGraph's tables are created with
+2. If `VERIFY_MODEL_SLUGS` is set, every slug a role may run on is probed with a one-token
+   call and a slug that does not answer fails the boot (ADR-0005, S5.1). Off by default:
+   each call costs money and needs a real key, which CI has not.
+3. If `DATABASE_URL` is set, the pool is opened and LangGraph's tables are created with
    `.setup()` (S0.2.2), then every bid a previous process left mid-run is resumed from its
    checkpoint (S3.1.1). If it is **unset**, the API starts without a database and says so
    once in the log: the `/health` route, the OpenAPI schema and `npm run gen:api` (which
@@ -32,6 +35,7 @@ from pydantic import BaseModel
 
 from crossbid.agent.runner import BidRunner, resume_unfinished_runs
 from crossbid.db import Database
+from crossbid.llm import verify_configured_models
 from crossbid.settings import Settings, configure_tracing, get_settings
 
 logger = logging.getLogger(__name__)
@@ -76,6 +80,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         resolved = settings if settings is not None else get_settings()
         configure_tracing(resolved)
+        # Before the pool, because a slug that does not answer should stop the boot rather
+        # than be discovered by a bid. Returns immediately unless VERIFY_MODEL_SLUGS is set;
+        # a plain call rather than a thread because nothing is being served yet.
+        verify_configured_models(resolved)
         db = await open_database(resolved)
         runner = await start_runner(db, resolved)
         app.state.settings = resolved

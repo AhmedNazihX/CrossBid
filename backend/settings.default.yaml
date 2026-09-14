@@ -15,8 +15,17 @@ models:
   # Verified answering on this account 2026-09-10 (ADR-0005), and the cheapest that does.
   fallback: google/gemini-2.5-flash-lite
 
-# Slugs offered in the developer panel's model picker (S4.6.2). This list is the
-# verified set, not OpenRouter's catalogue.
+# The slugs a chat role may be switched to (S5.1), and so the developer panel's model
+# picker (S4.6.2). This list is the verified set, not OpenRouter's catalogue: every slug
+# was confirmed with a live one-token call, and every one of them returns valid structured
+# output, which is what makes a switch safe mid-project. Three vendors, so the multi-model
+# comparison the story asks for is a configuration change.
+#
+# The loader refuses a `models:` entry above that is not on this list, so the two blocks
+# cannot drift; `embed` is exempt and is not listed here, because its 1536 dimensions are
+# pinned to the pgvector columns (ADR-0004) and changing it means re-embedding the corpus.
+# Adding a slug means probing it first: `VERIFY_MODEL_SLUGS=true` on one boot walks this
+# list and fails startup on anything that does not answer.
 available_models:
   - openai/gpt-5.6-terra
   - openai/gpt-5.6-luna

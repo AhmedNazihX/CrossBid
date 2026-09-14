@@ -18,7 +18,6 @@ from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 
 from crossbid.llm import (
-    CHAT_ROLES,
     LANGCHAIN_RETRIES,
     OPENROUTER_BASE_URL,
     PROBE_MAX_TOKENS,
@@ -29,7 +28,7 @@ from crossbid.llm import (
     resilient,
     verify_configured_models,
 )
-from crossbid.settings import ModelRole, Settings, load_settings
+from crossbid.settings import CHAT_MODEL_ROLES, ModelRole, Settings, load_settings
 
 FAKE_OPENROUTER_KEY = "sk-or-v1-LEAKED-OPENROUTER-KEY"
 
@@ -119,8 +118,8 @@ def test_the_key_does_not_leak_into_the_model_repr(settings: Settings) -> None:
 
 def test_chat_roles_excludes_the_embedding_role() -> None:
     # Assert
-    assert ModelRole.EMBED not in CHAT_ROLES
-    assert set(CHAT_ROLES) == {
+    assert ModelRole.EMBED not in CHAT_MODEL_ROLES
+    assert set(CHAT_MODEL_ROLES) == {
         ModelRole.EXTRACT,
         ModelRole.CHEAP,
         ModelRole.JUDGE,
@@ -158,14 +157,20 @@ def test_verification_probes_every_chat_slug_when_switched_on(
     )
 
     # Assert -- one token per slug, and the embedding slug is not probed with a chat call
-    assert probed == [
-        ("openai/gpt-5.6-terra", PROBE_MAX_TOKENS),
-        ("openai/gpt-5.6-luna", PROBE_MAX_TOKENS),
-        ("anthropic/claude-haiku-4.5", PROBE_MAX_TOKENS),
-        # The fallback slug is probed too: a fallback nobody checked is worth nothing,
-        # because the one moment it is used is the moment the primary has already failed.
-        ("google/gemini-2.5-flash-lite", PROBE_MAX_TOKENS),
+    assert probed == [(slug, PROBE_MAX_TOKENS) for slug in opted_in.runtime.available_models]
+    # Every configured chat slug is on that list, the fallback included: a fallback nobody
+    # checked is worth nothing, because the one moment it is used is the moment the primary
+    # has already failed. So is `google/gemini-2.5-flash`, which no role runs on today and
+    # which S5.1 nonetheless lets an operator switch a role to.
+    slugs = [slug for slug, _ in probed]
+    assert slugs == [
+        "openai/gpt-5.6-terra",
+        "openai/gpt-5.6-luna",
+        "anthropic/claude-haiku-4.5",
+        "google/gemini-2.5-flash",
+        "google/gemini-2.5-flash-lite",
     ]
+    assert opted_in.runtime.models.embed not in slugs
 
 
 def test_verification_fails_fast_and_names_the_slug_that_did_not_answer(
@@ -188,6 +193,34 @@ def test_verification_fails_fast_and_names_the_slug_that_did_not_answer(
     assert "openai/gpt-5.6-terra" in message
     assert "extract" in message
     assert "ADR-0005" in message
+
+
+def test_a_slug_only_the_picker_offers_is_probed_and_named_as_such(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings
+) -> None:
+    """S5.1's own hazard: a slug no role runs on today is one an operator may switch to
+    tomorrow, and a 404 found out then is found out at the worst possible moment."""
+    # Arrange
+    monkeypatch.setenv("VERIFY_MODEL_SLUGS", "true")
+    opted_in = load_settings(env_file=None)
+    offered_only = "google/gemini-2.5-flash"
+    configured = set(opted_in.runtime.models.model_dump().values())
+    assert offered_only in opted_in.runtime.available_models
+    assert offered_only not in configured
+
+    def refuse_that_one(model: ChatOpenAI) -> None:
+        if model.model_name == offered_only:
+            raise RuntimeError("Error code: 404 - 0 endpoints available")
+
+    # Act / Assert
+    with pytest.raises(LlmError) as caught:
+        verify_configured_models(opted_in, probe=refuse_that_one)
+
+    # Assert -- the message separates "in use" from "offered", because the cost differs
+    message = str(caught.value)
+    assert offered_only in message
+    assert "model picker" in message
+    assert "configured for role" not in message
 
 
 def test_the_probe_sends_a_single_token(

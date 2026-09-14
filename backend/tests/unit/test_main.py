@@ -15,6 +15,7 @@ from pydantic import SecretStr
 
 from crossbid import main as main_module
 from crossbid.db import Database, DatabaseError
+from crossbid.llm import LlmError
 from crossbid.main import NO_DATABASE_MESSAGE, create_app, get_database, open_database
 from crossbid.settings import Settings
 
@@ -90,6 +91,57 @@ def test_a_route_that_needs_the_database_answers_503_without_one(
     # Assert
     assert response.status_code == 503
     assert "DATABASE_URL" in response.json()["detail"]
+
+
+# ------------------------------------------------------------- model slugs (S5.1)
+
+
+def test_startup_probes_the_model_slugs_before_opening_the_pool(
+    offline_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR-0005's "fail fast on a slug that does not answer" needs a caller to be true.
+
+    The function guarded itself on `VERIFY_MODEL_SLUGS` and nothing invoked it, so the
+    setting documented a check that never ran. Ordering matters as much as the call: a
+    slug that 404s should stop the boot before a pool is built for it.
+    """
+    # Arrange
+    order: list[str] = []
+    monkeypatch.setattr(
+        main_module, "verify_configured_models", lambda _settings: order.append("verify")
+    )
+
+    async def fake_open(settings: Settings) -> None:
+        order.append("open_database")
+        return None
+
+    monkeypatch.setattr(main_module, "open_database", fake_open)
+
+    # Act
+    with TestClient(create_app(offline_settings)):
+        pass
+
+    # Assert
+    assert order == ["verify", "open_database"]
+
+
+def test_a_slug_that_does_not_answer_stops_the_boot(
+    offline_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Discovering it mid-bid would be after the upload and the parse were paid for."""
+
+    # Arrange
+    def refuse(_settings: Settings) -> None:
+        raise LlmError("The model slug 'x' did not answer on this account.")
+
+    monkeypatch.setattr(main_module, "verify_configured_models", refuse)
+
+    # Act & Assert
+    with (
+        pytest.raises(LlmError, match="did not answer"),
+        TestClient(create_app(offline_settings)),
+    ):
+        pass  # pragma: no cover - the context manager never opens
 
 
 # ------------------------------------------------------------------- DATABASE_URL
