@@ -19,10 +19,17 @@
  * asked for anything. `?next=` is what lets the form say why it interrupted and then finish
  * the journey it interrupted (ADR-0041).
  *
+ * **The check re-runs on every navigation until it finds a company, and never after.**
+ * Depending on the session alone was a bug with a long fuse (ADR-0042): the `(app)` layout
+ * stays mounted as you move between routes inside it, so the gate ran exactly once — and a
+ * bidder who then *created* their company was still carrying `needsCompany`. Every click on
+ * Dashboard bounced off stale state, forever, until a full page reload. `found` is what
+ * stops the extra request once there is an answer that cannot change back.
+ *
  * `/company` itself is exempt, for the obvious reason.
  */
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/components/auth/session-provider'
 import { loadProfile } from '@/lib/companies'
@@ -36,6 +43,8 @@ export function RequireCompany({ children }: Readonly<{ children: React.ReactNod
   const router = useRouter()
   const pathname = usePathname()
   const [check, setCheck] = useState<Check>('checking')
+  /** Once a company has been seen, it cannot un-exist; stop asking. */
+  const found = useRef(false)
 
   useEffect(() => {
     // Only a real session can have a company. On the dev bridge the header names one
@@ -44,13 +53,20 @@ export function RequireCompany({ children }: Readonly<{ children: React.ReactNod
       setCheck('skipped')
       return
     }
+    if (found.current) {
+      setCheck('hasCompany')
+      return
+    }
     const controller = new AbortController()
+    // Back to `checking` first, so the redirect below cannot fire on the previous answer
+    // while this one is still in flight — which is the whole defect this re-run fixes.
+    setCheck('checking')
     void (async () => {
       try {
         const { profile } = await loadProfile(controller.signal)
-        if (!controller.signal.aborted) {
-          setCheck(profile === undefined ? 'needsCompany' : 'hasCompany')
-        }
+        if (controller.signal.aborted) return
+        found.current = profile !== undefined
+        setCheck(profile === undefined ? 'needsCompany' : 'hasCompany')
       } catch {
         // A failure here is the API being unreachable, not a missing company. Render the
         // screen and let it show its own error rather than redirecting on a network blip.
@@ -58,7 +74,7 @@ export function RequireCompany({ children }: Readonly<{ children: React.ReactNod
       }
     })()
     return () => controller.abort()
-  }, [status])
+  }, [status, pathname])
 
   useEffect(() => {
     if (check === 'needsCompany' && pathname !== ONBOARDING_PATH) {
