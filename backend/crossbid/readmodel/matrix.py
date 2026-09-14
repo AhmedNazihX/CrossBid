@@ -12,8 +12,8 @@ index, turning a resume into a failed run.
 **The reviewer's columns are never written by the agent.** `reviewer_status`,
 `override_reason`, `attached_doc_ids` and `reviewed_at` are left to their defaults on insert
 and are *not* in the `do update set` list, so a re-check of a row a human has already
-confirmed refreshes the agent's finding and leaves the human's disposition alone. S3.4.x
-writes them from the review, through its own statement.
+confirmed refreshes the agent's finding and leaves the human's disposition alone. S3.4.2
+writes them from the review, through `UPDATE_REVIEWED_ROW`, once at `finalize`.
 
 Every statement carries `company_id` in its text (ADR-0011); `SCOPED_STATEMENTS` lets a test
 assert it. The connection protocol is `readmodel.bids.ConnectionSource`.
@@ -21,6 +21,7 @@ assert it. The connection protocol is `readmodel.bids.ConnectionSource`.
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Mapping, Sequence
 from typing import Any, Final, LiteralString
 
@@ -45,6 +46,24 @@ on conflict (id) do update set
 where matrix_rows.company_id = %(company_id)s
 """
 
+UPDATE_REVIEWED_ROW: Final[LiteralString] = """
+update matrix_rows
+set status = %(status)s,
+    reviewer_status = %(reviewer_status)s,
+    override_reason = %(override_reason)s,
+    attached_doc_ids = %(attached_doc_ids)s,
+    reviewed_at = %(reviewed_at)s
+where company_id = %(company_id)s and bid_id = %(bid_id)s and id = %(id)s
+"""
+"""The reviewer's columns, which `UPSERT_MATRIX_ROW` deliberately never touches (S3.4.2).
+
+A separate statement rather than a wider upsert, and the split is the safeguard: the agent's
+writer must stay unable to overwrite a human's disposition, so a resumed run that re-checks a
+requirement refreshes the finding and leaves the review alone. `status` is here as well as
+there because it is the one column both may write -- the agent proposes it and the reviewer
+may change it -- and at review time the reviewer's is the later word.
+"""
+
 SELECT_MATRIX_ROWS: Final[LiteralString] = """
 select m.id, m.requirement_id, m.status, m.evidence, m.ecertis_evidence, m.agent_rationale,
        m.reviewer_status, m.override_reason, m.attached_doc_ids, m.reviewed_at
@@ -57,7 +76,11 @@ order by r.document_name, r.page, r.created_at
 same response then run in the same order, which is what lets the workspace put them side by
 side without sorting either of them in the browser."""
 
-SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (UPSERT_MATRIX_ROW, SELECT_MATRIX_ROWS)
+SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
+    UPSERT_MATRIX_ROW,
+    UPDATE_REVIEWED_ROW,
+    SELECT_MATRIX_ROWS,
+)
 
 
 async def write_matrix_rows(
@@ -76,6 +99,24 @@ async def write_matrix_rows(
     params = [_params(row, company_id=company_id, bid_id=bid_id) for row in rows]
     async with db.connection() as conn, conn.cursor() as cursor:
         await cursor.executemany(UPSERT_MATRIX_ROW, params)
+    return len(params)
+
+
+async def write_reviewed_rows(
+    db: ConnectionSource, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
+) -> int:
+    """Write the reviewer's disposition onto every row of one bid. Returns how many.
+
+    Called once, at `finalize`, with the whole matrix as `apply_review` left it. Rows the
+    reviewer did not touch are written too, because "confirmed, at this time" is a fact
+    about them and leaving them `pending` would make a finished bid indistinguishable from
+    an abandoned one (S3.4.2).
+    """
+    if not rows:
+        return 0
+    params = [_reviewed_params(row, company_id=company_id, bid_id=bid_id) for row in rows]
+    async with db.connection() as conn, conn.cursor() as cursor:
+        await cursor.executemany(UPDATE_REVIEWED_ROW, params)
     return len(params)
 
 
@@ -101,6 +142,22 @@ def _params(row: MatrixRow, *, company_id: str, bid_id: str) -> dict[str, Any]:
         "evidence": Jsonb([item.model_dump(mode="json") for item in row.evidence]),
         "ecertis_evidence": None if ecertis is None else Jsonb(ecertis.model_dump(mode="json")),
         "agent_rationale": row.agent_rationale,
+    }
+
+
+def _reviewed_params(row: MatrixRow, *, company_id: str, bid_id: str) -> dict[str, Any]:
+    """`attached_doc_ids` is a `uuid[]` column, so the ids go as `UUID` objects: psycopg
+    sends a list of `str` as `text[]`, which Postgres will not compare or store there
+    (the lesson `readmodel.bids._uuids` carries for `= any(%s)`)."""
+    return {
+        "id": row.id,
+        "company_id": company_id,
+        "bid_id": bid_id,
+        "status": row.status.value,
+        "reviewer_status": row.reviewer_status.value,
+        "override_reason": row.override_reason,
+        "attached_doc_ids": [uuid.UUID(identifier) for identifier in row.attached_doc_ids],
+        "reviewed_at": row.reviewed_at,
     }
 
 

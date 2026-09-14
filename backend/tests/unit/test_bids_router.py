@@ -669,6 +669,43 @@ def test_list_bids_returns_summaries_for_the_calling_company_only(
     assert summary["decision"] is None
 
 
+def test_list_bids_shows_the_final_decision_once_a_reviewer_has_given_one(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """S3.4.3: the dashboard reads the decision out of the `bids` projection and nothing
+    else -- no checkpoint, no join onto `reviews`."""
+    # Arrange
+    read_model.add_bid(status=BidStatus.COMPLETE, reviewed_decision=Decision.CONDITIONAL)
+    read_model.add_bid(
+        status=BidStatus.AWAITING_REVIEW, verdict=AGENT_VERDICT.model_dump(mode="json")
+    )
+    read_model.add_bid(status=BidStatus.CHECKING)
+
+    # Act
+    body = client.get("/bids", headers=headers()).json()
+
+    # Assert -- reviewed shows the human's call, parked shows the agent's, running shows none
+    assert sorted(bid["decision"] or "none" for bid in body["bids"]) == [
+        "conditional",
+        "no_go",
+        "none",
+    ]
+
+
+def test_listing_bids_never_touches_the_graph(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    """ "`GET /bids` reads only from the read model" is the story's criterion, and a runner
+    whose graph cannot be built is how it is made checkable: a list that reached for a
+    checkpoint would raise here."""
+    # Arrange
+    read_model.add_bid(status=BidStatus.COMPLETE, reviewed_decision=Decision.GO)
+    runner._storage_missing = True
+
+    # Act / Assert
+    assert client.get("/bids", headers=headers()).status_code == 200
+
+
 def test_list_bids_without_the_dev_header_is_401(
     client: TestClient, read_model: InMemoryReadModel
 ) -> None:

@@ -81,6 +81,9 @@ class RecordingProjection:
     async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Any) -> None:
         pass
 
+    async def write_reviewed_rows(self, *, company_id: str, bid_id: str, rows: Any) -> int:
+        return len(rows)
+
     async def record_review(self, *, company_id: str, bid_id: str, **record: Any) -> None:
         self.reviews.append(record)
 

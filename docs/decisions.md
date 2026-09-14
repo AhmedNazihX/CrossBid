@@ -2336,3 +2336,60 @@ assert that a particular person reviewed a bid when the system cannot know it, a
 trail that records an unverified identity is worse than one that records none.** The column
 stays empty until magic-link sign-in (S0.3.1) can fill it truthfully. This is a real gap in the
 audit story and is named here rather than papered over.
+
+---
+
+## ADR-0026 — The reviewer's edits had nowhere to land
+
+**Date:** 2026-09-14 · **Stories:** S3.4.3 · **Status:** accepted
+
+S3.4.3 reads as bookkeeping — "the read-model tables are written at each point, `GET /bids`
+reads only from them, and a consistency test proves it". Writing the consistency test found
+that the first half was false in a way nothing else would have caught.
+
+### The bug the story existed to find
+
+`readmodel/matrix.py`'s upsert deliberately excludes `reviewer_status`, `override_reason`,
+`attached_doc_ids` and `reviewed_at` from its `do update set` list. That is a real safeguard —
+a resumed run re-checking a requirement must refresh the agent's finding and leave a human's
+disposition alone — and its docstring said, correctly, "S3.4.x writes them from the review,
+through its own statement."
+
+S3.4.2 did not write that statement. `apply_review` returned a matrix with every row
+dispositioned, `_project` wrote it through the *agent's* upsert, and every reviewer column was
+silently dropped. The bid reached `complete`, the audit row was written, the decision was
+recorded — and the matrix in Frankfurt still read `pending` on every row. Nothing failed. The
+checkpoint was right and the projection was wrong, which is precisely the failure mode the
+plan's read-model rule names.
+
+**This is ADR-0022 and ADR-0023's pattern a third time**: every piece correct in isolation, the
+path between them never walked. The difference is that this time the walk was a test rather
+than a demo, which is what the Increment 2 retro asked for.
+
+`write_reviewed_rows` is now the second statement, called once at `finalize` with the whole
+matrix. Every row is written, not only the edited ones, because "confirmed, at this time" is a
+fact about an untouched row and leaving it `pending` makes a finished bid indistinguishable
+from an abandoned one.
+
+### The consistency test is a comparison, not a recorder
+
+`test_read_model_consistency.py` runs one bid from `START` to `complete` — fan-out, interrupt,
+a review that changes a row, the re-score — and then compares everything the poller can see
+against `aget_state`.
+
+The design choice that makes it worth anything: **the fake read model stores what the real
+statements store.** The matrix upsert replaces by id and preserves the reviewer's columns; the
+reviewer's update writes only those; problems and verdict are replaced whole. A convenience
+fake that remembered the last list it was handed would have agreed with the checkpoint by
+construction and proved nothing — and would have passed against the bug above.
+
+Both subtleties were mutation-checked rather than assumed. Removing the `write_reviewed_rows`
+call fails two tests; reverting `matrix_rows` to `operator.add` fails two others. A consistency
+test that cannot fail is a comment.
+
+### What is deliberately not tested here
+
+The SQL. `test_bids_readmodel.py` asserts the statements, including that the agent's upsert
+still cannot name a reviewer column — a text assertion, so re-widening it to "fix" a future bug
+fails loudly. What this test adds is whether `graph._project` maps the *state* onto those
+writes faithfully, which is answerable offline and was where the defect actually was.

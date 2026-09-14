@@ -90,7 +90,7 @@ from crossbid.readmodel.bids import (
     set_bid_status,
     set_bid_verdict,
 )
-from crossbid.readmodel.matrix import write_matrix_rows
+from crossbid.readmodel.matrix import write_matrix_rows, write_reviewed_rows
 from crossbid.readmodel.requirements import write_requirements
 from crossbid.settings import Settings
 
@@ -171,6 +171,10 @@ class RunProjection(Protocol):
         override_reason: str | None,
     ) -> None: ...
 
+    async def write_reviewed_rows(
+        self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
+    ) -> int: ...
+
 
 class StageError(RuntimeError):
     """A node failed. `stage` says which; the message names the exception's type only."""
@@ -215,6 +219,13 @@ class ReadModelProjection:
             company_id=company_id,
             bid_id=bid_id,
             verdict=verdict.model_dump(mode="json"),
+        )
+
+    async def write_reviewed_rows(
+        self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
+    ) -> int:
+        return await write_reviewed_rows(
+            self._db, company_id=company_id, bid_id=bid_id, rows=rows
         )
 
     async def record_review(
@@ -332,6 +343,13 @@ async def _project_review(
     final: Verdict | None = state.get("verdict")
     if final is None:  # pragma: no cover -- apply_review always writes one first
         raise ValueError("a review cannot be recorded before the bid has been scored")
+    # The reviewer's own columns, which the agent's upsert deliberately cannot write
+    # (`readmodel/matrix.py`). Every row, not just the edited ones: an untouched row is
+    # `confirmed` at this moment, and that is a fact about it.
+    written = await projection.write_reviewed_rows(
+        company_id=company_id, bid_id=bid_id, rows=state.get("matrix_rows", [])
+    )
+    logger.info("Bid %s: %d row(s) marked with the reviewer's disposition", bid_id, written)
     review: ReviewSubmission | None = state.get("review")
     await projection.record_review(
         company_id=company_id,

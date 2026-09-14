@@ -162,6 +162,13 @@ class RecordingProjection:
         assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
         self.events.append(("verdict", verdict))
 
+    async def write_reviewed_rows(
+        self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
+    ) -> int:
+        assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
+        self.events.append(("reviewed", list(rows)))
+        return len(rows)
+
     async def record_review(self, *, company_id: str, bid_id: str, **record: Any) -> None:
         assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
         self.events.append(("review", record))
@@ -824,9 +831,14 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
     async def record_review(db: Any, **kwargs: Any) -> None:
         calls.append(("review", kwargs))
 
+    async def write_reviewed_rows(db: Any, **kwargs: Any) -> int:
+        calls.append(("reviewed", kwargs))
+        return len(kwargs["rows"])
+
     monkeypatch.setattr(graph_module, "write_matrix_rows", write_matrix_rows)
     monkeypatch.setattr(graph_module, "set_bid_verdict", set_bid_verdict)
     monkeypatch.setattr(graph_module, "record_review", record_review)
+    monkeypatch.setattr(graph_module, "write_reviewed_rows", write_reviewed_rows)
     projection = ReadModelProjection(FakeDatabase())
 
     # Act
@@ -856,6 +868,9 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
         partially_supported_rows=0,
     )
     await projection.set_verdict(company_id=COMPANY_ID, bid_id=BID_ID, verdict=verdict)
+    reviewed = await projection.write_reviewed_rows(
+        company_id=COMPANY_ID, bid_id=BID_ID, rows=matrix
+    )
     await projection.record_review(
         company_id=COMPANY_ID,
         bid_id=BID_ID,
@@ -868,9 +883,10 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
     # Assert -- every call carries the tenant, and problems go out as plain JSON
     assert written == 2
     assert checked == 1
+    assert reviewed == 1
     # The verdict is dumped to JSON here, not in the read model: that module never imports
     # from `models/verdict`, the same rule that keeps `problems` raw on the way through.
-    assert calls[-2] == (
+    assert calls[-3] == (
         "verdict",
         {
             "company_id": COMPANY_ID,
@@ -878,7 +894,11 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
             "verdict": verdict.model_dump(mode="json"),
         },
     )
-    assert calls[-3] == ("matrix", {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix})
+    assert calls[-4] == ("matrix", {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix})
+    assert calls[-2] == (
+        "reviewed",
+        {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix},
+    )
     # Both verdicts are dumped to JSON here too, so the read model never has to know the
     # shape of one — the same rule that keeps `problems` raw on the way through.
     assert calls[-1] == (

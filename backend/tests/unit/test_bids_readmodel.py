@@ -66,7 +66,13 @@ from crossbid.readmodel.bids import (
     unfinished_bids,
 )
 from crossbid.readmodel.documents import DocumentStatus
-from crossbid.readmodel.matrix import fetch_matrix_rows, write_matrix_rows
+from crossbid.readmodel.matrix import (
+    UPDATE_REVIEWED_ROW,
+    UPSERT_MATRIX_ROW,
+    fetch_matrix_rows,
+    write_matrix_rows,
+    write_reviewed_rows,
+)
 from crossbid.readmodel.requirements import fetch_requirements, write_requirements
 
 pytestmark = pytest.mark.anyio
@@ -943,3 +949,64 @@ async def test_fetch_matrix_rows_reads_an_ecertis_mapping_back() -> None:
     assert found.ecertis_evidence is not None
     assert found.ecertis_evidence.issuers == ("Finanzamt",)
     assert found.attached_doc_ids == ()
+
+
+# ----------------------------------------------------------- the reviewer's own columns
+
+
+async def test_the_agents_upsert_cannot_write_a_reviewers_column() -> None:
+    """The safeguard: a resumed run re-checking a requirement refreshes the agent's finding
+    and must leave a human's disposition exactly where it was (S3.4.2)."""
+    updated = UPSERT_MATRIX_ROW[UPSERT_MATRIX_ROW.index("do update set") :]
+
+    for column in ("reviewer_status", "override_reason", "attached_doc_ids", "reviewed_at"):
+        assert column not in updated
+
+
+async def test_writing_a_review_sends_the_reviewer_columns_and_the_status() -> None:
+    # Arrange
+    db = FakeDatabase(Scripted(rowcount=1))
+    document_id = uuid.uuid4()
+    row = MatrixRow(
+        id=str(uuid.uuid4()),
+        requirement_id=str(uuid.uuid4()),
+        status=RowStatus.SUPPORTED,
+        agent_rationale="Kein Nachweis gefunden.",
+        reviewer_status=ReviewerStatus.OVERRIDDEN,
+        override_reason="Der Nachweis liegt als Anlage 4 vor.",
+        attached_doc_ids=(str(document_id),),
+        reviewed_at=NOW,
+    )
+
+    # Act
+    written = await write_reviewed_rows(
+        db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), rows=[row]
+    )
+
+    # Assert
+    assert written == 1
+    [(_sql, sent)] = db.conn.executed  # one `executemany`, so the params are a list
+    [params] = sent
+    assert params["reviewer_status"] == "overridden"
+    assert params["override_reason"] == "Der Nachweis liegt als Anlage 4 vor."
+    assert params["status"] == "supported"
+    assert params["reviewed_at"] == NOW
+    # `attached_doc_ids` is a `uuid[]` column: a list of `str` would go as `text[]`.
+    assert params["attached_doc_ids"] == [document_id]
+
+
+async def test_writing_no_reviewed_rows_touches_the_database_at_all() -> None:
+    db = FakeDatabase()
+
+    assert (
+        await write_reviewed_rows(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), rows=[])
+        == 0
+    )
+    assert db.borrowed == 0
+
+
+def test_the_reviewer_update_is_scoped_to_the_bid_as_well_as_the_tenant() -> None:
+    """A row id is a `uuid5` over a requirement id, so scoping by bid costs nothing and
+    keeps the statement unable to reach across one."""
+    assert "company_id = %(company_id)s" in UPDATE_REVIEWED_ROW
+    assert "bid_id = %(bid_id)s" in UPDATE_REVIEWED_ROW
