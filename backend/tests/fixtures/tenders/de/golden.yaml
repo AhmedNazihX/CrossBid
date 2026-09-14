@@ -1,11 +1,15 @@
 # =====================================================================================
-#  UNVERIFIED DRAFT -- NOT YET A SCORING REFERENCE.
+#  VERIFIED SCORING REFERENCE. Adjudicated by a human on 2026-09-13 (S6.4, ADR-0020).
 #
-#  Every label below was drafted by an LLM (Claude, Opus 5) reading the parsed PDFs.
-#  NO HUMAN HAS CHECKED THE JUDGEMENT CALLS YET: the category, kind, stage, checkability,
-#  threshold and eCertis mapping on each row are a proposal, not a finding. Do not use
-#  this file to score extraction (S3.2.3) or to report a recall number until a person has
-#  read it and `verified_by` names them.
+#  Every label below was drafted by an LLM (Claude, Opus 5) reading the parsed PDFs and
+#  then read by a person, who corrected the judgement calls -- the category, kind, stage,
+#  checkability, threshold and eCertis mapping. `meta.labelled_by` below is the
+#  machine-readable form of that, and `VERIFICATION.md` beside this file records what was
+#  actually decided, separately from what the tests already prove.
+#
+#  Verifying this file made the recall number *trustworthy*. It did not make it pass:
+#  measured 0.72 on the committed live run against a 0.90 gate, ~0.74 +/- 0.02 across four
+#  runs. Read ADR-0021 and the Increment 2 retro before quoting any figure from it.
 #
 #  What *is* mechanically guaranteed, by `tests/unit/test_golden_labels.py`: every `doc`
 #  exists in the pack, every `page` is inside it, and every `quote` literally occurs on

@@ -1,16 +1,15 @@
 # =============================================================================
-#  UNVERIFIED DRAFT — DO NOT USE AS A SCORING REFERENCE YET.
+#  VERIFIED SCORING REFERENCE. Adjudicated by a human on 2026-09-13 (S6.4, ADR-0020).
 #
 #  Every label below was drafted by an LLM (Claude, Opus 5) reading the parsed
-#  PDF text. NO HUMAN HAS CHECKED THE JUDGEMENT CALLS YET: the category / kind /
+#  PDF text and then read by a person, who corrected the judgement calls: the category / kind /
 #  stage / checkable assignments, the thresholds and the requirement/conditional
 #  split are all machine drafts. Only the `quote` fields are mechanically
 #  guaranteed (see `method`); the *meaning* attached to each quote is not.
 #
-#  S6.4 is closed only when a human has reviewed this file and set
-#  `verified_by` / `verified_on` and `labelled_by: llm_assisted_human_verified`.
-#  Until then no recall or precision figure computed against this file means
-#  anything.
+#  S6.4 is closed for this file: see `meta.verified_by` / `verified_on` below and
+#  `VERIFICATION.md` beside it. There is no recall report for this tender -- the
+#  live extraction test is DE-only -- so it was verified by reading.
 # =============================================================================
 
 meta:

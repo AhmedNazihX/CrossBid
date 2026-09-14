@@ -15,13 +15,19 @@ YAML is loaded on its own so the script runs in a checkout with no `.env`.
 today are `source: synthetic`: built from the golden labels to exercise this script, and
 marked on every report so their number is never mistaken for a measurement.
 
-**How a reviewer closes S6.4.** The report is the deliverable, not just the number. It lists,
-per tender, the golden labels nothing found, the extracted rows no label explains (the one
-failure a verbatim check is blind to), the stage-filter leaks and the field disagreements.
-Adjudicate those lists, correct `tests/fixtures/tenders/<fixture>/golden.yaml`, and then set
-that file's `meta.labelled_by` to `llm_assisted_human_verified` with `verified_by` naming you
-and `verified_on` dated. That flip is what closes S6.4 — and with it S3.2.1's recall
-criterion and Milestone 1. Nothing in this script can do it for you.
+**How a reviewer closes S6.4** — done for all three tenders on 2026-09-13, and kept here
+because the procedure is the deliverable. The report lists, per tender, the golden labels
+nothing found, the extracted rows no label explains (the one failure a verbatim check is
+blind to), the stage-filter leaks and the field disagreements. Adjudicate those lists,
+correct `tests/fixtures/tenders/<fixture>/golden.yaml`, and then set that file's
+`meta.labelled_by` to `llm_assisted_human_verified` with `verified_by` naming you and
+`verified_on` dated. Nothing in this script can do it for you.
+
+**That flip closed S6.4 and did *not* close S3.2.1.** It was expected to — the plan's
+Increment 1 row says so — and the expectation was wrong in an instructive way: verifying the
+key made the number *trustworthy*, not *higher*. Measured against the verified key, recall is
+0.72 on the committed live run and ~0.74 +/- 0.02 across four. S3.2.1's criterion is "at
+least 0.9", so the story now fails on a measurement rather than waiting on a task.
 
 Exit codes: 0 every tender clears the threshold, 1 one did not (or nothing was read), 2 the
 inputs could not be read at all.
