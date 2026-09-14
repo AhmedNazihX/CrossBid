@@ -59,6 +59,7 @@ from crossbid.readmodel.bids import (
     list_bids,
     mark_bid_failed,
     record_review,
+    release_bid_to_review,
     set_bid_problems,
     set_bid_status,
     set_bid_verdict,
@@ -1010,3 +1011,53 @@ def test_the_reviewer_update_is_scoped_to_the_bid_as_well_as_the_tenant() -> Non
     keeps the statement unable to reach across one."""
     assert "company_id = %(company_id)s" in UPDATE_REVIEWED_ROW
     assert "bid_id = %(bid_id)s" in UPDATE_REVIEWED_ROW
+
+
+async def test_releasing_a_claimed_bid_puts_it_back_on_awaiting_review() -> None:
+    """`failed` would be the obvious status and is a trap — it is terminal, the startup
+    resume skips it, and `claim_bid_for_review` refuses it, so a review that failed on a
+    transient timeout would be dead with the submission already in its checkpoint."""
+    # Arrange
+    db = FakeDatabase(Scripted(rowcount=1))
+
+    # Act
+    await release_bid_to_review(
+        db,
+        company_id=str(COMPANY_ID),
+        bid_id=str(BID_ID),
+        reason="applying_review failed: OperationalError",
+    )
+
+    # Assert
+    params = db.params()
+    assert params["status"] == BidStatus.AWAITING_REVIEW.value
+    assert params["reason"] == "applying_review failed: OperationalError"
+
+
+async def test_releasing_a_bid_that_is_not_this_companys_is_not_found() -> None:
+    db = FakeDatabase(Scripted(rowcount=0))
+
+    with pytest.raises(BidNotFoundError):
+        await release_bid_to_review(
+            db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), reason="x"
+        )
+
+
+async def test_the_status_a_release_restores_is_the_one_the_claim_will_accept() -> None:
+    """The pair has to agree or a failed review is unrecoverable — asserted against the
+    values both statements actually send, because the defect was that they did not."""
+    # Arrange
+    claiming = FakeDatabase(Scripted(rowcount=1))
+    releasing = FakeDatabase(Scripted(rowcount=1))
+
+    # Act
+    await claim_bid_for_review(claiming, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
+    await release_bid_to_review(
+        releasing, company_id=str(COMPANY_ID), bid_id=str(BID_ID), reason="x"
+    )
+
+    # Assert -- what a release leaves behind is what a claim looks for
+    assert releasing.params()["status"] == claiming.params()["parked"]
+    # And it is not a status the startup resume would also pick up, which would race the
+    # reviewer's own retry.
+    assert BidStatus.AWAITING_REVIEW not in UNFINISHED_STATUSES

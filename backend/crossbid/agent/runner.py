@@ -63,6 +63,7 @@ from crossbid.readmodel.bids import (
     BidRow,
     ConnectionSource,
     mark_bid_failed,
+    release_bid_to_review,
     unfinished_bids,
 )
 from crossbid.settings import Settings, bid_run_config
@@ -140,6 +141,9 @@ class BidRunner:
         self._budget = budget
         self._clock = clock
         self._tasks: dict[str, asyncio.Task[None]] = {}
+        # Reviews are not tasks — they run inside the caller's request — but they need the
+        # same "only one at a time" property, and for a sharper reason. See `submit_review`.
+        self._reviewing: set[str] = set()
 
     @property
     def graph(self) -> BidGraph:
@@ -180,14 +184,28 @@ class BidRunner:
         strand it at `applying_review` with nothing saying why. The router turns the
         exception into a 5xx after the reason is on the row.
         """
+        if bid.id in self._reviewing:
+            # The database claim alone does not close this. On resume LangGraph re-runs the
+            # `await_review` node from its top, and the stage wrapper's first act is to write
+            # `awaiting_review` again (graph.py, decision 2) — so for the several awaited
+            # round-trips until `apply_review` writes its own status, the row is claimable a
+            # second time. A double-click would then resume the same thread twice: two audit
+            # rows, two decisions, two passes of `write_reviewed_rows`. This set closes that
+            # window, and it is checked before the first `await` so nothing can interleave
+            # between the test and the insert. One API process (ADR-0010) is what makes an
+            # in-process guard sufficient.
+            raise RunnerError(f"bid {bid.id} is already being reviewed")
+        self._reviewing.add(bid.id)
         config = bid_run_config(bid.id, thread_id=bid.thread_id, run_name=REVIEW_RUN_NAME)
         try:
             await self.graph.ainvoke(Command(resume=review), config)
         except Exception as exc:
             reason = failure_reason_of(exc)
             logger.exception("Bid %s: %s", bid.id, reason)
-            await self._record_failure(bid, reason)
+            await self._release_claim(bid, reason)
             raise
+        finally:
+            self._reviewing.discard(bid.id)
 
     async def shutdown(self) -> None:
         """Cancel every run in flight and wait for the cancellations to land.
@@ -241,6 +259,21 @@ class BidRunner:
             return None
         logger.info("Bid %s: no checkpoint yet; starting from the row", bid.id)
         return initial_state(bid)
+
+    async def _release_claim(self, bid: BidRow, reason: str) -> None:
+        """A failed review goes back to `awaiting_review`, not to `failed`.
+
+        `failed` is terminal and unreachable by every recovery path the product has — the
+        startup resume skips it and `claim_bid_for_review` refuses it — so a transient pool
+        timeout would strand the bid for good. The graph is still parked at its interrupt;
+        resubmitting is the affordance, and this is what leaves it available.
+        """
+        try:
+            await release_bid_to_review(
+                self._db, company_id=bid.company_id, bid_id=bid.id, reason=reason
+            )
+        except Exception:
+            logger.exception("Bid %s: could not release the review claim", bid.id)
 
     async def _record_failure(self, bid: BidRow, reason: str) -> None:
         try:

@@ -342,8 +342,10 @@ export interface components {
              * @description The compliance matrix, one row per checked requirement, in the same order as `requirements`. Fills in lane by lane while the status is `checking`.
              */
             matrix_rows: components["schemas"]["MatrixRow"][];
-            /** @description The agent's go/no-go with every gap behind it, written when the status reaches `scoring`. Null before that. Advisory: the reviewer confirms or overrides it before it is final. */
+            /** @description The agent's go/no-go with every gap behind it, written when the status reaches `scoring`, and re-scored on the reviewer's statuses once they have reviewed. Null before scoring. Advisory: what the *rules* say about the matrix. */
             verdict: components["schemas"]["Verdict"] | null;
+            /** @description What the reviewer decided. Null until a human has. Deliberately not the same field as `verdict.decision`: that is what the rules say about the matrix as the reviewer left it, and this is what the reviewer concluded. The difference between them is the override. */
+            decision: components["schemas"]["Decision"] | null;
             /**
              * Problems
              * @description What parsing and extraction could not do, for the reviewer

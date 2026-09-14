@@ -18,7 +18,10 @@ Three decisions.
 **1. The warning goes in `agent_rationale`, not in a new column.** The reviewer reads the
 rationale beside the row; a boolean in the database that no screen renders is not a flag. It
 also needs no migration, and it follows the pattern `check_loop` already set: a notice is
-appended and the model's own sentence gives way to it, never the other way round.
+appended and the model's own sentence gives way to it, never the other way round. The revised
+row is rebuilt through `MatrixRow.model_validate` rather than `model_copy(update=...)`, for
+the reason `nodes/review.py` gives at length: the copy skips validation, and two modules
+revising the same model must not disagree about whether that is allowed.
 
 **2. Nothing is downgraded.** The status stays exactly as checking left it. The story asks
 for a warning, and the product is advisory: a reviewer told that the ISO 27001 certificate
@@ -108,13 +111,21 @@ def _expired_certificates(
 
 
 def _flagged(row: MatrixRow, *, expired: Sequence[CertificateHeld]) -> MatrixRow:
-    """One row with whatever notices apply appended to its rationale."""
+    """One row with whatever notices apply appended to its rationale.
+
+    Truncation drops whole notices rather than cutting one in half: a reviewer must not be
+    shown "…expired on 2026-0" and left to guess. The cap is generous enough that this only
+    bites on a document matching a great many lapsed certificates at once.
+    """
     notices = [*_ecertis_notices(row), *_certificate_notices(row, expired)]
     if not notices:
         return row
-    joined = " ".join([row.agent_rationale.strip(), *notices])
-    rationale = joined[:MAX_FLAGGED_RATIONALE_CHARS]
-    return row.model_copy(update={"agent_rationale": rationale})
+    rationale = row.agent_rationale.strip()
+    for notice in notices:
+        if len(rationale) + 1 + len(notice) > MAX_FLAGGED_RATIONALE_CHARS:
+            break
+        rationale = f"{rationale} {notice}"
+    return MatrixRow.model_validate(row.model_dump() | {"agent_rationale": rationale})
 
 
 def _ecertis_notices(row: MatrixRow) -> list[str]:

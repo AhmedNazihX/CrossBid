@@ -20,6 +20,13 @@ export type RowStatus = components['schemas']['RowStatus']
 export type Evidence = components['schemas']['Evidence']
 export type EcertisEvidence = components['schemas']['EcertisEvidence']
 export type StartBidRequest = components['schemas']['StartBidRequest']
+export type Verdict = components['schemas']['Verdict']
+export type Decision = components['schemas']['Decision']
+export type Gap = components['schemas']['Gap']
+export type GapSeverity = components['schemas']['GapSeverity']
+export type ReviewSubmission = components['schemas']['ReviewSubmission']
+export type RowEdit = components['schemas']['RowEdit']
+export type ReviewerStatus = components['schemas']['ReviewerStatus']
 
 /**
  * Statuses after which another poll would show nothing new: the interrupt (a person must
@@ -50,4 +57,33 @@ export async function listBids(signal?: AbortSignal): Promise<readonly BidSummar
 /** Starts a bid and resolves with the 202 body (`status: "queued"`). */
 export function startBid(body: StartBidRequest): Promise<BidResponse> {
   return apiRequest('post', '/bids', { body })
+}
+
+/**
+ * Submits the review that finishes a bid (story S3.4.2) and resolves with the bid as the
+ * review left it — `status: "complete"`, the re-scored verdict, and every row carrying the
+ * reviewer's disposition. There is no polling afterwards: the backend runs the resume
+ * inside this request because nothing past the interrupt calls a model.
+ *
+ * Answers **409** when the bid is not parked at `awaiting_review`, which is the same answer
+ * for "somebody already reviewed it" and "it is still running" — the claim is one
+ * conditional update and cannot tell them apart. **422** names a row the matrix does not
+ * have, a status the row cannot legally take, or a decision differing from the agent's with
+ * no reason given.
+ */
+export function submitReview(
+  bidId: string,
+  body: ReviewSubmission,
+  signal?: AbortSignal
+): Promise<BidResponse> {
+  return apiRequest('post', '/bids/{bid_id}/review', {
+    path: { bid_id: bidId },
+    body,
+    signal,
+  })
+}
+
+/** A bid parked at its interrupt is the only one a review may be submitted for. */
+export function isAwaitingReview(bid: BidResponse): boolean {
+  return bid.status === 'awaiting_review'
 }

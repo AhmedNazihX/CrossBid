@@ -271,8 +271,9 @@ def test_a_row_matching_many_expired_certificates_stays_inside_the_cell() -> Non
         today=TODAY,
     )
 
-    # Assert
+    # Assert -- inside the cap, and never ending mid-notice
     assert len(flagged[0].agent_rationale) <= MAX_FLAGGED_RATIONALE_CHARS
+    assert flagged[0].agent_rationale.endswith("relied on.")
 
 
 def test_a_profile_that_could_not_be_read_costs_the_certificate_warning_only() -> None:

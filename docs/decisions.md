@@ -2476,3 +2476,108 @@ inline copy of that predicate now calls the model's.
 "Unread pages are listed on the bid" needed no code: the parser derives them, the pipeline
 stores them, and `GET /bids/{id}` returns them per document alongside the `problems` list. It
 gained a test at the layer a reviewer meets it, which is the only part that was missing.
+
+---
+
+## ADR-0028 — What a fresh reading of Increment 3 found
+
+**Date:** 2026-09-14 · **Stories:** S4.5.2, S4.5.3, and corrections to S3.4.1/S3.4.2 · **Status:** accepted
+
+The two workspace screens closed F3.4. Before wiring them, the four backend commits were read
+again from scratch against ADR-0024 to ADR-0027 — "does the code do what the ADR says". It
+found six defects the test suite did not, four of them in the scorer's own rules, and every
+one of them a **wrong answer that validated cleanly** rather than a crash.
+
+### The scorer was wrong in three ways, all of them generous to the bidder
+
+**An exclusion ground the extractor labelled `informational` could not block a bid.**
+`_severity_of` short-circuited on `kind is INFORMATIONAL` *before* the test that gives an
+exclusion ground its severity regardless of kind — while the module docstring and ADR-0024
+rule 2 both say, in as many words, that `kind` is not consulted for an exclusion ground. The
+test written for that rule parametrised `optional` and not the third value of the same enum.
+Reproduced: a bidder with evidence *against* them on a conviction, and one supported formal
+requirement, scored **`go` with zero gaps**. `kind` comes from the extraction model, so this
+is exactly the extraction defect the rule exists to neutralise. The kind check now applies
+only to requirements that are not exclusion grounds, and the test parametrises all three.
+
+**A matrix nobody had checked scored `conditional`.** Rule 4 reaches
+`insufficient_evidence` only when some row is `partially_supported`. Five mandatory
+requirements with *no rows at all* — a lane that never ran, a cancelled shutdown — produced
+"This bid is possible with open items. 0 of 5 mandatory requirements are supported." An
+*empty* matrix correctly declined, so the worse state got the more encouraging answer than
+the better one.
+
+**A matrix whose mandatory rows were all `not_applicable` scored `go`**, with a rationale
+reading "0 of 3 mandatory requirements are supported". The `go` gate counted *settled* rows,
+and `not_applicable` settles.
+
+All three are one repair: **the gate is `mandatory_supported`, not `settled`.** The agent
+needs one mandatory requirement it can say is supported, or it declines. That single sentence
+covers the empty matrix, the unchecked matrix, the all-partial matrix and the all-inapplicable
+matrix — each of which was a different wrong answer before. `not_applicable` still closes a
+gap; it just cannot open a recommendation. `Verdict`'s validator moved with it: `go` now
+requires `mandatory_supported > 0` rather than `mandatory_total > 0`, and declining is
+refused exactly when a `go` would be available.
+
+### The 409 was not airtight, and the claim that made it was undone one node later
+
+`claim_bid_for_review` is a correct conditional `UPDATE`. It is also immediately reversed: on
+resume LangGraph re-runs `await_review` from its top and the stage wrapper's first act is to
+write `awaiting_review` again. The project already knew that — `graph.py` decision 2 documents
+it and a test asserts the status is written twice — and nothing had connected it to the claim.
+So for the several awaited round-trips until `apply_review` writes its own status, the row is
+claimable a second time: a double-click resumes one thread twice, for two audit rows, two
+decisions and two passes of `write_reviewed_rows`.
+
+The router test passed because its fake runner never re-runs the real graph — **the same trap
+ADR-0026 says the consistency test was written to avoid**, one layer up.
+
+`BidRunner` now holds an in-flight set, tested before the first `await` so nothing interleaves
+between the test and the insert, and the router answers the same 409 for it. One API process
+(ADR-0010) is what makes an in-process guard sufficient; a second process would need the
+database claim to survive the resume instead.
+
+### A failed review left the bid permanently dead
+
+After the claim, any exception sent the bid to `failed` — which is terminal, which
+`resume_unfinished_runs` skips, and which `claim_bid_for_review` refuses. A transient pool
+timeout in `record_review` would therefore strand the bid for good, with the reviewer's
+submission sitting in its checkpoint and a permanent 409 in front of the only endpoint that
+could finish it. `release_bid_to_review` puts it back on `awaiting_review` with the reason
+recorded: the graph is still parked, and resubmitting is the affordance the product has. A
+test asserts the status a release restores is the one a claim accepts, because the defect was
+that they disagreed.
+
+### `GET /bids/{id}` never showed the reviewer's decision
+
+ADR-0025's whole point is that the verdict and the decision are two different facts, and
+`BidResponse` carried only the first. For the case the ADR is written about — the reviewer
+overrides a `conditional` re-score with `no_go` — the dashboard showed `no_go` and the
+workspace showed `conditional`, with the reviewer's own click answering with the re-score.
+`BidResponse.decision` now carries it. S3.4.3's consistency test could not see this: it
+compares the projection against the checkpoint, not the API shape.
+
+### What was checked and found sound
+
+Worth recording, because these were the suspicions: `_decide` cannot produce a `Decision`
+that `Verdict` rejects (fuzzed over every 1-, 2- and 3-requirement matrix across all
+kind × category × stage × row-status combinations, before and after the repair);
+`merged_rows` is order-stable and duplicate-free under LangGraph's superstep fold, including
+on a resumed lane; `ResilientModel.ainvoke`'s two-block control flow has no path that
+discards a successful answer or falls back after one; `flags` is applied once and cannot
+double-append, because the graph has no back-edge; and all five new SQL statements carry
+`company_id` and are in their module's `SCOPED_STATEMENTS`.
+
+### Left standing, deliberately
+
+The row-edit validation exists twice — `routers/bids.py::_check_row_edit` builds a candidate
+row for the 422, `review.py::_reviewed` builds it again for the write. They agree on every
+input today. Consolidating them is the right change and is not this story's; the risk is
+recorded here because it is what would turn a future `MatrixRow` invariant into a 500 plus a
+stranded bid rather than a 422.
+
+`RETRYABLE` includes `RateLimitError` and retries with no backoff, so a 429 costs one wasted
+call before the fallback. And `check_loop`'s re-ask catches `ValidationError` only — a
+`LengthFinishReasonError` is the same "not the requested shape" and is re-asked by nothing,
+which is the failure mode ADR-0021 caught in extraction. Both are noted rather than fixed:
+they are cheap to add and neither is a wrong answer, only a wasted or lost one.

@@ -275,6 +275,20 @@ where company_id = %(company_id)s and id = %(bid_id)s and status = %(parked)s
 change and the loser sees `rowcount == 0`. Migration 0006's column is not involved -- this
 is the *status*, and moving it off `awaiting_review` is the claim."""
 
+RELEASE_BID_TO_REVIEW: Final[LiteralString] = """
+update bids
+set status = %(status)s, failure_reason = %(reason)s, updated_at = now()
+where company_id = %(company_id)s and id = %(bid_id)s
+"""
+"""Undoes `CLAIM_BID_FOR_REVIEW` when the resume it claimed for failed.
+
+`failed` would be the obvious status and is a trap: it is terminal, it is not in
+`UNFINISHED_STATUSES` so the startup resume skips it, and `claim_bid_for_review` only accepts
+`awaiting_review` — so a review that failed on a transient pool timeout would leave the bid
+dead, with the reviewer's submission sitting in its checkpoint and a permanent 409 in front of
+the only endpoint that could finish it. Back to `awaiting_review` is the honest state: the
+graph is still parked, and resubmitting is the affordance the product has."""
+
 INSERT_REVIEW: Final[LiteralString] = """
 insert into reviews (bid_id, company_id, decision, agent_verdict, final_verdict,
                      override_reason, reviewer_id)
@@ -323,6 +337,7 @@ SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     UPDATE_BID_VERDICT,
     UPDATE_BID_DECISION,
     CLAIM_BID_FOR_REVIEW,
+    RELEASE_BID_TO_REVIEW,
     INSERT_REVIEW,
     SELECT_DOCUMENTS_BY_ID,
     SELECT_BID_DOCUMENTS,
@@ -478,6 +493,23 @@ async def claim_bid_for_review(db: ConnectionSource, *, company_id: str, bid_id:
         )
     if cursor.rowcount != 1:
         raise BidStateError(f"bid {bid_id} is not waiting for a review")
+
+
+async def release_bid_to_review(
+    db: ConnectionSource, *, company_id: str, bid_id: str, reason: str
+) -> None:
+    """Put a claimed bid back on `awaiting_review` and record why. See the statement."""
+    async with db.connection() as conn:
+        cursor = await conn.execute(
+            RELEASE_BID_TO_REVIEW,
+            {
+                "company_id": company_id,
+                "bid_id": bid_id,
+                "status": BidStatus.AWAITING_REVIEW.value,
+                "reason": reason,
+            },
+        )
+        _require_one_row(cursor.rowcount, bid_id)
 
 
 async def record_review(

@@ -5,6 +5,7 @@ import { cn } from 'cn'
 
 import { DataTable, Td, Th, Tr } from '@/components/ui/data-table'
 import { Icon } from '@/components/ui/icons'
+import { Notice } from '@/components/ui/notice'
 import { Tabs } from '@/components/ui/tabs'
 import { Tag } from '@/components/ui/tag'
 import type { BidDocument, ExtractionProblem, MatrixRow, Requirement } from '@/lib/bids'
@@ -12,8 +13,15 @@ import { formatLanguage, requirementLabel } from '@/lib/format'
 import { CitationLink } from './citation-link'
 import { isSameCitation, type Citation } from './citation'
 import { describeProblems } from './problems'
+import {
+  isSwitchable,
+  RequirementLanguageToggle,
+  requirementTextIn,
+  type RequirementLanguage,
+} from './requirement-language'
 import { RequirementDetail } from './requirement-detail'
-import { RowStatusBadge } from './row-status-badge'
+import type { RowReview } from './row-review-controls'
+import { RowStatusChange } from './row-status-change'
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
@@ -34,6 +42,11 @@ export interface RequirementListProps {
   readonly onCite: (citation: Citation) => void
   /** Rendered inside the table area while there is nothing to list yet. */
   readonly emptyMessage: React.ReactNode
+  /**
+   * The reviewer's pending edits and the documents they may attach (S4.5.2). Absent while
+   * the bid is not parked at its interrupt, which leaves the table exactly as S4.5.1 built it.
+   */
+  readonly review?: RowReview
 }
 
 /**
@@ -44,7 +57,11 @@ export interface RequirementListProps {
  * the left, the check's evidence and the eCertis card on the right. Category tabs filter; the
  * footer line names what the run could not do.
  *
- * Read-only: S4.5.2 adds the artboard's Confirm / Change status / Add evidence controls.
+ * With a `review` the Evidence column also carries the reviewer's pending status beside the
+ * agent's, and every expanded row gains the artboard's Confirm / Change status / Add evidence
+ * controls (S4.5.2). What the run could not do is a notice above the table rather than a word
+ * in the footer: unread pages and dropped rows are the reviewer's problem to act on, and a
+ * footer is where a count goes to be skipped.
  */
 export function RequirementList({
   requirements,
@@ -56,6 +73,7 @@ export function RequirementList({
   activeCitation,
   onCite,
   emptyMessage,
+  review,
 }: RequirementListProps) {
   const [filter, setFilter] = useState<CategoryFilter>('all')
   const [expandedId, setExpandedId] = useState<string | undefined>(undefined)
@@ -79,11 +97,19 @@ export function RequirementList({
   const footer = [
     `Showing ${shown.length} of ${requirements.length}`,
     'every line links to its page in the tender',
-    ...problemLines,
   ].join(' · ')
 
   return (
     <div className="flex flex-col gap-3.5">
+      {problemLines.length > 0 && (
+        <Notice title="What the run could not read">
+          <ul className="m-0 mt-1 list-disc pl-4">
+            {problemLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </Notice>
+      )}
       <Tabs
         items={tabs}
         value={filter}
@@ -140,6 +166,8 @@ export function RequirementList({
                 activeCitation={activeCitation}
                 onCite={onCite}
                 showDocument={documents.length > 1}
+                bidderLanguage={bidderLanguage}
+                review={review}
               />
             ))}
           </tbody>
@@ -159,6 +187,8 @@ interface RequirementRowProps {
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
   readonly showDocument: boolean
+  readonly bidderLanguage: string
+  readonly review?: RowReview
 }
 
 function RequirementRow({
@@ -171,14 +201,18 @@ function RequirementRow({
   activeCitation,
   onCite,
   showDocument,
+  bidderLanguage,
+  review,
 }: RequirementRowProps) {
+  const [language, setLanguage] = useState<RequirementLanguage>('bidder')
   const detailId = `${requirement.id}-detail`
   const citation: Citation = {
     documentName: requirement.document_name,
     page: requirement.page ?? null,
     criterionId: requirement.ecertis_criterion_id ?? undefined,
   }
-  const explained = requirement.translation ?? requirement.source_text
+  const explained = requirementTextIn(requirement, language)
+  const canSwitch = isSwitchable(requirement, bidderLanguage)
   const isTranslated = requirement.translation !== null && requirement.translation !== undefined
 
   return (
@@ -201,7 +235,12 @@ function RequirementRow({
               !isExpanded && 'items-center'
             )}
           >
-            <span className={cn('min-w-0 flex-1', !isExpanded && 'truncate')}>{explained}</span>
+            <span
+              lang={language === 'source' ? requirement.source_lang : bidderLanguage}
+              className={cn('min-w-0 flex-1', !isExpanded && 'truncate')}
+            >
+              {explained}
+            </span>
             <Icon
               name="chev"
               size={14}
@@ -211,6 +250,15 @@ function RequirementRow({
               )}
             />
           </button>
+          {canSwitch && (
+            <RequirementLanguageToggle
+              requirement={requirement}
+              bidderLanguage={bidderLanguage}
+              value={language}
+              onChange={setLanguage}
+              className="mt-1.5"
+            />
+          )}
           {!isTranslated && (
             <span className="mt-1 block [font:var(--type-body-sm)] text-text-muted">
               Not yet translated — shown in the tender&rsquo;s language
@@ -231,7 +279,11 @@ function RequirementRow({
               {isChecking ? 'Checking…' : 'Not checked'}
             </span>
           ) : (
-            <RowStatusBadge status={row.status} />
+            <RowStatusChange
+              row={row}
+              pending={review?.edits.editOf(row.id)?.status}
+              isConfirmed={review?.edits.isConfirmed(row.id) ?? false}
+            />
           )}
         </Td>
       </Tr>
@@ -243,6 +295,7 @@ function RequirementRow({
             isChecking={isChecking}
             activeCitation={activeCitation}
             onCite={onCite}
+            review={review}
           />
         </Td>
       </Tr>

@@ -32,7 +32,7 @@ from typing import Final
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from crossbid.agent.runner import BidRunner, build_runner
+from crossbid.agent.runner import BidRunner, RunnerError, build_runner
 from crossbid.agent.state import ExtractionProblem
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
@@ -42,7 +42,7 @@ from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.review import ReviewSubmission, RowEdit
 from crossbid.models.tender import BidStatus, BidSummary
-from crossbid.models.verdict import Verdict
+from crossbid.models.verdict import Decision, Verdict
 from crossbid.readmodel.bids import (
     TENDER_DOCUMENT_KINDS,
     BidDocumentRow,
@@ -85,7 +85,10 @@ NOT_AWAITING_REVIEW_DETAIL: Final = (
 OVERRIDE_NEEDS_A_REASON_DETAIL: Final = (
     "Your decision differs from the agent's, so a reason is required: give override_reason."
 )
-REVIEW_FAILED_DETAIL: Final = "The review could not be applied. The bid records why."
+REVIEW_FAILED_DETAIL: Final = (
+    "The review could not be applied, and the bid is still waiting for you. Try again; if it "
+    "keeps failing, the run's log says why."
+)
 
 
 # ------------------------------------------------------------------------ request models
@@ -166,8 +169,16 @@ class BidResponse(BaseModel):
     verdict: Verdict | None = Field(
         description=(
             "The agent's go/no-go with every gap behind it, written when the status "
-            "reaches `scoring`. Null before that. Advisory: the reviewer confirms or "
-            "overrides it before it is final."
+            "reaches `scoring`, and re-scored on the reviewer's statuses once they have "
+            "reviewed. Null before scoring. Advisory: what the *rules* say about the matrix."
+        )
+    )
+    decision: Decision | None = Field(
+        description=(
+            "What the reviewer decided. Null until a human has. Deliberately not the same "
+            "field as `verdict.decision`: that is what the rules say about the matrix as "
+            "the reviewer left it, and this is what the reviewer concluded. The difference "
+            "between them is the override."
         )
     )
     problems: list[ExtractionProblem] = Field(
@@ -197,6 +208,7 @@ class BidResponse(BaseModel):
             requirements=requirements,
             matrix_rows=list(matrix_rows or []),
             verdict=_verdict_of(bid),
+            decision=bid.reviewed_decision,
             problems=[ExtractionProblem.model_validate(problem) for problem in bid.problems],
             documents=[BidDocumentResponse.from_row(row) for row in documents],
             created_at=bid.created_at,
@@ -326,8 +338,18 @@ async def submit_review(
 
     try:
         await runner.submit_review(bid, body)
+    except RunnerError as exc:
+        # A review already in flight for this bid. The database claim cannot see it — the
+        # resumed graph rewrites `awaiting_review` on its way past the interrupt — so the
+        # runner holds the second half of the guard, and the reviewer gets the same answer
+        # they would for a second submission, because that is what it is.
+        logger.info("Bid %s: a review is already in flight", bid.id)
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail=NOT_AWAITING_REVIEW_DETAIL
+        ) from exc
     except Exception as exc:
-        # `submit_review` has already written the reason to the row; say so without it.
+        # `submit_review` has already put the bid back on `awaiting_review` with the reason,
+        # so the reviewer may simply try again; say so without quoting the failure.
         logger.exception("Bid %s: the review could not be applied", bid.id)
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, detail=REVIEW_FAILED_DETAIL

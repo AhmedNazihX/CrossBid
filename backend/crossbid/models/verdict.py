@@ -115,16 +115,24 @@ class Verdict(BaseModel):
                 "decision is 'go' but open items or partially supported rows remain; "
                 "use 'conditional'"
             )
-        if self.decision is Decision.GO and not self.mandatory_total:
-            # A matrix with no mandatory requirement in it has established nothing, so a
-            # clean one is not a pass: extraction that found none is the likelier reading
-            # than a tender that asks for none (S3.4.1, rule 4).
+        if self.decision is Decision.GO and not self.mandatory_supported:
+            # A `go` needs something of its own to stand on. `mandatory_supported`, not
+            # `mandatory_total`: a matrix with no mandatory requirement at all and one whose
+            # mandatory rows are every one of them `not_applicable` have both established
+            # nothing, and neither is a pass (S3.4.1, rule 4).
             raise ValueError(
-                "decision is 'go' but no mandatory requirement was scored; a bid cannot "
-                "qualify on an empty matrix -- use 'insufficient_evidence'"
+                "decision is 'go' but no mandatory requirement is supported; a bid cannot "
+                "qualify on a matrix that proves nothing -- use 'insufficient_evidence'"
             )
         is_declining = self.decision is Decision.INSUFFICIENT_EVIDENCE
-        if is_declining and self.partially_supported_rows == 0 and self.mandatory_total > 0:
+        if (
+            is_declining
+            and self.mandatory_supported
+            and not self.gaps
+            and not self.partially_supported_rows
+        ):
+            # The exact complement of the clause above: with something supported, nothing
+            # outstanding and no gaps, a `go` is available and declining is not honest.
             raise ValueError(
                 "decision is 'insufficient_evidence' but every row is settled; nothing is "
                 "insufficient -- use 'go', 'conditional' or 'no_go'"

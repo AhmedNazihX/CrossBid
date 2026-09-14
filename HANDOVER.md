@@ -1,4 +1,4 @@
-# Handover — end of the Increment 2 session (2026-09-13, extended 2026-09-14)
+# Handover — end of the Increment 3 backend session (2026-09-14)
 
 Written for whoever picks this up next, including a future me with no memory of the session.
 `CLAUDE.md` is still the standing brief; `docs/project-plan.md` is still the source of truth for
@@ -7,6 +7,42 @@ scope. This file only covers what changed, what it cost, and what is genuinely o
 ---
 
 ## Where the project stands
+
+**Increment 3's backend is code-complete: S3.4.1, S3.4.2, S3.4.3 and S3.4.4 are built and
+committed.** The graph now runs `parse_docs → extract_reqs → plan_checks → check_reqs →
+score_verdict → await_review → apply_review → finalize`, and a bid ends `complete` with a
+verdict, a reviewed matrix and an audit row. ADR-0024 to ADR-0027 record the decisions.
+Migration **0006** is applied to Frankfurt. **4 217 tests, 100 % coverage, `make lint` clean.**
+
+**What is left in Increment 3 is the two workspace screens** — S4.5.2 (L, row editing) and
+S4.5.3 (confirm or override the verdict) — and then a walkthrough of the round trip against
+Frankfurt.
+
+Four things from that work that a later story must not undo:
+
+1. **The reviewer's decision and the re-scored verdict are different facts** and live in
+   different columns (`bids.decision`, `bids.verdict`). A reviewer may mark two rows
+   `not_applicable` and still say `no_go`; that difference *is* the override, and `Verdict`
+   refuses a decision contradicting its own gaps, so collapsing them was never expressible
+   (ADR-0025).
+2. **The agent's matrix upsert must stay unable to write a reviewer's column.** S3.4.2 shipped
+   without the second statement and every reviewer edit was silently dropped — the bid reached
+   `complete`, the audit row was written, and the matrix still read `pending`. `write_reviewed_rows`
+   is that statement; `test_bids_readmodel.py` asserts the upsert still cannot name those
+   columns (ADR-0026).
+3. **`matrix_rows` is a merge-by-id channel, not an appending one.** `apply_review` returns the
+   whole matrix; under `operator.add` that is 135 rows becoming 270 with the re-score running
+   over both copies (`state.merged_rows`).
+4. **`ChatOpenAI` retries twice by itself** and `max_retries=0` is now set, so S3.4.4's "one
+   retry, then the smaller model" is true rather than approximately true (ADR-0027).
+
+**A verdict a live run will now produce that looks wrong and is not:** a bid whose extraction
+found nothing scores `insufficient_evidence`, never `go`. `Verdict` refuses a `go` with zero
+mandatory requirements, because zero of zero is not a pass (ADR-0024).
+
+---
+
+## Where Increment 2 left it (still true)
 
 **Increment 2 is code-complete.** Every story built and committed: S1.1.2, S1.4.1, S2.4.1,
 S2.4.2, S3.3.1, S3.3.2, S4.5.1's matrix criterion, plus the wait-fillers S6.3, S6.4 and S3.2.3.
@@ -35,6 +71,7 @@ equivalence where a criterion id exists, and the matrix renders read-only in the
 |---|---|---|
 | **Milestone 1** | in progress | S3.2.1 (below) **and** a recorded end-to-end demo, which has never been made |
 | **Milestone 2** | in progress | all seven stories built; closes with Milestone 1's demo |
+| **Milestone 3** | in progress | backend done; S4.5.2 and S4.5.3 remain, then a walkthrough |
 
 ---
 
@@ -183,10 +220,10 @@ Three options, in the order I would take them.
    its ten evidence documents, no tender documents, no bids. The FR pack is uploaded on camera
    from `backend/tests/fixtures/tenders/fr/`. Show the wedge on **FR with the DUME**; the PDFs on
    their own leave the card dark. The retro's one recommendation is to do this *first*, not last.
-2. **Start Increment 3 — the review round-trip.** S3.4.1–S3.4.4, S4.5.2, S4.5.3 (**S2.4.3 is
-   done** — `make seed-demo` landed early because the demo needed it): the
-   verdict, the human interrupt, and the reviewer editing rows. This is the product's safety
-   boundary and the last substantial work before the submission line at Milestone 5.
+2. **Finish Increment 3.** Its backend is done (S3.4.1–S3.4.4); what remains is S4.5.2 and
+   S4.5.3, the two workspace screens, and a walkthrough of the round trip. See *Finishing
+   Increment 3* below. Once they land, the review demo is a second recording worth making
+   immediately — the increment's own end-to-end walk.
 3. **Keep attacking recall** — only with repeated runs per configuration, and knowing the noise
    floor. The plan time-boxes this (R6) for good reason.
 
@@ -195,74 +232,64 @@ defensible story for the grader than a number chased to 0.9.
 
 ---
 
-## Starting Increment 3 — read this first
+## Finishing Increment 3 — read this first
 
-Increment 3 is the **review round-trip**: the verdict, the human interrupt that accepts a
-reviewer's edits, and the workspace UI for making them. It is the product's safety boundary and
-the last substantial work before the submission line at Milestone 5.
+The backend is done. What is left is `S4.5.2` and `S4.5.3`, which are independent of each
+other, and then walking the round trip in a browser.
 
-### The stories, and why the order is forced
-
-`S3.4.1 → S3.4.2 → {S3.4.3, S3.4.4} → {S4.5.2, S4.5.3}`
-
-| Story | Size | What it is | `needs` |
+| Story | Size | What it is | state |
 |---|---|---|---|
-| **S3.4.1** | M | The scorer: mandatory row `unsupported` or an unmet exclusion ground → `no_go`; mandatory `partially_supported` → `conditional`; a mandatory row with no evidence is **never** `go` | S3.3.1 ✅ |
-| **S3.4.2** | M | The interrupt accepts a review: rows + decision come back, the scorer re-runs on the reviewer's statuses, bid ends `done`; a second submission is **409** | S3.4.1 |
-| **S3.4.3** | M | Read-model writes at scoring and at review; `GET /bids` reads only from them, with a consistency test against the checkpoint | S3.4.2 |
-| **S3.4.4** | M | Resilience: unread pages listed, LLM timeout → one retry → smaller model, schema violation → one re-ask → `partially_supported`, no eCertis entry flagged, expired certificate warned with its date | S3.4.2 |
-| **S4.5.2** | **L** | Reviewer edits a row's status, gives a reason, attaches a document, switches FR/DE per row; edits held locally until confirm, agent's original stays visible | S3.4.3, S4.0.1 ✅ |
-| **S4.5.3** | M | Confirm or override the verdict with a reason; submitted once, final state shown | S3.4.2, S4.0.1 ✅ |
-
-**Nothing parallelises until S3.4.1 lands** — every other story depends on it directly or
-transitively. After S3.4.2, S3.4.3 and S3.4.4 are independent of each other, and so are S4.5.2
-and S4.5.3 once their backend dependency is in. S4.5.2 is the only **L** in the increment.
+| **S3.4.1** | M | The rules-only scorer, explained in the bidder's language and tone | ✅ ADR-0024 |
+| **S3.4.2** | M | The interrupt accepts a review; the scorer re-runs; a second submission is 409 | ✅ ADR-0025 |
+| **S3.4.3** | M | Read-model writes at scoring and review, with a consistency test | ✅ ADR-0026 |
+| **S3.4.4** | M | Resilience, and the two reviewer notices | ✅ ADR-0027 |
+| **S4.5.2** | **L** | Reviewer edits a row's status, gives a reason, attaches a document, switches FR/DE per row; edits held locally until confirm, agent's original stays visible | in progress |
+| **S4.5.3** | M | Confirm or override the verdict with a reason; submitted once, final state shown | in progress |
 
 Wait-fillers for this increment: **S6.5, S7.3**, then S7.2.
 
-### What already exists, so you do not rebuild it
+### What the frontend has to work against
 
-- **The graph is built for this.** `crossbid/agent/graph.py`'s module docstring already names
-  `score_verdict`, `apply_review` and `finalize` as "later stories", and decision 2 explains why
-  the interrupt is a **node calling `interrupt()`** rather than `interrupt_after=`: a static
-  interrupt on the last node leaves `aget_state().next == ()` with no `interrupts`, which is
-  indistinguishable from a finished run. The node parks with `next == ("await_review",)` and
-  continues on `Command(resume=review)`, **which is exactly the mechanism S3.4.2 needs.** That
-  was measured on langgraph 1.2.11 before being chosen — do not re-litigate it.
-- **`_request_review` is the seam.** It currently returns `{}` and its docstring says so:
-  "S3.4.2 replaces the return with the review payload `interrupt()` hands back."
-- **One documented caveat you will hit:** on resume the node re-runs from its top, so the
-  `awaiting_review` status write happens twice. The value is identical both times and
-  `apply_review`'s stage overwrites it immediately. This is known, not a bug to chase.
-- **`stage()` wraps every node** — status on entry, projection on exit, `StageError` naming the
-  stage and never the document (ADR-0008). New nodes go through it; do not write the read model
-  directly from a node.
-- **The vocabulary is settled (ADR-0013)**, and the UI already speaks it: rows are
-  `supported` / `partially_supported` / `unsupported` / `not_applicable`; verdicts are
-  `go` / `conditional` / `no_go` / `insufficient_evidence`. `/verdicts` is a placeholder route
-  that names its story.
-- **You will need a parked bid to work against, and there is none right now.** The FR run that
-  proved ADR-0023 was deleted so the demo could be recorded live (see above). Recreate one in
-  about three minutes whenever you need it: upload the three files in
-  `backend/tests/fixtures/tenders/fr/` as *Tender notice*, *Tender document* and *ESPD / DUME
-  request*, then start a bid on notice `618320-2026` in French. It parks at `awaiting_review`
-  with ~135 requirements, 30 of them DUME-sourced with eCertis evidence — the fixture every
-  resume path in S3.4.2 needs. **If the demo has since been recorded, one may already exist.**
+- **`POST /bids/{id}/review`** takes a `ReviewSubmission` and answers the finished
+  `BidResponse` — **synchronously**, because nothing past the interrupt calls a model. There is
+  no polling after a review. `frontend/lib/bids.ts` already exports `submitReview` and the
+  types.
+- **409** means the bid is not parked at `awaiting_review`, and it cannot distinguish "already
+  reviewed" from "still running" — the claim is one conditional `UPDATE`. Do not offer a retry
+  that will also 409; show the current state.
+- **422** names a row the matrix does not have, a status the row cannot legally take (a
+  `supported` row needs an evidence quote or an attachment), or a decision differing from the
+  agent's with no `override_reason`. All three are checked *before* the graph is resumed, so a
+  rejected review leaves the bid exactly where it was.
+- `BidResponse.verdict` is the **agent's advisory** verdict while parked, and the **re-scored**
+  one afterwards. The reviewer's own decision is not in it — it is on the dashboard's
+  `BidSummary.decision`. Two answers to two questions (ADR-0025).
+
+### You will need a parked bid to work against
+
+There is none right now, and that is deliberate — Frankfurt is reset for a live demo take.
+Recreate one in about three minutes: upload the three files in
+`backend/tests/fixtures/tenders/fr/` as *Tender notice*, *Tender document* and *ESPD / DUME
+request*, then start a bid on notice `618320-2026` in French. It parks at `awaiting_review`
+with ~135 requirements, 30 of them DUME-sourced with eCertis evidence. **Delete it again
+afterwards** if the demo has still not been recorded.
 
 ### The one process change the retro asks for
 
-**Record the demo first, not last.** Every defect found in Increment 2 — unverified answer keys,
-a wedge no run could light, a DUME no user could upload — was reachable only by walking the
-product end to end, and each was found when the walkthrough was finally attempted. Increment 3's
-demo is the review round-trip; walking it early is how S3.4.2's 409 and S4.5.2's local-edit
-state get exercised before they are called done.
+**Record the demo first, not last.** Every defect found in Increment 2 — unverified answer
+keys, a wedge no run could light, a DUME no user could upload — was reachable only by walking
+the product end to end. Increment 3 has now produced a fourth of exactly that shape: S3.4.2's
+reviewer edits reached `complete` without ever reaching the database, and only writing
+S3.4.3's consistency test found it. The walk is what finds these; a test that walks is the
+cheap version of it.
 
 ---
 
 ## Reproducing the state
 
 ```bash
-make install && make lint && make test          # 3 996 tests, 100 % coverage, all offline
+make install && make lint && make test          # 4 217 tests, 100 % coverage, all offline
+make migrate                                    # 0006 is the newest; applied to Frankfurt already
 uv run scripts/recall.py                        # scores the committed fixtures
 uv run scripts/recall.py tests/fixtures/extractions/de.live.json   # the real DE figure; exits 1
 make test-live                                  # costs money; the DE bid run alone is ~$1.60

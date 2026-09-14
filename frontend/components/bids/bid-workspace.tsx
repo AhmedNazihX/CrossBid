@@ -10,6 +10,8 @@ import { MatrixSummary } from '@/components/matrix/matrix-summary'
 import { RequirementCards } from '@/components/matrix/requirement-cards'
 import { RequirementList } from '@/components/matrix/requirement-list'
 import { indexRowsByRequirement } from '@/components/matrix/row-status'
+import type { AttachableDocument } from '@/components/matrix/row-attachments'
+import { useRowEdits } from '@/components/matrix/use-row-edits'
 import { citableDocuments } from '@/components/matrix/source-documents'
 import type { Citation } from '@/components/matrix/citation'
 import { SourcePanel, type SourceSelection } from '@/components/pdf/source-panel'
@@ -21,11 +23,13 @@ import { Notice } from '@/components/ui/notice'
 import { Tabs } from '@/components/ui/tabs'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
-import { getBid, isBidSettled, type BidResponse } from '@/lib/bids'
+import { getBid, isAwaitingReview, isBidSettled, type BidResponse } from '@/lib/bids'
+import { listDocuments } from '@/lib/documents'
 import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
 import { SHELL_MEDIA_QUERY, useMediaQuery } from '@/lib/use-media-query'
 import { usePolling } from '@/lib/use-polling'
 import { BID_STATUS_LABELS } from './bid-status'
+import { VerdictPanel } from './verdict-panel'
 
 type LoadState =
   | { readonly phase: 'loading' }
@@ -110,16 +114,24 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
     (signal: AbortSignal) => getBid(initial.id, signal),
     [initial.id]
   )
-  const { value: bid, error: pollError } = usePolling({
+  const { value: polled, error: pollError } = usePolling({
     initialValue: initial,
     fetchLatest,
     isSettled: isBidSettled,
   })
+  // The server's answer to the review is newer than any poll, and polling has stopped by
+  // then anyway — `complete` is settled. So a reviewed bid supersedes the polled one for the
+  // rest of this mount. A 409 lands here too: the panel re-reads the bid and hands back what
+  // is actually true, which is exactly what the screen should switch to (S4.5.3).
+  const [reviewed, setReviewed] = useState<BidResponse | undefined>(undefined)
+  const bid = reviewed ?? polled
   const isDesktop = useMediaQuery(SHELL_MEDIA_QUERY)
   const [selection, setSelection] = useState<SourceSelection | undefined>(undefined)
   const [activeCitation, setActiveCitation] = useState<Citation | undefined>(undefined)
   const [phoneTab, setPhoneTab] = useState<PhoneTab>('matrix')
   const announcement = useStatusAnnouncement(bid)
+  const edits = useRowEdits(bid.matrix_rows)
+  const attachable = useAttachableDocuments(isAwaitingReview(bid))
 
   const status = BID_STATUS_LABELS[bid.status]
   const isRunning = !isBidSettled(bid)
@@ -134,6 +146,9 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
     [bid.documents, bid.matrix_rows]
   )
   const hasRows = bid.matrix_rows.length > 0
+  // Only while the bid is parked: omitting it leaves the matrix exactly as S4.5.1 built it,
+  // which is what a finished or still-running bid should show.
+  const review = isAwaitingReview(bid) ? { edits, attachable } : undefined
 
   const handleCite = useCallback(
     (citation: Citation) => {
@@ -162,16 +177,39 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
 
   const emptyMessage = describeEmptyList(bid)
   const reviewNote =
-    'Every row is still waiting for your confirmation; the verdict follows that review.'
-  const reviewButton = (
-    <Button
-      disabled
-      aria-describedby="review-verdict-note"
-      icon={<Icon name="shield" size={16} />}
-    >
-      Review verdict
-    </Button>
+    bid.verdict === null
+      ? 'The verdict is written once checking has finished.'
+      : 'Confirm the verdict, or override it with a reason. Your row edits go with it.'
+  const showVerdict = useCallback(() => setPhoneTab('verdict'), [])
+  const backToMatrix = useCallback(() => setPhoneTab('matrix'), [])
+  const verdictPanel = (
+    <VerdictPanel
+      bid={bid}
+      rowEdits={edits.edits}
+      onReviewed={setReviewed}
+      onBackToMatrix={isDesktop === false ? backToMatrix : undefined}
+    />
   )
+  const reviewButton =
+    bid.verdict === null ? (
+      <Button
+        disabled
+        aria-describedby="review-verdict-note"
+        icon={<Icon name="shield" size={16} />}
+      >
+        Review verdict
+      </Button>
+    ) : (
+      // A link, not a button: the panel is on this page and the action is "take me to it",
+      // so it should open in a new tab, be copyable, and move focus the way an anchor does.
+      <Link
+        href="#verdict"
+        className="inline-flex h-9 items-center gap-2 rounded-md bg-accent-default px-3.5 [font:var(--type-body-sm)] font-medium text-text-inverse no-underline transition-colors hover:bg-accent-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-default"
+      >
+        <Icon name="shield" size={16} />
+        Review verdict
+      </Link>
+    )
 
   const liveRegion = (
     <p role="status" aria-live="polite" className="sr-only">
@@ -239,10 +277,12 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             <RequirementCards
               requirements={bid.requirements}
               rowsByRequirement={rowsByRequirement}
+              bidderLanguage={bid.bidder_language}
               isChecking={isRunning}
               activeCitation={activeCitation}
               onCite={handleCite}
               emptyMessage={emptyMessage}
+              review={review}
             />
           </div>
           <div id="phone-panel-source" role="tabpanel" hidden={phoneTab !== 'source'}>
@@ -256,7 +296,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             )}
           </div>
           <div id="phone-panel-verdict" role="tabpanel" hidden={phoneTab !== 'verdict'}>
-            <Notice title="No verdict yet">{reviewNote}</Notice>
+            {phoneTab === 'verdict' && verdictPanel}
           </div>
           {pollError !== undefined && (
             <p className="m-0 [font:var(--type-body-sm)] text-text-muted">
@@ -268,9 +308,10 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
           <Button
             size="lg"
             fullWidth
-            disabled
+            disabled={bid.verdict === null}
             aria-describedby="review-verdict-note"
             icon={<Icon name="shield" size={16} />}
+            onClick={showVerdict}
           >
             Review verdict
           </Button>
@@ -367,6 +408,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             activeCitation={activeCitation}
             onCite={handleCite}
             emptyMessage={emptyMessage}
+            review={review}
           />
         </div>
         <SourcePanel
@@ -375,8 +417,48 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
           onSelect={handleSelect}
         />
       </div>
+      {bid.verdict !== null && (
+        <div id="verdict" className="mt-6 scroll-mt-4">
+          {verdictPanel}
+        </div>
+      )}
     </>
   )
+}
+
+/**
+ * The company's own evidence, as the documents a reviewer may attach to a row (S4.5.2).
+ *
+ * Fetched once, and only while the bid is parked: a finished bid has nothing to attach to,
+ * and a running one has no rows yet. Tender documents are deliberately not offered — a row
+ * is proved by what the bidder holds, not by the buyer's own pack — and a document still
+ * being parsed is not attachable, so both filters are applied here rather than in the panel.
+ *
+ * A failure costs the attach control and nothing else: the reviewer can still change a
+ * status and give a reason, so the list stays empty and the panel says so.
+ */
+function useAttachableDocuments(isEnabled: boolean): readonly AttachableDocument[] {
+  const [documents, setDocuments] = useState<readonly AttachableDocument[]>([])
+  useEffect(() => {
+    if (!isEnabled) {
+      return
+    }
+    const controller = new AbortController()
+    listDocuments(controller.signal)
+      .then((all) =>
+        setDocuments(
+          all
+            .filter((d) => d.kind === 'company_evidence' && d.status === 'ready')
+            .map((d) => ({ id: d.id, name: d.name }))
+        )
+      )
+      .catch(() => {
+        // Attaching is one of three things a reviewer can do to a row; losing the list must
+        // not take the other two with it.
+      })
+    return () => controller.abort()
+  }, [isEnabled])
+  return documents
 }
 
 /**

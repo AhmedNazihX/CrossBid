@@ -363,17 +363,18 @@ def test_mandatory_supported_cannot_exceed_the_total() -> None:
         )
 
 
-def test_a_go_needs_at_least_one_mandatory_requirement_to_have_been_scored() -> None:
-    """Zero of zero is not a pass: extraction that found no mandatory requirement is the
-    likelier reading than a tender that asks for none (S3.4.1)."""
-    with pytest.raises(ValidationError, match="empty matrix"):
-        Verdict(
-            decision=Decision.GO,
-            rationale="x",
-            mandatory_total=0,
-            mandatory_supported=0,
-            partially_supported_rows=0,
-        )
+def test_a_go_needs_a_mandatory_requirement_it_can_say_is_supported() -> None:
+    """Zero of zero is not a pass, and neither is zero of three: a matrix that proves
+    nothing cannot qualify a bid however tidy it is (S3.4.1)."""
+    for total in (0, 3):
+        with pytest.raises(ValidationError, match="proves nothing"):
+            Verdict(
+                decision=Decision.GO,
+                rationale="x",
+                mandatory_total=total,
+                mandatory_supported=0,
+                partially_supported_rows=0,
+            )
 
 
 def test_an_empty_matrix_may_decline_to_judge_although_no_row_is_unsettled() -> None:

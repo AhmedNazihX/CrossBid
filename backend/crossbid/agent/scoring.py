@@ -28,11 +28,12 @@ ran — a resumed run, a cancelled shutdown. Treating "not checked" as "fine" is
 failure mode a go/no-go must not have.
 
 **4. `insufficient_evidence` is the agent declining to judge, and the test for it is that
-nothing was settled.** Not a proportion: a threshold like "fewer than half the rows" would
-be a number nobody in the plan chose. If not one mandatory requirement came back
-`supported` or `not_applicable` while rows remain open, there is nothing to build a
-recommendation on. An empty matrix is the same answer for the same reason, which is why
-zero of zero is never a `go`.
+it can point at nothing.** Not a proportion: a threshold like "fewer than half the rows"
+would be a number nobody in the plan chose. If not one mandatory requirement came back
+`supported`, there is nothing to build a recommendation on — and that one sentence covers
+every shape of it: an empty matrix, a matrix nobody checked, a matrix of nothing but
+`partially_supported`, and a matrix whose mandatory rows the model all read as
+`not_applicable`. Each of those was a different wrong answer before it was written this way.
 
 **5. A gap names the numbers when the profile can answer them, and stays silent when it
 cannot.** `required` comes off the requirement's own `Threshold`; `actual` comes off the
@@ -114,9 +115,7 @@ def score(
     partial = sum(
         1 for req in scored if _status_of(by_requirement, req) is RowStatus.PARTIALLY_SUPPORTED
     )
-    settled = sum(1 for req in mandatory if _status_of(by_requirement, req) in SETTLED_STATUSES)
-
-    decision = _decide(gaps, partially_supported=partial, settled_mandatory=settled)
+    decision = _decide(gaps, partially_supported=partial, supported_mandatory=supported)
     return Verdict(
         decision=decision,
         gaps=tuple(gaps),
@@ -139,20 +138,29 @@ def score(
 
 
 def _decide(
-    gaps: Sequence[Gap], *, partially_supported: int, settled_mandatory: int
+    gaps: Sequence[Gap], *, partially_supported: int, supported_mandatory: int
 ) -> Decision:
     """The decision, in the order the criteria are written. Nothing else decides.
 
-    The order is the point: a blocking gap outranks every open item, and `go` is reachable
-    only from a matrix with neither. `insufficient_evidence` sits between `go` and
-    `conditional` rather than below them — see rule 4.
+    The order is the point. A blocking gap outranks everything: it is a definite answer, and
+    a bid with one is `no_go` however little else was established. Below that, **the agent
+    needs something of its own to stand on** — one mandatory requirement it can say is
+    supported — or it declines. Only then do the open items decide between `go` and
+    `conditional`.
+
+    `supported_mandatory` and not "settled": counting `not_applicable` towards the gate let
+    three mandatory rows the model read as inapplicable produce a `go` whose own rationale
+    said `0 of 3 supported`, and let five mandatory requirements *nobody had checked* produce
+    `conditional` — the encouraging answer for the worse state, because an empty matrix
+    declined and a never-checked one did not. `not_applicable` still closes a gap; it just
+    cannot open a recommendation.
     """
     if any(gap.severity is GapSeverity.BLOCKING for gap in gaps):
         return Decision.NO_GO
-    if not gaps and not partially_supported:
-        return Decision.GO if settled_mandatory else Decision.INSUFFICIENT_EVIDENCE
-    if partially_supported and not settled_mandatory:
+    if not supported_mandatory:
         return Decision.INSUFFICIENT_EVIDENCE
+    if not gaps and not partially_supported:
+        return Decision.GO
     return Decision.CONDITIONAL
 
 
@@ -165,9 +173,13 @@ def _gaps(
 ) -> list[Gap]:
     """Every reason the bidder does not yet qualify, blocking ones first.
 
-    Requirement order is preserved inside each severity, which is document-and-page order
-    by the time the read model has them — so the gap list reads in the order a reviewer
-    would meet the clauses.
+    Requirement order is preserved inside each severity — but that is the order of the
+    `requirements` channel, which is the order the nodes appended in: a published DUME's
+    criteria first (`parse_docs`), then extraction's, section by section. The matrix the
+    workspace shows is sorted by document and page (`SELECT_MATRIX_ROWS`), so on a pack with
+    a DUME the two orders differ and the gaps named in the rationale are not the first rows
+    of the list beside it. Stated rather than fixed: sorting here would need the read model's
+    ordering rule in a module that has no database, and the gap carries its requirement id.
     """
     found = [
         gap
@@ -203,18 +215,24 @@ def _gap_for(
 
 
 def _severity_of(requirement: Requirement, row: MatrixRow | None) -> GapSeverity | None:
-    """How badly this requirement is open, or `None` when it is not. Rules 2 and 3."""
-    if requirement.kind is RequirementKind.INFORMATIONAL:
+    """How badly this requirement is open, or `None` when it is not. Rules 2 and 3.
+
+    The order of the first two tests is the whole of rule 2 and was wrong once. An exclusion
+    ground is read *before* `kind` is consulted, because `kind` is assigned by the extraction
+    model and an exclusion ground it labelled `informational` is an extraction defect — one
+    that would otherwise let a bidder with evidence against them on an unspent conviction
+    score `go` with no gap naming it. Only a requirement that is not an exclusion ground may
+    be softened by its kind.
+    """
+    is_exclusion_ground = requirement.category is RequirementCategory.EXCLUSION_GROUND
+    if requirement.kind is RequirementKind.INFORMATIONAL and not is_exclusion_ground:
         return None
     if row is None:
         # Never checked. Rule 3: that is an open item, never a silent pass.
         return GapSeverity.OPEN_ITEM
     if row.status in SETTLED_STATUSES:
         return None
-    is_fatal = (
-        requirement.kind is RequirementKind.MANDATORY
-        or requirement.category is RequirementCategory.EXCLUSION_GROUND
-    )
+    is_fatal = requirement.kind is RequirementKind.MANDATORY or is_exclusion_ground
     if row.status is BLOCKING_STATUS and is_fatal:
         return GapSeverity.BLOCKING
     return GapSeverity.OPEN_ITEM

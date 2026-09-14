@@ -21,6 +21,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
+from crossbid.agent.runner import RunnerError
 from crossbid.agent.state import ExtractionProblem, ExtractionProblemReason
 from crossbid.auth import DEV_COMPANY_HEADER
 from crossbid.ingestion.storage import StorageError
@@ -1099,3 +1100,61 @@ def test_unread_pages_and_problems_are_both_listed_on_the_bid(
     assert body["documents"][0]["unread_pages"] == [3]
     assert body["problems"][0]["reason"] == "unreadable_document"
     assert body["problems"][0]["pages"] == [1, 2, 3]
+
+
+def test_a_reviewed_bid_carries_the_reviewers_decision_beside_the_re_scored_verdict(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """ADR-0025's whole point, at the API. The verdict is what the rules say about the matrix
+    as the reviewer left it; `decision` is what the reviewer concluded. Without both on this
+    response the workspace would show the re-score while the dashboard showed the override."""
+    # Arrange
+    rescored = Verdict(
+        decision=Decision.CONDITIONAL,
+        gaps=(Gap(requirement_id="a", severity=GapSeverity.OPEN_ITEM, summary="Personal"),),
+        rationale="Dieses Angebot ist mit Auflagen möglich.",
+        mandatory_total=2,
+        mandatory_supported=1,
+        partially_supported_rows=1,
+    )
+    bid = read_model.add_bid(
+        status=BidStatus.COMPLETE,
+        verdict=rescored.model_dump(mode="json"),
+        reviewed_decision=Decision.NO_GO,
+    )
+
+    # Act
+    body = client.get(f"/bids/{bid.id}", headers=headers()).json()
+
+    # Assert
+    assert body["verdict"]["decision"] == "conditional"
+    assert body["decision"] == "no_go"
+
+
+def test_a_bid_nobody_has_reviewed_has_no_decision(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """Null until a human has decided — the agent's advisory answer lives in `verdict`."""
+    bid = read_model.add_bid(
+        status=BidStatus.AWAITING_REVIEW, verdict=AGENT_VERDICT.model_dump(mode="json")
+    )
+
+    assert client.get(f"/bids/{bid.id}", headers=headers()).json()["decision"] is None
+
+
+def test_a_review_already_in_flight_is_the_same_conflict_as_a_second_submission(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    """The database claim cannot see an in-flight review: the resumed graph rewrites
+    `awaiting_review` on its way past the interrupt. The runner holds the other half of the
+    guard, and a reviewer must not be able to tell the two cases apart."""
+    # Arrange
+    bid, _row = parked_bid(read_model)
+    runner.review_error = RunnerError(f"bid {bid.id} is already being reviewed")
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers())
+
+    # Assert
+    assert response.status_code == 409
+    assert response.json()["detail"] == bids_router.NOT_AWAITING_REVIEW_DETAIL

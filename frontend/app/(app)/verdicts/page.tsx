@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-import { EmptyState } from '@/components/common/empty-state'
+import { VerdictsList } from '@/components/bids/verdicts-list'
 import { PageHeader } from '@/components/layout/page-header'
 
 export const metadata: Metadata = {
@@ -8,26 +8,21 @@ export const metadata: Metadata = {
 }
 
 /**
- * Placeholder behind the sidebar's Verdicts entry. The review screen — the agent's
- * recommendation, what would change it, and your decision with a reason — is S4.5.3
- * (`Verdict.dc.html`) and needs the evidence check of Increment 2 first.
+ * The Verdicts screen behind the sidebar's entry (story S4.5.3, `Verdict.dc.html`): the
+ * queue of recommendations a person still owes an answer to.
+ *
+ * The review itself happens in the bid's own workspace, next to the matrix it is a verdict
+ * on — a decision taken from a list, without the evidence in front of it, is exactly the
+ * rubber stamp the interrupt exists to prevent. So this page routes rather than decides.
  */
 export default function VerdictsPage() {
   return (
     <>
       <PageHeader
         title="Verdicts"
-        description="Every recommendation waiting for your confirmation, and the ones you have decided."
+        description="Every recommendation waiting for your confirmation, and the ones you have decided. Open a tender to confirm or override its verdict against the matrix behind it."
       />
-      <EmptyState
-        title="No verdicts to review yet"
-        description="A verdict is Go, Conditional, No-go, or Insufficient evidence, with the compliance matrix behind it. It appears once the evidence check has run over a bid, and nothing proceeds until a person confirms or overrides it."
-        steps={[
-          'Start a bid; the requirement list appears first, the verdict follows in Increment 2.',
-        ]}
-        action={{ href: '/bids/new', label: 'Analyse tender' }}
-        secondaryAction={{ href: '/dashboard', label: 'Back to dashboard' }}
-      />
+      <VerdictsList />
     </>
   )
 }

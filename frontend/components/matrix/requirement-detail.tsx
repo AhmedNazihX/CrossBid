@@ -11,6 +11,7 @@ import {
   STAGE_LABELS,
 } from './requirement-labels'
 import { RowEvidence } from './row-evidence'
+import type { RowReview } from './row-review-controls'
 
 export interface RequirementDetailProps {
   readonly requirement: Requirement
@@ -19,6 +20,8 @@ export interface RequirementDetailProps {
   readonly isChecking: boolean
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
+  /** Present once the bid is parked at its interrupt; absent keeps the panel read-only. */
+  readonly review?: RowReview
 }
 
 /**
@@ -36,6 +39,7 @@ export function RequirementDetail({
   isChecking,
   activeCitation,
   onCite,
+  review,
 }: RequirementDetailProps) {
   return (
     <div className="grid gap-5 shell:grid-cols-2 shell:pl-[116px]">
@@ -73,7 +77,12 @@ export function RequirementDetail({
           </p>
         </div>
       ) : (
-        <RowEvidence row={row} activeCitation={activeCitation} onCite={onCite} />
+        <RowEvidence
+          row={row}
+          activeCitation={activeCitation}
+          onCite={onCite}
+          review={review}
+        />
       )}
     </div>
   )

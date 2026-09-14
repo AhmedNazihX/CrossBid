@@ -10,9 +10,16 @@ import type { MatrixRow, Requirement } from '@/lib/bids'
 import { requirementLabel } from '@/lib/format'
 import { CitationLink } from './citation-link'
 import { isSameCitation, type Citation } from './citation'
+import {
+  isSwitchable,
+  RequirementLanguageToggle,
+  requirementTextIn,
+  type RequirementLanguage,
+} from './requirement-language'
 import { CATEGORY_LABELS, CATEGORY_ORDER } from './requirement-labels'
 import { RowEvidence } from './row-evidence'
-import { RowStatusBadge } from './row-status-badge'
+import type { RowReview } from './row-review-controls'
+import { RowStatusChange } from './row-status-change'
 
 export interface RequirementCardsProps {
   readonly requirements: readonly Requirement[]
@@ -21,6 +28,9 @@ export interface RequirementCardsProps {
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
   readonly emptyMessage: React.ReactNode
+  readonly bidderLanguage: string
+  /** The reviewer's pending edits (S4.5.2); absent leaves the cards read-only. */
+  readonly review?: RowReview
 }
 
 /**
@@ -28,7 +38,10 @@ export interface RequirementCardsProps {
  * category with its count; each card a white 12 px-radius tile headed by the row's status
  * badge, with the requirement id and its citation, the requirement explained, and the
  * agent's one sentence underneath — the artboard's evidence line. Expanding a card shows the
- * cited passages and the eCertis card. Every tap target is at least 44 px.
+ * cited passages, the eCertis card and, with a `review`, the Confirm / Change status / Add
+ * evidence controls. The phone has no second column for the tender's own words, so the row's
+ * language switch is how the original is reached here at all. Every tap target is at
+ * least 44 px.
  */
 export function RequirementCards({
   requirements,
@@ -37,6 +50,8 @@ export function RequirementCards({
   activeCitation,
   onCite,
   emptyMessage,
+  bidderLanguage,
+  review,
 }: RequirementCardsProps) {
   if (requirements.length === 0) {
     return <div className="text-text-secondary">{emptyMessage}</div>
@@ -67,6 +82,8 @@ export function RequirementCards({
                 label={requirementLabel(index)}
                 activeCitation={activeCitation}
                 onCite={onCite}
+                bidderLanguage={bidderLanguage}
+                review={review}
               />
             ))}
           </section>
@@ -83,6 +100,8 @@ interface RequirementCardProps {
   readonly label: string
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
+  readonly bidderLanguage: string
+  readonly review?: RowReview
 }
 
 function RequirementCard({
@@ -92,8 +111,11 @@ function RequirementCard({
   label,
   activeCitation,
   onCite,
+  bidderLanguage,
+  review,
 }: RequirementCardProps) {
   const [isExpanded, setExpanded] = useState(false)
+  const [language, setLanguage] = useState<RequirementLanguage>('bidder')
   const detailId = `${requirement.id}-evidence`
   const citation: Citation = {
     documentName: requirement.document_name,
@@ -107,7 +129,12 @@ function RequirementCard({
           {isChecking ? 'Checking…' : 'Not checked'}
         </span>
       ) : (
-        <RowStatusBadge status={row.status} className="self-start" />
+        <RowStatusChange
+          row={row}
+          pending={review?.edits.editOf(row.id)?.status}
+          isConfirmed={review?.edits.isConfirmed(row.id) ?? false}
+          className="self-start"
+        />
       )}
       <div className="flex flex-wrap items-center justify-between gap-x-2">
         <Tag mono>{label}</Tag>
@@ -118,9 +145,22 @@ function RequirementCard({
           className="min-h-11"
         />
       </div>
-      <p className="m-0 text-base leading-[1.45] text-text-primary">
-        {requirement.translation ?? requirement.source_text}
+      <p
+        lang={language === 'source' ? requirement.source_lang : bidderLanguage}
+        className="m-0 text-base leading-[1.45] text-text-primary"
+      >
+        {requirementTextIn(requirement, language)}
       </p>
+      {isSwitchable(requirement, bidderLanguage) && (
+        <RequirementLanguageToggle
+          requirement={requirement}
+          bidderLanguage={bidderLanguage}
+          value={language}
+          onChange={setLanguage}
+          isPhone
+          className="self-start"
+        />
+      )}
       {row !== undefined && (
         <>
           <p className="m-0 [font:var(--type-body-sm)] text-text-secondary">
@@ -147,6 +187,7 @@ function RequirementCard({
               onCite={onCite}
               isPhone
               showRationale={false}
+              review={review}
             />
           </div>
         </>

@@ -61,6 +61,11 @@ def bid_row(bid_id: str | None = None, **overrides: Any) -> BidRow:
     return BidRow(**(values | overrides))
 
 
+WAIT_TIMEOUT_S = 5.0
+"""Long enough for a scheduled coroutine to start; short enough that a guard that never
+releases fails the suite instead of hanging it."""
+
+
 class RecordingProjection:
     def __init__(self) -> None:
         self.statuses: list[BidStatus] = []
@@ -597,11 +602,15 @@ async def test_submit_review_resumes_the_parked_run_and_waits_for_it(
     assert runner.running == frozenset()
 
 
-async def test_submit_review_records_a_failure_on_the_bid_and_re_raises(
-    offline_settings: Settings, failures: FailureRecorder, caplog: pytest.LogCaptureFixture
+async def test_a_failed_review_goes_back_to_awaiting_review_not_to_failed(
+    offline_settings: Settings,
+    releases: ReleaseRecorder,
+    failures: FailureRecorder,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """The bid was claimed off `awaiting_review` before this ran, so failing silently would
-    strand it at `applying_review` with nothing saying why."""
+    """`failed` is terminal and every recovery path refuses it — the startup resume skips it
+    and the claim only accepts `awaiting_review` — so a transient failure there would strand
+    the bid for good with the reviewer's submission already in its checkpoint."""
     # Arrange
     saver = MemorySaver()
     runner = runner_for(
@@ -617,7 +626,86 @@ async def test_submit_review_records_a_failure_on_the_bid_and_re_raises(
     ):
         await runner.submit_review(bid, REVIEW)
 
-    assert failures.calls[-1][1:] == (bid.id, "applying_review failed: RuntimeError")
+    assert releases.calls[-1][1:] == (bid.id, "applying_review failed: RuntimeError")
+    assert failures.calls == []
+
+
+async def test_a_release_that_itself_fails_is_logged_rather_than_masking_the_review_error(
+    offline_settings: Settings,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The reviewer has to learn the review failed; the log is where a failed repair goes."""
+
+    # Arrange
+    async def broken(db: Any, **kwargs: Any) -> None:
+        raise OSError("database unreachable")
+
+    monkeypatch.setattr(runner_module, "release_bid_to_review", broken)
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection(), apply=crashing)
+    )
+    bid = bid_row()
+    await runner.start(bid)
+
+    # Act / Assert
+    with (
+        caplog.at_level(logging.ERROR, logger="crossbid.agent.runner"),
+        pytest.raises(StageError),
+    ):
+        await runner.submit_review(bid, REVIEW)
+
+    assert "could not release the review claim" in caplog.text
+
+
+async def test_a_second_review_of_the_same_bid_in_flight_is_refused(
+    offline_settings: Settings, releases: ReleaseRecorder
+) -> None:
+    """The database claim cannot see this one: the resumed graph rewrites `awaiting_review`
+    on its way past the interrupt, so the row is claimable again for several round-trips.
+    A double-click would resume one thread twice — two audit rows, two decisions."""
+    # Arrange
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_apply(state: BidState, config: RunnableConfig | None = None) -> Any:
+        started.set()
+        await release.wait()
+        return await quiet_apply(state, config)
+
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection(), apply=slow_apply)
+    )
+    bid = bid_row()
+    await runner.start(bid)
+
+    # Act -- the first review parks inside `apply_review`; the second arrives meanwhile
+    first = asyncio.create_task(runner.submit_review(bid, REVIEW))
+    await asyncio.wait_for(started.wait(), timeout=WAIT_TIMEOUT_S)
+    with pytest.raises(RunnerError, match="already being reviewed"):
+        await runner.submit_review(bid, REVIEW)
+
+    # Assert -- and the guard is released once the first finishes
+    release.set()
+    await first
+    await runner.submit_review(bid, REVIEW)
+
+
+class ReleaseRecorder:
+    """Replaces `readmodel.bids.release_bid_to_review` for the runner."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+
+    async def __call__(self, db: Any, *, company_id: str, bid_id: str, reason: str) -> None:
+        self.calls.append((company_id, bid_id, reason))
+
+
+@pytest.fixture
+def releases(monkeypatch: pytest.MonkeyPatch) -> ReleaseRecorder:
+    recorder = ReleaseRecorder()
+    monkeypatch.setattr(runner_module, "release_bid_to_review", recorder)
+    return recorder
 
 
 async def test_a_review_is_traced_apart_from_the_run_that_parked(

@@ -5,6 +5,7 @@ import type { MatrixRow } from '@/lib/bids'
 import type { Citation } from './citation'
 import { EcertisCard } from './ecertis-card'
 import { EvidenceList } from './evidence-list'
+import { RowReviewControls, type RowReview } from './row-review-controls'
 import { ROW_STATUS_WITHOUT_EVIDENCE } from './row-status'
 
 export interface RowEvidenceProps {
@@ -14,6 +15,11 @@ export interface RowEvidenceProps {
   readonly isPhone?: boolean
   /** `false` where the caller already shows the sentence, as the phone card does. */
   readonly showRationale?: boolean
+  /**
+   * The reviewer's pending edits and the documents they may attach. Omitted while the bid is
+   * not parked at its interrupt, which is what makes the block read-only again.
+   */
+  readonly review?: RowReview
 }
 
 /**
@@ -22,8 +28,9 @@ export interface RowEvidenceProps {
  * passages it cited — each one a link into the source panel — and the eCertis card naming
  * the national document for the bidder's country.
  *
- * Read-only in S4.5.1. Confirm / Change status / Add evidence are the artboard's next row of
- * controls and belong to S4.5.2; nothing here mutates anything.
+ * S4.5.2 adds the artboard's Confirm / Change status / Add evidence controls under the card,
+ * but only the pending-edit state changes when they are used: everything above them is the
+ * agent's own answer, and stays exactly as the run left it until the review is submitted.
  */
 export function RowEvidence({
   row,
@@ -31,6 +38,7 @@ export function RowEvidence({
   onCite,
   isPhone = false,
   showRationale = true,
+  review,
 }: RowEvidenceProps) {
   const hasEvidence = row.evidence.length > 0
   return (
@@ -53,6 +61,14 @@ export function RowEvidence({
       )}
       {row.ecertis_evidence !== null && row.ecertis_evidence !== undefined && (
         <EcertisCard evidence={row.ecertis_evidence} />
+      )}
+      {review !== undefined && (
+        <RowReviewControls
+          row={row}
+          edits={review.edits}
+          attachable={review.attachable}
+          isPhone={isPhone}
+        />
       )}
     </div>
   )

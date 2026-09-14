@@ -121,6 +121,89 @@ def test_an_unsupported_exclusion_ground_blocks_however_its_kind_reads() -> None
     assert result.gaps[0].requirement_id == reqs[1].id
 
 
+@pytest.mark.parametrize("kind", list(RequirementKind))
+def test_an_unsupported_exclusion_ground_blocks_whatever_kind_the_extractor_gave_it(
+    kind: RequirementKind,
+) -> None:
+    """All three kinds, because `informational` was the one that got through. `kind` comes
+    from the extraction model, and an exclusion ground it mislabelled must not be able to
+    decide a bid: this is a bidder with evidence *against* them on an unspent conviction."""
+    # Arrange
+    reqs = [
+        requirement("Umsatz", identifier="a"),
+        requirement(
+            "Keine Verurteilung wegen Bestechung",
+            identifier="b",
+            category=RequirementCategory.EXCLUSION_GROUND,
+            kind=kind,
+        ),
+    ]
+    rows = [row(reqs[0]), row(reqs[1], RowStatus.UNSUPPORTED)]
+
+    # Act
+    result = score(reqs, rows, language="de")
+
+    # Assert
+    assert result.decision is Decision.NO_GO
+    assert [gap.requirement_id for gap in result.gaps] == [reqs[1].id]
+
+
+def test_a_matrix_nobody_checked_declines_rather_than_encouraging_the_bidder() -> None:
+    """The worse state must not get the better answer. An *empty* matrix declines, so five
+    mandatory requirements with no rows at all cannot read `conditional` — a bidder would be
+    told the bid is possible subject to conditions about a bid never checked."""
+    # Arrange
+    reqs = [requirement(f"Anforderung {n}", identifier=str(n)) for n in range(5)]
+
+    # Act
+    result = score(reqs, [], language="de")
+
+    # Assert
+    assert result.decision is Decision.INSUFFICIENT_EVIDENCE
+    assert (result.mandatory_supported, result.mandatory_total) == (0, 5)
+    assert len(result.gaps) == 5
+
+
+def test_a_matrix_of_nothing_but_not_applicable_proves_nothing_and_is_not_a_go() -> None:
+    """`not_applicable` closes a gap; it cannot open a recommendation. Three clauses the
+    model read as inapplicable is not a qualified bidder."""
+    # Arrange
+    reqs = [requirement(f"Anforderung {n}", identifier=str(n)) for n in range(3)]
+    rows = [row(req, RowStatus.NOT_APPLICABLE) for req in reqs]
+
+    # Act
+    result = score(reqs, rows, language="de")
+
+    # Assert
+    assert result.decision is Decision.INSUFFICIENT_EVIDENCE
+    assert result.gaps == ()
+
+
+def test_one_supported_row_beside_a_not_applicable_one_is_still_a_go() -> None:
+    """The complement: `not_applicable` must not *block* a go either, only fail to cause one."""
+    # Arrange
+    reqs = [requirement("Umsatz", identifier="a"), requirement("Konzern", identifier="b")]
+    rows = [row(reqs[0]), row(reqs[1], RowStatus.NOT_APPLICABLE)]
+
+    # Act / Assert
+    assert score(reqs, rows, language="de").decision is Decision.GO
+
+
+def test_a_blocking_gap_still_decides_even_when_nothing_is_supported() -> None:
+    """A blocking gap is a definite answer and outranks the agent having nothing to stand
+    on; declining there would be softer than the evidence warrants."""
+    # Arrange
+    reqs = [requirement("Umsatz", identifier="a")]
+    rows = [row(reqs[0], RowStatus.UNSUPPORTED)]
+
+    # Act
+    result = score(reqs, rows, language="de")
+
+    # Assert
+    assert result.decision is Decision.NO_GO
+    assert result.mandatory_supported == 0
+
+
 def test_a_mandatory_row_that_is_only_partially_supported_is_conditional() -> None:
     # Arrange
     reqs = [requirement("Umsatz", identifier="a"), requirement("Personal", identifier="b")]
