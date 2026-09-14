@@ -57,7 +57,9 @@ card resolving *Terrorist offences* to `Auszug aus dem Bundeszentralregister / F
 
 **That run was then deleted on purpose.** Frankfurt is **reset to the clean first-run state** —
 the demo company and its ten evidence documents, **no tender documents and no bids** — so the
-demo can be recorded as a live take rather than a narration. Do not go looking for a parked bid;
+demo could be recorded as a live take rather than a narration. **That is history — the
+recording was dropped as a gate (ADR-0031) and Frankfurt now holds a completed bid again.** At
+the time of writing this paragraph there was no parked bid;
 there is none, and that is deliberate. `docs/demo-runbook.md` is the script and describes both
 the state to expect and how to reset it again after a take.
 
@@ -69,7 +71,7 @@ equivalence where a criterion id exists, and the matrix renders read-only in the
 
 | | state | what actually holds it open |
 |---|---|---|
-| **Milestone 1** | in progress | **S3.2.1's recall, and only that**, plus a recorded demo |
+| **Milestone 1** | in progress | **S3.2.1's recall, and nothing else** |
 | **Milestone 2** | **closed 2026-09-14** | every criterion verified against Frankfurt, not asserted |
 | **Milestone 3** | **closed 2026-09-14** | eight stories — S4.4.1 was pulled in; walked end to end |
 
@@ -83,14 +85,21 @@ made the two increments circular. **S4.4.1 was pulled into Increment 3 and built
 it found that nothing had ever written `bids.deadline` or `bids.buyer`: migration 0007 and the
 start form's new fields are the fix. Increment 4 is therefore 17 stories, not 18.
 
-**Milestone 1 is held by one thing: S3.2.1's recall gate, 0.72 against 0.90.** That changed
-character on 2026-09-14. It used to be "not yet measured against a verified key"; the key is
-verified now, so it is measured — and it fails. **Verifying the key made the figure
-trustworthy, not higher.** What to do about a threshold set before anything had been measured
-is an open decision the user deferred until after the demo is recorded; it is not an
-outstanding piece of work. The two candidate paths are in the Increment 2 retro: amend the
-criterion and report 0.74 ± 0.02 honestly, or spend time on extraction knowing the noise floor
-means a single $1.60 run can validate nothing.
+**Milestone 1 is now held by exactly one thing: S3.2.1's recall gate, 0.72 against 0.90.**
+
+The recorded demo was dropped as a gate on 2026-09-14 (ADR-0031). It was never one of
+Increment 1's done-when criteria — it lived in the status notes as "the cadence requires" a
+recording, and no such cadence is defined anywhere in the plan — and the course brief asks for
+no video. What earned the demo its reputation was the *walk*, not the tape, and the walk has
+been done (ADR-0029). `docs/demo-runbook.md` is kept as the walkthrough script and as the
+source of S7.4's screenshots, which are stills.
+
+The recall gate changed character on 2026-09-14 too. It used to be "not yet measured against a
+verified key"; the key is verified now, so it is measured — and it fails. **Verifying the key
+made the figure trustworthy, not higher.** What to do about a threshold set before anything had
+been measured is an open decision, not an outstanding piece of work. The two candidate paths
+are in the Increment 2 retro: amend the criterion and report 0.74 ± 0.02 honestly, or spend
+time on extraction knowing the noise floor means a single $1.60 run can validate nothing.
 
 ---
 
@@ -181,7 +190,7 @@ regression.
   The eight FR ids were read by a human straight off `DUME_acheteur.xml`, a file the product
   could not ingest at all until the DUME work landed. So the demo step is: upload
   `DUME_acheteur.xml` as `tender_espd_request` **alongside** the FR PDFs, then run the bid.
-  **This affects S7.4's user guide and Milestone 1's recorded demo.**
+  **This affects S7.4's user guide**, whose screenshots come from the same walk.
 - **Any scorer must filter the DE key on `stage: bid_eligibility`.** Rows deliberately sit in
   `requirements` that are `contract_performance`, so the stage filter can be scored in both
   directions (ADR-0015). `scored_labels` does this; anything new must too.
@@ -230,19 +239,17 @@ blend that paints a visibly darker rectangle across the hero.
 
 ## What to do next
 
-**Increments 0, 2 and 3 are closed. Only Milestone 1 is open**, and it is held by S3.2.1's
-recall gate plus the unrecorded demo — see below. For Increment 4, jump to *Starting
+**Increments 0, 2 and 3 are closed. Only Milestone 1 is open**, and since 2026-09-14 it is
+held by S3.2.1's recall gate and nothing else (ADR-0031). For Increment 4, jump to *Starting
 Increment 4*.
 
 Three options, in the order I would take them.
 
-1. **Record the end-to-end demo.** It is the only thing besides S3.2.1 holding Milestone 1 open,
-   it needs no new code, and it doubles as the user guide's screenshots (S7.4).
-   **`docs/demo-runbook.md` is the script** — the take shot by shot, the numbers to quote, and
-   the things not to do. Frankfurt is already reset for a **live take**: the seeded company and
-   its ten evidence documents, no tender documents, no bids. The FR pack is uploaded on camera
-   from `backend/tests/fixtures/tenders/fr/`. Show the wedge on **FR with the DUME**; the PDFs on
-   their own leave the card dark. The retro's one recommendation is to do this *first*, not last.
+1. **Decide what to do about S3.2.1's recall gate.** It is now the only thing holding
+   Milestone 1 open. Either amend the criterion to the measured 0.74 ± 0.02 and report it with
+   its variance, or spend time on extraction — knowing that the noise floor is wider than any
+   single prompt edit's effect, so a configuration needs several $1.60 runs to be validated at
+   all. The Increment 2 retro argues for the first and the plan time-boxes the second (R6).
 2. **Finish Increment 3.** Its backend is done (S3.4.1–S3.4.4); what remains is S4.5.2 and
    S4.5.3, the two workspace screens, and a walkthrough of the round trip. See *Finishing
    Increment 3* below. Once they land, the review demo is a second recording worth making

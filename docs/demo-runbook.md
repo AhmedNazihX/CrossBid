@@ -1,12 +1,19 @@
-# Demo runbook — one recording, Increments 1 and 2
+# Demo runbook — the end-to-end walkthrough
 
-Milestone 1 and Milestone 2 both close on a recorded end-to-end demo. This is the script for
-**one** take covering both, written so nothing has to be decided while recording.
+**No milestone depends on a recording any more** (ADR-0031, 2026-09-14). This file is kept
+because the walk itself is worth having and the script is already written: it is the route
+through the product that found four separate defects across Increments 2 and 3, and it is where
+**S7.4's screenshots** come from — the user guide needs stills, not video.
 
-**State as of 2026-09-14: reset for a live take.** The demo company is seeded with its ten
-evidence documents and nothing else — no tender documents, no bids. You upload the tender and
-start the run on camera. The whole flow has been performed once already against this exact
-build, so nothing below is untested; see ADR-0023 for what that run proved.
+Follow it as a walkthrough. If you do decide to record a take, it still works as a shot list.
+
+**State as of 2026-09-14: NOT reset.** Frankfurt holds a completed FR bid (`618320-2026`) with
+144 requirements, 144 matrix rows and three tender documents — kept deliberately after the
+walkthrough of ADR-0029. The clean first-run state this file used to assume is gone, so **reset
+before following the script from the top**: delete the bid (documents, requirements and matrix
+rows cascade) and remove the three tender objects from Storage. The whole flow has been
+performed twice against this build, so nothing below is untested; ADR-0023 and ADR-0029 record
+what those runs proved.
 
 ---
 

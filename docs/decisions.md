@@ -2723,3 +2723,39 @@ The open-items count is a correlated subquery, and it was first written scoped b
 right to: the rule is that every statement carries the tenant predicate **in its own text**, so
 that a fragment is safe on its own terms rather than by where it happens to be spliced. The API
 connects as a `BYPASSRLS` role (ADR-0009), which is the whole reason that rule is absolute.
+
+---
+
+## ADR-0031 — The recorded demo is dropped as a gate; the walk is not
+
+**Date:** 2026-09-14 · **Stories:** Milestone 1 · **Status:** accepted
+
+The user asked for the recorded end-to-end demo to stop being a requirement. Checking what it
+actually was before removing it turned up three things, and together they make this a smaller
+decision than it looked.
+
+**It was never a done-when criterion.** Increment 1's criteria are `docker compose up`, a
+page-cited translated requirement list from an uploaded pack, a checkpoint surviving a restart,
+and the confirmed screen designs. No demo. The recording appears only in the *status* column,
+as "the cadence requires a recorded end-to-end demo against Frankfurt" — and **no such cadence
+is defined anywhere**: the word appears twice in the plan, both times referring to a practice
+that is never stated. A gate nobody wrote down was holding a milestone shut.
+
+**The course brief does not ask for one.** `135.md` grades problem definition, understanding of
+agent concepts, technical implementation and reflection. It mentions no video, screencast or
+presentation. So dropping it costs nothing at grading.
+
+**What earned the demo its reputation was the walk, not the tape.** The Increment 2 retro's one
+process recommendation — *record the demo first, not last* — was written because three defects
+that session were reachable only by using the product end to end. That argument is about
+walking, and the walk is now a thing that happens: ADR-0029 records one performed against
+Frankfurt on 2026-09-14, which found a fourth defect of exactly the same shape. Increment 3 also
+produced ADR-0026, where the walk was a *test* rather than a person and found a fifth.
+
+So the practice survives in the form that was doing the work, and the artefact that was not
+pulling its weight is gone. **Milestone 1 is now held by S3.2.1's recall gate alone.**
+
+`docs/demo-runbook.md` is kept rather than deleted. It is the written route through the product
+that found those defects, and it is where **S7.4's screenshots** come from — a user guide needs
+stills, not video. Its header now says so, and it carries the warning that Frankfurt is no
+longer in the clean first-run state the script used to assume.
