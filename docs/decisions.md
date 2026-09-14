@@ -3180,3 +3180,55 @@ five scalars, three turnover years, four certificates with their dates — the s
 answered `PUT /companies/me → 200` with the "Saved" notice and no memory warning. The create
 path is covered by the router's own tests (201, the owner taken from the token and not the
 body, 409 on a second company, 422 on a bad body).
+
+---
+
+## ADR-0038 — A password beside the magic link, and the mitigation that did not exist
+
+**Date:** 2026-09-14 · **Stories:** S0.3.1, S4.1.1 (amends both) · **Status:** accepted
+
+The first real sign-in worked. The fourth did not: *"email rate limit exceeded"*. Supabase's
+built-in mailer allows **2 messages per hour**, project-wide, and that is the whole of the
+free allowance — custom SMTP replaces it, starting at 30/hour and adjustable.
+
+**The plan already carried this risk, and its mitigation was wrong.** R7 reads "pre-issued
+session or test OTP in S7.7". Checked today: Supabase's `test_otp` — a map of identity to
+fixed code that bypasses sending — exists for **SMS only**. There is no email equivalent in
+the CLI config or the dashboard. So the escape hatch that risk row was resting on was never
+there, and the row has been rewritten to say what is actually available.
+
+**The decision: a password *beside* the link, not instead of it.** The user's call, and it is
+the one that costs least in every direction.
+
+- **The backend does not change at all.** `signInWithPassword` returns the same JWT, with the
+  same `sub` and `email` claims, from the same issuer. `SupabaseTokenVerifier` cannot tell the
+  two apart and should not try — which is the property that made this a frontend-only change.
+- **"No password code in our repo" survives.** Supabase hashes and stores it; this app collects
+  it in a field and hands it over. That plan commitment is unchanged, and the plan's wording
+  now says so explicitly rather than by implication.
+- **The link remains the sign-*up* path.** `signInWithOtp` creates the user when there is none,
+  so a first-time bidder still needs no password to invent and no second form to fill in. The
+  original promise — "so that I never manage a password" — is still available to anyone who
+  wants it. It is no longer the *only* way in.
+- **It removes email from the loop entirely where that matters.** An account created in the
+  Supabase dashboard with a password sends nothing, which is what makes development and a live
+  demo independent of a two-an-hour allowance.
+
+**What was rejected, and why.** *Password only* would have meant retiring the magic-link path,
+callback route and PKCE handling built and verified hours earlier, and amending S0.3.1's
+acceptance criteria to remove a promise the product had made for a reason — Sabine is not a
+procurement professional, and "no password to lose" is a real benefit to her. *Password in
+development only* would have left the production sign-in route unexercised in the environment
+the demo is given from, which is how a demo breaks on camera.
+
+**One screen, two routes, and the failure text is still Supabase's own.** The form opens on
+password with "Email me a sign-in link instead" beside it. ADR-0034's rule holds on both
+paths: `Invalid login credentials` and `email rate limit exceeded` are shown as they come,
+because each names the one fact that explains it. Neither message distinguishes an unknown
+address from a wrong password — Supabase does not, and neither does this screen, so it is not
+an enumeration oracle.
+
+**Verified in a browser**: both modes render and toggle, the password submit reaches Supabase,
+and a wrong credential comes back as `Invalid login credentials` in an alert with the form
+re-enabled. A successful password sign-in needs an account with a password on it, which is a
+dashboard action rather than something this repo can do.

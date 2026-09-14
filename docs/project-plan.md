@@ -25,7 +25,7 @@ Sprint capstone (brief in `135.md`): build a useful AI agent with LangGraph, Ope
 - Storage: Supabase Storage bucket, prefix per company, signed URLs. Chunks 800 tokens/100 overlap, embeddings via OpenRouter's `/embeddings` endpoint. **Default `openai/text-embedding-3-small` (1536 dims, ~$0.027/1M)**, changed from 3-large on 2026-09-10 while nothing was yet embedded (ADR-0004): 1536 dims sits under pgvector's 2000-dim index cap, so HNSW/IVFFlat are available. `openai/text-embedding-3-large` (3072 dims, $0.13/1M) stays as the quality switch and `qwen/qwen3-embedding-8b` (4096 dims, ~$0.057/1M) as the non-OpenAI multilingual option; `baai/bge-m3` is dropped — HTTP 404 on this account's data policy. Changing the slug means re-embedding and a column dimension change, so S7.1 measures the choice rather than reopening it. Vector-only retrieval.
 - Parsing: `pymupdf4llm` default; Docling (`do_ocr=False`) behind the same `Parser` interface, switchable. Pages with no text flagged "not read".
 - Guards: regex/heuristic scan on every chunk → flagged chunks to luna yes/no → excluded and listed to reviewer; document text wrapped in delimited data blocks; `slowapi` rate limit on bid creation; schema validation on tool outputs; scorer refuses `go` without evidence on mandatory rows.
-- Auth: Supabase Auth magic link, JWT verified in FastAPI, single company per user. Developer role = env-var email list. `/dev` route gated on both sides.
+- Auth: Supabase Auth — magic link **or password** (amended 2026-09-14, ADR-0038) — JWT verified in FastAPI, single company per user. Developer role = env-var email list. `/dev` route gated on both sides.
 - Frontend calls FastAPI directly with bearer token; CORS locked; TS types via `openapi-typescript`; poll `/bids/{id}` every 2 s.
 - "Ask the tender": separate thread `bid:{id}:chat`, ReAct agent with `tender_rag_search`, `company_rag_search`, `get_matrix`.
 - Tenant isolation: application-level `company_id` on every query and Store namespace.
@@ -142,7 +142,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 **Segregation.** Two processes on two origins. The Next.js app renders UI and holds the user's session token. FastAPI owns all business logic, database access, LLM calls, and secrets. The browser never sees the OpenRouter key, a database password, or a checkpoint. The only thing the two share is the OpenAPI contract, which generates `frontend/lib/api.ts`.
 
 **Interaction.**
-1. Login: the browser talks to Supabase Auth (magic link) and receives a JWT. No password code in our repo.
+1. Login: the browser talks to Supabase Auth and receives a JWT — by magic link, or by password for an account that has one (ADR-0038). No password code in our repo either way: Supabase hashes and stores it, and the backend verifies the same JWT whichever route produced it.
 2. Every API call carries `Authorization: Bearer <jwt>`. FastAPI verifies the signature against Supabase's public keys (JWKS), reads the user id, loads the user's company. CORS allows only the web origin.
 3. Long runs: `POST /bids` returns 202 with the bid id and starts the graph in a background task. The browser polls `GET /bids/{id}` every 2 s. When status is `awaiting_review` it renders the matrix. `POST /bids/{id}/review` resumes the graph.
 4. Files: the browser uploads PDFs to FastAPI (multipart). FastAPI parses, chunks, embeds, and stores the original in Supabase Storage. The viewer asks the API for a short-lived signed URL and loads the PDF straight from Storage.
@@ -254,7 +254,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 
 **F0.3 Authentication and settings** — users sign in without passwords; operators change behaviour without redeploying.
 
-- **S0.3.1** (M) *As a bidder, I want to sign in with a link sent to my email, so that I never manage a password.* `needs S0.2.1`
+- **S0.3.1** (M) *As a bidder, I want to sign in with a link sent to my email, so that I never manage a password.* `needs S0.2.1` — **amended 2026-09-14 (ADR-0038): a password is offered alongside the link, not instead of it.** The link remains the first-time and no-password route; the built-in mailer's two-messages-an-hour limit made it unusable as the *only* route in development and a risk in a live demo.
   - Given a valid Supabase token, when I call any `/companies` endpoint, then my user and company are resolved.
   - Given an expired or forged token, then the API answers 401.
   - Given my email in `DEVELOPER_EMAILS`, when I call `/dev/*`, then 200; otherwise 403.
@@ -459,7 +459,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 
 **F4.1 Shell and sign-in** — a place to work, in plain English.
 
-- **S4.1.1** (M) *As a bidder, I want to sign in by clicking a link in my email and land on my dashboard, so that I start working within a minute.* `needs S0.4.2`
+- **S4.1.1** (M) *As a bidder, I want to sign in by clicking a link in my email and land on my dashboard, so that I start working within a minute.* `needs S0.4.2` — the screen offers both routes (ADR-0038); both land on the dashboard through the same session.
   - Given the login page, when I enter my email, then a link arrives and following it opens the dashboard with a persisted session.
   - Given a protected route without a session, then I am redirected to login.
 - **S4.1.2** (S) *As a bidder, I want a consistent layout with clear navigation, so that I always know where bids, company, and settings are.* `needs S0.4.2 (hand-written types for the first two endpoints are acceptable until it lands); login link appears with S4.1.1`
@@ -669,7 +669,7 @@ Lanes A–E survive only as tags on stories in the roadmap's story board; they d
 | R4 | Supabase free-tier project pauses after a week idle and the demo fails on review day | Medium / Medium | Wake it the day before review; Compose stack as fallback demo; noted in the user guide | S7.4, S8.1 |
 | R5 | Effort is 87–205 h against an 18 h brief and velocity is unknown | High / Medium | Increments 0–5 are the submission line; re-forecast after Increment 1 | this table |
 | R6 | Prompt-tuning loops blow the estimate on S3.2.1 and S3.3.1 | High / Medium | Time-box each tuning round to 1 h; fake-model tests protect the row shape; accept the measured recall | S3.3.2 |
-| R7 | Magic-link email in development and in Playwright | Medium / Medium | Dev auth mode until Increment 4; pre-issued session or test OTP in S7.7 | S0.3.1, S7.7 |
+| R7 | Magic-link email in development and in Playwright | Medium / Medium | **Realised 2026-09-14 and mitigated (ADR-0038).** The built-in mailer allows **2 messages/hour**, and Supabase has **no email `test_otp`** — that setting is SMS-only, so this row's original mitigation did not exist. Password sign-in, with the account created in the dashboard, needs no email at all; custom SMTP raises the limit for the demo. Dev auth mode remains the offline route. | S0.3.1, S4.1.1, S7.7 |
 | R8 | TED API rate limits or schema drift | Low / Medium | Recorded responses in tests; one retry then a typed error | S1.2.1 |
 | R9 | Bid run latency: 100 pages, fan-out at concurrency 5 | Medium / Medium | 10-minute budget in S3.1.1; stage shown by polling; concurrency and section size in settings | S3.1.1 |
 | R10 | Medium 5 (feedback loop) only half met because learning was cut | High / Low | Claim it as partial; the graded threshold is cleared without it | coverage table |

@@ -34,8 +34,16 @@ export interface SessionState {
   /**
    * Ask Supabase to email a magic link. Resolves when the mail has been accepted for
    * sending. `next` is the path to land on afterwards, carried through the mailbox.
+   *
+   * This is also the sign-*up* path: `signInWithOtp` creates the user when there is none,
+   * so a first-time bidder needs no separate form and no password to invent.
    */
   readonly sendMagicLink: (email: string, next?: string) => Promise<void>
+  /**
+   * Sign in with a password (ADR-0038). Resolves once the session exists; the subscription
+   * above then reports `signedIn` and the screen redirects, exactly as it does for a link.
+   */
+  readonly signInWithPassword: (email: string, password: string) => Promise<void>
   readonly signOut: () => Promise<void>
 }
 
@@ -84,6 +92,13 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
     if (error !== null) throw error
   }, [])
 
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const supabase = await getSupabaseClient()
+    if (supabase === null) throw new Error('Sign-in is not configured for this build.')
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error !== null) throw error
+  }, [])
+
   const signOut = useCallback(async () => {
     const supabase = await getSupabaseClient()
     if (supabase === null) return
@@ -92,8 +107,14 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
   }, [])
 
   const value = useMemo<SessionState>(
-    () => ({ status, email: session?.user.email, sendMagicLink, signOut }),
-    [status, session, sendMagicLink, signOut]
+    () => ({
+      status,
+      email: session?.user.email,
+      sendMagicLink,
+      signInWithPassword,
+      signOut,
+    }),
+    [status, session, sendMagicLink, signInWithPassword, signOut]
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

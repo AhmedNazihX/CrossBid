@@ -9,20 +9,26 @@
  * marketing page's canvas and brand lockup, and invents no spacing, colour or type of its
  * own. ADR-0034 records that.
  *
- * **The form has two states and they are not the same screen.** Before sending, an email
- * field; after sending, the link has gone to an address and the useful thing to show is
- * *which* address, plus a way back for a typo. A single screen that just greys out the
+ * **Two ways in, one screen (ADR-0038).** A password for an account that has one, and a
+ * emailed link for everyone else. The link is also the sign-*up* path — `signInWithOtp`
+ * creates the user when there is none — so a first-time bidder needs no separate form and
+ * no password to invent, and the plan's original "never manage a password" promise is still
+ * available to anyone who wants it.
+ *
+ * **The link half has two states and they are not the same screen.** Before sending, an
+ * email field; after sending, the link has gone to an address and the useful thing to show
+ * is *which* address, plus a way back for a typo. A single screen that just greys out the
  * button would leave the bidder watching a mailbox they may have misspelled.
  *
- * **A failure to send is never silent, and never guessed at.** Supabase's own message is
- * shown as it comes: rate limiting ("For security purposes, you can only request this
- * once every 60 seconds") is the one users actually hit, and paraphrasing it into
- * "something went wrong" would hide the one instruction that helps.
+ * **A failure is never silent, and never guessed at.** Supabase's own message is shown as
+ * it comes: "email rate limit exceeded" is the one that actually turns up — the built-in
+ * mailer allows two messages an hour — and paraphrasing it into "something went wrong"
+ * would hide the one fact that explains it. The same goes for "Invalid login credentials".
  *
  * **The address is never confirmed or denied.** Supabase answers the same way for a known
- * and an unknown address, and so does this screen: telling a stranger which emails have
- * accounts is an enumeration oracle, and it is why the success state says "if that address
- * has an account".
+ * and an unknown address, on both paths, and so does this screen: telling a stranger which
+ * emails have accounts is an enumeration oracle, and it is why the sent state says "if that
+ * address has an account".
  */
 import Image from 'next/image'
 import Link from 'next/link'
@@ -37,12 +43,15 @@ import { AUTH_MODE, configurationProblem } from '@/lib/auth-mode'
 import { safeNextPath } from '@/lib/safe-next-path'
 
 type Stage = 'form' | 'sending' | 'sent'
+type Method = 'password' | 'link'
 
 export function SignInCard() {
-  const { sendMagicLink, status } = useSession()
+  const { sendMagicLink, signInWithPassword, status } = useSession()
   const router = useRouter()
   const next = safeNextPath(useSearchParams().get('next'))
+  const [method, setMethod] = useState<Method>('password')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [stage, setStage] = useState<Stage>('form')
   const [error, setError] = useState<string | undefined>(undefined)
 
@@ -57,12 +66,24 @@ export function SignInCard() {
     setError(undefined)
     setStage('sending')
     try {
-      await sendMagicLink(email.trim(), next)
-      setStage('sent')
+      if (method === 'link') {
+        await sendMagicLink(email.trim(), next)
+        setStage('sent')
+        return
+      }
+      await signInWithPassword(email.trim(), password)
+      // The provider's subscription reports `signedIn` and the effect above redirects, so
+      // the form stays in its sending state rather than flashing back to an empty one.
     } catch (cause) {
       setStage('form')
-      setError(cause instanceof Error ? cause.message : 'The link could not be sent.')
+      setError(cause instanceof Error ? cause.message : 'Sign-in failed.')
     }
+  }
+
+  function chooseMethod(chosen: Method) {
+    setMethod(chosen)
+    setError(undefined)
+    setPassword('')
   }
 
   if (status === 'disabled') {
@@ -107,6 +128,10 @@ export function SignInCard() {
     )
   }
 
+  const busy = stage === 'sending'
+  const usingLink = method === 'link'
+  const incomplete = email.trim() === '' || (!usingLink && password === '')
+
   return (
     <Card>
       <div className="flex flex-col gap-2">
@@ -114,12 +139,17 @@ export function SignInCard() {
           Sign in
         </h1>
         <p className="m-0 [font:var(--type-body)] text-text-secondary">
-          We email you a link. There is no password to remember or to lose.
+          {usingLink
+            ? 'We email you a link. Nothing to remember, and nothing to lose.'
+            : 'With the password on your account, or ask for a link instead.'}
         </p>
       </div>
 
       {error !== undefined && (
-        <Notice tone="danger" title="The link could not be sent">
+        <Notice
+          tone="danger"
+          title={usingLink ? 'The link could not be sent' : 'Not signed in'}
+        >
           {error}
         </Notice>
       )}
@@ -135,12 +165,39 @@ export function SignInCard() {
           placeholder="sabine@example-it.de"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          disabled={stage === 'sending'}
+          disabled={busy}
         />
-        <Button type="submit" fullWidth disabled={stage === 'sending' || email.trim() === ''}>
-          {stage === 'sending' ? 'Sending…' : 'Email me a sign-in link'}
+        {!usingLink && (
+          <Input
+            label="Password"
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={busy}
+          />
+        )}
+        <Button type="submit" fullWidth disabled={busy || incomplete}>
+          {busy
+            ? usingLink
+              ? 'Sending…'
+              : 'Signing in…'
+            : usingLink
+              ? 'Email me a sign-in link'
+              : 'Sign in'}
         </Button>
       </form>
+
+      <button
+        type="button"
+        className="rounded-sm [font:var(--type-body-sm)] text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
+        onClick={() => chooseMethod(usingLink ? 'password' : 'link')}
+        disabled={busy}
+      >
+        {usingLink ? 'Use a password instead' : 'Email me a sign-in link instead'}
+      </button>
     </Card>
   )
 }
