@@ -159,6 +159,14 @@ class ExtractionProblemReason(StrEnum):
     `UNREADABLE_DOCUMENT`: there the pages exist and are blank, here there are no pages. The
     run continues without the file, and the reviewer sees that it did."""
 
+    PLANTED_INSTRUCTION = "planted_instruction"
+    """A page carries text that is trying to instruct the agent rather than state a
+    requirement (S2.3.1, `guards.injection`). The page is still extracted: it is a tender
+    page and may hold real obligations beside the planted sentence, and dropping it would
+    hand an attacker a way to delete the requirement they least want checked. What the flag
+    buys is that a human is told which page to go and read. The structural defence is
+    unchanged either way — the page reaches the model inside a data block regardless."""
+
 
 class ExtractionProblem(BaseModel):
     """One thing extraction could not do, addressed to the reviewer.

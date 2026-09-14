@@ -173,6 +173,14 @@ class DocumentResponse(BaseModel):
         description="Pages with no text layer; the agent cannot read them and says so"
     )
     unread_page_count: int = Field(description="len(unread_pages), for a badge")
+    flagged_chunks: list[int] = Field(
+        description=(
+            "Chunk numbers the injection guard withheld from the corpus (S2.3.1). Text in "
+            "them reached no prompt and no embedding, so a reviewer is told rather than "
+            "left to wonder why a passage they can see on the page was never cited."
+        )
+    )
+    flagged_chunk_count: int = Field(description="len(flagged_chunks), for a badge")
     created_at: datetime = Field(description="When the upload was accepted")
     updated_at: datetime = Field(description="When the status last changed")
 
@@ -188,6 +196,8 @@ class DocumentResponse(BaseModel):
             pages=record.pages,
             unread_pages=list(record.unread_pages),
             unread_page_count=len(record.unread_pages),
+            flagged_chunks=list(record.flagged_chunks),
+            flagged_chunk_count=len(record.flagged_chunks),
             created_at=record.created_at,
             updated_at=record.updated_at,
         )

@@ -20,8 +20,12 @@ export function describeProblems(
   const invalid = count('invalid_row', 'invalid_criterion_id')
   const sections = count('section_failed', 'model_error', 'unwrappable_section')
   const documentsFailed = count('unreadable_document', 'unparseable_document')
+  const planted = count('planted_instruction')
 
   return [
+    planted > 0
+      ? `${plural(planted, 'page')} carrying text addressed to the agent — read before trusting`
+      : undefined,
     unreadPages > 0
       ? `${plural(unreadPages, 'page')} without a text layer not read`
       : undefined,

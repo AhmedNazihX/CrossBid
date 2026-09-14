@@ -12,8 +12,8 @@ between two companies (ADR-0009). The constants are `Final[LiteralString]` with 
 interpolation at all — not even of the column list, which is why it is written out six
 times. `LiteralString` is what psycopg's `execute` accepts and what pyright enforces, so a
 statement assembled at run time cannot be passed; an f-string would turn a literal into a
-plain `str` and forfeit exactly that guarantee. `SCOPED_STATEMENTS` lists the six so one test
-asserts the scope on all of them, and another asserts the six column lists are identical.
+plain `str` and forfeit exactly that guarantee. `SCOPED_STATEMENTS` lists the seven so one test
+asserts the scope on all of them, and another asserts their column lists are identical.
 
 Two things a reader might otherwise take for oversights:
 
@@ -91,6 +91,15 @@ class DocumentRecord(BaseModel):
     unread_pages: tuple[int, ...] = Field(
         default=(), description="Pages with no text layer, listed rather than dropped (S2.1.1)"
     )
+    flagged_chunks: tuple[int, ...] = Field(
+        default=(),
+        description=(
+            "Chunk numbers the injection guard withheld (S2.3.1). Listed rather than "
+            "silently dropped: a document whose text was partly kept out of the corpus is "
+            "something a reviewer has to be told about, because it changes what 'no "
+            "evidence found' means for it."
+        ),
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -120,7 +129,7 @@ class ConnectionSource(Protocol):
 
 DOCUMENT_COLUMNS: Final[LiteralString] = (
     "id, company_id, bid_id, kind, name, storage_path, status, failure_reason, "
-    "pages, unread_pages, created_at, updated_at"
+    "pages, unread_pages, flagged_chunks, created_at, updated_at"
 )
 """Every column `DocumentRecord` reads. Written out verbatim in each statement below rather
 than spliced in, so the statements stay literals (module docstring); a test asserts that each
@@ -130,7 +139,7 @@ INSERT_DOCUMENT_SQL: Final[LiteralString] = """
 insert into documents (id, company_id, kind, name, storage_path, status)
 values (%(id)s, %(company_id)s, %(kind)s, %(name)s, %(storage_path)s, 'uploaded')
 returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, created_at, updated_at
+pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 """The first status is written, not left to the column default, so the statement says what
 the row will read back. `where` is not needed: the tenant is the row being created."""
@@ -140,7 +149,7 @@ update documents
 set status = 'parsed', pages = %(pages)s, unread_pages = %(unread_pages)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
 returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, created_at, updated_at
+pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 
 MARK_STATUS_SQL: Final[LiteralString] = """
@@ -148,29 +157,44 @@ update documents
 set status = %(status)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
 returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, created_at, updated_at
+pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 """`embedded` and `ready`, the two transitions that carry nothing but the new status.
 `failed` has its own statement because the check constraint demands a reason with it."""
+
+SET_FLAGGED_CHUNKS_SQL: Final[LiteralString] = """
+update documents
+set flagged_chunks = %(flagged_chunks)s, updated_at = now()
+where id = %(document_id)s and company_id = %(company_id)s
+returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
+pages, unread_pages, flagged_chunks, created_at, updated_at
+"""
+"""S2.3.1 — the chunk numbers the injection guard refused.
+
+**It does not touch `status`, and that is deliberate.** Every kind is scanned, including the
+tender documents that are never embedded at upload, so folding this into `mark_embedded`
+would have walked a tender pack through a status it never reaches — and the poller a bidder
+is watching reports that status. The numbers exist only after chunking, which is why this is
+not part of `mark_parsed` either."""
 
 MARK_FAILED_SQL: Final[LiteralString] = """
 update documents
 set status = 'failed', failure_reason = %(reason)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
 returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, created_at, updated_at
+pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 
 SELECT_DOCUMENT_SQL: Final[LiteralString] = """
 select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, created_at, updated_at
+pages, unread_pages, flagged_chunks, created_at, updated_at
 from documents
 where id = %(document_id)s and company_id = %(company_id)s
 """
 
 LIST_DOCUMENTS_SQL: Final[LiteralString] = """
 select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, created_at, updated_at
+pages, unread_pages, flagged_chunks, created_at, updated_at
 from documents
 where company_id = %(company_id)s
 order by created_at desc, id
@@ -179,6 +203,7 @@ order by created_at desc, id
 SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     INSERT_DOCUMENT_SQL,
     MARK_PARSED_SQL,
+    SET_FLAGGED_CHUNKS_SQL,
     MARK_STATUS_SQL,
     MARK_FAILED_SQL,
     SELECT_DOCUMENT_SQL,
@@ -255,6 +280,20 @@ class DocumentsReadModel:
         self, *, company_id: uuid.UUID, document_id: uuid.UUID
     ) -> DocumentRecord:
         return await self._advance(company_id, document_id, DocumentStatus.EMBEDDED)
+
+    async def set_flagged_chunks(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID, flagged_chunks: Sequence[int]
+    ) -> DocumentRecord:
+        """What the injection guard withheld, on the row where the bidder sees it (S2.3.1)."""
+        row = await self._fetch_one(
+            SET_FLAGGED_CHUNKS_SQL,
+            {
+                "company_id": company_id,
+                "document_id": document_id,
+                "flagged_chunks": list(flagged_chunks),
+            },
+        )
+        return _record(_require(row, document_id, "updated"))
 
     async def mark_ready(
         self, *, company_id: uuid.UUID, document_id: uuid.UUID

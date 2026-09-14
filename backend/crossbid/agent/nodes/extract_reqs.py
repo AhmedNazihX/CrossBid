@@ -3,7 +3,7 @@
 One model call per section of five to eight pages, structured output per call, and every row
 checked against the page it claims to come from before it is allowed into the state.
 
-Six decisions carry this node.
+Seven decisions carry this node.
 
 **1. The document only ever reaches the model inside a data block.** Every page of a section
 is a `DataBlock` and the section's prompt is `wrap_as_data`'s output — one tagged envelope
@@ -54,6 +54,16 @@ VOL/B, framework agreement and data-processing agreement are all genuinely phras
 obligations. They bind the winner after award, not the bidder at qualification time. The
 filter cut the set to 238 with no measured recall loss.
 
+**7. A page that tries to give orders is reported, not withheld.** Every readable page is
+scanned by `guards.injection` before sectioning, and a page that trips the scanner becomes a
+`PLANTED_INSTRUCTION` problem naming that one page. The page is still extracted. A tender
+page is the buyer's own text and may carry real obligations beside the planted sentence, and
+dropping it would let an attacker delete the requirement they least want checked by writing
+"ignore all previous instructions" next to it. Withholding is the right answer on the
+*company* side — `ingestion/pipeline.py` keeps a flagged chunk out of the corpus — because
+there the text is evidence the bidder controls, and there is always other evidence. Decision
+1 is what actually defends this node; the scan is what tells a human where to look.
+
 Dedupe is by quote similarity *and* page proximity *within one document*: page numbers of
 different files are not comparable, and the same obligation cited from two documents is two
 citations, not a duplicate.
@@ -90,6 +100,7 @@ from crossbid.agent.state import (
     bidder_language_of,
     sections_of,
 )
+from crossbid.guards.injection import scan
 from crossbid.guards.wrap import DataBlock, DataWrapError, wrap_as_data
 from crossbid.llm import chat_model, resilient
 from crossbid.models.ecertis_criteria import CRITERION_IDS, EcertisCriterionId
@@ -383,6 +394,7 @@ class RequirementExtractor:
         sections: list[DocumentSection] = []
         problems: list[ExtractionProblem] = []
         for document in documents:
+            problems.extend(_planted_instructions(document))
             found = sections_of(document, section_pages=self._section_pages)
             if not found:
                 problems.append(
@@ -607,6 +619,40 @@ def _locations(exc: ValidationError) -> tuple[str, ...]:
     """The field paths a validation error names, deduplicated, in order."""
     paths = (".".join(str(part) for part in error["loc"]) for error in exc.errors())
     return tuple(dict.fromkeys(path for path in paths if path))
+
+
+def _planted_instructions(document: TenderDocument) -> tuple[ExtractionProblem, ...]:
+    """One problem per page of `document` whose text is trying to give the agent orders.
+
+    Page by page rather than per document, because the answer a reviewer needs is *which
+    page* — a 60-page pack with one planted paragraph and a problem that said only "this
+    file" would be no help at all. Only readable pages are scanned; the rest hold no text
+    to scan and are already reported as unread.
+
+    Nothing is dropped here. See `ExtractionProblemReason.PLANTED_INSTRUCTION` for why a
+    tender page is reported rather than withheld, which is the opposite of what the same
+    scanner does to a company document in `ingestion/pipeline.py`.
+    """
+    flagged = tuple(
+        page.page_number
+        for page in document.parsed.readable_pages
+        if scan(page.text) is not None
+    )
+    if not flagged:
+        return ()
+    logger.warning(
+        "document %s: pages %s carry text addressed to the agent; extracting anyway",
+        document.name,
+        ", ".join(str(number) for number in flagged),
+    )
+    return tuple(
+        ExtractionProblem(
+            reason=ExtractionProblemReason.PLANTED_INSTRUCTION,
+            document_name=document.name,
+            pages=(number,),
+        )
+        for number in flagged
+    )
 
 
 def _problem(

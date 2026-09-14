@@ -67,6 +67,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
+from crossbid.guards.injection import InjectionFinding, scan
 from crossbid.ingestion.chunker import Chunk, Chunker
 from crossbid.ingestion.embeddings import (
     ChunkStoreError,
@@ -201,6 +202,10 @@ class DocumentRecords(Protocol):
         self, *, company_id: uuid.UUID, document_id: uuid.UUID
     ) -> DocumentRecord: ...
 
+    async def set_flagged_chunks(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID, flagged_chunks: Sequence[int]
+    ) -> DocumentRecord: ...
+
     async def mark_ready(
         self, *, company_id: uuid.UUID, document_id: uuid.UUID
     ) -> DocumentRecord: ...
@@ -220,6 +225,25 @@ class Upload:
 
 
 # -------------------------------------------------------------------------------- pipeline
+
+
+def _partition_by_guard(
+    chunks: Sequence[Chunk],
+) -> tuple[list[Chunk], list[tuple[int, InjectionFinding]]]:
+    """The chunks that may be stored, and the numbered ones the guard refused.
+
+    Numbered by position in the document's own chunk sequence, one-based, because that is
+    what `documents.flagged_chunks` means and what a reviewer counts when they go looking.
+    """
+    kept: list[Chunk] = []
+    flagged: list[tuple[int, InjectionFinding]] = []
+    for number, chunk in enumerate(chunks, start=1):
+        finding = scan(chunk.text)
+        if finding is None:
+            kept.append(chunk)
+        else:
+            flagged.append((number, finding))
+    return kept, flagged
 
 
 class DocumentPipeline:
@@ -318,8 +342,7 @@ class DocumentPipeline:
         # After `parsed`, so the row says how many pages were looked at before it failed.
         if not parsed.readable_pages:
             raise NoReadableTextError(f"document {record.id}: no page has a text layer")
-        if record.kind in EMBEDDED_KINDS:
-            record = await self._embed_and_write(record, parsed)
+        record = await self._scan_and_embed(record, parsed)
         return await self._records.mark_ready(
             company_id=record.company_id, document_id=record.id
         )
@@ -351,14 +374,51 @@ class DocumentPipeline:
             company_id=record.company_id, document_id=record.id
         )
 
-    async def _embed_and_write(
+    async def _scan_and_embed(
         self, record: DocumentRecord, parsed: ParsedDocument
     ) -> DocumentRecord:
+        """Scan every document for planted instructions; embed the ones that get embedded.
+
+        **The scan runs for every kind, and that is the point.** Only company evidence is
+        embedded at upload (`EMBEDDED_KINDS`) — a tender document's text reaches a model
+        through `extract_reqs`' page sections instead, which is precisely where the
+        adversarial fixtures aim. Scanning only the embedded kinds would have put the guard
+        everywhere except the path the attack uses. The flagged chunk numbers are written to
+        the row whatever the kind, so `documents.flagged_chunks` means the same thing for a
+        tender pack as for a certificate.
+
+        **For an embedded kind, the flagged chunk is withheld before the embedder.** The
+        story asks that a flagged chunk never enter a prompt; filtering at retrieval time
+        would make that a property of every caller of every RAG tool, and one forgetful
+        caller would undo it. Held back before `insert_company_chunks` the text is not in
+        the corpus at all — nothing for a query to find, no embedding paid for, and the
+        guarantee holds for tools not yet written.
+
+        The chunk is withheld, not the document. A 200-page pack with one planted paragraph
+        is still worth reading; refusing the whole upload would hand an attacker a way to
+        make a tender unanalysable by hiding four lines in it.
+        """
         chunks = await asyncio.to_thread(self._chunker.chunk, parsed)
+        kept, flagged = _partition_by_guard(chunks)
+        for number, finding in flagged:
+            logger.warning(
+                "document %s chunk %d withheld: %s — %r",
+                record.id,
+                number,
+                ", ".join(signal.value for signal in finding.signals),
+                finding.excerpt,
+            )
+        record = await self._records.set_flagged_chunks(
+            company_id=record.company_id,
+            document_id=record.id,
+            flagged_chunks=[number for number, _ in flagged],
+        )
+        if record.kind not in EMBEDDED_KINDS:
+            return record
         await self._chunk_writer.insert_company_chunks(
             company_id=record.company_id,
             document_id=record.id,
-            chunks=await self._embed(chunks),
+            chunks=await self._embed(kept),
         )
         return await self._records.mark_embedded(
             company_id=record.company_id, document_id=record.id

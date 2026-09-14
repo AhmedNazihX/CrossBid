@@ -34,6 +34,7 @@ from crossbid.readmodel.documents import (
     MARK_STATUS_SQL,
     SCOPED_STATEMENTS,
     SELECT_DOCUMENT_SQL,
+    SET_FLAGGED_CHUNKS_SQL,
     TENANT_PARAMETER,
     DocumentRecord,
     DocumentsReadModel,
@@ -63,6 +64,7 @@ def document_row(**overrides: Any) -> dict[str, Any]:
         "failure_reason": None,
         "pages": 0,
         "unread_pages": [],
+        "flagged_chunks": [],
         "created_at": FIXED_NOW,
         "updated_at": FIXED_NOW,
     }
@@ -121,10 +123,11 @@ def test_the_column_list_names_exactly_the_record_fields() -> None:
     assert columns == list(DocumentRecord.model_fields)
 
 
-def test_the_statements_are_the_six_the_module_defines() -> None:
+def test_the_statements_are_the_seven_the_module_defines() -> None:
     assert SCOPED_STATEMENTS == (
         INSERT_DOCUMENT_SQL,
         MARK_PARSED_SQL,
+        SET_FLAGGED_CHUNKS_SQL,
         MARK_STATUS_SQL,
         MARK_FAILED_SQL,
         SELECT_DOCUMENT_SQL,
@@ -140,6 +143,7 @@ def test_the_statements_are_the_six_the_module_defines() -> None:
         ("mark_embedded", ("company_id", "document_id")),
         ("mark_ready", ("company_id", "document_id")),
         ("mark_failed", ("company_id", "document_id")),
+        ("set_flagged_chunks", ("company_id", "document_id", "flagged_chunks")),
         ("get", ("company_id", "document_id")),
         ("list", ("company_id",)),
     ],
@@ -305,6 +309,60 @@ async def test_a_transition_that_touches_no_row_is_an_error_naming_the_document(
         await getattr(model, method)(company_id=COMPANY_ID, document_id=DOCUMENT_ID, **extra)
 
 
+@pytest.mark.anyio
+async def test_set_flagged_chunks_binds_the_numbers_and_leaves_the_status_alone() -> None:
+    """The guard's verdict is not a stage of the pipeline (S2.3.1).
+
+    A document whose chunks were withheld still goes on to `embedded` and `ready`; writing a
+    status here would invent a transition the poller would have to learn.
+    """
+    # Arrange
+    model, source = read_model([document_row(flagged_chunks=[2, 7])])
+
+    # Act
+    record = await model.set_flagged_chunks(
+        company_id=COMPANY_ID, document_id=DOCUMENT_ID, flagged_chunks=(2, 7)
+    )
+
+    # Assert
+    assert source.only.sql == SET_FLAGGED_CHUNKS_SQL
+    assert source.only.params == {
+        "document_id": DOCUMENT_ID,
+        "company_id": COMPANY_ID,
+        "flagged_chunks": [2, 7],
+    }
+    assert "set flagged_chunks" in source.only.sql
+    assert "status =" not in source.only.sql
+    assert record.flagged_chunks == (2, 7)
+
+
+@pytest.mark.anyio
+async def test_set_flagged_chunks_binds_a_list_not_the_sequence_it_was_given() -> None:
+    """psycopg adapts a tuple to a composite record, a list to an array (CLAUDE.md)."""
+    # Arrange
+    model, source = read_model([document_row(flagged_chunks=[])])
+
+    # Act
+    await model.set_flagged_chunks(
+        company_id=COMPANY_ID, document_id=DOCUMENT_ID, flagged_chunks=()
+    )
+
+    # Assert
+    assert isinstance(source.only.params["flagged_chunks"], list)
+
+
+@pytest.mark.anyio
+async def test_set_flagged_chunks_on_a_row_that_is_not_there_names_the_document() -> None:
+    # Arrange
+    model, _source = read_model([])
+
+    # Act & Assert
+    with pytest.raises(ReadModelError, match=str(DOCUMENT_ID)):
+        await model.set_flagged_chunks(
+            company_id=COMPANY_ID, document_id=DOCUMENT_ID, flagged_chunks=(1,)
+        )
+
+
 # ---------------------------------------------------------------------------- reads
 
 
@@ -386,7 +444,9 @@ def test_the_record_is_frozen_and_refuses_unknown_columns() -> None:
     with pytest.raises(ValidationError):
         record.status = DocumentStatus.READY  # type: ignore[misc]
     with pytest.raises(ValidationError, match="extra"):
-        DocumentRecord.model_validate(document_row(flagged_chunks=[]))
+        # `flagged_chunks` stood here until S2.3.1 made it a real column, which is the
+        # hazard with using a plausible future name as the example of an impossible one.
+        DocumentRecord.model_validate(document_row(shredded_by_goat=True))
 
 
 def test_the_happy_path_statuses_are_linear_and_failed_is_terminal() -> None:

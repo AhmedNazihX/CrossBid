@@ -732,6 +732,18 @@ class InMemoryRecords:
     ) -> DocumentRecord:
         return self._advance("mark_embedded", company_id, document_id, DocumentStatus.EMBEDDED)
 
+    async def set_flagged_chunks(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID, flagged_chunks: Sequence[int]
+    ) -> DocumentRecord:
+        """What the guard withheld (S2.3.1). Writes no status, exactly as the real one does
+        not — every kind is scanned, including the ones that never reach `embedded`."""
+        found = self._own("set_flagged_chunks", company_id, document_id)
+        return self._write(
+            found.model_copy(
+                update={"flagged_chunks": tuple(flagged_chunks), "updated_at": self._now()}
+            )
+        )
+
     async def mark_ready(
         self, *, company_id: uuid.UUID, document_id: uuid.UUID
     ) -> DocumentRecord:
@@ -777,7 +789,18 @@ class InMemoryRecords:
         return [record for record in self.history if record.id == document_id]
 
     def statuses_of(self, document_id: uuid.UUID) -> list[DocumentStatus]:
-        return [record.status for record in self.history_of(document_id)]
+        """The statuses a poller would have seen, which is not the same as the writes.
+
+        Consecutive repeats are collapsed because a write that changes no status is not a
+        transition: S2.3.1's `set_flagged_chunks` records what the injection guard withheld
+        without advancing the row, and a test about the *order of statuses* should not start
+        failing because a new column is written between two of them.
+        """
+        seen: list[DocumentStatus] = []
+        for record in self.history_of(document_id):
+            if not seen or seen[-1] is not record.status:
+                seen.append(record.status)
+        return seen
 
 
 @dataclass
