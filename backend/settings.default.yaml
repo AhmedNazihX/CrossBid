@@ -74,6 +74,22 @@ agent:
   # "one retry" means one.
   llm_timeout_seconds: 90
 
+# S2.3.3: what one company may start per hour, counted in-process per company by
+# `crossbid/rate_limit.py`. Both are bounds on runaway spend from one account, not quotas
+# anybody bills against -- an API running as N workers holds N sets of counters, so the
+# effective limit is N x the number below.
+limits:
+  # A bid run is ~5 minutes and ~$1.60 of OpenRouter (the DE pack, measured 2026-09-11), so
+  # 10 per hour caps one company at roughly $16/hour of LLM spend. That is enough for a
+  # bidder to start a bid, see it was the wrong pack, and start it again several times in a
+  # working session, and far too few for a script to empty the budget before anyone notices.
+  bid_creations_per_hour: 10
+  # An upload costs a parse and ~$0.03/1M tokens of embeddings, not a run, so this bounds
+  # storage and CPU rather than the LLM bill and can be far looser. The DE pack is 28 files;
+  # 120 is four full packs an hour -- generous for a human uploading a tender, useless as a
+  # way to fill a bucket.
+  document_uploads_per_hour: 120
+
 # S3.2.3's gate. `scripts/recall.py` scores an extraction result against a golden file
 # and exits non-zero below this, so the number E3's done-when turns on is configuration and
 # not a literal buried in a script. 0.9 is the plan's figure for S3.2.1.

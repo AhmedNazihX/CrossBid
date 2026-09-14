@@ -33,6 +33,9 @@ that belongs to another company answers **404**, never 403 (S2.2.2's reasoning: 
 confirms the id exists). There is no `bid_id` on the upload: the pack is uploaded first and
 S3.1.1's `POST /bids` attaches it (see `ingestion.pipeline`).
 
+`POST /documents` also carries S2.3.3's per-company hourly limit, which answers **429** with
+a `Retry-After`; `crossbid/rate_limit.py` holds the counters and the caveats.
+
 Response shapes are the frontend's contract — `frontend/lib/api.ts` is generated from this
 schema — so they are plain Pydantic models with a description on every field and no
 server-side detail (`storage_path`, `company_id`) the browser has no use for.
@@ -80,6 +83,7 @@ from crossbid.ingestion.storage import (
 )
 from crossbid.main import get_app_settings, get_database
 from crossbid.models import DocumentKind
+from crossbid.rate_limit import document_upload_limit
 from crossbid.readmodel.documents import DocumentRecord, DocumentsReadModel, DocumentStatus
 from crossbid.settings import Settings
 
@@ -254,6 +258,9 @@ def get_pipeline(
     status_code=status.HTTP_202_ACCEPTED,
     response_model=DocumentResponse,
     summary="Upload a document",
+    # S2.3.3. A route dependency rather than a parameter, so it is settled before the
+    # multipart body is read: a caller over its limit never gets to send 50 MB.
+    dependencies=[Depends(document_upload_limit)],
 )
 async def upload_document(
     background: BackgroundTasks,

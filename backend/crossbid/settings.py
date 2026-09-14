@@ -3,7 +3,8 @@
 Three layers, lowest first (S0.3.2):
 
 1. **`settings.default.yaml`** -- behaviour an operator tunes: model slugs per role,
-   temperature, max tokens, chunking, agent limits, enabled tools. Committed, reviewed,
+   temperature, max tokens, chunking, agent limits, per-company request limits, enabled
+   tools. Committed, reviewed,
    and the *only* place a model slug is written down (CLAUDE.md).
 2. **The environment** -- secrets and deployment wiring, through `pydantic-settings`:
    `OPENROUTER_API_KEY`, `APP_ENCRYPTION_KEY`, `DATABASE_URL`, `AUTH_MODE`, `ENV`,
@@ -180,6 +181,22 @@ class AgentSettings(_Frozen):
     output and tight enough that a hung connection does not sit inside the run budget."""
 
 
+class LimitsSettings(_Frozen):
+    """S2.3.3 — how much one company may start per hour, counted in `rate_limit.py`.
+
+    Its own section rather than a key under `agent`: `agent` bounds what *one* run may
+    spend once it has been started, and these bound how many runs and uploads a single
+    account may start at all. The two are tuned against different failures — a run that
+    fans out too wide, and an account that loops on the start button — and an operator
+    lowering one must not silently move the other.
+
+    The window is an hour and is not configurable; `rate_limit.HOUR_SECONDS` says why.
+    """
+
+    document_uploads_per_hour: int = Field(gt=0)
+    bid_creations_per_hour: int = Field(gt=0)
+
+
 class EvaluationSettings(_Frozen):
     """The offline quality gates. Read by `scripts/recall.py`, never by a request path.
 
@@ -206,6 +223,7 @@ class RuntimeSettings(_Frozen):
     """Not in `settings.default.yaml` yet, so `None` until it is added (see the report)."""
     ingestion: IngestionSettings
     agent: AgentSettings
+    limits: LimitsSettings
     evaluation: EvaluationSettings
     """Offline gates (S3.2.3). Deliberately *not* published by `GET /dev/settings`: it is
     a maintainer's scoring threshold, not a knob the developer panel changes."""

@@ -13,7 +13,10 @@ Startup order, in `lifespan`:
 
 CORS allows exactly one origin -- the web app (`WEB_ORIGIN`) -- and the custom `X-Dev-Company`
 header the dev auth bridge reads; a browser at `:3000` could otherwise not reach `:8000` at all.
-Rate limiting arrives with S2.3.3.
+
+Rate limiting (S2.3.3) is deliberately **not** here: it hangs off `POST /documents` and
+`POST /bids` as a dependency, because those two are the routes that spend money and the
+workspace's two-second poll must not be throttled with them. See `crossbid/rate_limit.py`.
 """
 
 from __future__ import annotations

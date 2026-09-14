@@ -15,6 +15,9 @@ every route here). A document that *is* the caller's but cannot start a bid answ
 that names the problem — **422** for company evidence, **409** for a file still processing
 or already attached to another bid — so the browser can say which file to fix.
 
+`POST /bids` carries S2.3.3's per-company hourly limit: over it, the answer is **429** with
+a `Retry-After` and no run is started. `crossbid/rate_limit.py` holds the counters.
+
 The response models are the frontend's contract (`frontend/lib/api.ts` is generated from
 this schema), so every field carries a description and nothing server-side (`thread_id`,
 `storage_path`, `company_id`) is in them. `problems` are `ExtractionProblem`s re-validated
@@ -43,6 +46,7 @@ from crossbid.models.requirement import Requirement
 from crossbid.models.review import ReviewSubmission, RowEdit
 from crossbid.models.tender import BidStatus, BidSummary
 from crossbid.models.verdict import Decision, Verdict
+from crossbid.rate_limit import bid_start_limit
 from crossbid.readmodel.bids import (
     TENDER_DOCUMENT_KINDS,
     BidDocumentRow,
@@ -286,7 +290,13 @@ def get_bid_runner(
 
 
 @router.post(
-    "", status_code=status.HTTP_202_ACCEPTED, response_model=BidResponse, summary="Start a bid"
+    "",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=BidResponse,
+    summary="Start a bid",
+    # S2.3.3. This is the expensive route -- one run is ~5 minutes and ~$1.60 -- so the
+    # limit is settled before the company, the documents or the graph are even looked up.
+    dependencies=[Depends(bid_start_limit)],
 )
 async def start_bid(
     body: StartBidRequest,
