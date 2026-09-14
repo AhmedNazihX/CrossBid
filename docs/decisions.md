@@ -3812,6 +3812,7 @@ that is where chunks are made. It is not: extraction reads `parsed.pages`, never
 plant in a tender PDF would have sailed past a scanner that only ever saw the embed path. The
 lesson is that "where the text is chunked" and "where the text reaches a model" are two
 different places in this codebase, and a guard has to be installed at both.
+
 ---
 
 ## ADR-0050 — A role may only be switched to a slug someone probed
@@ -3854,3 +3855,33 @@ so a bad slug stops the boot rather than being discovered by a bid, and two test
 `test_main.py` pin both the call and its ordering. A self-guarding function is easy to leave
 unwired precisely because it never complains: the guard makes the missing caller silent.
 
+---
+
+## ADR-0051 — Thumbs that are stored and nothing more
+
+**Date:** 2026-09-14 · **Stories:** S4.6.3 · **Status:** accepted
+
+A reviewer can rate any matrix row up or down and add a sentence saying what it should have
+said. The acceptance criterion is that the rating is **stored** — and the plan's cut list keeps
+few-shot learning from feedback out of the course build, so nothing reads these rows back into
+a prompt. Both module docstrings say so, because a "feedback" table that quietly began steering
+the agent would be the kind of surprise this project's advisory-only positioning cannot afford.
+
+**Append-only, because the disagreement is the record.** Re-rating a row inserts rather than
+updates; `distinct on (matrix_row_id) … order by created_at desc` answers "the latest per
+target". The bidder's earlier answer is part of what the story keeps.
+
+**The stored `company_id` comes from the bid row, not from the caller.** The write is an
+`insert … select from bids b` whose `where` proves `b.company_id = %(company_id)s`, so the
+scope and the stored value cannot disagree — there is no parameter to get wrong. A named
+`matrix_row_id` must additionally satisfy an `exists` subquery carrying its own scope, so
+rating another company's row selects nothing, inserts nothing, and answers 404. One 404 detail
+covers both causes, and the list route answers an empty list rather than 404 for a bid that is
+not the caller's, so neither route is an id oracle.
+
+**`matrix_row_id` is nullable** — 0001 made it so — which is the target a chat answer will rate
+at F3.5. A `Rating` IntEnum (`UP = 1`, `DOWN = -1`) is pinned against the migration's
+`check (rating in (-1, 1))` by a parity test, because `test_migrations.py`'s constraint guard
+only scans `text … in (…)` constraints and cannot see a smallint one.
+
+No migration: the `feedback` table from `0001_init.sql` is used exactly as declared.

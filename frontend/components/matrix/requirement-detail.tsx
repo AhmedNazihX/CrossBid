@@ -12,12 +12,15 @@ import {
 } from './requirement-labels'
 import { RowEvidence } from './row-evidence'
 import type { RowReview } from './row-review-controls'
+import type { RowFeedbackController } from './use-row-feedback'
 
 export interface RequirementDetailProps {
   readonly requirement: Requirement
   /** The matrix row answering this requirement, or `undefined` while the check is behind. */
   readonly row: MatrixRow | undefined
   readonly isChecking: boolean
+  /** The bidder's thumbs on this bid (S4.6.3); shown under a row that has been checked. */
+  readonly feedback: RowFeedbackController
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
   /** Present once the bid is parked at its interrupt; absent keeps the panel read-only. */
@@ -37,6 +40,7 @@ export function RequirementDetail({
   requirement,
   row,
   isChecking,
+  feedback,
   activeCitation,
   onCite,
   review,
@@ -79,6 +83,7 @@ export function RequirementDetail({
       ) : (
         <RowEvidence
           row={row}
+          feedback={feedback}
           activeCitation={activeCitation}
           onCite={onCite}
           review={review}

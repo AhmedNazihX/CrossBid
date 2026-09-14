@@ -19,6 +19,7 @@ import {
 import { CATEGORY_LABELS, CATEGORY_ORDER } from './requirement-labels'
 import { RowEvidence } from './row-evidence'
 import type { RowReview } from './row-review-controls'
+import type { RowFeedbackController } from './use-row-feedback'
 import { RowStatusChange } from './row-status-change'
 
 export interface RequirementCardsProps {
@@ -29,6 +30,8 @@ export interface RequirementCardsProps {
   readonly onCite: (citation: Citation) => void
   readonly emptyMessage: React.ReactNode
   readonly bidderLanguage: string
+  /** The bidder's thumbs on this bid, for the rating control inside each card (S4.6.3). */
+  readonly feedback: RowFeedbackController
   /** The reviewer's pending edits (S4.5.2); absent leaves the cards read-only. */
   readonly review?: RowReview
 }
@@ -51,6 +54,7 @@ export function RequirementCards({
   onCite,
   emptyMessage,
   bidderLanguage,
+  feedback,
   review,
 }: RequirementCardsProps) {
   if (requirements.length === 0) {
@@ -83,6 +87,7 @@ export function RequirementCards({
                 activeCitation={activeCitation}
                 onCite={onCite}
                 bidderLanguage={bidderLanguage}
+                feedback={feedback}
                 review={review}
               />
             ))}
@@ -101,6 +106,7 @@ interface RequirementCardProps {
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
   readonly bidderLanguage: string
+  readonly feedback: RowFeedbackController
   readonly review?: RowReview
 }
 
@@ -112,6 +118,7 @@ function RequirementCard({
   activeCitation,
   onCite,
   bidderLanguage,
+  feedback,
   review,
 }: RequirementCardProps) {
   const [isExpanded, setExpanded] = useState(false)
@@ -183,6 +190,7 @@ function RequirementCard({
           <div id={detailId} hidden={!isExpanded}>
             <RowEvidence
               row={row}
+              feedback={feedback}
               activeCitation={activeCitation}
               onCite={onCite}
               isPhone

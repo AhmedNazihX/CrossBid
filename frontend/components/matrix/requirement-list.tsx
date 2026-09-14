@@ -21,6 +21,7 @@ import {
 } from './requirement-language'
 import { RequirementDetail } from './requirement-detail'
 import type { RowReview } from './row-review-controls'
+import type { RowFeedbackController } from './use-row-feedback'
 import { RowStatusChange } from './row-status-change'
 import {
   CATEGORY_LABELS,
@@ -36,6 +37,8 @@ export interface RequirementListProps {
   readonly problems: readonly ExtractionProblem[]
   readonly documents: readonly BidDocument[]
   readonly bidderLanguage: string
+  /** The bidder's thumbs on this bid, for the rating control under each row (S4.6.3). */
+  readonly feedback: RowFeedbackController
   /** `true` while the run is still in flight, so a missing row means "not yet", not "never". */
   readonly isChecking: boolean
   readonly activeCitation: Citation | undefined
@@ -69,6 +72,7 @@ export function RequirementList({
   problems,
   documents,
   bidderLanguage,
+  feedback,
   isChecking,
   activeCitation,
   onCite,
@@ -167,6 +171,7 @@ export function RequirementList({
                 onCite={onCite}
                 showDocument={documents.length > 1}
                 bidderLanguage={bidderLanguage}
+                feedback={feedback}
                 review={review}
               />
             ))}
@@ -188,6 +193,7 @@ interface RequirementRowProps {
   readonly onCite: (citation: Citation) => void
   readonly showDocument: boolean
   readonly bidderLanguage: string
+  readonly feedback: RowFeedbackController
   readonly review?: RowReview
 }
 
@@ -202,6 +208,7 @@ function RequirementRow({
   onCite,
   showDocument,
   bidderLanguage,
+  feedback,
   review,
 }: RequirementRowProps) {
   const [language, setLanguage] = useState<RequirementLanguage>('bidder')
@@ -293,6 +300,7 @@ function RequirementRow({
             requirement={requirement}
             row={row}
             isChecking={isChecking}
+            feedback={feedback}
             activeCitation={activeCitation}
             onCite={onCite}
             review={review}

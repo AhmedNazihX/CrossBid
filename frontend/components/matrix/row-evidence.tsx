@@ -5,11 +5,15 @@ import type { MatrixRow } from '@/lib/bids'
 import type { Citation } from './citation'
 import { EcertisCard } from './ecertis-card'
 import { EvidenceList } from './evidence-list'
+import { RowFeedback } from './row-feedback'
 import { RowReviewControls, type RowReview } from './row-review-controls'
 import { ROW_STATUS_WITHOUT_EVIDENCE } from './row-status'
+import type { RowFeedbackController } from './use-row-feedback'
 
 export interface RowEvidenceProps {
   readonly row: MatrixRow
+  /** The bidder's thumbs on this bid (S4.6.3). Always present: a row can always be rated. */
+  readonly feedback: RowFeedbackController
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
   readonly isPhone?: boolean
@@ -31,9 +35,14 @@ export interface RowEvidenceProps {
  * S4.5.2 adds the artboard's Confirm / Change status / Add evidence controls under the card,
  * but only the pending-edit state changes when they are used: everything above them is the
  * agent's own answer, and stays exactly as the run left it until the review is submitted.
+ *
+ * S4.6.3's thumbs come last, under both. They are about the answer above them rather than
+ * about the tender, and unlike the review controls they are there whatever state the bid is
+ * in: a finished bid is exactly when a bidder knows whether the check was right.
  */
 export function RowEvidence({
   row,
+  feedback,
   activeCitation,
   onCite,
   isPhone = false,
@@ -70,6 +79,7 @@ export function RowEvidence({
           isPhone={isPhone}
         />
       )}
+      <RowFeedback row={row} feedback={feedback} isPhone={isPhone} />
     </div>
   )
 }

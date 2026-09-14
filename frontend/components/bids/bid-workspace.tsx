@@ -12,6 +12,7 @@ import { RequirementList } from '@/components/matrix/requirement-list'
 import { indexRowsByRequirement } from '@/components/matrix/row-status'
 import type { AttachableDocument } from '@/components/matrix/row-attachments'
 import { useRowEdits } from '@/components/matrix/use-row-edits'
+import { useRowFeedback } from '@/components/matrix/use-row-feedback'
 import { citableDocuments } from '@/components/matrix/source-documents'
 import type { Citation } from '@/components/matrix/citation'
 import { SourcePanel, type SourceSelection } from '@/components/pdf/source-panel'
@@ -131,6 +132,9 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
   const [phoneTab, setPhoneTab] = useState<PhoneTab>('matrix')
   const announcement = useStatusAnnouncement(bid)
   const edits = useRowEdits(bid.matrix_rows)
+  // Loaded once per bid and passed to both layouts, so thirty rows share one request for
+  // the thumbs the bidder has already given (S4.6.3).
+  const feedback = useRowFeedback(initial.id)
   const attachable = useAttachableDocuments(isAwaitingReview(bid))
 
   const status = BID_STATUS_LABELS[bid.status]
@@ -283,6 +287,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
               activeCitation={activeCitation}
               onCite={handleCite}
               emptyMessage={emptyMessage}
+              feedback={feedback}
               review={review}
             />
           </div>
@@ -405,6 +410,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             problems={bid.problems}
             documents={bid.documents}
             bidderLanguage={bid.bidder_language}
+            feedback={feedback}
             isChecking={isRunning}
             activeCitation={activeCitation}
             onCite={handleCite}

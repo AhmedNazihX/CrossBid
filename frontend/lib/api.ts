@@ -274,6 +274,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bids/{bid_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What this company has rated on this bid
+         * @description The latest rating of each target, so the workspace can show a thumb it already has.
+         *
+         *     A bid that is not the caller's is an empty list rather than a 404: the statement is
+         *     scoped by company, so there is nothing to find and nothing to distinguish it from a bid
+         *     nobody has rated yet — and answering 404 here would tell a caller which bid ids exist.
+         */
+        get: operations["get_feedback_bids__bid_id__feedback_get"];
+        put?: never;
+        /**
+         * Rate one matrix row, or the bid's answer
+         * @description Store the rating and answer with the row as it was written.
+         *
+         *     Rating the same target again appends rather than replacing: the bidder's first answer is
+         *     part of the record this story exists to keep, and `GET` shows only the latest of them.
+         *
+         *     A comment of nothing but whitespace is stored as no comment at all, so "rated, said
+         *     nothing" is one state in the database rather than two.
+         */
+        post: operations["post_feedback_bids__bid_id__feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -696,6 +730,11 @@ export interface components {
              * @description Slugs the picker may offer: the verified set, not OpenRouter's catalogue
              */
             available_models: string[];
+            /**
+             * Switchable Roles
+             * @description The roles available_models applies to. Every role but embed, whose slug is pinned to the stored vectors' width and is not a picker choice.
+             */
+            switchable_roles: components["schemas"]["ModelRole"][];
             /** Temperature */
             temperature: number;
             /** Max Tokens */
@@ -791,6 +830,16 @@ export interface components {
              * @description len(unread_pages), for a badge
              */
             unread_page_count: number;
+            /**
+             * Flagged Chunks
+             * @description Chunk numbers the injection guard withheld from the corpus (S2.3.1). Text in them reached no prompt and no embedding, so a reviewer is told rather than left to wonder why a passage they can see on the page was never cited.
+             */
+            flagged_chunks: number[];
+            /**
+             * Flagged Chunk Count
+             * @description len(flagged_chunks), for a badge
+             */
+            flagged_chunk_count: number;
             /**
              * Created At
              * Format: date-time
@@ -923,7 +972,69 @@ export interface components {
          *     built from untrusted input is how untrusted input escapes (ADR-0008).
          * @enum {string}
          */
-        ExtractionProblemReason: "no_verbatim_quote" | "invalid_row" | "invalid_criterion_id" | "missing_translation" | "model_error" | "section_failed" | "unwrappable_section" | "unreadable_document" | "unparseable_document";
+        ExtractionProblemReason: "no_verbatim_quote" | "invalid_row" | "invalid_criterion_id" | "missing_translation" | "model_error" | "section_failed" | "unwrappable_section" | "unreadable_document" | "unparseable_document" | "planted_instruction";
+        /**
+         * FeedbackListResponse
+         * @description Every target of this bid the bidder has rated, with what they last said about it.
+         */
+        FeedbackListResponse: {
+            /**
+             * Feedback
+             * @description The latest rating per target, so re-rating a row replaces what the screen shows without losing the earlier answer from the table
+             */
+            feedback: components["schemas"]["FeedbackRecord"][];
+        };
+        /**
+         * FeedbackRecord
+         * @description One stored rating, as the bidder's own screen reads it back.
+         *
+         *     `company_id` is deliberately absent: it is the scope every statement here filters by,
+         *     and a response that repeated it would tell the browser something it already asserted.
+         */
+        FeedbackRecord: {
+            /**
+             * Id
+             * @description Identifies this rating; a later rating of the same target is a new row with a new id
+             */
+            id: number;
+            /** Bid Id */
+            bid_id: string;
+            /**
+             * Matrix Row Id
+             * @description The matrix row rated, or null when the rating is about the bid's answer
+             */
+            matrix_row_id?: string | null;
+            /** @description 1 for a thumb up, -1 for a thumb down */
+            rating: components["schemas"]["Rating"];
+            /**
+             * Comment
+             * @description The bidder's correction, if given
+             */
+            comment?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * FeedbackSubmission
+         * @description A thumb about one answer, and what the bidder would have said instead.
+         */
+        FeedbackSubmission: {
+            /** @description 1 for a thumb up, -1 for a thumb down */
+            rating: components["schemas"]["Rating"];
+            /**
+             * Matrix Row Id
+             * @description The matrix row being rated. Null rates the bid's own answer, which is what a chat answer will be when F3.5 lands
+             */
+            matrix_row_id?: string | null;
+            /**
+             * Comment
+             * @description The correction, in the bidder's words. Optional: a thumb is a rating
+             */
+            comment?: string | null;
+        };
         /**
          * Gap
          * @description One reason the bidder does not yet qualify, in terms they can act on.
@@ -1006,6 +1117,12 @@ export interface components {
             reviewed_at?: string | null;
         };
         /**
+         * ModelRole
+         * @description The roles `settings.default.yaml` maps to slugs. Code asks for a role, never a slug.
+         * @enum {string}
+         */
+        ModelRole: "extract" | "cheap" | "embed" | "judge" | "fallback";
+        /**
          * ModelSlugs
          * @description Role -> OpenRouter slug. Every slug was confirmed with a live call (ADR-0004/0005).
          */
@@ -1021,6 +1138,17 @@ export interface components {
             /** Fallback */
             fallback: string;
         };
+        /**
+         * Rating
+         * @description A thumb, in the values the column already stores: `check (rating in (-1, 1))`.
+         *
+         *     An `IntEnum` rather than words, because 0001 fixed the vocabulary of this column before
+         *     the API existed and a `'up' -> 1` mapping layer would be a second place for it to drift.
+         *     `DocumentStatus` lives beside its table for the same reason. A test asserts the two
+         *     values against the check constraint, as `test_migrations.py` does for the text enums.
+         * @enum {integer}
+         */
+        Rating: 1 | -1;
         /**
          * Requirement
          * @description One obligation, with the evidence trail back to the page it was read from.
@@ -1836,6 +1964,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TedSearchPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_feedback_bids__bid_id__feedback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_feedback_bids__bid_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackSubmission"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackRecord"];
                 };
             };
             /** @description Validation Error */
