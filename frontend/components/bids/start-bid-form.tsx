@@ -21,7 +21,8 @@ import {
   TENDER_DOCUMENT_KINDS,
   type DocumentResponse,
 } from '@/lib/documents'
-import { plural } from '@/lib/format'
+import { formatDate, plural } from '@/lib/format'
+import { sourceLanguageOf, type TedNotice } from '@/lib/tenders'
 import {
   DOCUMENT_KIND_LABELS,
   DOCUMENT_STATUS_LABELS,
@@ -91,14 +92,35 @@ function deadlineAt(local: string, offsetMinutes: OffsetValue): string | null {
   return `${withSeconds}${sign}${hh}:${mm}`
 }
 
-export function StartBidForm() {
+export interface StartBidFormProps {
+  /**
+   * The notice picked on TED (S4.3.1), or `undefined` when the bidder typed it in.
+   *
+   * What it prefills is everything TED actually published — the publication number, the
+   * buyer, the source language and the deadline's **offset**. What it deliberately does not
+   * prefill is the hour: TED publishes a date and never a time (ADR-0043), and a `00:00`
+   * sitting in the field would be an invented deadline that looks like a read one. The date
+   * is shown in the hint instead, so the bidder copies the hour from the notice they can
+   * see and we cannot.
+   */
+  readonly notice?: TedNotice
+}
+
+export function StartBidForm({ notice }: StartBidFormProps = {}) {
   const router = useRouter()
   const [listState, setListState] = useState<ListState>({ phase: 'loading' })
-  const [noticeNumber, setNoticeNumber] = useState('')
-  const [sourceLanguage, setSourceLanguage] = useState<SourceLanguage>('fr')
-  const [buyer, setBuyer] = useState('')
+  const [noticeNumber, setNoticeNumber] = useState(notice?.publication_number ?? '')
+  const [sourceLanguage, setSourceLanguage] = useState<SourceLanguage>(
+    notice === undefined ? 'fr' : sourceLanguageOf(notice)
+  )
+  const [buyer, setBuyer] = useState(notice?.buyer ?? '')
   const [deadlineLocal, setDeadlineLocal] = useState('')
-  const [deadlineOffset, setDeadlineOffset] = useState<OffsetValue>('')
+  const [deadlineOffset, setDeadlineOffset] = useState<OffsetValue>(
+    notice?.deadline_utc_offset_minutes === null ||
+      notice?.deadline_utc_offset_minutes === undefined
+      ? ''
+      : (String(notice.deadline_utc_offset_minutes) as OffsetValue)
+  )
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [error, setError] = useState<string | undefined>(undefined)
   const [isStarting, setIsStarting] = useState(false)
@@ -174,14 +196,10 @@ export function StartBidForm() {
       className="flex flex-col gap-5"
     >
       <Notice>
-        Searching TED and uploading the pack from this screen arrive with the full flow
-        (S4.3.1). Until then, upload the tender&rsquo;s documents on the{' '}
-        <Link href="/company" className="underline">
-          Company profile
-        </Link>{' '}
-        page with the type <b className="font-medium">Tender document</b> — and, where the buyer
-        published one, the <b className="font-medium">ESPD / DUME request</b> XML, which names
-        the EU criteria outright — then start here.
+        Tick the documents the agent should read. Anything still processing cannot be ticked — a
+        requirement cited from a half-read file would cite the wrong page. Where the buyer
+        published an <b className="font-medium">ESPD / DUME request</b>, include it: it names
+        the EU criteria outright, so those need no inference at all.
       </Notice>
 
       <Card
@@ -224,7 +242,11 @@ export function StartBidForm() {
               type="datetime-local"
               value={deadlineLocal}
               onChange={(event) => setDeadlineLocal(event.target.value)}
-              hint="The date and time the notice states, exactly as it prints them."
+              hint={
+                notice?.deadline == null
+                  ? 'The date and time the notice states, exactly as it prints them.'
+                  : `TED publishes ${formatDate(notice.deadline)} for this notice and no time. Add the hour from the notice itself.`
+              }
             />
             <Select
               label="Its time zone"

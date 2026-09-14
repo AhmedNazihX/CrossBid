@@ -21,6 +21,33 @@ export function formatDateTime(iso: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? '—' : DATE_TIME.format(date)
 }
 
+const DATE_ONLY = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+
+/**
+ * "7 Oct 2026", or an em dash when there is no date.
+ *
+ * Separate from `formatDateTime` because a TED deadline genuinely has no time of day — the
+ * hour comes from the notice or the bidder (ADR-0043) — and rendering one as midnight would
+ * put an hour on the screen that nobody published. Parsed as UTC rather than as a local
+ * timestamp: `new Date('2026-10-07')` is midnight UTC, which is the *previous day* west of
+ * Greenwich, so the date is split rather than handed to the browser's timezone.
+ */
+export function formatDate(iso: string | null | undefined): string {
+  if (iso === null || iso === undefined) {
+    return '—'
+  }
+  const [year, month, day] = iso.slice(0, 10).split('-').map(Number)
+  if (year === undefined || month === undefined || day === undefined) {
+    return '—'
+  }
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return Number.isNaN(date.getTime()) ? '—' : DATE_ONLY.format(date)
+}
+
 /** "fr" → "FR"; unknown → "—". */
 export function formatLanguage(code: string | null | undefined): string {
   return code === null || code === undefined || code.length === 0 ? '—' : code.toUpperCase()

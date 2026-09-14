@@ -96,9 +96,22 @@ export type ResponseBody<P extends keyof paths, M extends HttpMethod> =
 export type PathParams<P extends keyof paths, M extends HttpMethod> =
   ParametersOf<ApiOperation<P, M>> extends { path: infer Values } ? Values : never
 
-/** Query string parameters the operation accepts; `never` when it accepts none. */
+/**
+ * Query string parameters the operation accepts; `never` when it accepts none.
+ *
+ * Both branches are needed. `openapi-typescript` emits `query: {...}` when at least one
+ * parameter is required and `query?: {...}` when every one is optional — and a single
+ * `extends { query: infer V }` matches only the first, quietly resolving to `never` for the
+ * second. The whole parameter object then fails to type-check against `never`, which is how
+ * a route with nothing but optional filters became impossible to call (S4.3.1 was the first
+ * to have any query parameters at all, so this had never been exercised).
+ */
 export type QueryParams<P extends keyof paths, M extends HttpMethod> =
-  ParametersOf<ApiOperation<P, M>> extends { query: infer Values } ? Values : never
+  ParametersOf<ApiOperation<P, M>> extends { query: infer Values }
+    ? Values
+    : ParametersOf<ApiOperation<P, M>> extends { query?: infer Optional }
+      ? Exclude<Optional, undefined>
+      : never
 
 type DeclaredRequestBody<P extends keyof paths, M extends HttpMethod> = NonNullable<
   ApiOperation<P, M> extends { requestBody?: infer Body } ? Body : never

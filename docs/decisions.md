@@ -3468,3 +3468,51 @@ even though notices are public — an unauthenticated route here is a free proxy
 finds it — and `TedUnavailableError` becomes **503, never an empty page**: "nothing matched"
 and "TED did not answer" are different facts, and a bidder told the first will widen a query
 that was never the problem.
+
+---
+
+## ADR-0044 — The start-a-bid flow, and the translation that costs nothing
+
+**Date:** 2026-09-14 · **Stories:** S4.3.1 · **Status:** accepted
+
+`NewBid.dc.html`'s three cards, in one screen: find the notice on TED, add the pack the
+buyer published, start. Until now the first two were a sentence apologising for their own
+absence, and the bidder typed a publication number they had to fetch from the TED portal —
+which is the thing this screen exists to save them from.
+
+**The wedge arrives here for free, and it is worth saying out loud.** TED publishes every
+notice title in all 24 EU languages, so the company profile's `language` is passed into the
+search and a German bidder reads a French tender's title in German **with no model call and
+no cost** (ADR-0043). Verified live: a CPV-72 search in France returned 19 238 open notices
+rendered as *"Frankreich – Systemberatung"*, *"Frankreich – Software-Entwicklung"*. Nothing
+else in the product delivers cross-border translation that cheaply.
+
+**Picking a notice prefills what TED published and refuses to invent the rest.** Publication
+number, buyer, source language and the deadline's **offset** all carry across. The hour does
+not: TED publishes a date and never a time, so a `00:00` sitting in the field would be an
+invented deadline that looks like a read one. The hint names the date instead — *"TED
+publishes 7 Oct 2026 for this notice and no time. Add the hour from the notice itself."* —
+which puts the one fact the bidder needs next to the field that needs it.
+
+**The search can be skipped, and that is not a hedge.** A bidder who already has the number
+— from an email, from the buyer — should not have to search for a notice they can name, and
+the escape hatch is also what keeps the screen working on a day TED is down. The start form
+keeps its own fields either way; the notice only ever prefills them.
+
+**The picked notice lives in component state, not the URL.** It is half a form, not a page:
+a refreshed `/bids/new?notice=…` that restored the choice but not the uploads would be a
+worse lie than starting over. Nothing is created until Start, so *Change* is always available
+and costs nothing.
+
+**A latent bug in the generated client, found by being the first caller.** `QueryParams`
+resolved to `never` whenever *every* query parameter was optional, because
+`openapi-typescript` emits `query?: {…}` in that case and the helper only matched `query:
+{…}`. No route had query parameters before this one, so it had never been exercised — the
+whole parameter object then failed to type-check against `never`. Both branches are handled
+now.
+
+The story's second criterion needed no work: only `ready` documents are selectable and
+`canStart` requires one, so Start is already unreachable until a tender document has been
+read. What did need work was the note above it, which still explained that searching TED
+"arrives with the full flow (S4.3.1)" — true until this commit, and exactly the kind of
+sentence that rots into a lie.
