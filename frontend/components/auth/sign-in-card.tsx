@@ -202,18 +202,31 @@ export function SignInCard() {
         </Button>
       </form>
 
-      <div className="flex flex-col gap-2 border-t border-border-subtle pt-4">
-        {OTHER_METHODS[method].map((other) => (
-          <button
-            key={other}
-            type="button"
-            className="rounded-sm text-left [font:var(--type-body-sm)] text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
-            onClick={() => chooseMethod(other)}
-            disabled={busy}
-          >
-            {SWITCH_LABELS[other]}
-          </button>
-        ))}
+      <div className="flex flex-col gap-3 border-t border-border-subtle pt-5">
+        {OTHER_METHODS[method].map(({ method: other, emphasis }) =>
+          emphasis === 'button' ? (
+            <Button
+              key={other}
+              type="button"
+              variant="secondary"
+              fullWidth
+              disabled={busy}
+              onClick={() => chooseMethod(other)}
+            >
+              {SWITCH_LABELS[other]}
+            </Button>
+          ) : (
+            <button
+              key={other}
+              type="button"
+              className="rounded-sm self-center [font:var(--type-body-sm)] text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
+              onClick={() => chooseMethod(other)}
+              disabled={busy}
+            >
+              {SWITCH_LABELS[other]}
+            </button>
+          )
+        )}
       </div>
     </Card>
   )
@@ -235,18 +248,36 @@ const BUSY_LABELS: Readonly<Record<Method, string>> = {
 const SWITCH_LABELS: Readonly<Record<Method, string>> = {
   password: 'I already have an account',
   link: 'Email me a sign-in link instead',
-  register: 'Create an account',
+  register: 'Create an account', // the secondary button on the sign-in screen
+}
+
+interface Alternative {
+  readonly method: Method
+  /** `button` for a real destination, `link` for a correction. See `OTHER_METHODS`. */
+  readonly emphasis: 'button' | 'link'
 }
 
 /**
- * What the footer offers from each screen. Sign-up is not offered from the link screen: the
- * link already creates the account when there is none, so a second route to the same place
- * would be a choice without a difference.
+ * What the footer offers from each screen, and with how much weight.
+ *
+ * **Creating an account is a button, and going back to sign-in is not.** From the sign-in
+ * screen, registering is a different destination a first-time visitor is genuinely choosing
+ * between — a text link makes the one action a new bidder needs the least visible thing on
+ * the page. From the registration screen, "I already have an account" is a correction of a
+ * wrong turn, and giving it equal weight would leave two buttons competing where one is
+ * plainly the point of the screen. The asymmetry is the intent, not an oversight.
+ *
+ * Sign-up is not offered from the link screen at all: the link already creates the account
+ * when there is none, so a second route to the same place would be a choice without a
+ * difference.
  */
-const OTHER_METHODS: Readonly<Record<Method, readonly Method[]>> = {
-  password: ['link', 'register'],
-  link: ['password'],
-  register: ['password'],
+const OTHER_METHODS: Readonly<Record<Method, readonly Alternative[]>> = {
+  password: [
+    { method: 'register', emphasis: 'button' },
+    { method: 'link', emphasis: 'link' },
+  ],
+  link: [{ method: 'password', emphasis: 'link' }],
+  register: [{ method: 'password', emphasis: 'link' }],
 }
 
 function Card({ children }: Readonly<{ children: React.ReactNode }>) {
