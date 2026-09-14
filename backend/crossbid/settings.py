@@ -225,6 +225,11 @@ class LimitsSettings(_Frozen):
 
     document_uploads_per_hour: int = Field(gt=0)
     bid_creations_per_hour: int = Field(gt=0)
+    chat_questions_per_hour: int = Field(gt=0)
+    """S3.5.1: questions one company may ask about its bids per hour. Its own number rather
+    than a share of `bid_creations_per_hour`, because the two bound different bills -- a run
+    is dollars and a chat turn is cents, and an operator tightening one must not silently
+    stop a bidder asking what the matrix already says."""
 
 
 class EvaluationSettings(_Frozen):

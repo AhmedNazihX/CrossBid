@@ -34,6 +34,13 @@ import pytest
 from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
+from crossbid.agent.chat_graph import (
+    BIDDER_LANGUAGE_MARKER as CHAT_BIDDER_LANGUAGE_MARKER,
+)
+from crossbid.agent.chat_graph import CHAT_PROMPT_NAME
+from crossbid.agent.chat_graph import (
+    TOOL_BUDGET_MARKER as CHAT_TOOL_BUDGET_MARKER,
+)
 from crossbid.agent.nodes import extract_reqs as extract_reqs_module
 from crossbid.agent.nodes.check_loop import (
     BIDDER_COUNTRY_MARKER,
@@ -1320,6 +1327,10 @@ PROMPT_VALUES: Mapping[str, Mapping[str, str]] = {
         CHECK_BIDDER_LANGUAGE_MARKER: "de",
         BIDDER_COUNTRY_MARKER: "de",
         TOOL_BUDGET_MARKER: "4",
+    },
+    CHAT_PROMPT_NAME: {
+        CHAT_BIDDER_LANGUAGE_MARKER: "de",
+        CHAT_TOOL_BUDGET_MARKER: "4",
     },
 }
 """What each node passes its prompt: `extract_reqs` here, `check_loop` for `check.md`.

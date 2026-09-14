@@ -136,6 +136,7 @@ def _routers() -> list[APIRouter]:
     `openapi-typescript` emits components in (ADR-0009), so keep it stable.
     """
     from crossbid.routers.bids import router as bids_router
+    from crossbid.routers.chat import router as chat_router
     from crossbid.routers.companies import router as companies_router
     from crossbid.routers.dev import router as dev_router
     from crossbid.routers.documents import router as documents_router
@@ -151,6 +152,7 @@ def _routers() -> list[APIRouter]:
         dev_router,
         tenders_router,
         feedback_router,
+        chat_router,
     ]
 
 

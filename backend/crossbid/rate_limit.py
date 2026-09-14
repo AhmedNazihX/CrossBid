@@ -1,12 +1,17 @@
-"""S2.3.3 — per-company limits on the two routes that spend money.
+"""S2.3.3 — per-company limits on the routes that spend money.
 
-`POST /documents` and `POST /bids` are the only routes that start real work: an upload
-parses and embeds a whole pack, and one bid run is about five minutes and $1.60 of
-OpenRouter (CLAUDE.md's measured figure for the DE pack). Everything else reads a
-projection. That is why this is a **dependency on those two routes and not middleware over
-all of them**: the workspace polls `GET /bids/{id}` every two seconds by design (S4.5.1), so
-a limiter in front of every route would either throttle the poll or be set so high that it
-stops bounding the LLM bill — the thing the story exists to bound.
+`POST /documents`, `POST /bids` and `POST /bids/{id}/chat` are the routes that start real
+work: an upload parses and embeds a whole pack, one bid run is about five minutes and $1.60
+of OpenRouter (CLAUDE.md's measured figure for the DE pack), and a chat turn (S3.5.1) is a
+short ReAct loop over a cheap model. Everything else reads a projection. That is why this is
+a **dependency on those routes and not middleware over all of them**: the workspace polls
+`GET /bids/{id}` every two seconds by design (S4.5.1), so a limiter in front of every route
+would either throttle the poll or be set so high that it stops bounding the LLM bill — the
+thing the story exists to bound.
+
+Each route carries its own `scope` and its own number, because they cost different amounts
+and an operator tightening one must not silently stop another: a bidder should not lose the
+ability to ask what the matrix says because they uploaded a large pack this morning.
 
 **Why not `guards/`.** That package is the *prompt* boundary, and its rule is that nothing
 in it imports from the rest of `crossbid` (`test_wrap.py` asserts it), which is what lets
@@ -238,3 +243,11 @@ bid_start_limit: Final = RequestLimit(
     limit_of=lambda limits: limits.bid_creations_per_hour,
 )
 """`POST /bids`. The expensive one: this is the number that bounds the LLM bill."""
+
+chat_question_limit: Final = RequestLimit(
+    scope="chat",
+    noun="questions asked about a bid",
+    limit_of=lambda limits: limits.chat_questions_per_hour,
+)
+"""`POST /bids/{id}/chat` (S3.5.1). Its own scope, so a busy afternoon of questions can
+never consume the budget for starting the bid they are about — and the other way round."""

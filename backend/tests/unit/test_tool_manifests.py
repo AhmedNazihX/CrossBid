@@ -46,6 +46,7 @@ BUILT_TOOLS = frozenset(
         "ecertis_evidence_lookup",
         "search_ted",
         "currency_convert",
+        "get_matrix",
     }
 )
 """What discovery must find at minimum, so a sweep that finds nothing cannot pass silently."""

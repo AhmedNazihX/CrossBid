@@ -174,7 +174,11 @@ def test_idle_keys_are_swept_and_live_ones_are_kept() -> None:
 
 
 def settings_with(base: Settings, *, uploads: int = 100, bids: int = 100) -> Settings:
-    limits = LimitsSettings(document_uploads_per_hour=uploads, bid_creations_per_hour=bids)
+    limits = LimitsSettings(
+        document_uploads_per_hour=uploads,
+        bid_creations_per_hour=bids,
+        chat_questions_per_hour=bids,
+    )
     return Settings(env=base.env, runtime=base.runtime.model_copy(update={"limits": limits}))
 
 
@@ -389,18 +393,27 @@ def _start_bid(client: TestClient) -> Any:
 # ------------------------------------------------------------------------- the defaults
 
 
-def test_the_committed_defaults_bound_both_routes(offline_settings: Settings) -> None:
-    """`settings.default.yaml` has to carry a number for each, or the story is not wired."""
+def test_the_committed_defaults_bound_every_spending_route(offline_settings: Settings) -> None:
+    """`settings.default.yaml` has to carry a number for each, or the story is not wired.
+
+    The ordering is the point as much as the presence: a bid run costs dollars, an upload
+    costs a parse and a chat turn costs cents, so the looser limits belong to the cheaper
+    routes. A configuration that let a company ask fewer questions than it starts runs would
+    be telling a bidder to start the bid again rather than ask what it already said.
+    """
     limits = offline_settings.runtime.limits
 
     assert limits.bid_creations_per_hour > 0
     assert limits.document_uploads_per_hour >= limits.bid_creations_per_hour
+    assert limits.chat_questions_per_hour >= limits.bid_creations_per_hour
 
 
 def test_a_limit_of_zero_is_refused_at_startup() -> None:
     """A quota of nothing would mean an operator typo silently closes the product."""
     with pytest.raises(ValueError, match="greater than 0"):
-        LimitsSettings(document_uploads_per_hour=0, bid_creations_per_hour=1)
+        LimitsSettings(
+            document_uploads_per_hour=0, bid_creations_per_hour=1, chat_questions_per_hour=1
+        )
 
 
 def test_the_default_clock_is_monotonic_and_needs_no_injection() -> None:

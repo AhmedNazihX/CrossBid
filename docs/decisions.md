@@ -4095,3 +4095,75 @@ have put a released chunk after every chunk that followed it in the document.
 Reviews run in sequence, not under `gather`: the expected count is zero, so there is no
 latency to win, and a poisoned document is precisely where a burst of concurrent calls would
 be the wrong reflex.
+
+---
+
+## ADR-0055 — Ask the tender: the citation is the feature, so it is built from what was retrieved
+
+**Date:** 2026-09-14 · **Stories:** S3.5.1 · **Status:** accepted
+
+A bidder asks a question about the tender or their matrix and gets an answer in their own
+language with citations. `POST /bids/{bid_id}/chat`, one ReAct turn, no streaming in v1.
+
+### A model may point at a passage; it may not describe one
+
+The failure to design against is not a wrong answer, it is a *confident* one with a citation
+that looks real. So the model never writes a citation. It answers with `PassageRef` pairs —
+which search, which numbered passage — and `_resolve` builds each `Citation` from the
+retrieved object in the ledger. A model that retypes a quote changes nothing, and a reference
+naming a passage that does not exist is **dropped with a log line** rather than repaired into
+a neighbouring one. This is `check_loop`'s discipline, applied to a conversation.
+
+`PassageRef` is deliberately *not* `check_loop.EvidenceRef`, which was the tempting reuse. Its
+field description says "your tool calls in this conversation" — unambiguous for a
+one-requirement conversation, wrong for a thread carrying earlier turns. The descriptions are
+the contract the model reads, so two meanings need two models.
+
+**An answer with no resolvable references keeps its prose and says so.** It may be right, and
+deleting it would hide that; it gains a fixed `UNCITED_ANSWER` sentence, mirroring
+`check_loop`'s `UNCITED_SUPPORT` downgrade. Visibly uncited beats silently plausible.
+
+**When nothing was retrieved, the model is never asked for prose at all.** No tool call found
+anything — including the case where it made no call — and the answer is a fixed sentence. A
+model invited to write a paragraph after four empty searches writes the most plausible
+paragraph it can, which is the failure this codebase is arranged against. It also saves a
+call on every genuinely unanswerable question.
+
+### The transcript is ours, on the checkpointer
+
+Thread `bid:{id}:chat`, derived from the bid row's own `thread_id` so `bid:{id}` has one
+definition. The argument is security, not convenience: a stateless endpoint whose request
+carries its own history lets the browser put words *and citations* into the assistant's
+mouth, and the next turn builds on a transcript we never wrote. Server-side state costs
+nothing to build — the checkpointer exists, is `.setup()` at startup, needs no table — and
+`AsyncPostgresSaver`'s single lock (CLAUDE.md) does not bite here: a chat turn is a few writes
+on its own thread while a human types, not a fan-out burst.
+
+Two things fell out of probing the serialiser, both now load-bearing: an artifact returns from
+a checkpoint as a plain `dict`, and a Pydantic model in a channel triggers msgpack's
+"will be blocked in a future version" warning — so the delivered turn is stored as plain JSON
+and validated at the boundary. The dict-ification buys a guarantee for free: a reference can
+only resolve against a search made for *this* question.
+
+### Three tools, and why the other three are absent
+
+`CHAT_TOOLS` is the plan's `tender_rag_search`, `company_rag_search`, `get_matrix` — the last
+built here, with its own `MANIFEST`. The absentees (`ecertis_evidence_lookup`,
+`currency_convert`, `search_ted`) share one reason: **none returns a passage on a page of this
+bid's documents**, so an answer resting on one could only ever come back uncited. That is
+ADR-0052's per-node tool set doing the work it was built for, on its second caller.
+
+Retrieved text is not wrapped by the graph, and that is correct: `rag.py` and `get_matrix`
+each wrap their own output, so untrusted text is blocked at the tool boundary rather than at
+whichever consumer remembers.
+
+A batch of tool calls that would overshoot the budget is refused **whole**, because `ToolNode`
+runs a batch or none; the pending calls get `BUDGET_SPENT` messages so the thread stays valid
+for the provider.
+
+### Known and accepted
+
+Two concurrent chat requests on one bid both write the same thread, and LangGraph is
+last-write-wins. Acceptable for one bidder with one browser tab, and a lock the story did not
+ask for was not invented.
+

@@ -49,6 +49,7 @@ TENDER_RAG = "tender_rag_search"
 ECERTIS = "ecertis_evidence_lookup"
 SEARCH_TED = "search_ted"
 CURRENCY = "currency_convert"
+GET_MATRIX = "get_matrix"
 PATH = DEV_SETTINGS_PATH
 UNKNOWN_PATH = "/dev/no-such-route"
 
@@ -98,7 +99,7 @@ def test_it_lists_every_manifest_that_exists(client: TestClient) -> None:
     listed = tools_by_name(fetch(client))
 
     # Assert
-    assert set(listed) == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED, CURRENCY}
+    assert set(listed) == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED, CURRENCY, GET_MATRIX}
 
 
 def test_each_manifest_carries_what_the_panel_shows(client: TestClient) -> None:

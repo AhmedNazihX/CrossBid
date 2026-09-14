@@ -12,7 +12,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from crossbid.models.matrix import RowStatus
+from crossbid.models.matrix import MAX_QUOTE_CHARS, RowStatus
 from crossbid.models.verdict import Decision
 
 MAX_COMMENT_CHARS = 4000
@@ -83,7 +83,15 @@ class Citation(BaseModel):
     document_id: str
     document_name: str
     page: int = Field(ge=1)
-    quote: str | None = None
+    quote: str | None = Field(default=None, max_length=MAX_QUOTE_CHARS)
+    """Bounded like `Evidence.quote`, and for the same reason.
+
+    Both producers already truncate -- `RagHit` caps what it returns and `get_matrix`
+    truncates to this constant -- so this bound changes no behaviour today. It is here
+    because the invariant belongs to the type: a quote is document text, and ADR-0008's rule
+    is that untrusted input is constrained where it is *defined*, not at each place that
+    happens to remember. The next producer of a `Citation` inherits the bound instead of
+    having to rediscover it."""
 
 
 class ChatRole(StrEnum):

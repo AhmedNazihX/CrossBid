@@ -58,6 +58,7 @@ TENDER_RAG = "tender_rag_search"
 ECERTIS = "ecertis_evidence_lookup"
 SEARCH_TED = "search_ted"
 CURRENCY = "currency_convert"
+GET_MATRIX = "get_matrix"
 
 NOT_BUILT_YET = "haruspex_lookup"
 """A name no module provides — and, as of S1.3.1, an invented one.
@@ -120,7 +121,7 @@ def test_discovery_finds_every_module_that_exports_a_manifest() -> None:
     found = {entry.manifest.name for entry in tool_entries()}
 
     # Assert
-    assert found == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED, CURRENCY}
+    assert found == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED, CURRENCY, GET_MATRIX}
 
 
 def test_manifests_lists_the_tools_that_exist_not_the_ones_that_are_on() -> None:

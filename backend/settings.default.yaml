@@ -98,6 +98,11 @@ limits:
   # 120 is four full packs an hour -- generous for a human uploading a tender, useless as a
   # way to fill a bucket.
   document_uploads_per_hour: 120
+  # A chat turn (S3.5.1) is a few cheap-model calls over retrieved passages -- cents, not the
+  # dollar-and-a-half a run costs -- so this is loose enough that a bidder working through a
+  # matrix never meets it and tight enough that a loop in a browser tab cannot spend a day's
+  # budget while nobody is watching.
+  chat_questions_per_hour: 60
 
 # S3.2.3's gate. `scripts/recall.py` scores an extraction result against a golden file
 # and exits non-zero below this, so the number E3's done-when turns on is configuration and
@@ -119,3 +124,4 @@ enabled_tools:
   - search_ted
   - ecertis_evidence_lookup
   - currency_convert
+  - get_matrix
