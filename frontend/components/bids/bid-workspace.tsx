@@ -186,6 +186,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
     <VerdictPanel
       bid={bid}
       rowEdits={edits.edits}
+      blockedRowCount={edits.blockers.length}
       onReviewed={setReviewed}
       onBackToMatrix={isDesktop === false ? backToMatrix : undefined}
     />

@@ -35,6 +35,13 @@ export interface VerdictDecisionFormProps {
   readonly isSubmitting: boolean
   /** What the API said when it refused the last attempt. */
   readonly submitError: string | undefined
+  /**
+   * How many of the reviewer's own row edits the server would refuse. Non-zero blocks the
+   * submit — see `blockedByRows`. A count rather than the messages: each row already shows
+   * its own sentence where the reviewer made the edit, and repeating them here would name
+   * rows by an id they have never seen, which is the thing the server's 422 does badly.
+   */
+  readonly blockedRowCount: number
   readonly onSubmit: (decision: Decision, overrideReason: string | undefined) => void
   readonly onBackToMatrix?: () => void
 }
@@ -45,11 +52,24 @@ const NO_DECISION_CHOSEN = 'Choose one of the four decisions before confirming.'
 const NOT_ACKNOWLEDGED =
   'Confirm that you have reviewed the compliance matrix. A verdict is never confirmed automatically.'
 
+/**
+ * The reviewer has edited a row in a way the server refuses. Said here in rows rather than
+ * in ids, because the row itself is already showing what is wrong with it — and because a
+ * 422 naming a `matrix_row_id` is exactly the answer S4.5.2's mirrored rules exist to spare
+ * them.
+ */
+function blockedByRows(count: number): string {
+  const rows = count === 1 ? 'One row' : `${count} rows`
+  const they = count === 1 ? 'it' : 'them'
+  return `${rows} cannot be saved as you have left ${they}. Fix ${they} in the matrix above — each says what is missing — then confirm.`
+}
+
 export function VerdictDecisionForm({
   agentDecision,
   isLocked,
   isSubmitting,
   submitError,
+  blockedRowCount,
   onSubmit,
   onBackToMatrix,
 }: VerdictDecisionFormProps) {
@@ -99,6 +119,12 @@ export function VerdictDecisionForm({
     if (!hasReviewed) {
       setFormError(NOT_ACKNOWLEDGED)
       acknowledgeRef.current?.focus()
+      return
+    }
+    // Last, because it is about the matrix rather than this form: a reviewer who has not
+    // chosen a decision should be told that first.
+    if (blockedRowCount > 0) {
+      setFormError(blockedByRows(blockedRowCount))
       return
     }
     setFormError(undefined)

@@ -2581,3 +2581,65 @@ call before the fallback. And `check_loop`'s re-ask catches `ValidationError` on
 `LengthFinishReasonError` is the same "not the requested shape" and is re-asked by nothing,
 which is the failure mode ADR-0021 caught in extraction. Both are noted rather than fixed:
 they are cheap to add and neither is a wrong answer, only a wasted or lost one.
+
+---
+
+## ADR-0029 — The walkthrough, and the gap only the walkthrough found
+
+**Date:** 2026-09-14 · **Stories:** the F3.4 walkthrough · **Status:** accepted
+
+Increment 3 was code-complete, 4 233 tests green, four ADRs written and a fresh reading of the
+backend already done (ADR-0028). The round trip had still never been walked in a browser. It
+has now: the FR pack uploaded through the upload form, a bid started, the run parked, a row
+edited, the verdict confirmed — against Frankfurt, on the real build.
+
+### What the run proved
+
+`618320-2026`, notice + RC + `DUME_acheteur.xml`, French source, German bidder. Parked at
+`awaiting_review` in **2 min 23 s**: **144 requirements, 30 of them from the DUME**, 144 matrix
+rows, **29 of 30 eCertis lookups resolved** — the thirtieth has no national FR entry, which is
+the normal answer ADR-0007 documents and which `flags.py` now writes onto the row as a reviewer
+notice. Verdict `conditional`, 1 of 131 mandatory supported.
+
+The review then behaved as designed, end to end: the client refused an override with no reason
+and moved focus to the field; one row was marked `not_applicable` with a reason; the bid ended
+`complete` with **143 rows `confirmed`, 1 `overridden`, and `reviewed_at` set on all 144** — the
+write ADR-0026 added, doing its job on real data rather than in a fake. Exactly **one** `reviews`
+row, `reviewer_id` NULL as migration 0006 intends, `bids.decision = conditional`. A second
+submission answered **409**, and the audit table still held one row. The re-score moved the open
+items from 143 to 142 because of that single edit, which is S3.4.2's "the scorer re-runs on my
+statuses" visible on screen.
+
+### The defect
+
+Pressing **Confirm verdict** with a row edit the server refuses sent the request anyway. The
+bid was never at risk — the router validates before it claims, so it answered 422 and left the
+bid parked — but the reviewer was shown
+`Row e0842294-1954-5037-a8f4-794173452245 cannot be marked supported`: **a raw UUID they have
+never seen**, which is precisely the answer S4.5.2's mirrored rules exist to spare them.
+
+It is an integration gap, and an instructive one. Each half was right. The matrix computed
+`blockers` and showed each row its own sentence. The verdict panel deliberately did not read
+them — its author wrote, in as many words, "if you hand it edits the server would refuse, the
+422 surfaces as a form error rather than being caught early". Neither is wrong alone. The
+defect lived in the wiring between them, which belonged to neither author, and **no test at
+either end could have seen it**: the matrix's tests end at the hook's output and the panel's
+begin at its props.
+
+`VerdictDecisionForm` now takes `blockedRowCount` and refuses last — after the decision and the
+acknowledgement, because a reviewer who has not chosen a decision should be told that first —
+with a sentence that counts rows instead of naming ids and points at the matrix, where each row
+is already saying what is missing.
+
+### The lesson, now four for four
+
+Increment 2 recorded three occasions where something was done at the layer it was tested and
+not at the layer a person touches: unverified answer keys, a wedge no run could light
+(ADR-0022), a DUME no user could upload (ADR-0023). Increment 3 has now produced two more —
+reviewer edits that reached `complete` without reaching the database (ADR-0026, found by a
+test that walked the path) and this one, found only by a person-shaped walk of the same path.
+
+The pattern is sharp enough to state as a rule: **a seam between two correctly-built pieces is
+not covered by either piece's tests, and only a walk crosses it.** Both halves of Increment 3's
+frontend were built in parallel against a written contract, and the contract was honoured on
+both sides; the gap was in what neither side was asked to own.

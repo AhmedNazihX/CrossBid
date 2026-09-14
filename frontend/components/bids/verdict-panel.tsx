@@ -44,6 +44,13 @@ export interface VerdictPanelProps {
   /** The matrix's unsent edits, sent with the review in the same call. */
   readonly rowEdits: readonly RowEdit[]
   /**
+   * How many of those edits the server would refuse, from the matrix's own mirrored rules.
+   * The form blocks on it: without this the reviewer presses Confirm, the server answers
+   * 422 naming a `matrix_row_id`, and they are shown an id they have never seen — which is
+   * precisely what mirroring the rules in the matrix was for.
+   */
+  readonly blockedRowCount?: number
+  /**
    * The bid as the server now has it: after a review lands, and after a 409 when the panel
    * re-reads the bid to show what is true. In both cases it supersedes the `bid` prop.
    */
@@ -56,6 +63,7 @@ export interface VerdictPanelProps {
 export function VerdictPanel({
   bid,
   rowEdits,
+  blockedRowCount = 0,
   onReviewed,
   onBackToMatrix,
   className,
@@ -116,6 +124,7 @@ export function VerdictPanel({
               isLocked={isLocked}
               isSubmitting={state.phase === 'submitting'}
               submitError={state.phase === 'editing' ? state.error : undefined}
+              blockedRowCount={blockedRowCount}
               onSubmit={handleSubmit}
               onBackToMatrix={onBackToMatrix}
             />
