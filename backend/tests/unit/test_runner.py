@@ -19,7 +19,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 
 from crossbid.agent import runner as runner_module
-from crossbid.agent.graph import AWAIT_REVIEW, build_graph
+from crossbid.agent.graph import AWAIT_REVIEW, StageError, build_graph
 from crossbid.agent.runner import (
     DEFAULT_RUN_BUDGET_SECONDS,
     DEFAULT_RUN_BUDGET_USD,
@@ -32,6 +32,7 @@ from crossbid.agent.runner import (
 )
 from crossbid.agent.state import BidState
 from crossbid.ingestion.storage import StorageError
+from crossbid.models.review import ReviewSubmission
 from crossbid.models.tender import BidStatus
 from crossbid.models.verdict import Decision, Verdict
 from crossbid.readmodel.bids import BidRow, thread_id_of
@@ -63,6 +64,7 @@ def bid_row(bid_id: str | None = None, **overrides: Any) -> BidRow:
 class RecordingProjection:
     def __init__(self) -> None:
         self.statuses: list[BidStatus] = []
+        self.reviews: list[dict[str, Any]] = []
 
     async def set_status(self, *, company_id: str, bid_id: str, status: BidStatus) -> None:
         self.statuses.append(status)
@@ -78,6 +80,9 @@ class RecordingProjection:
 
     async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Any) -> None:
         pass
+
+    async def record_review(self, *, company_id: str, bid_id: str, **record: Any) -> None:
+        self.reviews.append(record)
 
 
 class FakeDatabase:
@@ -130,6 +135,20 @@ async def quiet_score(state: BidState, config: RunnableConfig | None = None) -> 
     }
 
 
+async def quiet_apply(state: BidState, config: RunnableConfig | None = None) -> Any:
+    """Stands in for `apply_review`, which would otherwise read the companies table."""
+    return {
+        "agent_verdict": state.get("verdict"),
+        "verdict": Verdict(
+            decision=Decision.INSUFFICIENT_EVIDENCE,
+            rationale="re-scored on the reviewer's statuses",
+            mandatory_total=0,
+            mandatory_supported=0,
+            partially_supported_rows=0,
+        ),
+    }
+
+
 def graph_over(
     settings: Settings,
     saver: MemorySaver,
@@ -137,6 +156,7 @@ def graph_over(
     *,
     parse: Any = quiet_parse,
     extract: Any = quiet_extract,
+    apply: Any = quiet_apply,
 ) -> Any:
     """The real wiring, with every node that would reach a database or a model replaced.
 
@@ -152,6 +172,7 @@ def graph_over(
         plan_checks=quiet_plan,
         check_reqs=quiet_check,
         score_verdict=quiet_score,
+        apply_review=apply,
         projection=projection,
         checkpointer=saver,
     )
@@ -540,3 +561,89 @@ async def test_resume_unfinished_runs_stops_startup_when_the_graph_cannot_be_bui
         )
 
     assert runner.running == frozenset()
+
+
+# ---------------------------------------------------------------------- submitting a review
+
+
+REVIEW = ReviewSubmission(decision=Decision.INSUFFICIENT_EVIDENCE)
+
+
+async def test_submit_review_resumes_the_parked_run_and_waits_for_it(
+    offline_settings: Settings, failures: FailureRecorder
+) -> None:
+    """Inline rather than a background task: the reviewer sees the consequence of their own
+    click in the same request, because nothing past the interrupt calls a model."""
+    # Arrange
+    saver = MemorySaver()
+    projection = RecordingProjection()
+    runner = runner_for(graph_over(offline_settings, saver, projection))
+    bid = bid_row()
+    await runner.start(bid)
+    assert projection.statuses[-1] is BidStatus.AWAITING_REVIEW
+
+    # Act
+    await runner.submit_review(bid, REVIEW)
+
+    # Assert
+    assert projection.statuses[-2:] == [BidStatus.APPLYING_REVIEW, BidStatus.COMPLETE]
+    assert len(projection.reviews) == 1
+    assert projection.reviews[0]["decision"] is Decision.INSUFFICIENT_EVIDENCE
+    assert failures.calls == []
+    # Nothing was scheduled: the registry is for background runs, and this was not one.
+    assert runner.running == frozenset()
+
+
+async def test_submit_review_records_a_failure_on_the_bid_and_re_raises(
+    offline_settings: Settings, failures: FailureRecorder, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The bid was claimed off `awaiting_review` before this ran, so failing silently would
+    strand it at `applying_review` with nothing saying why."""
+    # Arrange
+    saver = MemorySaver()
+    runner = runner_for(
+        graph_over(offline_settings, saver, RecordingProjection(), apply=crashing)
+    )
+    bid = bid_row()
+    await runner.start(bid)
+
+    # Act / Assert
+    with (
+        caplog.at_level(logging.ERROR, logger="crossbid.agent.runner"),
+        pytest.raises(StageError, match="applying_review failed: RuntimeError"),
+    ):
+        await runner.submit_review(bid, REVIEW)
+
+    assert failures.calls[-1][1:] == (bid.id, "applying_review failed: RuntimeError")
+
+
+async def test_a_review_is_traced_apart_from_the_run_that_parked(
+    offline_settings: Settings, failures: FailureRecorder
+) -> None:
+    """The two happen minutes or days apart; reading them as one trace misreports both."""
+    # Arrange
+    configs: list[Any] = []
+
+    class RecordingGraph:
+        def __init__(self, inner: Any) -> None:
+            self._inner = inner
+
+        async def ainvoke(self, payload: Any, config: Any = None) -> Any:
+            configs.append(config)
+            return await self._inner.ainvoke(payload, config)
+
+        async def aget_state(self, config: Any) -> Any:
+            return await self._inner.aget_state(config)
+
+    saver = MemorySaver()
+    inner = graph_over(offline_settings, saver, RecordingProjection())
+    runner = runner_for(RecordingGraph(inner))
+    bid = bid_row()
+    await runner.start(bid)
+
+    # Act
+    await runner.submit_review(bid, REVIEW)
+
+    # Assert
+    assert configs[0]["run_name"] == runner_module.RUN_NAME
+    assert configs[-1]["run_name"] == runner_module.REVIEW_RUN_NAME

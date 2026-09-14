@@ -43,6 +43,7 @@ from crossbid.models.requirement import (
     RequirementKind,
     RequirementStage,
 )
+from crossbid.models.review import ReviewSubmission
 from crossbid.models.tender import BidStatus
 from crossbid.models.verdict import Decision, Gap, GapSeverity, Verdict
 from crossbid.readmodel.bids import BidRow, thread_id_of
@@ -129,6 +130,10 @@ class RecordingProjection:
     def written_verdicts(self) -> list[Verdict]:
         return [value for kind, value in self.events if kind == "verdict"]
 
+    @property
+    def reviews(self) -> list[dict[str, Any]]:
+        return [value for kind, value in self.events if kind == "review"]
+
     async def set_status(self, *, company_id: str, bid_id: str, status: BidStatus) -> None:
         assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
         if self._fail_on_status:
@@ -156,6 +161,10 @@ class RecordingProjection:
     async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Verdict) -> None:
         assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
         self.events.append(("verdict", verdict))
+
+    async def record_review(self, *, company_id: str, bid_id: str, **record: Any) -> None:
+        assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
+        self.events.append(("review", record))
 
 
 class FakeDatabase:
@@ -263,6 +272,29 @@ def score_node(decision: Decision = Decision.CONDITIONAL) -> Any:
     return score_verdict
 
 
+def apply_node(decision: Decision = Decision.NO_GO) -> Any:
+    """`apply_review`, faked: the real one is asserted in `test_review.py`. What the graph
+    has to prove is that the review reaches it and that both verdicts leave it."""
+
+    async def apply_review(state: BidState, config: RunnableConfig | None = None) -> Any:
+        applied.append(state["review"])
+        return {
+            "agent_verdict": state.get("verdict"),
+            "verdict": Verdict(
+                decision=decision,
+                gaps=(Gap(requirement_id="a", severity=GapSeverity.BLOCKING, summary="x"),),
+                rationale="re-scored by a fake",
+                mandatory_total=2,
+                mandatory_supported=1,
+                partially_supported_rows=0,
+            ),
+        }
+
+    applied: list[ReviewSubmission] = []
+    apply_review.applied = applied  # type: ignore[attr-defined]
+    return apply_review
+
+
 async def crashing(state: BidState, config: RunnableConfig | None = None) -> Any:
     raise RuntimeError("Der Bieter muss ... (text quoted from the tender)")
 
@@ -277,6 +309,7 @@ def compile_graph(
     plan: Any | None = None,
     check: Any | None = None,
     score: Any | None = None,
+    apply: Any | None = None,
 ) -> Any:
     return build_graph(
         settings,
@@ -288,10 +321,17 @@ def compile_graph(
         plan_checks=plan if plan is not None else plan_node(),
         check_reqs=check if check is not None else check_node([]),
         score_verdict=score if score is not None else score_node(),
+        apply_review=apply if apply is not None else apply_node(),
         projection=projection,
         checkpointer=saver,
     )
 
+
+REVIEW = ReviewSubmission(
+    decision=Decision.GO,
+    override_reason="Die Referenzen liegen als Anlage 4 vor; der Agent hat sie nicht gefunden.",
+)
+"""A reviewer disagreeing with the agent -- the case the audit record exists for."""
 
 CONFIG = bid_run_config(BID_ID, thread_id=thread_id_of(BID_ID))
 
@@ -426,23 +466,105 @@ async def test_a_second_graph_on_the_same_thread_sees_the_parked_state(
 
 
 async def test_resuming_the_parked_graph_runs_it_to_the_end(offline_settings: Settings) -> None:
-    """`Command(resume=...)` is how S3.4.2 will hand the review in; today nothing follows."""
+    """`Command(resume=...)` is how the review arrives; the run then finishes `complete`."""
     saver = MemorySaver()
     projection = RecordingProjection()
     graph = compile_graph(offline_settings, saver=saver, projection=projection)
     await graph.ainvoke(initial_state(bid_row()), CONFIG)
 
     # Act
-    await graph.ainvoke(Command(resume={"decision": "go"}), CONFIG)
+    await graph.ainvoke(Command(resume=REVIEW.model_dump(mode="json")), CONFIG)
     snapshot = await graph.aget_state(CONFIG)
 
     # Assert
     assert snapshot.next == ()
     assert snapshot.interrupts == ()
-    assert snapshot.values["status"] is BidStatus.AWAITING_REVIEW
+    assert snapshot.values["status"] is BidStatus.COMPLETE
+    assert projection.statuses[-3:] == [
+        BidStatus.AWAITING_REVIEW,
+        BidStatus.APPLYING_REVIEW,
+        BidStatus.COMPLETE,
+    ]
     # The documented caveat: the interrupt node re-runs on resume, so its status is written
     # twice with the same value.
     assert projection.statuses.count(BidStatus.AWAITING_REVIEW) == 2
+
+
+async def test_the_review_arrives_at_the_node_as_a_validated_submission(
+    offline_settings: Settings,
+) -> None:
+    """It crosses the interrupt as JSON and must be a `ReviewSubmission` by the time any
+    node reads it: a resume can be issued by anything holding the thread id."""
+    # Arrange
+    saver = MemorySaver()
+    apply = apply_node()
+    graph = compile_graph(
+        offline_settings, saver=saver, projection=RecordingProjection(), apply=apply
+    )
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+
+    # Act
+    await graph.ainvoke(Command(resume=REVIEW.model_dump(mode="json")), CONFIG)
+
+    # Assert
+    assert apply.applied == [REVIEW]
+
+
+async def test_a_resume_that_is_not_a_review_fails_the_interrupt_stage(
+    offline_settings: Settings,
+) -> None:
+    """Nothing downstream may see an unvalidated payload, so the stage refuses it there."""
+    # Arrange
+    saver = MemorySaver()
+    graph = compile_graph(offline_settings, saver=saver, projection=RecordingProjection())
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+
+    # Act / Assert
+    with pytest.raises(StageError, match="awaiting_review failed: ValidationError"):
+        await graph.ainvoke(Command(resume={"decision": "maybe"}), CONFIG)
+
+
+async def test_the_audit_record_carries_both_verdicts_and_the_reviewers_own_decision(
+    offline_settings: Settings,
+) -> None:
+    """The override is the difference between them, so all three are recorded (S3.4.2)."""
+    # Arrange
+    saver = MemorySaver()
+    projection = RecordingProjection()
+    graph = compile_graph(offline_settings, saver=saver, projection=projection)
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+
+    # Act
+    await graph.ainvoke(Command(resume=REVIEW.model_dump(mode="json")), CONFIG)
+
+    # Assert
+    assert len(projection.reviews) == 1
+    record = projection.reviews[0]
+    assert record["decision"] is Decision.GO
+    assert record["agent_verdict"].decision is Decision.CONDITIONAL
+    assert record["final_verdict"].decision is Decision.NO_GO
+    assert record["override_reason"] == REVIEW.override_reason
+
+
+async def test_the_audit_record_is_written_once_and_only_at_the_end(
+    offline_settings: Settings,
+) -> None:
+    """An update carrying no `decision` must not write one -- every node before `finalize`
+    would otherwise record a review that had not been finished."""
+    # Arrange
+    saver = MemorySaver()
+    projection = RecordingProjection()
+    graph = compile_graph(offline_settings, saver=saver, projection=projection)
+
+    # Act
+    await graph.ainvoke(initial_state(bid_row()), CONFIG)
+    before = len(projection.reviews)
+    await graph.ainvoke(Command(resume=REVIEW.model_dump(mode="json")), CONFIG)
+
+    # Assert
+    assert before == 0
+    assert len(projection.reviews) == 1
+    assert projection.events[-1][0] == "review"
 
 
 # ----------------------------------------------------------------------- the checking fan-out
@@ -699,8 +821,12 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
     async def set_bid_verdict(db: Any, **kwargs: Any) -> None:
         calls.append(("verdict", kwargs))
 
+    async def record_review(db: Any, **kwargs: Any) -> None:
+        calls.append(("review", kwargs))
+
     monkeypatch.setattr(graph_module, "write_matrix_rows", write_matrix_rows)
     monkeypatch.setattr(graph_module, "set_bid_verdict", set_bid_verdict)
+    monkeypatch.setattr(graph_module, "record_review", record_review)
     projection = ReadModelProjection(FakeDatabase())
 
     # Act
@@ -730,13 +856,21 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
         partially_supported_rows=0,
     )
     await projection.set_verdict(company_id=COMPANY_ID, bid_id=BID_ID, verdict=verdict)
+    await projection.record_review(
+        company_id=COMPANY_ID,
+        bid_id=BID_ID,
+        decision=Decision.GO,
+        agent_verdict=verdict,
+        final_verdict=verdict,
+        override_reason=REVIEW.override_reason,
+    )
 
     # Assert -- every call carries the tenant, and problems go out as plain JSON
     assert written == 2
     assert checked == 1
     # The verdict is dumped to JSON here, not in the read model: that module never imports
     # from `models/verdict`, the same rule that keeps `problems` raw on the way through.
-    assert calls[-1] == (
+    assert calls[-2] == (
         "verdict",
         {
             "company_id": COMPANY_ID,
@@ -744,11 +878,56 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
             "verdict": verdict.model_dump(mode="json"),
         },
     )
-    assert calls[-2] == ("matrix", {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix})
+    assert calls[-3] == ("matrix", {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix})
+    # Both verdicts are dumped to JSON here too, so the read model never has to know the
+    # shape of one — the same rule that keeps `problems` raw on the way through.
+    assert calls[-1] == (
+        "review",
+        {
+            "company_id": COMPANY_ID,
+            "bid_id": BID_ID,
+            "decision": Decision.GO,
+            "agent_verdict": verdict.model_dump(mode="json"),
+            "final_verdict": verdict.model_dump(mode="json"),
+            "override_reason": REVIEW.override_reason,
+        },
+    )
     assert all(kwargs["company_id"] == COMPANY_ID for _, kwargs in calls)
     assert calls[0][1]["status"] is BidStatus.PARSING
     assert calls[1][1]["problems"] == [PARSE_PROBLEM.model_dump(mode="json")]
     assert calls[1][1]["problems"][0]["reason"] == "unparseable_document"
+
+
+async def test_a_review_with_no_agent_verdict_delegates_a_null_rather_than_a_guess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    calls: list[dict[str, Any]] = []
+
+    async def record_review(db: Any, **kwargs: Any) -> None:
+        calls.append(kwargs)
+
+    monkeypatch.setattr(graph_module, "record_review", record_review)
+    verdict = Verdict(
+        decision=Decision.INSUFFICIENT_EVIDENCE,
+        rationale="Die Extraktion hat nichts gefunden.",
+        mandatory_total=0,
+        mandatory_supported=0,
+        partially_supported_rows=0,
+    )
+
+    # Act
+    await ReadModelProjection(FakeDatabase()).record_review(
+        company_id=COMPANY_ID,
+        bid_id=BID_ID,
+        decision=Decision.NO_GO,
+        agent_verdict=None,
+        final_verdict=verdict,
+        override_reason=None,
+    )
+
+    # Assert
+    assert calls[0]["agent_verdict"] is None
 
 
 # ---------------------------------------------------------------------------- the state

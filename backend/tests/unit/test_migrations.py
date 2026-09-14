@@ -60,6 +60,7 @@ CONSTRAINT_ENUMS: dict[str, type[enum.Enum]] = {
     "matrix_rows_status_check": RowStatus,
     "matrix_rows_reviewer_status_check": ReviewerStatus,
     "reviews_decision_check": Decision,
+    "bids_decision_check": Decision,  # 0006 (S3.4.2): the reviewer's own final call
     "documents_status_check": DocumentStatus,  # 0002 (S2.2.3)
 }
 

@@ -126,6 +126,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bids/{bid_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit the review that finishes a bid
+         * @description Resume the parked run with the reviewer's edits and answer the finished bid.
+         *
+         *     The safety boundary: nothing leaves this system as final until a person has been here.
+         *     The run is waiting at its interrupt, this hands it the submission, the scorer re-runs on
+         *     the reviewer's statuses and the bid ends `complete`.
+         *
+         *     Answers **409** when the bid is not parked at `awaiting_review` — which is the same
+         *     answer for "somebody already reviewed it" and "it is still running", because the claim
+         *     is one conditional update and cannot tell them apart. That is deliberate: a second
+         *     submission must not half-apply. **422** names a row the matrix does not have, a status
+         *     the row cannot legally take, or a decision that differs from the agent's with no reason
+         *     given; the check happens here, before the graph is resumed, so a rejected review leaves
+         *     the bid exactly where it was.
+         */
+        post: operations["submit_review_bids__bid_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bids/{bid_id}": {
         parameters: {
             query?: never;
@@ -1012,11 +1044,49 @@ export interface components {
          */
         RequirementStage: "bid_eligibility" | "contract_performance";
         /**
+         * ReviewSubmission
+         * @description What the reviewer sends back to resume the graph.
+         *
+         *     `decision` is the reviewer's own call. It may disagree with the agent's, and when it does
+         *     the disagreement is recorded rather than smoothed over — that record is what a feedback
+         *     loop would later learn from.
+         */
+        ReviewSubmission: {
+            decision: components["schemas"]["Decision"];
+            /**
+             * Row Edits
+             * @default []
+             */
+            row_edits: components["schemas"]["RowEdit"][];
+            /**
+             * Override Reason
+             * @description Required when the reviewer's decision differs from the agent's
+             */
+            override_reason?: string | null;
+        };
+        /**
          * ReviewerStatus
          * @description What the human did with the agent's finding. The review step is the safety boundary.
          * @enum {string}
          */
         ReviewerStatus: "pending" | "confirmed" | "overridden";
+        /**
+         * RowEdit
+         * @description A reviewer's change to one matrix row.
+         */
+        RowEdit: {
+            /** Matrix Row Id */
+            matrix_row_id: string;
+            /** @description None leaves the agent's status */
+            status?: components["schemas"]["RowStatus"] | null;
+            /** Override Reason */
+            override_reason?: string | null;
+            /**
+             * Attached Doc Ids
+             * @default []
+             */
+            attached_doc_ids: string[];
+        };
         /**
          * RowStatus
          * @description The agent's finding for one requirement, in the design system's words (ADR-0013).
@@ -1379,6 +1449,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_review_bids__bid_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSubmission"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

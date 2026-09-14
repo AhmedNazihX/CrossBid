@@ -2260,3 +2260,79 @@ a reader counting bullets should be counting gaps.
 
 `Verdict.score` stays `None`. The French fixture's weighted 5-of-10 cut-off is real, but nothing
 in `Requirement` carries a buyer's points scale, so producing one would mean inventing it.
+
+---
+
+## ADR-0025 — Two answers, kept apart: the review round-trip
+
+**Date:** 2026-09-14 · **Stories:** S3.4.2 · **Status:** accepted
+
+The human interrupt was built in S3.1.1 and parked a bid at `awaiting_review` with nothing to
+resume it. This is the other half: the reviewer's submission crosses the interrupt, the scorer
+re-runs on their statuses, and the bid ends `complete`.
+
+### The verdict and the decision are different facts
+
+The first design tried to make the review produce *one* answer — the final verdict — and it
+does not fit, for a reason that is not a modelling inconvenience but the point of the story.
+
+**The verdict is what the rules say about the matrix as the reviewer left it. The decision is
+what the reviewer decided.** A reviewer who marks two rows `not_applicable` and still says
+`no_go` is exercising judgement the rules cannot encode, and that is why a person is in the
+loop at all. `Verdict`'s own validator makes the collapse impossible anyway: it refuses a
+decision that contradicts its gaps, and a human override frequently does exactly that.
+
+So `finalize` records three things — the agent's original verdict, the re-scored one, and the
+reviewer's decision — and **the override is the difference between them**, not a flag. The
+`reviews` table 0001 declared already had columns for all three; what was missing was
+`bids.decision`, added in 0006, so the dashboard can read a final answer without joining.
+
+That means `BidRow.decision` now has two sources with a precedence rule: the reviewer's call
+once there is one, else the agent's advisory one off the verdict. This *revises* ADR-0024,
+which derived it from the verdict alone and argued against a second column. The argument there
+was against two copies of one answer; this is two different answers, and a bid parked at
+`awaiting_review` still needs something on the dashboard.
+
+### The parts that could have gone quietly wrong
+
+**`matrix_rows` stopped being an appending channel.** `apply_review` returns the whole matrix
+with the reviewer's dispositions on it, and under `operator.add` that second copy would have
+sat *beside* the agent's original — 135 rows becoming 270, the re-score running over both, a
+reviewer's `unsupported` counted next to the `supported` it replaced. `state.merged_rows`
+replaces by id and appends what is new, which is identical to `operator.add` for the checking
+lanes (their ids are disjoint) and correct for the review.
+
+**`model_copy(update=...)` skips validation.** It is the obvious way to write a revised row and
+it would have let a reviewer mark a row `supported` with nothing cited — straight past
+`MatrixRow`'s central invariant, into the database, and out to a bidder as proof. Every revised
+row is rebuilt through `model_validate` instead. The router checks the same thing first and
+answers 422, so the node's raise should be unreachable; it is there because "should be" is not
+an argument for leaving the bypass open.
+
+**The 409 is a conditional `UPDATE`, not a status check.** A read-then-write would let two
+submissions both see `awaiting_review` and both resume the graph. `claim_bid_for_review` moves
+the row off `awaiting_review` in one statement and the loser sees `rowcount == 0`. It cannot
+distinguish "already reviewed" from "still running" and the router deliberately says the same
+thing for both.
+
+**The resume payload is re-validated at the interrupt.** `interrupt()` returns whatever
+`Command(resume=...)` carried, and a resume can be issued by anything holding the thread id, so
+`_request_review` parses it as a `ReviewSubmission` before any node downstream sees it.
+
+### The review runs inline, unlike every other graph invocation
+
+`POST /bids/{id}/review` awaits the resume rather than answering 202. Everything past the
+interrupt is rules and two statements — no model call, no page to parse — so it finishes inside
+a normal request, and making the reviewer poll for the consequence of their own click would be
+latency invented for symmetry with `POST /bids`. A failure is written to the bid before the 500
+is raised, because the bid was already claimed off `awaiting_review` and a silent failure would
+strand it.
+
+### `reviews.reviewer_id` is now nullable, and that is the honest answer
+
+`auth.py` says it plainly: under `AUTH_MODE=dev` a header is not a credential. There is no
+verified identity to record. The obvious substitute — the company's `owner_user_id` — would
+assert that a particular person reviewed a bid when the system cannot know it, and **an audit
+trail that records an unverified identity is worse than one that records none.** The column
+stays empty until magic-link sign-in (S0.3.1) can fill it truthfully. This is a real gap in the
+audit story and is named here rather than papered over.

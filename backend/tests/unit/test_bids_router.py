@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -33,6 +33,7 @@ from crossbid.models.requirement import (
     RequirementKind,
     RequirementStage,
 )
+from crossbid.models.review import ReviewSubmission
 from crossbid.models.tender import BidStatus, DocumentKind
 from crossbid.models.verdict import Decision, Gap, GapSeverity, Verdict
 from crossbid.readmodel.bids import BidDocumentRow, BidRow, BidStateError, thread_id_of
@@ -68,6 +69,7 @@ READ_MODEL_FUNCTIONS = (
     "fetch_requirements",
     "fetch_matrix_rows",
     "bid_documents",
+    "claim_bid_for_review",
 )
 
 
@@ -121,6 +123,7 @@ class InMemoryReadModel:
         self.requirements: dict[str, list[Requirement]] = {}
         self.matrix_rows: dict[str, list[MatrixRow]] = {}
         self.attach_error: BidStateError | None = None
+        self.claimed: list[str] = []
         self.attached: list[tuple[str, list[str]]] = []
         self.failed: list[tuple[str, str]] = []
 
@@ -214,6 +217,14 @@ class InMemoryReadModel:
     ) -> list[MatrixRow]:
         return list(self.matrix_rows.get(bid_id, []))
 
+    async def claim_bid_for_review(self, db: Any, *, company_id: str, bid_id: str) -> None:
+        """The real one is a conditional update; this is the same condition, in a dict."""
+        row = self.bids.get(bid_id)
+        if row is None or row.status is not BidStatus.AWAITING_REVIEW:
+            raise BidStateError(f"bid {bid_id} is not waiting for a review")
+        self.claimed.append(bid_id)
+        self.bids[bid_id] = row.model_copy(update={"status": BidStatus.APPLYING_REVIEW})
+
     async def bid_documents(
         self, db: Any, *, company_id: str, bid_id: str
     ) -> list[BidDocumentRow]:
@@ -227,6 +238,9 @@ class InMemoryReadModel:
 class FakeRunner:
     def __init__(self, *, storage_missing: bool = False) -> None:
         self.started: list[BidRow] = []
+        self.reviewed: list[tuple[BidRow, ReviewSubmission]] = []
+        self.review_error: Exception | None = None
+        self.on_review: Callable[[BidRow], None] | None = None
         self._storage_missing = storage_missing
 
     @property
@@ -237,6 +251,13 @@ class FakeRunner:
 
     def start(self, bid: BidRow) -> None:
         self.started.append(bid)
+
+    async def submit_review(self, bid: BidRow, review: ReviewSubmission) -> None:
+        if self.review_error is not None:
+            raise self.review_error
+        self.reviewed.append((bid, review))
+        if self.on_review is not None:
+            self.on_review(bid)
 
 
 class FakeDatabase:
@@ -692,3 +713,322 @@ def test_every_field_of_the_contract_carries_a_description(model: type[BaseModel
     a field the frontend developer has to guess at."""
     undescribed = [name for name, field in model.model_fields.items() if not field.description]
     assert undescribed == []
+
+
+# ------------------------------------------------------------------ POST /bids/{id}/review
+
+
+AGENT_VERDICT = Verdict(
+    decision=Decision.NO_GO,
+    gaps=(Gap(requirement_id="a", severity=GapSeverity.BLOCKING, summary="Personal"),),
+    rationale="Dieses Angebot wird nicht empfohlen.",
+    mandatory_total=2,
+    mandatory_supported=1,
+    partially_supported_rows=0,
+)
+
+
+def parked_bid(read_model: InMemoryReadModel, **overrides: Any) -> tuple[BidRow, MatrixRow]:
+    """A bid waiting at its interrupt, with one matrix row a reviewer could edit."""
+    bid = read_model.add_bid(
+        status=BidStatus.AWAITING_REVIEW,
+        verdict=AGENT_VERDICT.model_dump(mode="json"),
+        **overrides,
+    )
+    rows = [requirement(bid.id)]
+    read_model.requirements[bid.id] = rows
+    row = MatrixRow(
+        id=str(uuid.uuid4()),
+        requirement_id=rows[0].id,
+        status=RowStatus.UNSUPPORTED,
+        agent_rationale="Kein Nachweis im Bestand gefunden.",
+    )
+    read_model.matrix_rows[bid.id] = [row]
+    return bid, row
+
+
+def review_body(**overrides: Any) -> dict[str, Any]:
+    body: dict[str, Any] = {"decision": "no_go"}
+    return body | overrides
+
+
+def test_submitting_a_review_claims_the_bid_and_resumes_the_run(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    # Arrange
+    bid, row = parked_bid(read_model)
+    body = review_body(
+        row_edits=[
+            {
+                "matrix_row_id": row.id,
+                "status": "not_applicable",
+                "override_reason": "Gilt nur für Bietergemeinschaften.",
+            }
+        ]
+    )
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 200
+    assert read_model.claimed == [bid.id]
+    submitted = runner.reviewed[0][1]
+    assert submitted.decision is Decision.NO_GO
+    assert submitted.row_edits[0].matrix_row_id == row.id
+
+
+def test_the_response_shows_the_bid_as_the_review_left_it_not_as_it_was(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    """The reviewer clicked confirm; answering with the state they were leaving would be
+    the one thing the response must not do."""
+    # Arrange
+    bid, _row = parked_bid(read_model)
+    runner.on_review = lambda done: read_model.bids.__setitem__(
+        done.id,
+        read_model.bids[done.id].model_copy(
+            update={"status": BidStatus.COMPLETE, "reviewed_decision": Decision.NO_GO}
+        ),
+    )
+
+    # Act
+    body = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers()).json()
+
+    # Assert
+    assert body["status"] == "complete"
+
+
+def test_a_second_submission_is_a_conflict(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    """The story's criterion. The claim is a conditional update, so the second caller loses
+    it however close together the two arrive."""
+    # Arrange
+    bid, _row = parked_bid(read_model)
+
+    # Act
+    first = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers())
+    second = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers())
+
+    # Assert
+    assert first.status_code == 200
+    assert second.status_code == 409
+    assert len(runner.reviewed) == 1
+
+
+def test_reviewing_a_bid_that_is_still_running_is_the_same_conflict(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    bid = read_model.add_bid(status=BidStatus.CHECKING)
+
+    response = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers())
+
+    assert response.status_code == 409
+
+
+def test_another_companys_bid_is_not_found_rather_than_forbidden(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    bid, _row = parked_bid(read_model, company_id=OTHER_COMPANY_ID)
+
+    response = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers())
+
+    assert response.status_code == 404
+
+
+def test_an_edit_naming_a_row_this_bid_has_no_matrix_for_is_refused(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    # Arrange
+    bid, _row = parked_bid(read_model)
+    body = review_body(row_edits=[{"matrix_row_id": "ghost", "override_reason": "weil"}])
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 422
+    assert "ghost" in response.json()["detail"]
+
+
+def test_marking_a_row_supported_with_nothing_cited_is_refused_before_the_graph_runs(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    """The product's central promise, enforced where the reviewer can still fix it: the bid
+    must stay parked rather than failing its run."""
+    # Arrange
+    bid, row = parked_bid(read_model)
+    body = review_body(
+        row_edits=[
+            {
+                "matrix_row_id": row.id,
+                "status": "supported",
+                "override_reason": "Wir erfüllen das.",
+            }
+        ]
+    )
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 422
+    assert read_model.bids[bid.id].status is BidStatus.AWAITING_REVIEW
+    assert runner.reviewed == []
+
+
+def test_disagreeing_with_the_agent_without_a_reason_is_refused(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """An override without a reason is unauditable, and the reviewer is the audit trail."""
+    # Arrange
+    bid, _row = parked_bid(read_model)
+
+    # Act
+    response = client.post(
+        f"/bids/{bid.id}/review", json=review_body(decision="go"), headers=headers()
+    )
+
+    # Assert
+    assert response.status_code == 422
+    assert response.json()["detail"] == bids_router.OVERRIDE_NEEDS_A_REASON_DETAIL
+
+
+def test_disagreeing_with_the_agent_with_a_reason_is_accepted(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    # Arrange
+    bid, _row = parked_bid(read_model)
+    body = review_body(decision="go", override_reason="Die Referenzen liegen als Anlage vor.")
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 200
+    assert runner.reviewed[0][1].decision is Decision.GO
+
+
+def test_a_bid_that_was_never_scored_accepts_any_decision_without_a_reason(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """There is no agent decision to disagree with, so requiring a reason would be asking
+    the reviewer to justify a difference from nothing."""
+    # Arrange
+    bid, _row = parked_bid(read_model)
+    read_model.bids[bid.id] = read_model.bids[bid.id].model_copy(update={"verdict": None})
+
+    # Act
+    response = client.post(
+        f"/bids/{bid.id}/review", json=review_body(decision="go"), headers=headers()
+    )
+
+    # Assert
+    assert response.status_code == 200
+
+
+def test_attaching_another_companys_document_is_not_found(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    """A tenant boundary: the ids arrive in a request body and nothing else would notice."""
+    # Arrange
+    bid, row = parked_bid(read_model)
+    theirs = read_model.add_document(*document_row(owner=OTHER_COMPANY_ID))
+    body = review_body(row_edits=[{"matrix_row_id": row.id, "attached_doc_ids": [theirs.id]}])
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 404
+    assert runner.reviewed == []
+
+
+def test_attaching_the_companys_own_document_is_accepted(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    # Arrange
+    bid, row = parked_bid(read_model)
+    ours = read_model.add_document(*document_row(kind=DocumentKind.COMPANY_EVIDENCE))
+    body = review_body(row_edits=[{"matrix_row_id": row.id, "attached_doc_ids": [ours.id]}])
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 200
+    assert runner.reviewed[0][1].row_edits[0].attached_doc_ids == (ours.id,)
+
+
+def test_an_attachment_id_that_is_not_a_uuid_is_refused(
+    client: TestClient, read_model: InMemoryReadModel, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`documents_by_id` casts to `uuid.UUID` for the `= any(%s)` comparison; a bad id must
+    be a 422 naming the field and not a 500 out of psycopg."""
+    # Arrange
+    bid, row = parked_bid(read_model)
+
+    async def strict(db: Any, *, company_id: str, document_ids: Sequence[str]) -> Any:
+        return [uuid.UUID(identifier) for identifier in document_ids]
+
+    monkeypatch.setattr(bids_router, "documents_by_id", strict)
+    body = review_body(row_edits=[{"matrix_row_id": row.id, "attached_doc_ids": ["nope"]}])
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 422
+
+
+def test_a_review_that_fails_mid_flight_is_a_500_and_the_bid_records_why(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    """The bid was claimed off `awaiting_review` before the resume, so a silent failure
+    would strand it. `submit_review` writes the reason; the router only has to say so."""
+    # Arrange
+    bid, _row = parked_bid(read_model)
+    runner.review_error = RuntimeError("the checkpointer went away")
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers())
+
+    # Assert
+    assert response.status_code == 500
+    assert response.json()["detail"] == bids_router.REVIEW_FAILED_DETAIL
+
+
+def test_reviewing_without_the_company_header_is_unauthorised(client: TestClient) -> None:
+    response = client.post(f"/bids/{uuid.uuid4()}/review", json=review_body())
+
+    assert response.status_code == 401
+
+
+def test_a_review_is_refused_when_the_graph_cannot_be_built(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
+) -> None:
+    bid, _row = parked_bid(read_model)
+    runner._storage_missing = True
+
+    response = client.post(f"/bids/{bid.id}/review", json=review_body(), headers=headers())
+
+    assert response.status_code == 503
+
+
+def test_two_edits_to_one_row_are_refused_by_the_contract(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """`ReviewSubmission` refuses them, so the answer is FastAPI's own 422 on the body."""
+    # Arrange
+    bid, row = parked_bid(read_model)
+    body = review_body(
+        row_edits=[
+            {"matrix_row_id": row.id, "override_reason": "erst"},
+            {"matrix_row_id": row.id, "override_reason": "dann"},
+        ]
+    )
+
+    # Act / Assert
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+    assert response.status_code == 422

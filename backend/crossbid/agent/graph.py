@@ -5,7 +5,8 @@ edge below is fixed: parse the pack, extract the requirements, check them, stop 
 reviewer. No model decides what runs next, and nothing here calls a tool. The *agentic* part
 of Crossbid — a small ReAct loop per requirement with a bounded tool budget — lives inside
 `check_reqs` (S3.3.1), the node this graph fans out to. `score_verdict` (S3.4.1) is a rules
-engine and calls no model either; `apply_review` and `finalize` are later stories.
+engine and calls no model either, and so are `apply_review` and `finalize` (S3.4.2) --
+no model runs anywhere past the fan-out.
 Extraction fans out for latency and nothing else (ADR-0011).
 Describing the graph this way is a CLAUDE.md convention, and this module is where the
 description has to be true.
@@ -72,16 +73,19 @@ from crossbid.agent.nodes.check_reqs import (
 )
 from crossbid.agent.nodes.extract_reqs import build_extract_reqs
 from crossbid.agent.nodes.parse_docs import build_parse_docs
+from crossbid.agent.nodes.review import build_apply_review, finalize
 from crossbid.agent.nodes.score_verdict import build_score_verdict
 from crossbid.agent.state import BidState, ExtractionProblem
 from crossbid.db import Database
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
+from crossbid.models.review import ReviewSubmission
 from crossbid.models.tender import BidStatus
-from crossbid.models.verdict import Verdict
+from crossbid.models.verdict import Decision, Verdict
 from crossbid.readmodel.bids import (
     BidRow,
     ConnectionSource,
+    record_review,
     set_bid_problems,
     set_bid_status,
     set_bid_verdict,
@@ -98,6 +102,8 @@ PLAN_CHECKS: Final = "plan_checks"
 CHECK_REQS: Final = "check_reqs"
 SCORE_VERDICT: Final = "score_verdict"
 AWAIT_REVIEW: Final = "await_review"
+APPLY_REVIEW: Final = "apply_review"
+FINALIZE: Final = "finalize"
 """Node names. `AWAIT_REVIEW` is what `aget_state().next` reports while a bid is parked,
 and S3.4.2 resumes by that name."""
 
@@ -154,6 +160,17 @@ class RunProjection(Protocol):
 
     async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Verdict) -> None: ...
 
+    async def record_review(
+        self,
+        *,
+        company_id: str,
+        bid_id: str,
+        decision: Decision,
+        agent_verdict: Verdict | None,
+        final_verdict: Verdict,
+        override_reason: str | None,
+    ) -> None: ...
+
 
 class StageError(RuntimeError):
     """A node failed. `stage` says which; the message names the exception's type only."""
@@ -198,6 +215,28 @@ class ReadModelProjection:
             company_id=company_id,
             bid_id=bid_id,
             verdict=verdict.model_dump(mode="json"),
+        )
+
+    async def record_review(
+        self,
+        *,
+        company_id: str,
+        bid_id: str,
+        decision: Decision,
+        agent_verdict: Verdict | None,
+        final_verdict: Verdict,
+        override_reason: str | None,
+    ) -> None:
+        await record_review(
+            self._db,
+            company_id=company_id,
+            bid_id=bid_id,
+            decision=decision,
+            agent_verdict=(
+                None if agent_verdict is None else agent_verdict.model_dump(mode="json")
+            ),
+            final_verdict=final_verdict.model_dump(mode="json"),
+            override_reason=override_reason,
         )
 
 
@@ -268,6 +307,41 @@ async def _project(
     if verdict is not None:
         await projection.set_verdict(company_id=company_id, bid_id=bid_id, verdict=verdict)
         logger.info("Bid %s: verdict %s written to the read model", bid_id, verdict.decision)
+    await _project_review(projection, state, update, bid_id=bid_id, company_id=company_id)
+
+
+async def _project_review(
+    projection: RunProjection,
+    state: BidState,
+    update: BidUpdate,
+    *,
+    bid_id: str,
+    company_id: str,
+) -> None:
+    """The audit record, written when `finalize` reports a decision and not before.
+
+    `decision` in an update is the signal, and everything else the record needs is already
+    on the state by then — the review the interrupt returned, the agent's verdict as
+    `apply_review` preserved it, and the re-score that replaced it. Doing it here rather
+    than from the node keeps the rule the module docstring states: a node returns state, the
+    stage decides what the read model learns from it (decision 1).
+    """
+    decision: Decision | None = update.get("decision")
+    if decision is None:
+        return
+    final: Verdict | None = state.get("verdict")
+    if final is None:  # pragma: no cover -- apply_review always writes one first
+        raise ValueError("a review cannot be recorded before the bid has been scored")
+    review: ReviewSubmission | None = state.get("review")
+    await projection.record_review(
+        company_id=company_id,
+        bid_id=bid_id,
+        decision=decision,
+        agent_verdict=state.get("agent_verdict"),
+        final_verdict=final,
+        override_reason=None if review is None else review.override_reason,
+    )
+    logger.info("Bid %s: review recorded, the reviewer decided %s", bid_id, decision.value)
 
 
 async def _request_review(
@@ -276,18 +350,24 @@ async def _request_review(
 ) -> BidUpdate:
     """The interrupt node's body. Parks the run; returns only once a human resumes it.
 
-    In this increment nothing follows, so the return is empty and the wrapping stage's
-    `status` is all the resume records. S3.4.2 replaces the return with the review payload
-    `interrupt()` hands back.
+    `interrupt()` returns whatever `Command(resume=...)` carried, so the reviewer's
+    submission arrives here as the node's own value — typed, checkpointed with the rest of
+    the state, and with no `aupdate_state` on a channel from outside the graph (S3.4.2).
+    It is re-validated rather than trusted: a resume can be issued by anything holding the
+    thread id, and `ReviewSubmission` is the contract the nodes downstream rely on.
+
+    One documented caveat, unchanged: on resume the node re-runs from its top, so the
+    `awaiting_review` status write happens twice. The value is identical both times and
+    `apply_review`'s stage overwrites it at once.
     """
-    interrupt(
+    resumed = interrupt(
         {
             INTERRUPT_BID_ID: state.get("bid_id", ""),
             INTERRUPT_REQUIREMENTS: len(state.get("requirements", [])),
             INTERRUPT_PROBLEMS: len(state.get("extraction_problems", [])),
         }
     )
-    return {}
+    return {"review": ReviewSubmission.model_validate(resumed)}
 
 
 def _identity_of(state: BidState) -> tuple[str, str]:
@@ -335,16 +415,17 @@ def build_graph(
     plan_checks: BidNode | None = None,
     check_reqs: BidNode | None = None,
     score_verdict: BidNode | None = None,
+    apply_review: BidNode | None = None,
     projection: RunProjection | None = None,
     checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """The compiled outer graph — a deterministic workflow with a human interrupt.
 
     `START → parse_docs → extract_reqs → plan_checks →` a lane of `check_reqs` per
-    `agent.check_concurrency` `→ score_verdict → await_review → END`, compiled on the
-    process checkpointer
+    `agent.check_concurrency` `→ score_verdict → await_review → apply_review → finalize →
+    END`, compiled on the process checkpointer
     so that a run interrupted by a restart continues from its last completed node
-    (`runner.resume_unfinished_runs`). The seven keyword seams exist for tests, which run the
+    (`runner.resume_unfinished_runs`). The eight keyword seams exist for tests, which run the
     real wiring over fake nodes, a recording projection and a `MemorySaver`; production
     passes none of them. Building the real `parse_docs` raises `StorageError` when Storage
     is not configured — see `build_parse_docs` — and that is left to the caller to answer.
@@ -354,6 +435,7 @@ def build_graph(
     plan = plan_checks if plan_checks is not None else build_plan_checks(db)
     check = check_reqs if check_reqs is not None else build_check_reqs(settings, db)
     scorer = score_verdict if score_verdict is not None else build_score_verdict(db)
+    applier = apply_review if apply_review is not None else build_apply_review(db)
     project = projection if projection is not None else ReadModelProjection(db)
     saver = checkpointer if checkpointer is not None else db.checkpointer
     concurrency = settings.runtime.agent.check_concurrency
@@ -367,6 +449,8 @@ def build_graph(
     builder.add_node(CHECK_REQS, stage(BidStatus.CHECKING, check, project))
     builder.add_node(SCORE_VERDICT, stage(BidStatus.SCORING, scorer, project))
     builder.add_node(AWAIT_REVIEW, stage(BidStatus.AWAITING_REVIEW, _request_review, project))
+    builder.add_node(APPLY_REVIEW, stage(BidStatus.APPLYING_REVIEW, applier, project))
+    builder.add_node(FINALIZE, stage(BidStatus.COMPLETE, finalize, project))
     builder.add_edge(START, PARSE_DOCS)
     builder.add_edge(PARSE_DOCS, EXTRACT_REQS)
     builder.add_edge(EXTRACT_REQS, PLAN_CHECKS)
@@ -377,7 +461,9 @@ def build_graph(
     )
     builder.add_edge(CHECK_REQS, SCORE_VERDICT)
     builder.add_edge(SCORE_VERDICT, AWAIT_REVIEW)
-    builder.add_edge(AWAIT_REVIEW, END)
+    builder.add_edge(AWAIT_REVIEW, APPLY_REVIEW)
+    builder.add_edge(APPLY_REVIEW, FINALIZE)
+    builder.add_edge(FINALIZE, END)
     return builder.compile(checkpointer=saver)
 
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Final
 
@@ -39,6 +40,7 @@ from crossbid.ingestion.storage import StorageError
 from crossbid.main import get_app_settings, get_database
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
+from crossbid.models.review import ReviewSubmission, RowEdit
 from crossbid.models.tender import BidStatus, BidSummary
 from crossbid.models.verdict import Verdict
 from crossbid.readmodel.bids import (
@@ -48,6 +50,7 @@ from crossbid.readmodel.bids import (
     BidStateError,
     attach_documents,
     bid_documents,
+    claim_bid_for_review,
     company_language,
     create_bid,
     documents_by_id,
@@ -75,6 +78,14 @@ STORAGE_NOT_CONFIGURED_DETAIL: Final = (
     "Document storage is not configured on this server, so bids cannot be started."
 )
 ATTACH_FAILED_REASON_PREFIX: Final = "attaching documents failed"
+NOT_AWAITING_REVIEW_DETAIL: Final = (
+    "This bid is not waiting for a review. It has either been reviewed already or has not "
+    "finished running."
+)
+OVERRIDE_NEEDS_A_REASON_DETAIL: Final = (
+    "Your decision differs from the agent's, so a reason is required: give override_reason."
+)
+REVIEW_FAILED_DETAIL: Final = "The review could not be applied. The bid records why."
 
 
 # ------------------------------------------------------------------------ request models
@@ -270,6 +281,62 @@ async def start_bid(
     return BidResponse.assemble(bid, requirements=[], documents=rows)
 
 
+@router.post(
+    "/{bid_id}/review",
+    response_model=BidResponse,
+    summary="Submit the review that finishes a bid",
+)
+async def submit_review(
+    bid_id: uuid.UUID,
+    body: ReviewSubmission,
+    company: CompanyContext = Depends(current_company),
+    db: Database = Depends(get_database),
+    runner: BidRunner = Depends(get_bid_runner),
+) -> BidResponse:
+    """Resume the parked run with the reviewer's edits and answer the finished bid.
+
+    The safety boundary: nothing leaves this system as final until a person has been here.
+    The run is waiting at its interrupt, this hands it the submission, the scorer re-runs on
+    the reviewer's statuses and the bid ends `complete`.
+
+    Answers **409** when the bid is not parked at `awaiting_review` — which is the same
+    answer for "somebody already reviewed it" and "it is still running", because the claim
+    is one conditional update and cannot tell them apart. That is deliberate: a second
+    submission must not half-apply. **422** names a row the matrix does not have, a status
+    the row cannot legally take, or a decision that differs from the agent's with no reason
+    given; the check happens here, before the graph is resumed, so a rejected review leaves
+    the bid exactly where it was.
+    """
+    company_id = company.company_id
+    bid = await fetch_bid(db, company_id=company_id, bid_id=str(bid_id))
+    if bid is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
+    _check_graph_available(runner)
+
+    rows = await fetch_matrix_rows(db, company_id=company_id, bid_id=bid.id)
+    _check_review(body, bid, rows)
+    await _check_attachments(db, company_id=company_id, review=body)
+
+    try:
+        await claim_bid_for_review(db, company_id=company_id, bid_id=bid.id)
+    except BidStateError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail=NOT_AWAITING_REVIEW_DETAIL
+        ) from exc
+
+    try:
+        await runner.submit_review(bid, body)
+    except Exception as exc:
+        # `submit_review` has already written the reason to the row; say so without it.
+        logger.exception("Bid %s: the review could not be applied", bid.id)
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, detail=REVIEW_FAILED_DETAIL
+        ) from exc
+
+    logger.info("Bid %s reviewed: the reviewer decided %s", bid.id, body.decision.value)
+    return await _bid_response(db, company_id=company_id, bid_id=bid.id)
+
+
 @router.get("/{bid_id}", response_model=BidResponse, summary="Poll one bid")
 async def get_bid(
     bid_id: uuid.UUID,
@@ -277,15 +344,9 @@ async def get_bid(
     db: Database = Depends(get_database),
 ) -> BidResponse:
     """One bid of the calling company with its requirements so far. Another's id is 404."""
-    bid = await fetch_bid(db, company_id=company.company_id, bid_id=str(bid_id))
-    if bid is None:
+    if await fetch_bid(db, company_id=company.company_id, bid_id=str(bid_id)) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
-    requirements = await fetch_requirements(db, company_id=company.company_id, bid_id=bid.id)
-    documents = await bid_documents(db, company_id=company.company_id, bid_id=bid.id)
-    matrix_rows = await fetch_matrix_rows(db, company_id=company.company_id, bid_id=bid.id)
-    return BidResponse.assemble(
-        bid, requirements=requirements, documents=documents, matrix_rows=matrix_rows
-    )
+    return await _bid_response(db, company_id=company.company_id, bid_id=str(bid_id))
 
 
 @router.get("", response_model=BidListResponse, summary="List the company's bids")
@@ -299,6 +360,91 @@ async def list_company_bids(
 
 
 # ------------------------------------------------------------------------------ helpers
+
+
+async def _bid_response(db: Database, *, company_id: str, bid_id: str) -> BidResponse:
+    """The polling shape, read from the four projections and never from a checkpoint.
+
+    Re-reads the bid rather than taking the caller's copy: after a review the row has moved
+    on, and answering with the one fetched before the resume would show the reviewer the
+    state they were trying to leave.
+    """
+    bid = await fetch_bid(db, company_id=company_id, bid_id=bid_id)
+    if bid is None:  # pragma: no cover -- the caller has just read the row
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
+    return BidResponse.assemble(
+        bid,
+        requirements=await fetch_requirements(db, company_id=company_id, bid_id=bid_id),
+        documents=await bid_documents(db, company_id=company_id, bid_id=bid_id),
+        matrix_rows=await fetch_matrix_rows(db, company_id=company_id, bid_id=bid_id),
+    )
+
+
+def _check_review(review: ReviewSubmission, bid: BidRow, rows: Sequence[MatrixRow]) -> None:
+    """Every edit names a row of this bid and leaves it saveable, and an override has a
+    reason. Refused here rather than inside the graph: a 422 leaves the bid parked where the
+    reviewer can fix their submission, where a node raising would fail the run instead.
+    """
+    by_id = {row.id: row for row in rows}
+    for edit in review.row_edits:
+        row = by_id.get(edit.matrix_row_id)
+        if row is None:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"This bid has no matrix row {edit.matrix_row_id}.",
+            )
+        _check_row_edit(edit, row)
+    agent = _verdict_of(bid)
+    disagrees = agent is not None and review.decision is not agent.decision
+    if disagrees and not review.override_reason:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, detail=OVERRIDE_NEEDS_A_REASON_DETAIL
+        )
+
+
+def _check_row_edit(edit: RowEdit, row: MatrixRow) -> None:
+    """The edit, applied, must still satisfy `MatrixRow` — chiefly the rule that a
+    `supported` row carries a citation or an attachment. Checking it by construction rather
+    than by restating the rule keeps one definition of it (S3.3.1)."""
+    try:
+        MatrixRow.model_validate(
+            row.model_dump()
+            | {
+                "status": row.status if edit.status is None else edit.status,
+                "attached_doc_ids": [*row.attached_doc_ids, *edit.attached_doc_ids],
+            }
+        )
+    except ValidationError as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                f"Row {edit.matrix_row_id} cannot be marked {edit.status}: a supported row "
+                "needs an evidence quote or an attached document."
+            ),
+        ) from exc
+
+
+async def _check_attachments(
+    db: Database, *, company_id: str, review: ReviewSubmission
+) -> None:
+    """Every attached document is one of this company's. A tenant boundary, so it is a
+    lookup and not a format check: the ids arrive in a request body and nothing else in the
+    path would notice one belonging to somebody else."""
+    wanted = sorted({doc_id for edit in review.row_edits for doc_id in edit.attached_doc_ids})
+    if not wanted:
+        return
+    try:
+        owned = await documents_by_id(db, company_id=company_id, document_ids=wanted)
+    except ValueError as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Attached document ids must be UUIDs."
+        ) from exc
+    found = {row.id for row in owned}
+    missing = [doc_id for doc_id in wanted if doc_id not in found]
+    if missing:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=f"No such document: {', '.join(missing)}."
+        )
 
 
 def _verdict_of(bid: BidRow) -> Verdict | None:

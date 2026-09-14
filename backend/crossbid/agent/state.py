@@ -50,8 +50,9 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from crossbid.ingestion.parser import ParsedDocument, ParsedPage
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
+from crossbid.models.review import ReviewSubmission
 from crossbid.models.tender import BidStatus
-from crossbid.models.verdict import Verdict
+from crossbid.models.verdict import Decision, Verdict
 
 DEFAULT_BIDDER_LANGUAGE: Final = "de"
 """The language requirements are explained in when the bid does not say otherwise.
@@ -86,6 +87,32 @@ def latest_status(_current: BidStatus, incoming: BidStatus) -> BidStatus:
     to any other, so a lambda here would make two differently-reduced channels compare equal.
     """
     return incoming
+
+
+def merged_rows(current: list[MatrixRow], incoming: list[MatrixRow]) -> list[MatrixRow]:
+    """The reducer on `matrix_rows`: append what is new, replace what shares an id.
+
+    Checking's lanes hold disjoint requirements, so for them this is exactly `operator.add`,
+    which is what it used to be. S3.4.2 is why it is not any more: `apply_review` returns the
+    *whole* matrix with the reviewer's dispositions on it, and under an appending channel
+    that second copy would sit beside the agent's original — 135 rows becoming 270, the
+    scorer re-running over both, and a reviewer's `unsupported` counted next to the
+    `supported` it replaced. Replacing by id is well defined because the id is a `uuid5` over
+    the requirement id (`check_loop.matrix_row_id`), which is also what lets a resumed run
+    re-check a requirement without doubling it.
+
+    Order is the first appearance of each id, so the matrix keeps the document-and-page order
+    the lanes wrote it in however many times it is revised.
+
+    Named rather than a lambda, for the reason `latest_status` is: two lambdas compare equal
+    as reducers, so two differently-reduced channels would compare equal too.
+    """
+    if not current:
+        return list(incoming)
+    replacements = {row.id: row for row in incoming}
+    merged = [replacements.pop(row.id, row) for row in current]
+    merged.extend(replacements.values())
+    return merged
 
 
 class ExtractionProblemReason(StrEnum):
@@ -303,10 +330,25 @@ class BidState(TypedDict, total=False):
     each lane repeats because it is also what explains the answer: a reviewer asking why the
     matrix names a German paper against a French tender reads it off the checkpoint."""
 
-    matrix_rows: Annotated[list[MatrixRow], operator.add]
-    """One row per requirement, appended per checking lane (S3.3.1). Appending because the
-    lanes run in one superstep and each returns only its own share; the row id is a `uuid5`
-    over the requirement id, so a resumed run updates rather than doubles."""
+    matrix_rows: Annotated[list[MatrixRow], merged_rows]
+    """One row per requirement, contributed per checking lane (S3.3.1) and revised as a whole
+    by `apply_review` (S3.4.2). The reducer appends new ids and replaces known ones — see
+    `merged_rows` for why plain appending stopped being right."""
+
+    review: ReviewSubmission
+    """What the reviewer sent back, as the `await_review` node's `interrupt()` returned it
+    (S3.4.2). Present only after a resume, which is what makes "has this bid been reviewed"
+    answerable from the checkpoint rather than from the read model."""
+
+    agent_verdict: Verdict
+    """The verdict as the agent left it, preserved by `apply_review` before it overwrites
+    `verdict` with the re-score. The `reviews` row records both, and a reviewer looking at a
+    finished bid must be able to see what they changed their mind about."""
+
+    decision: Decision
+    """The reviewer's own final call, which may differ from the re-scored verdict — that
+    difference is the override the audit record exists for, and smoothing it over would
+    throw away the one signal a feedback loop could ever learn from."""
 
     verdict: Verdict
     """The agent's go/no-go, written by `score_verdict` (S3.4.1). No reducer: unlike the
@@ -340,6 +382,27 @@ class ScoreUpdate(TypedDict, total=False):
     """The partial state `score_verdict` returns: the verdict, and nothing else."""
 
     verdict: Verdict
+
+
+class ReviewUpdate(TypedDict, total=False):
+    """The partial state `await_review` returns: whatever the reviewer resumed it with."""
+
+    review: ReviewSubmission
+
+
+class AppliedReviewUpdate(TypedDict, total=False):
+    """The partial state `apply_review` returns: the revised matrix and both verdicts."""
+
+    matrix_rows: list[MatrixRow]
+    agent_verdict: Verdict
+    verdict: Verdict
+
+
+class FinalizeUpdate(TypedDict, total=False):
+    """The partial state `finalize` returns: the reviewer's decision, which is also what
+    tells the stage wrapper to write the audit record (see `graph._project`)."""
+
+    decision: Decision
 
 
 class ParseUpdate(TypedDict, total=False):

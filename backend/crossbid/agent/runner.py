@@ -53,11 +53,12 @@ from dataclasses import dataclass
 from typing import Any, Final, Protocol
 
 from langchain_core.runnables import RunnableConfig
-from langgraph.types import StateSnapshot
+from langgraph.types import Command, StateSnapshot
 
 from crossbid.agent.graph import StageError, build_graph, initial_state
 from crossbid.agent.state import BidState
 from crossbid.db import Database
+from crossbid.models.review import ReviewSubmission
 from crossbid.readmodel.bids import (
     BidRow,
     ConnectionSource,
@@ -78,6 +79,9 @@ DEFAULT_RUN_BUDGET_USD: Final = 2.50
 """Attribute names on `settings.runtime.agent` once the parent adds them."""
 
 RUN_NAME: Final = "bid_run"
+REVIEW_RUN_NAME: Final = "bid_review"
+"""Traces of the resume are named apart from the run that parked (S0.3.3): the two happen
+minutes or days apart and reading them as one trace would misreport both."""
 TASK_NAME_PREFIX: Final = "bid-run:"
 
 Clock = Callable[[], float]
@@ -160,6 +164,30 @@ class BidRunner:
     def resume(self, bid: BidRow) -> asyncio.Task[None]:
         """Schedule `bid` to continue from its checkpoint (or from scratch if it has none)."""
         return self._schedule(bid, resume=True)
+
+    async def submit_review(self, bid: BidRow, review: ReviewSubmission) -> None:
+        """Resume the parked run with `review` and wait for it, in the caller's request.
+
+        Inline rather than a background task, and that is a considered difference from
+        `start`. Everything past the interrupt — applying the edits, re-scoring, writing the
+        audit record — is rules and two statements; there is no model call and no page to
+        parse, so it finishes in the time an HTTP request already takes. Answering 202 and
+        making the reviewer poll for the consequence of their own click would be latency
+        invented for the sake of symmetry.
+
+        Failure is recorded the way a background run's is, then re-raised: the bid was
+        claimed off `awaiting_review` before this was called, so a silent failure would
+        strand it at `applying_review` with nothing saying why. The router turns the
+        exception into a 5xx after the reason is on the row.
+        """
+        config = bid_run_config(bid.id, thread_id=bid.thread_id, run_name=REVIEW_RUN_NAME)
+        try:
+            await self.graph.ainvoke(Command(resume=review), config)
+        except Exception as exc:
+            reason = failure_reason_of(exc)
+            logger.exception("Bid %s: %s", bid.id, reason)
+            await self._record_failure(bid, reason)
+            raise
 
     async def shutdown(self) -> None:
         """Cancel every run in flight and wait for the cancellations to land.

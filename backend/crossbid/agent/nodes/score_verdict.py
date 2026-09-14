@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Sequence
 from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -31,6 +32,8 @@ from crossbid.agent.nodes.check_reqs import CompanyLookup
 from crossbid.agent.scoring import score
 from crossbid.agent.state import BidState, ScoreUpdate, bidder_language_of
 from crossbid.models.company import CompanyProfile, Tone
+from crossbid.models.matrix import MatrixRow
+from crossbid.models.verdict import Verdict
 from crossbid.readmodel.bids import ConnectionSource
 from crossbid.readmodel.companies import CompaniesReadModel, CompanyReadModelError
 
@@ -60,10 +63,23 @@ class VerdictScorer:
         config: Optional[RunnableConfig] = None,  # noqa: UP045
     ) -> ScoreUpdate:
         """The bid's verdict, scored from the state's own requirements and matrix rows."""
+        return {"verdict": await self.verdict_for(state)}
+
+    async def verdict_for(
+        self, state: BidState, rows: Sequence[MatrixRow] | None = None
+    ) -> Verdict:
+        """Score `state`, optionally against `rows` instead of the matrix it carries.
+
+        The override is what S3.4.2 re-scores the reviewer's statuses through. It is a
+        parameter rather than a second scoring path because "the scorer re-runs on my
+        statuses" is only a true sentence if it is the *same* scorer: a copy would be free
+        to drift, and the rule a reviewer's edit is measured against would stop being the
+        rule the agent was measured against.
+        """
         profile = await self._profile(state.get("company_id", ""))
         verdict = score(
             state.get("requirements", []),
-            state.get("matrix_rows", []),
+            state.get("matrix_rows", []) if rows is None else rows,
             language=bidder_language_of(state),
             tone=profile.tone if profile is not None else DEFAULT_TONE,
             profile=profile,
@@ -76,7 +92,7 @@ class VerdictScorer:
             verdict.mandatory_supported,
             verdict.mandatory_total,
         )
-        return {"verdict": verdict}
+        return verdict
 
     async def _profile(self, company_id: str) -> CompanyProfile | None:
         """The bidder's profile, or `None` and a line in the log. See the module docstring.

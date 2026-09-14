@@ -114,6 +114,10 @@ class BidRow(BaseModel):
     verdict: dict[str, Any] | None = None
     """The `Verdict` as stored, raw for the same reason `problems` is. `None` until
     `score_verdict` has run (S3.4.1)."""
+    reviewed_decision: Decision | None = None
+    """`bids.decision` (migration 0006): the *reviewer's* final call, `None` until a human
+    has made one. Named apart from `decision` below because they are not the same fact —
+    see that property."""
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -140,10 +144,22 @@ class BidRow(BaseModel):
 
     @property
     def decision(self) -> Decision | None:
-        """The stored verdict's decision, or `None` when there is none or it is unreadable."""
-        raw = (self.verdict or {}).get("decision")
+        """What the dashboard shows: the reviewer's call once there is one, else the agent's.
+
+        Two sources with a precedence rule, not two copies of one answer. `bids.decision` is
+        what a person decided and exists only after a review (S3.4.2); the verdict's own
+        decision is the agent's advisory reading, which is what a bid parked at
+        `awaiting_review` has to offer. A bid with neither is still in flight and shows
+        nothing, which is what `BidSummary.decision` documents.
+
+        A verdict the current vocabulary does not recognise answers `None` rather than
+        raising: 0004 renamed `go_with_open_items` out of the enum, and one unreadable row
+        must not blank a company's dashboard.
+        """
+        if self.reviewed_decision is not None:
+            return self.reviewed_decision
         try:
-            return Decision(raw)
+            return Decision((self.verdict or {}).get("decision"))
         except ValueError:
             return None
 
@@ -173,7 +189,8 @@ def thread_id_of(bid_id: str) -> str:
 
 _BID_COLUMNS: Final[LiteralString] = """
     b.id, b.company_id, b.thread_id, b.ted_publication_number, b.title, b.source_language,
-    b.status, b.failure_reason, b.problems, b.verdict, b.created_at, b.updated_at,
+    b.status, b.failure_reason, b.problems, b.verdict, b.decision, b.created_at,
+    b.updated_at,
     c.language as bidder_language
 """
 
@@ -242,6 +259,32 @@ reviewer's final one. One jsonb column rather than a table, for the reason `prob
 one: it is a projection of the graph state, read whole and never queried by field. The
 `reviews` table is the separate, append-only record of *who decided what*."""
 
+UPDATE_BID_DECISION: Final[LiteralString] = """
+update bids
+set decision = %(decision)s, updated_at = now()
+where company_id = %(company_id)s and id = %(bid_id)s
+"""
+
+CLAIM_BID_FOR_REVIEW: Final[LiteralString] = """
+update bids
+set status = %(claimed)s, updated_at = now()
+where company_id = %(company_id)s and id = %(bid_id)s and status = %(parked)s
+"""
+"""The 409 in S3.4.2, made atomic. A read-then-write would let two submissions both see
+`awaiting_review` and both resume the graph; a conditional update lets exactly one row
+change and the loser sees `rowcount == 0`. Migration 0006's column is not involved -- this
+is the *status*, and moving it off `awaiting_review` is the claim."""
+
+INSERT_REVIEW: Final[LiteralString] = """
+insert into reviews (bid_id, company_id, decision, agent_verdict, final_verdict,
+                     override_reason, reviewer_id)
+values (%(bid_id)s, %(company_id)s, %(decision)s, %(agent_verdict)s, %(final_verdict)s,
+        %(override_reason)s, %(reviewer_id)s)
+"""
+"""Append-only: a second review of the same bid would be a second row, never an update.
+`reviewer_id` is nullable since 0006 and is `None` under dev auth -- see that migration for
+why recording an unverified identity is worse than recording none."""
+
 SELECT_COMPANY_LANGUAGE: Final[LiteralString] = """
 select language from companies where id = %(company_id)s
 """
@@ -278,6 +321,9 @@ SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     UPDATE_BID_FAILED,
     UPDATE_BID_PROBLEMS,
     UPDATE_BID_VERDICT,
+    UPDATE_BID_DECISION,
+    CLAIM_BID_FOR_REVIEW,
+    INSERT_REVIEW,
     SELECT_DOCUMENTS_BY_ID,
     SELECT_BID_DOCUMENTS,
     ATTACH_DOCUMENTS,
@@ -412,6 +458,71 @@ async def set_bid_verdict(
         _require_one_row(cursor.rowcount, bid_id)
 
 
+async def claim_bid_for_review(db: ConnectionSource, *, company_id: str, bid_id: str) -> None:
+    """Move the bid off `awaiting_review`, or refuse because it was never parked there.
+
+    The one operation that makes "a second submission is 409" true under concurrency. A
+    `BidStateError` here means either that someone else submitted first or that the bid is
+    not waiting on a human at all; the router cannot tell the two apart and neither can the
+    reviewer, so it says the same thing for both.
+    """
+    async with db.connection() as conn:
+        cursor = await conn.execute(
+            CLAIM_BID_FOR_REVIEW,
+            {
+                "company_id": company_id,
+                "bid_id": bid_id,
+                "claimed": BidStatus.APPLYING_REVIEW.value,
+                "parked": BidStatus.AWAITING_REVIEW.value,
+            },
+        )
+    if cursor.rowcount != 1:
+        raise BidStateError(f"bid {bid_id} is not waiting for a review")
+
+
+async def record_review(
+    db: ConnectionSource,
+    *,
+    company_id: str,
+    bid_id: str,
+    decision: Decision,
+    agent_verdict: Mapping[str, Any] | None,
+    final_verdict: Mapping[str, Any],
+    override_reason: str | None,
+    reviewer_id: str | None = None,
+) -> None:
+    """Append the audit row and set the bid's final decision, in one transaction.
+
+    One transaction because the pair is the record: a `bids.decision` with no `reviews` row
+    behind it is a verdict nobody can audit, and a `reviews` row the dashboard does not
+    reflect is an audit of something that never happened. psycopg commits the connection
+    when the `async with` block leaves without an exception, so the two statements either
+    both land or neither does.
+
+    `agent_verdict` is nullable in this signature and not in the column: a bid can only have
+    reached a review through `score_verdict`, so `None` means a caller assembled the record
+    by hand, and `'null'::jsonb` records that honestly rather than inventing a verdict.
+    """
+    async with db.connection() as conn:
+        await conn.execute(
+            INSERT_REVIEW,
+            {
+                "bid_id": bid_id,
+                "company_id": company_id,
+                "decision": decision.value,
+                "agent_verdict": Jsonb(dict(agent_verdict) if agent_verdict else None),
+                "final_verdict": Jsonb(dict(final_verdict)),
+                "override_reason": override_reason,
+                "reviewer_id": reviewer_id,
+            },
+        )
+        cursor = await conn.execute(
+            UPDATE_BID_DECISION,
+            {"company_id": company_id, "bid_id": bid_id, "decision": decision.value},
+        )
+        _require_one_row(cursor.rowcount, bid_id)
+
+
 # ----------------------------------------------------------------- companies, documents
 
 
@@ -494,6 +605,7 @@ def _bid_row(record: Mapping[str, Any]) -> BidRow:
         failure_reason=_optional_str(record.get("failure_reason")),
         problems=list(record.get("problems") or []),
         verdict=record.get("verdict"),
+        reviewed_decision=_optional_decision(record.get("decision")),
         created_at=record.get("created_at"),
         updated_at=record.get("updated_at"),
     )
@@ -510,6 +622,14 @@ def _document_row(record: Mapping[str, Any]) -> BidDocumentRow:
         pages=int(record["pages"]),
         unread_pages=tuple(int(page) for page in record.get("unread_pages") or ()),
     )
+
+
+def _optional_decision(value: object) -> Decision | None:
+    """`bids.decision` as the contract knows it, or `None` for a word it no longer does."""
+    try:
+        return Decision(value)
+    except ValueError:
+        return None
 
 
 def _optional_str(value: object) -> str | None:

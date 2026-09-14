@@ -51,12 +51,14 @@ from crossbid.readmodel.bids import (
     BidStateError,
     attach_documents,
     bid_documents,
+    claim_bid_for_review,
     company_language,
     create_bid,
     documents_by_id,
     fetch_bid,
     list_bids,
     mark_bid_failed,
+    record_review,
     set_bid_problems,
     set_bid_status,
     set_bid_verdict,
@@ -158,6 +160,7 @@ def bid_record(**overrides: Any) -> dict[str, Any]:
         "failure_reason": None,
         "problems": [],
         "verdict": None,
+        "decision": None,
         "created_at": NOW,
         "updated_at": NOW,
         "bidder_language": "de",
@@ -399,6 +402,114 @@ async def test_set_bid_verdict_on_a_missing_bid_is_not_found() -> None:
         await set_bid_verdict(
             db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), verdict={"decision": "go"}
         )
+
+
+async def test_claiming_a_parked_bid_moves_it_off_awaiting_review() -> None:
+    # Arrange
+    db = FakeDatabase(Scripted(rowcount=1))
+
+    # Act
+    await claim_bid_for_review(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
+
+    # Assert
+    params = db.params()
+    assert params["parked"] == BidStatus.AWAITING_REVIEW.value
+    assert params["claimed"] == BidStatus.APPLYING_REVIEW.value
+
+
+async def test_claiming_a_bid_that_is_not_parked_is_a_state_error() -> None:
+    """The 409 in S3.4.2. `rowcount == 0` is how a conditional update says "somebody else
+    got there first", and it is the same answer as "this bid never parked"."""
+    db = FakeDatabase(Scripted(rowcount=0))
+
+    with pytest.raises(BidStateError, match="not waiting for a review"):
+        await claim_bid_for_review(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
+
+
+async def test_recording_a_review_writes_the_audit_row_and_the_decision_together() -> None:
+    # Arrange
+    db = FakeDatabase(Scripted(rowcount=1), Scripted(rowcount=1))
+    agent = {"decision": "no_go"}
+    final = {"decision": "conditional"}
+
+    # Act
+    await record_review(
+        db,
+        company_id=str(COMPANY_ID),
+        bid_id=str(BID_ID),
+        decision=Decision.GO,
+        agent_verdict=agent,
+        final_verdict=final,
+        override_reason="Die Referenzen liegen vor.",
+    )
+
+    # Assert -- both statements, on one borrowed connection, so they commit together
+    assert db.borrowed == 1
+    assert "insert into reviews" in db.statements[0]
+    assert "set decision" in db.statements[1]
+    assert db.params(0)["agent_verdict"].obj == agent
+    assert db.params(0)["final_verdict"].obj == final
+    assert db.params(0)["decision"] == "go"
+    assert db.params(0)["reviewer_id"] is None
+
+
+async def test_recording_a_review_for_a_missing_bid_is_not_found() -> None:
+    db = FakeDatabase(Scripted(rowcount=1), Scripted(rowcount=0))
+
+    with pytest.raises(BidNotFoundError):
+        await record_review(
+            db,
+            company_id=str(COMPANY_ID),
+            bid_id=str(BID_ID),
+            decision=Decision.GO,
+            agent_verdict=None,
+            final_verdict={"decision": "go"},
+            override_reason=None,
+        )
+
+
+async def test_a_review_recorded_without_an_agent_verdict_stores_null_not_a_guess() -> None:
+    # Arrange
+    db = FakeDatabase(Scripted(rowcount=1), Scripted(rowcount=1))
+
+    # Act
+    await record_review(
+        db,
+        company_id=str(COMPANY_ID),
+        bid_id=str(BID_ID),
+        decision=Decision.GO,
+        agent_verdict=None,
+        final_verdict={"decision": "go"},
+        override_reason=None,
+    )
+
+    # Assert
+    assert db.params(0)["agent_verdict"].obj is None
+
+
+def test_the_reviewers_decision_outranks_the_agents_on_the_dashboard() -> None:
+    """Two answers to two questions, with a precedence rule -- not two copies of one."""
+    # Arrange
+    row = _bid_row_model(
+        verdict={"decision": "no_go", "rationale": "x"},
+        reviewed_decision=Decision.GO,
+    )
+
+    # Act / Assert
+    assert row.decision is Decision.GO
+
+
+def test_a_bid_awaiting_review_still_shows_the_agents_advisory_decision() -> None:
+    row = _bid_row_model(verdict={"decision": "conditional", "rationale": "x"})
+
+    assert row.decision is Decision.CONDITIONAL
+
+
+def test_a_decision_column_the_vocabulary_no_longer_knows_reads_as_unset() -> None:
+    """0004 renamed `go_with_open_items` out of the enum; a pre-rename row must not raise."""
+    assert bids._optional_decision("go_with_open_items") is None
+    assert bids._optional_decision(None) is None
+    assert bids._optional_decision("go") is Decision.GO
 
 
 def test_a_scored_bid_carries_its_decision_into_the_dashboard_row() -> None:
