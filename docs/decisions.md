@@ -3516,3 +3516,57 @@ The story's second criterion needed no work: only `ready` documents are selectab
 read. What did need work was the note above it, which still explained that searching TED
 "arrives with the full flow (S4.3.1)" — true until this commit, and exactly the kind of
 sentence that rots into a lie.
+
+---
+
+## ADR-0045 — `search_ted` is registered, and it is now inside the ReAct loop
+
+**Date:** 2026-09-14 · **Stories:** S1.2.2 · **Status:** accepted
+
+S1.2.2's two criteria landed unevenly. *"Given a result, when I open it, then the notice PDF
+downloads in its source language"* was already true: S4.3.1's results carry **Read the
+notice**, pointing at `links.pdf.<official-language>` — the buyer's own words, not a
+translation, because a translation is not what the bidder is about to be held to. So the work
+here was the second criterion, the tool.
+
+**It is the only tool in the set that opens a socket to a service we do not control**, and
+`external=True` is what tells an operator so. eCertis is cached, the two RAG tools are local
+Postgres; TED is live, free, and occasionally slow.
+
+### The consequence worth recording rather than discovering
+
+`settings.default.yaml` has listed `search_ted` in `enabled_tools` since S1.4.1 — it is one of
+the five brief item Medium 6 wants an enable/disable surface over — and `check_reqs` binds
+**every enabled tool** to the per-requirement ReAct loop. So building the module put a live
+network search inside a loop that runs once per requirement, on a run that has already spent
+a euro by the time it gets there.
+
+The alternative was to declare `default_enabled=False` and contradict the settings file, which
+`test_tool_manifests.py` refuses in as many words: a module claiming to be off while the
+settings enable it is the panel telling an operator something the runtime does not do. The
+file is the operator's intention and the module is not entitled to overrule it.
+
+So it is bound, and three things bound the risk:
+
+* **The description says what the tool is not.** The likeliest wrong belief a model could form
+  is that this fetches the procurement pack. It says outright that it does not, and that those
+  files live on the buyer's platform for the bidder to upload.
+* **`max_tool_calls_per_requirement` is the budget**, and it counts a wasted search the same
+  as a useful one.
+* **An operator can switch it off**, which is the entire point of S1.4.1's registry and of
+  `external` being a field at all.
+
+**What would fix it properly is a per-node tool set** — `check_reqs` binding the tools a
+*check* needs rather than everything enabled — and that is a graph change, not this story's.
+It is recorded here so the next person to look at a slow run has somewhere to start, and
+`test_check_reqs.py` now carries the same note beside the assertion that lists the bound set.
+
+### Smaller choices
+
+The tool answers with a **trimmed** notice: title, buyer, deadline, languages, publication
+number and two URLs. The full model carries 24 PDF links and a repeated CPV list, which would
+spend tokens to say nothing.
+
+It is **total**, like every tool the loop calls (S3.3.1): `TedUnavailableError` comes back as
+`{"status": "unavailable", …}` rather than as an exception, because a third party being down
+must not end a run that has already cost money.

@@ -1003,8 +1003,17 @@ async def test_the_production_session_builds_the_enabled_tools_and_closes_its_cl
         bidder = ctx.bidder
         prompt = ctx.system_prompt
 
-    # Assert -- exactly the built half of `enabled_tools`, and the client is closed after
-    assert names == ["company_rag_search", "ecertis_evidence_lookup", "tender_rag_search"]
+    # Assert -- exactly the built half of `enabled_tools`, and the client is closed after.
+    # `search_ted` is in this list because the node binds every enabled tool and the settings
+    # enable it (S1.2.2). It is the only one here that opens a socket, and the loop's
+    # `max_tool_calls_per_requirement` budget is what bounds a model that reaches for it
+    # while checking a certificate. See ADR-0045 if that needs narrowing to a per-node set.
+    assert names == [
+        "company_rag_search",
+        "ecertis_evidence_lookup",
+        "search_ted",
+        "tender_rag_search",
+    ]
     assert budget == offline_settings.runtime.agent.max_tool_calls_per_requirement
     assert bidder == BIDDER
     assert prompt == offline_settings.runtime.system_prompt

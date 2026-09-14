@@ -95,7 +95,7 @@ def test_it_lists_every_manifest_that_exists(client: TestClient) -> None:
     listed = tools_by_name(fetch(client))
 
     # Assert
-    assert set(listed) == {COMPANY_RAG, TENDER_RAG, ECERTIS}
+    assert set(listed) == {COMPANY_RAG, TENDER_RAG, ECERTIS, "search_ted"}
 
 
 def test_each_manifest_carries_what_the_panel_shows(client: TestClient) -> None:
@@ -135,7 +135,7 @@ def test_it_names_the_tools_that_are_configured_but_not_built(client: TestClient
     body = fetch(client)
 
     # Assert
-    assert body["unbuilt_tools"] == ["currency_convert", "search_ted"]
+    assert body["unbuilt_tools"] == ["currency_convert"]
     assert set(body["unbuilt_tools"]).isdisjoint(tools_by_name(body))
 
 

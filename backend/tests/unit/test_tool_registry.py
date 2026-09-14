@@ -52,7 +52,10 @@ BID_ID = str(uuid.UUID("33333333-3333-4333-8333-333333333333"))
 COMPANY_RAG = "company_rag_search"
 TENDER_RAG = "tender_rag_search"
 ECERTIS = "ecertis_evidence_lookup"
-NOT_BUILT_YET = "search_ted"
+SEARCH_TED = "search_ted"
+NOT_BUILT_YET = "currency_convert"
+"""A name `settings.default.yaml` enables with no module behind it. `search_ted` played this
+part until S1.2.2 built it; `currency_convert` is S1.3.1 and takes it over."""
 """In `settings.default.yaml`'s `enabled_tools`, with no module until Increment 4."""
 
 
@@ -81,7 +84,7 @@ def test_discovery_finds_every_module_that_exports_a_manifest() -> None:
     found = {entry.manifest.name for entry in tool_entries()}
 
     # Assert
-    assert found == {COMPANY_RAG, TENDER_RAG, ECERTIS}
+    assert found == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED}
 
 
 def test_manifests_lists_the_tools_that_exist_not_the_ones_that_are_on() -> None:
@@ -226,7 +229,7 @@ def test_unbuilt_names_are_the_configured_ones_no_module_provides(
     unbuilt = unbuilt_tool_names(offline_settings)
 
     # Assert
-    assert unbuilt == ("currency_convert", "search_ted")
+    assert unbuilt == ("currency_convert",)
 
 
 def test_a_built_tool_that_is_switched_off_is_not_called_unbuilt(

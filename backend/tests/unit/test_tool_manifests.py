@@ -10,8 +10,8 @@ rather than the day someone remembers to add a test for it.
 
 The two directions are not symmetric, deliberately:
 
-* A **configured name with no module** is fine. `enabled_tools` already lists `search_ted`
-  and `currency_convert`, which are Increment 4 stories — the file is the operator's
+* A **configured name with no module** is fine. `enabled_tools` still lists `currency_convert`,
+  which is an Increment 4 story — the file is the operator's
   intention, and it is allowed to run ahead of the code. `PENDING_TOOLS` names them, so a
   typo in the settings file is still caught.
 * A **module whose flag disagrees with the file** is never fine, in either direction: an
@@ -32,10 +32,13 @@ import pytest
 from crossbid.settings import Settings
 from crossbid.tools.registry import ToolEntry, tool_entries
 
-PENDING_TOOLS = frozenset({"search_ted", "currency_convert"})
-"""Listed in `enabled_tools` with no module yet; Increment 4 (S4 TED, currency)."""
+PENDING_TOOLS = frozenset({"currency_convert"})
+"""Listed in `enabled_tools` with no module yet. `search_ted` left this set when S1.2.2 built
+it; `currency_convert` is S1.3.1."""
 
-BUILT_TOOLS = frozenset({"company_rag_search", "tender_rag_search", "ecertis_evidence_lookup"})
+BUILT_TOOLS = frozenset(
+    {"company_rag_search", "tender_rag_search", "ecertis_evidence_lookup", "search_ted"}
+)
 """What discovery must find at minimum, so a sweep that finds nothing cannot pass silently."""
 
 
