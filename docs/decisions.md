@@ -3942,3 +3942,75 @@ a framework for one caller. The constant plus a required argument is the whole m
 someone disables the tool in the settings. `test_tool_registry.py` covers both keys
 independently, and one test states on its own that `CHECK_TOOLS` does not contain `search_ted`,
 so an edit adding it back fails there rather than in a slow, expensive live run.
+
+---
+
+## ADR-0053 — The link keeps creating accounts, and a reset path that leaks nothing
+
+**Date:** 2026-09-14 · **Stories:** follow-up to S4.1.1 / ADR-0038 · **Status:** accepted
+
+Two decisions about the same screen, taken together because they trade against each other.
+
+### `shouldCreateUser` goes back to its default
+
+A magic link for an address with no account creates one. That was briefly changed to
+`false`, on the reasoning that a typo should fail rather than register — `…eslayed@` had
+appeared beside `…elsayed@` in `auth.users`, one transposition apart, unconfirmed and
+never used.
+
+**Reverted, because the cure was the worse disease.** With `shouldCreateUser: false` an
+unknown address returns an error where a known one succeeds, and that difference is a
+user-enumeration oracle: anyone can ask this deployment which email addresses have accounts,
+from a browser console, using the anon key that ships in the bundle. It is
+[supabase/auth#1955](https://github.com/supabase/auth/issues/1955), open since November 2024
+with no maintainer resolution, so there is no setting that closes it — Supabase has no
+"email enumeration protection" toggle (that is Google Cloud Identity Platform, a different
+product, and mistaking one for the other is what sent this investigation down a blind alley
+for a while).
+
+The options were: accept the oracle, put a CAPTCHA in front of sign-in, or accept silent
+registration. A CAPTCHA is real friction in a demo that will be walked through live. Silent
+registration costs a stray row in `auth.users` owning nothing — recoverable with one
+`delete`, which is exactly how the original typo was cleared. An enumeration oracle is not
+recoverable, because the information is gone once asked for. So: creating the account is the
+answer that reveals nothing, and it is the one the screen gives.
+
+### The reset path was already the enumeration-safe one
+
+`resetPasswordForEmail` returns without error for an address Supabase has never seen, and
+sends nothing. That is a documented property, not an accident — it is the same shape the
+magic link now has, so **both** mail-sending methods on this screen answer identically for
+known and unknown addresses. The sent state says "if that address has an account" for both,
+and it is true rather than a polite fiction.
+
+The password path is the one exception and cannot be otherwise: `signInWithPassword` answers
+"Invalid login credentials" for a wrong password and a missing account alike, which is
+Supabase declining to distinguish them on our behalf.
+
+### The flow reuses what exists rather than inventing a token path
+
+A recovery link is an ordinary PKCE arrival. `/auth/callback` exchanges its code exactly as
+it does for a magic link (ADR-0040) and forwards to `PASSWORD_RESET_PATH`, so
+`new-password-card.tsx` **never sees a token and never validates one** — the session is the
+proof, and `updateUser({ password })` is refused without one. "Was this link real?" is a
+question already answered upstream, by the code that was written to answer it.
+
+`PASSWORD_RESET_PATH` is a shared constant because two files must agree on it: the provider
+writes it into the mail as `?next=`, the callback reads it back. A rename touching one would
+land a valid recovery session on the dashboard — signed in, old password intact, no screen
+ever offering to change it.
+
+The page sits beside the callback rather than inside `(app)`, because the shell's
+`RequireCompany` would send a bidder with a recovery session to the company form before they
+had set the password they came to set.
+
+**Both fields are typed.** A password set from a mistyped string locks the account out of
+the very flow that would fix it, and the owner would not find out until their next sign-in.
+
+### A fourth method, not a fourth screen
+
+`Method` gains `reset` and the four `Record<Method, …>` tables gain a row each. The screens
+differ in one input and three strings, so a separate component would have copied the card,
+the error handling and the sent state to change a verb. `Card` moved to `auth-card.tsx` when
+the second screen needed the same frame — shared rather than copied, so the two cannot drift
+apart by a padding value.

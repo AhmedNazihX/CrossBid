@@ -13,6 +13,16 @@
  */
 export const DEFAULT_AFTER_SIGN_IN = '/dashboard'
 
+/**
+ * Where a recovery link ends up, once the callback has spent its code.
+ *
+ * A constant rather than a string in two files: `resetPassword` puts it into the mail as
+ * `?next=`, and the callback reads it back out, so a rename that moved only one of them
+ * would send someone with a valid recovery session to the dashboard — signed in, with the
+ * old password still on the account and no screen ever offering to change it.
+ */
+export const PASSWORD_RESET_PATH = '/auth/new-password'
+
 export function safeNextPath(value: string | null | undefined): string {
   if (value === null || value === undefined) return DEFAULT_AFTER_SIGN_IN
   const trimmed = value.trim()

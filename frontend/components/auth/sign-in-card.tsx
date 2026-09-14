@@ -9,12 +9,16 @@
  * marketing page's canvas and brand lockup, and invents no spacing, colour or type of its
  * own. ADR-0034 records that.
  *
- * **Two ways in and one way up, one screen (ADR-0038).** A password for an account that has
- * one, an emailed link for everyone else, and a third method that registers. The link used
- * to double as the sign-up path, which meant a mistyped address quietly created an account
- * rather than failing; it is now `shouldCreateUser: false` and registration is its own
- * method. The plan's "never manage a password" promise survives — the link still signs in
- * without one, it just will not invent an account to sign in to.
+ * **Four methods, one screen (ADR-0038, ADR-0053).** A password for an account that has
+ * one, an emailed link for everyone else, a third that registers, and a fourth that mails a
+ * reset. They are four `Record<Method, …>` entries rather than four screens because they
+ * differ in one input and three strings; the tables below are what keeps a fifth from
+ * costing a new component.
+ *
+ * The link *also* registers when there is no account (`shouldCreateUser` stays at its
+ * default), which is the deliberate choice recorded in ADR-0053: refusing would tell a
+ * stranger which addresses exist, and the plan's "never manage a password" promise is the
+ * one this screen exists to keep.
  *
  * **The link half has two states and they are not the same screen.** Before sending, an
  * email field; after sending, the link has gone to an address and the useful thing to show
@@ -27,15 +31,17 @@
  * would hide the one fact that explains it. The same goes for "Invalid login credentials".
  *
  * **The address is never confirmed or denied.** Supabase answers the same way for a known
- * and an unknown address, on both paths, and so does this screen: telling a stranger which
- * emails have accounts is an enumeration oracle, and it is why the sent state says "if that
- * address has an account".
+ * and an unknown address on the link and reset paths, and so does this screen: telling a
+ * stranger which emails have accounts is an enumeration oracle, and it is why the sent
+ * state says "if that address has an account" for both. The password path is the exception
+ * and cannot be otherwise — "Invalid login credentials" is the answer to a wrong password
+ * and a missing account alike, which is Supabase declining to distinguish them for us.
  */
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, type FormEvent } from 'react'
 
+import { AuthCard } from '@/components/auth/auth-card'
 import { useSession } from '@/components/auth/session-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,10 +50,10 @@ import { AUTH_MODE, configurationProblem } from '@/lib/auth-mode'
 import { safeNextPath } from '@/lib/safe-next-path'
 
 type Stage = 'form' | 'sending' | 'sent'
-type Method = 'password' | 'link' | 'register'
+type Method = 'password' | 'link' | 'register' | 'reset'
 
 export function SignInCard() {
-  const { sendMagicLink, signInWithPassword, register, status } = useSession()
+  const { sendMagicLink, signInWithPassword, register, resetPassword, status } = useSession()
   const router = useRouter()
   const next = safeNextPath(useSearchParams().get('next'))
   const [method, setMethod] = useState<Method>('password')
@@ -69,6 +75,11 @@ export function SignInCard() {
     try {
       if (method === 'link') {
         await sendMagicLink(email.trim(), next)
+        setStage('sent')
+        return
+      }
+      if (method === 'reset') {
+        await resetPassword(email.trim())
         setStage('sent')
         return
       }
@@ -97,7 +108,7 @@ export function SignInCard() {
 
   if (status === 'disabled') {
     return (
-      <Card>
+      <AuthCard>
         <Notice
           tone={configurationProblem === undefined ? 'neutral' : 'danger'}
           title={
@@ -114,60 +125,48 @@ export function SignInCard() {
         <Button asChild variant="secondary" fullWidth>
           <Link href="/dashboard">Continue to the dashboard</Link>
         </Button>
-      </Card>
+      </AuthCard>
     )
   }
 
   if (stage === 'sent') {
     return (
-      <Card>
+      <AuthCard>
         <div className="flex flex-col gap-2">
           <h1 className="m-0 text-[length:var(--text-lg)] font-semibold text-text-primary">
             Check your inbox
           </h1>
           <p className="m-0 [font:var(--type-body)] text-text-secondary">
             If <span className="font-medium text-text-primary">{email.trim()}</span> has an
-            account, a sign-in link is on its way. It expires in an hour and can be used once.
+            account, {method === 'reset' ? 'a link to set a new password' : 'a sign-in link'} is
+            on its way. It expires in an hour and can be used once.
           </p>
         </div>
         <Button variant="ghost" fullWidth onClick={() => setStage('form')}>
           Use a different address
         </Button>
-      </Card>
+      </AuthCard>
     )
   }
 
   const busy = stage === 'sending'
-  const usingLink = method === 'link'
   const registering = method === 'register'
-  const incomplete = email.trim() === '' || (!usingLink && password === '')
+  // A password is typed on exactly two of the four screens. `reset` and `link` both ask for
+  // an address and mail something to it; neither can be told apart by a password field.
+  const needsPassword = method === 'password' || registering
+  const incomplete = email.trim() === '' || (needsPassword && password === '')
 
   return (
-    <Card>
+    <AuthCard>
       <div className="flex flex-col gap-2">
         <h1 className="m-0 text-[length:var(--text-lg)] font-semibold text-text-primary">
-          {registering ? 'Create your account' : 'Sign in'}
+          {HEADINGS[method]}
         </h1>
-        <p className="m-0 [font:var(--type-body)] text-text-secondary">
-          {registering
-            ? 'Your email and a password. Next you tell Crossbid about your company.'
-            : usingLink
-              ? 'We email you a link. Nothing to remember, and nothing to lose.'
-              : 'With the password on your account, or ask for a link instead.'}
-        </p>
+        <p className="m-0 [font:var(--type-body)] text-text-secondary">{BLURBS[method]}</p>
       </div>
 
       {error !== undefined && (
-        <Notice
-          tone="danger"
-          title={
-            usingLink
-              ? 'The link could not be sent'
-              : registering
-                ? 'Account not created'
-                : 'Not signed in'
-          }
-        >
+        <Notice tone="danger" title={FAILURE_TITLES[method]}>
           {error}
         </Notice>
       )}
@@ -185,7 +184,7 @@ export function SignInCard() {
           onChange={(event) => setEmail(event.target.value)}
           disabled={busy}
         />
-        {!usingLink && (
+        {needsPassword && (
           <Input
             label="Password"
             type="password"
@@ -229,20 +228,43 @@ export function SignInCard() {
           )
         )}
       </div>
-    </Card>
+    </AuthCard>
   )
+}
+
+const HEADINGS: Readonly<Record<Method, string>> = {
+  password: 'Sign in',
+  link: 'Sign in',
+  register: 'Create your account',
+  reset: 'Reset your password',
+}
+
+const BLURBS: Readonly<Record<Method, string>> = {
+  password: 'With the password on your account, or ask for a link instead.',
+  link: 'We email you a link. Nothing to remember, and nothing to lose.',
+  register: 'Your email and a password. Next you tell Crossbid about your company.',
+  reset: 'We email you a link that lets you set a new one.',
+}
+
+const FAILURE_TITLES: Readonly<Record<Method, string>> = {
+  password: 'Not signed in',
+  link: 'The link could not be sent',
+  register: 'Account not created',
+  reset: 'The reset link could not be sent',
 }
 
 const SUBMIT_LABELS: Readonly<Record<Method, string>> = {
   password: 'Sign in',
   link: 'Email me a sign-in link',
   register: 'Create my account',
+  reset: 'Email me a reset link',
 }
 
 const BUSY_LABELS: Readonly<Record<Method, string>> = {
   password: 'Signing in…',
   link: 'Sending…',
   register: 'Creating…',
+  reset: 'Sending…',
 }
 
 /** How each way in is offered from the others. Phrased as the action, not as the method. */
@@ -250,6 +272,7 @@ const SWITCH_LABELS: Readonly<Record<Method, string>> = {
   password: 'I already have an account',
   link: 'Email me a sign-in link instead',
   register: 'Create an account', // the secondary button on the sign-in screen
+  reset: 'Forgotten your password?',
 }
 
 interface Alternative {
@@ -276,36 +299,11 @@ const OTHER_METHODS: Readonly<Record<Method, readonly Alternative[]>> = {
   password: [
     { method: 'register', emphasis: 'button' },
     { method: 'link', emphasis: 'link' },
+    { method: 'reset', emphasis: 'link' },
   ],
   link: [{ method: 'password', emphasis: 'link' }],
   register: [{ method: 'password', emphasis: 'link' }],
-}
-
-function Card({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-surface-canvas px-4 py-12">
-      <div className="flex w-full max-w-[400px] flex-col gap-6">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center self-center rounded-md"
-          aria-label="CrossBid — home"
-        >
-          <Image
-            src="/logo-lockup.svg"
-            alt="CrossBid"
-            width={124}
-            height={30}
-            priority
-            className="block h-[30px] w-auto"
-          />
-        </Link>
-        <div className="flex flex-col gap-5 rounded-[14px] border border-border-default bg-surface-card p-7 shadow-xs">
-          {children}
-        </div>
-        <p className="m-0 text-center [font:var(--type-body-sm)] text-text-muted">
-          Crossbid is advisory: it never submits a bid for you.
-        </p>
-      </div>
-    </main>
-  )
+  // Only back to the password screen: offering a magic link here would answer "I forgot my
+  // password" with "then do not use one", which is a fair answer to a different question.
+  reset: [{ method: 'password', emphasis: 'link' }],
 }

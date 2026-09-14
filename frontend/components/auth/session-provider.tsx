@@ -23,6 +23,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { setAccessToken } from '@/lib/api-client'
 import { isAuthEnabled } from '@/lib/auth-mode'
+import { PASSWORD_RESET_PATH } from '@/lib/safe-next-path'
 import { authCallbackUrl, getSupabaseClient } from '@/lib/supabase'
 
 export type SessionStatus = 'loading' | 'signedIn' | 'signedOut' | 'disabled'
@@ -35,12 +36,15 @@ export interface SessionState {
    * Ask Supabase to email a magic link. Resolves when the mail has been accepted for
    * sending. `next` is the path to land on afterwards, carried through the mailbox.
    *
-   * Sign-*in* only. `signInWithOtp` defaults to `shouldCreateUser: true`, which made this
-   * a silent sign-up path: a mistyped address did not fail, it registered a second account
-   * and mailed the link there. That is how `ahmed.nazih.eslayed@…` came to exist beside
-   * `…elsayed@…` — one transposition, a real-looking account, and no error to notice.
-   * Registration has had its own button since ADR-0038, so nothing is lost by refusing;
-   * an unknown address now gets an error instead of an account.
+   * This is also the sign-*up* path: `signInWithOtp` creates the user when there is none,
+   * so a first-time bidder needs no separate form and no password to invent.
+   *
+   * `shouldCreateUser` is left at its default of `true` deliberately, and the trade is
+   * known (ADR-0053). Setting it to `false` makes an unknown address return an error where
+   * a known one succeeds, which is a user-enumeration oracle — and one Supabase cannot
+   * currently close (supabase/auth#1955, open since November 2024). Creating the account is
+   * the answer that reveals nothing. The cost is that a typo registers rather than failing,
+   * which is why `resetPassword` below is the enumeration-safe path it is.
    */
   readonly sendMagicLink: (email: string, next?: string) => Promise<void>
   /**
@@ -56,6 +60,28 @@ export interface SessionState {
    * user and no session, and the person has to go to their inbox. The caller cannot know
    * in advance, so it is told which happened rather than guessing.
    */
+  /**
+   * Email a password-reset link. Resolves whether or not the address has an account.
+   *
+   * **This one genuinely cannot leak, and that is Supabase's doing, not ours.**
+   * `resetPasswordForEmail` returns without error for an address it has never seen and
+   * simply sends nothing — so unlike `shouldCreateUser: false`, there is no answer here to
+   * tell a known address from an unknown one. The screen says "if that address has an
+   * account" because that is precisely as much as anyone, including us, can know.
+   *
+   * The link lands on `/auth/callback`, which exchanges the code like any other arrival and
+   * then forwards to `/auth/new-password`. Recovery is an ordinary session: what makes it a
+   * reset is only that the next thing the screen does is `updatePassword`.
+   */
+  readonly resetPassword: (email: string) => Promise<void>
+  /**
+   * Set a new password on the signed-in account (`PASSWORD_RESET_PATH`'s form).
+   *
+   * Requires a session, which the recovery link has just provided. It is not reset-only —
+   * the same call changes a password for anyone already signed in — so nothing here checks
+   * *how* the session was obtained; Supabase refuses the call without one.
+   */
+  readonly updatePassword: (password: string) => Promise<void>
   readonly register: (
     email: string,
     password: string,
@@ -104,8 +130,7 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
     if (supabase === null) throw new Error('Sign-in is not configured for this build.')
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      // Never create an account from the sign-in form; see the interface docstring.
-      options: { emailRedirectTo: authCallbackUrl(next), shouldCreateUser: false },
+      options: { emailRedirectTo: authCallbackUrl(next) },
     })
     if (error !== null) throw error
   }, [])
@@ -129,6 +154,22 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
     return { needsConfirmation: data.session === null }
   }, [])
 
+  const resetPassword = useCallback(async (email: string) => {
+    const supabase = await getSupabaseClient()
+    if (supabase === null) throw new Error('Sign-in is not configured for this build.')
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: authCallbackUrl(PASSWORD_RESET_PATH),
+    })
+    if (error !== null) throw error
+  }, [])
+
+  const updatePassword = useCallback(async (password: string) => {
+    const supabase = await getSupabaseClient()
+    if (supabase === null) throw new Error('Sign-in is not configured for this build.')
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error !== null) throw error
+  }, [])
+
   const signOut = useCallback(async () => {
     const supabase = await getSupabaseClient()
     if (supabase === null) return
@@ -143,9 +184,20 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
       sendMagicLink,
       signInWithPassword,
       register,
+      resetPassword,
+      updatePassword,
       signOut,
     }),
-    [status, session, sendMagicLink, signInWithPassword, register, signOut]
+    [
+      status,
+      session,
+      sendMagicLink,
+      signInWithPassword,
+      register,
+      resetPassword,
+      updatePassword,
+      signOut,
+    ]
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
