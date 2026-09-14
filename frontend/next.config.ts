@@ -10,6 +10,24 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   /**
+   * Where the build output goes; `.next` unless told otherwise.
+   *
+   * `next build` and `next dev` share this directory, and a build run while a dev server
+   * is serving from it overwrites what that server is reading: the HTML still renders and
+   * the chunks go missing, so the page dies with `Cannot find module './611.js'` or a
+   * client-side exception. HANDOVER.md records that costing time three times — which is
+   * three times too many for a one-line escape hatch.
+   *
+   * So a build that is only being run to check something can be given its own directory:
+   *
+   *     NEXT_DIST_DIR=.next-verify npm run build
+   *
+   * Unset everywhere that matters — CI, the Dockerfile and `make dev-web` all use `.next`
+   * exactly as before, and `output: 'standalone'` writes inside whichever is chosen.
+   */
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
+
+  /**
    * The security headers that are the same on every response (ADR-0036).
    *
    * The Content-Security-Policy is *not* here: it carries a per-request nonce and so has
