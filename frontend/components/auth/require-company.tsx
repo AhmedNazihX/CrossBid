@@ -13,6 +13,12 @@
  * `/company` instead of on a dashboard that can only fail. It runs the same `GET
  * /companies/me` the form is about to run, one request either way.
  *
+ * **The redirect carries where they were going, and that is not a detail.** A bounce with
+ * nothing to show for it reads as a broken link, not as a step: you click Dashboard, the URL
+ * changes to something you did not ask for, and nothing on the page acknowledges that you
+ * asked for anything. `?next=` is what lets the form say why it interrupted and then finish
+ * the journey it interrupted (ADR-0041).
+ *
  * `/company` itself is exempt, for the obvious reason.
  */
 import { usePathname, useRouter } from 'next/navigation'
@@ -56,7 +62,7 @@ export function RequireCompany({ children }: Readonly<{ children: React.ReactNod
 
   useEffect(() => {
     if (check === 'needsCompany' && pathname !== ONBOARDING_PATH) {
-      router.replace(ONBOARDING_PATH)
+      router.replace(`${ONBOARDING_PATH}?next=${encodeURIComponent(pathname)}`)
     }
   }, [check, pathname, router])
 

@@ -49,6 +49,53 @@ export const LEGAL_FORM_LABELS: Readonly<Record<LegalForm, string>> = {
   other: 'Other',
 }
 
+/**
+ * Where the bidder is established: the 27 EU member states, by ISO 3166-1 alpha-2.
+ *
+ * A list rather than a text box because two lowercase letters is a rule the *column*
+ * enforces, not a thing a person should be asked to know — "is Czechia cz or cs" is not a
+ * question about their company. `companies.country` still accepts any two letters, so this
+ * narrows the form without narrowing the schema: a row written by the seed or by a later
+ * connector outside this set still loads and saves.
+ *
+ * The EU-27 and no further, because the plan's scope is EU-only — TED for tenders and
+ * eCertis for evidence, both of which are member-state instruments. UK and US are
+ * post-submission connectors; when one lands, its country joins this list with it.
+ *
+ * Greece is `gr`, its ISO code. The EU's own style guide writes `EL` and TED follows that
+ * in places, so a value crossing this boundary from a notice may need mapping — it is not
+ * this form's job, and the bidder's own country is the one place the ISO code is right.
+ */
+export const BIDDER_COUNTRIES: readonly { readonly code: string; readonly label: string }[] = [
+  { code: 'at', label: 'Austria' },
+  { code: 'be', label: 'Belgium' },
+  { code: 'bg', label: 'Bulgaria' },
+  { code: 'hr', label: 'Croatia' },
+  { code: 'cy', label: 'Cyprus' },
+  { code: 'cz', label: 'Czechia' },
+  { code: 'dk', label: 'Denmark' },
+  { code: 'ee', label: 'Estonia' },
+  { code: 'fi', label: 'Finland' },
+  { code: 'fr', label: 'France' },
+  { code: 'de', label: 'Germany' },
+  { code: 'gr', label: 'Greece' },
+  { code: 'hu', label: 'Hungary' },
+  { code: 'ie', label: 'Ireland' },
+  { code: 'it', label: 'Italy' },
+  { code: 'lv', label: 'Latvia' },
+  { code: 'lt', label: 'Lithuania' },
+  { code: 'lu', label: 'Luxembourg' },
+  { code: 'mt', label: 'Malta' },
+  { code: 'nl', label: 'Netherlands' },
+  { code: 'pl', label: 'Poland' },
+  { code: 'pt', label: 'Portugal' },
+  { code: 'ro', label: 'Romania' },
+  { code: 'sk', label: 'Slovakia' },
+  { code: 'si', label: 'Slovenia' },
+  { code: 'es', label: 'Spain' },
+  { code: 'se', label: 'Sweden' },
+]
+
 export const TONES: readonly Tone[] = ['plain', 'formal', 'brief']
 
 /** What each tone does to an explanation, said in the words the bidder will recognise. */

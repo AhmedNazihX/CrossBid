@@ -20,8 +20,17 @@
  * **Explanation language and tone live here** rather than on a settings page, because the
  * plan puts them here deliberately: brief item Easy 2 (personality and tone) must not
  * depend on the provider page, which is Could-priority and may never be built.
+ *
+ * **`?next=` is the interrupted journey, and the screen finishes it.** `RequireCompany`
+ * sends a bidder here when they asked for somewhere else, and a bounce that says nothing
+ * reads as a broken link rather than as a step. So the opening notice names where they were
+ * going, and the saved notice offers to take them there — the alternative, redirecting the
+ * moment the row exists, would snatch the page away from somebody still filling in their
+ * turnover (ADR-0041).
  */
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import { CertificateRows } from '@/components/company/certificate-rows'
 import { TurnoverRows } from '@/components/company/turnover-rows'
@@ -31,6 +40,7 @@ import { Notice } from '@/components/ui/notice'
 import { Select } from '@/components/ui/select'
 import { ApiError } from '@/lib/api-client'
 import {
+  BIDDER_COUNTRIES,
   EMPTY_PROFILE,
   EXPLANATION_LANGUAGES,
   LEGAL_FORMS,
@@ -44,11 +54,14 @@ import {
   type LegalForm,
   type Tone,
 } from '@/lib/companies'
+import { NAV_ITEMS } from '@/components/layout/nav-items'
 import { NO_FIELD_ERRORS, fieldErrorsFrom, type FieldErrors } from '@/lib/field-errors'
+import { safeNextPath } from '@/lib/safe-next-path'
 
 type Stage = 'loading' | 'ready' | 'saving'
 
 export function ProfileForm() {
+  const interrupted = useInterruptedDestination()
   const [profile, setProfile] = useState<CompanyProfile>(EMPTY_PROFILE)
   const [exists, setExists] = useState(false)
   const [stage, setStage] = useState<Stage>('loading')
@@ -108,6 +121,17 @@ export function ProfileForm() {
     }
   }
 
+  // A row written by the seed, or one day by a non-EU connector, can hold a country this
+  // list does not offer. A controlled `<select>` whose value matches no option renders
+  // blank, which reads as "not set" for a field that is set — so the value joins its own
+  // list rather than disappearing from it.
+  const countryOptions = useMemo(() => {
+    const known = BIDDER_COUNTRIES.map((entry) => ({ value: entry.code, label: entry.label }))
+    return known.some((option) => option.value === profile.country)
+      ? known
+      : [...known, { value: profile.country, label: profile.country.toUpperCase() }]
+  }, [profile.country])
+
   if (stage === 'loading') {
     return (
       <p className="[font:var(--type-body)] text-text-muted" role="status">
@@ -121,7 +145,13 @@ export function ProfileForm() {
   return (
     <form className="flex max-w-[52rem] flex-col gap-8" onSubmit={onSubmit} noValidate>
       {!exists && (
-        <Notice title="Tell us about your company">
+        <Notice
+          title={
+            interrupted === undefined
+              ? 'Tell us about your company'
+              : `${interrupted.label} needs your company first`
+          }
+        >
           Crossbid checks every requirement against these facts, so this comes first. You can
           change any of it later.
         </Notice>
@@ -135,7 +165,15 @@ export function ProfileForm() {
 
       {saved && failure === undefined && (
         <Notice title="Saved">
-          Your profile is stored and the agent has been told. Checks from now on run against it.
+          <p className="m-0">
+            Your profile is stored and the agent has been told. Checks from now on run against
+            it.
+          </p>
+          {interrupted !== undefined && (
+            <Button asChild variant="secondary" size="sm" className="mt-3">
+              <Link href={interrupted.href}>Continue to {interrupted.label}</Link>
+            </Button>
+          )}
         </Notice>
       )}
 
@@ -150,15 +188,14 @@ export function ProfileForm() {
             disabled={busy}
             onChange={(event) => patch({ name: event.target.value })}
           />
-          <Input
+          <Select
             label="Country"
-            hint="Two letters, lowercase — de, fr, nl"
-            required
-            maxLength={2}
+            hint="Where the company is established"
+            options={countryOptions}
             value={profile.country}
             error={errors.byField.country}
             disabled={busy}
-            onChange={(event) => patch({ country: event.target.value.toLowerCase() })}
+            onValueChange={(country) => patch({ country })}
           />
           <Select<LegalForm>
             label="Legal form"
@@ -296,6 +333,22 @@ function Section({
       {children}
     </section>
   )
+}
+
+/**
+ * Where `RequireCompany` was taking the bidder when it sent them here, if it did.
+ *
+ * Named from the nav rather than from the path, so the notice says "Dashboard" and not
+ * "/dashboard" — and `undefined` for a path no nav entry claims, because inventing a label
+ * for an unknown destination is how a reassuring sentence becomes a wrong one.
+ */
+function useInterruptedDestination():
+  { readonly href: string; readonly label: string } | undefined {
+  const requested = useSearchParams().get('next')
+  if (requested === null) return undefined
+  const href = safeNextPath(requested)
+  const item = NAV_ITEMS.find((entry) => entry.href === href)
+  return item === undefined ? undefined : { href, label: item.label }
 }
 
 function messageOf(error: unknown): string {

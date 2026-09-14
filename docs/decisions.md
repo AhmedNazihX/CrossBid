@@ -3346,3 +3346,57 @@ solves the *server/client* split rather than the cross-*browser* one. The instru
 the error says the thing that actually works: ask for a new link in the browser you intend to
 use it in. Sign-up with a password and "Confirm email" off avoids the round trip entirely,
 which is the recommendation for development and for a demo (ADR-0038, ADR-0039).
+
+---
+
+## ADR-0041 — The interrupted journey, and a country you pick rather than spell
+
+**Date:** 2026-09-14 · **Stories:** S4.2.1 (refines ADR-0037) · **Status:** accepted
+
+Reported as "clicking Dashboard with no company forwards me back to the company profile" —
+which is exactly what ADR-0037 built, and the report is still right, because of what the
+redirect left out.
+
+**A bounce with nothing to show for it reads as a broken link, not as a step.** You click
+Dashboard, the URL changes to somewhere you did not ask for, and nothing on the page
+acknowledges that you asked for anything. The redirect was correct and the experience was
+indistinguishable from a fault — which is the worst combination, because it invites somebody
+to "fix" behaviour that is load-bearing. Without it, every tenant route answers the 404 that
+started this whole thread: *"This account has no company yet. Create one with POST /companies."*
+
+So the redirect now carries the path it interrupted, and the form does two things with it:
+
+1. **It names the destination in the opening notice** — "Dashboard needs your company first"
+   rather than the generic "Tell us about your company". Named from `NAV_ITEMS` rather than
+   from the path, so it reads "Tenders" and not "/bids"; a path no nav entry claims gets the
+   generic wording, because inventing a label for an unknown destination is how a reassuring
+   sentence becomes a wrong one.
+2. **It offers to finish the journey after the save** — "Continue to Tenders" on the Saved
+   notice. Deliberately an offer and not a redirect: the row exists the moment the company is
+   created, and navigating away then would snatch the page from somebody still adding their
+   turnover and certificates. The bidder decides when they are done.
+
+Verified end to end: `/company?next=/bids` shows "Tenders needs your company first" when the
+account has none, and after a real save against Frankfurt the notice carries a working
+"Continue to Tenders".
+
+### The country is a list now
+
+Two lowercase letters is a rule `companies.country`'s check constraint enforces; it is not
+something a person should be asked to know. "Is Czechia `cz` or `cs`" is not a question about
+their company, and the old hint — "Two letters, lowercase — de, fr, nl" — asked it while
+naming three of twenty-seven.
+
+**The EU-27, and no further**, because the plan's scope is EU-only: TED for tenders and
+eCertis for evidence are both member-state instruments. UK and US are post-submission
+connectors, and when one lands its country joins the list with it. Greece is `gr`, its ISO
+code — the EU's own style guide writes `EL` and TED follows that in places, so a value
+crossing from a notice may need mapping one day; the bidder's own country is the one place
+the ISO code is unambiguously right.
+
+**The column still takes any two letters, so this narrows the form and not the schema.** A
+controlled `<select>` whose value matches no option renders blank, which would read as "not
+set" for a field that is set — so a loaded country outside the list is appended to its own
+options rather than disappearing from them. That is not hypothetical tidiness: it is what
+stops a seed row, or a row from a future connector, quietly losing its country on the next
+save.
