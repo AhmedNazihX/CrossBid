@@ -25,6 +25,7 @@ from crossbid.agent.graph import (
     INTERRUPT_BID_ID,
     INTERRUPT_PROBLEMS,
     INTERRUPT_REQUIREMENTS,
+    SCORE_VERDICT,
     ReadModelProjection,
     StageError,
     build_graph,
@@ -43,6 +44,7 @@ from crossbid.models.requirement import (
     RequirementStage,
 )
 from crossbid.models.tender import BidStatus
+from crossbid.models.verdict import Decision, Gap, GapSeverity, Verdict
 from crossbid.readmodel.bids import BidRow, thread_id_of
 from crossbid.settings import Settings, bid_run_config
 
@@ -123,6 +125,10 @@ class RecordingProjection:
     def written_matrix(self) -> list[Sequence[MatrixRow]]:
         return [value for kind, value in self.events if kind == "matrix"]
 
+    @property
+    def written_verdicts(self) -> list[Verdict]:
+        return [value for kind, value in self.events if kind == "verdict"]
+
     async def set_status(self, *, company_id: str, bid_id: str, status: BidStatus) -> None:
         assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
         if self._fail_on_status:
@@ -146,6 +152,10 @@ class RecordingProjection:
         assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
         self.events.append(("matrix", list(rows)))
         return len(rows)
+
+    async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Verdict) -> None:
+        assert (company_id, bid_id) == (COMPANY_ID, BID_ID)
+        self.events.append(("verdict", verdict))
 
 
 class FakeDatabase:
@@ -234,6 +244,25 @@ class InFlightCounter:
         return {"matrix_rows": []}
 
 
+def score_node(decision: Decision = Decision.CONDITIONAL) -> Any:
+    """The scorer, faked: S3.4.1's rules are asserted in `test_scoring.py`, and what the
+    graph has to prove is only that its output is projected under the `scoring` stage."""
+
+    async def score_verdict(state: BidState, config: RunnableConfig | None = None) -> Any:
+        return {
+            "verdict": Verdict(
+                decision=decision,
+                gaps=(Gap(requirement_id="a", severity=GapSeverity.OPEN_ITEM, summary="x"),),
+                rationale="scored by a fake",
+                mandatory_total=len(state.get("requirements", [])),
+                mandatory_supported=0,
+                partially_supported_rows=1,
+            )
+        }
+
+    return score_verdict
+
+
 async def crashing(state: BidState, config: RunnableConfig | None = None) -> Any:
     raise RuntimeError("Der Bieter muss ... (text quoted from the tender)")
 
@@ -247,6 +276,7 @@ def compile_graph(
     extract: Any | None = None,
     plan: Any | None = None,
     check: Any | None = None,
+    score: Any | None = None,
 ) -> Any:
     return build_graph(
         settings,
@@ -257,6 +287,7 @@ def compile_graph(
         ),
         plan_checks=plan if plan is not None else plan_node(),
         check_reqs=check if check is not None else check_node([]),
+        score_verdict=score if score is not None else score_node(),
         projection=projection,
         checkpointer=saver,
     )
@@ -287,6 +318,7 @@ async def test_the_status_sequence_is_written_to_the_read_model_in_order(
         BidStatus.CHECKING,
         BidStatus.CHECKING,
         BidStatus.CHECKING,
+        BidStatus.SCORING,
         BidStatus.AWAITING_REVIEW,
     ]
 
@@ -305,7 +337,7 @@ async def test_problems_are_projected_cumulatively_after_every_node(
     # (`check_reqs.lane_state`): arriving without it would write an empty one over them. The
     # interrupt node writes nothing on its first pass -- `interrupt()` raises before the
     # stage reaches its exit projection.
-    assert projection.problem_counts == [1, 2, 2, 2, 2]
+    assert projection.problem_counts == [1, 2, 2, 2, 2, 2]
 
 
 async def test_requirements_are_written_once_when_extraction_finishes(
@@ -329,8 +361,9 @@ async def test_a_parse_node_that_reports_nothing_still_writes_the_empty_list(
 ) -> None:
     """`set_problems` runs whether or not there is anything in it, and no rows means no
     `write_requirements` call -- the empty-list branch of `_project`. No requirements also
-    means no lane: the third write is `plan_checks`, and the fan-out goes straight to the
-    interrupt."""
+    means no lane: the third write is `plan_checks`, and the fan-out goes straight to
+    `score_verdict`, which is the fourth -- a bid that found nothing still owes its
+    reviewer a verdict (S3.4.1)."""
     projection = RecordingProjection()
     graph = compile_graph(
         offline_settings,
@@ -342,8 +375,9 @@ async def test_a_parse_node_that_reports_nothing_still_writes_the_empty_list(
 
     await graph.ainvoke(initial_state(bid_row()), CONFIG)
 
-    assert projection.problem_counts == [0, 0, 0]
+    assert projection.problem_counts == [0, 0, 0, 0]
     assert projection.written_rows == []
+    assert len(projection.written_verdicts) == 1
 
 
 # --------------------------------------------------------------------------- the interrupt
@@ -367,8 +401,9 @@ async def test_the_graph_parks_at_the_interrupt_with_awaiting_review(
         INTERRUPT_PROBLEMS: 2,
     }
     assert projection.statuses[-1] is BidStatus.AWAITING_REVIEW
-    # The checkpoint holds checking's output; its `status` names the stage that produced it.
-    assert snapshot.values["status"] is BidStatus.CHECKING
+    # The checkpoint holds scoring's output; its `status` names the stage that produced it.
+    assert snapshot.values["status"] is BidStatus.SCORING
+    assert snapshot.values["verdict"].decision is Decision.CONDITIONAL
     assert [row.id for row in snapshot.values["requirements"]] == [row.id for row in ROWS]
 
 
@@ -509,8 +544,9 @@ def test_the_fan_out_sends_to_the_checking_node_and_carries_the_bidder(
     assert all(send.arg["extraction_problems"] == [EXTRACT_PROBLEM] for send in sends)
 
 
-def test_the_fan_out_names_the_interrupt_when_there_is_nothing_to_check() -> None:
-    assert fan_out_checks({"requirements": []}, concurrency=5) == AWAIT_REVIEW
+def test_the_fan_out_names_the_scorer_when_there_is_nothing_to_check() -> None:
+    """Not the interrupt: an unscored bid would park with no answer for its reviewer."""
+    assert fan_out_checks({"requirements": []}, concurrency=5) == SCORE_VERDICT
 
 
 async def test_every_lane_is_sent_the_country_the_planner_resolved(
@@ -600,6 +636,7 @@ async def test_the_checkpoint_after_a_crash_resumes_at_the_failed_node(
         BidStatus.CHECKING,
         BidStatus.CHECKING,
         BidStatus.CHECKING,
+        BidStatus.SCORING,
         BidStatus.AWAITING_REVIEW,
     ]
     assert (await repaired.aget_state(CONFIG)).next == (AWAIT_REVIEW,)
@@ -658,7 +695,12 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
     monkeypatch.setattr(graph_module, "set_bid_status", set_bid_status)
     monkeypatch.setattr(graph_module, "set_bid_problems", set_bid_problems)
     monkeypatch.setattr(graph_module, "write_requirements", write_requirements)
+
+    async def set_bid_verdict(db: Any, **kwargs: Any) -> None:
+        calls.append(("verdict", kwargs))
+
     monkeypatch.setattr(graph_module, "write_matrix_rows", write_matrix_rows)
+    monkeypatch.setattr(graph_module, "set_bid_verdict", set_bid_verdict)
     projection = ReadModelProjection(FakeDatabase())
 
     # Act
@@ -679,10 +721,30 @@ async def test_read_model_projection_delegates_every_write_scoped_by_company(
         company_id=COMPANY_ID, bid_id=BID_ID, rows=matrix
     )
 
+    verdict = Verdict(
+        decision=Decision.NO_GO,
+        gaps=(Gap(requirement_id=ROWS[0].id, severity=GapSeverity.BLOCKING, summary="x"),),
+        rationale="Dieses Angebot wird nicht empfohlen.",
+        mandatory_total=2,
+        mandatory_supported=1,
+        partially_supported_rows=0,
+    )
+    await projection.set_verdict(company_id=COMPANY_ID, bid_id=BID_ID, verdict=verdict)
+
     # Assert -- every call carries the tenant, and problems go out as plain JSON
     assert written == 2
     assert checked == 1
-    assert calls[-1] == ("matrix", {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix})
+    # The verdict is dumped to JSON here, not in the read model: that module never imports
+    # from `models/verdict`, the same rule that keeps `problems` raw on the way through.
+    assert calls[-1] == (
+        "verdict",
+        {
+            "company_id": COMPANY_ID,
+            "bid_id": BID_ID,
+            "verdict": verdict.model_dump(mode="json"),
+        },
+    )
+    assert calls[-2] == ("matrix", {"company_id": COMPANY_ID, "bid_id": BID_ID, "rows": matrix})
     assert all(kwargs["company_id"] == COMPANY_ID for _, kwargs in calls)
     assert calls[0][1]["status"] is BidStatus.PARSING
     assert calls[1][1]["problems"] == [PARSE_PROBLEM.model_dump(mode="json")]

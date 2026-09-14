@@ -4,8 +4,9 @@
 edge below is fixed: parse the pack, extract the requirements, check them, stop for the
 reviewer. No model decides what runs next, and nothing here calls a tool. The *agentic* part
 of Crossbid — a small ReAct loop per requirement with a bounded tool budget — lives inside
-`check_reqs` (S3.3.1), the node this graph fans out to; `score_verdict`, `apply_review` and
-`finalize` are later stories. Extraction fans out for latency and nothing else (ADR-0011).
+`check_reqs` (S3.3.1), the node this graph fans out to. `score_verdict` (S3.4.1) is a rules
+engine and calls no model either; `apply_review` and `finalize` are later stories.
+Extraction fans out for latency and nothing else (ADR-0011).
 Describing the graph this way is a CLAUDE.md convention, and this module is where the
 description has to be true.
 
@@ -71,16 +72,19 @@ from crossbid.agent.nodes.check_reqs import (
 )
 from crossbid.agent.nodes.extract_reqs import build_extract_reqs
 from crossbid.agent.nodes.parse_docs import build_parse_docs
+from crossbid.agent.nodes.score_verdict import build_score_verdict
 from crossbid.agent.state import BidState, ExtractionProblem
 from crossbid.db import Database
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.tender import BidStatus
+from crossbid.models.verdict import Verdict
 from crossbid.readmodel.bids import (
     BidRow,
     ConnectionSource,
     set_bid_problems,
     set_bid_status,
+    set_bid_verdict,
 )
 from crossbid.readmodel.matrix import write_matrix_rows
 from crossbid.readmodel.requirements import write_requirements
@@ -92,6 +96,7 @@ PARSE_DOCS: Final = "parse_docs"
 EXTRACT_REQS: Final = "extract_reqs"
 PLAN_CHECKS: Final = "plan_checks"
 CHECK_REQS: Final = "check_reqs"
+SCORE_VERDICT: Final = "score_verdict"
 AWAIT_REVIEW: Final = "await_review"
 """Node names. `AWAIT_REVIEW` is what `aget_state().next` reports while a bid is parked,
 and S3.4.2 resumes by that name."""
@@ -147,6 +152,8 @@ class RunProjection(Protocol):
         self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
     ) -> int: ...
 
+    async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Verdict) -> None: ...
+
 
 class StageError(RuntimeError):
     """A node failed. `stage` says which; the message names the exception's type only."""
@@ -183,6 +190,14 @@ class ReadModelProjection:
     ) -> int:
         return await write_matrix_rows(
             self._db, company_id=company_id, bid_id=bid_id, rows=rows
+        )
+
+    async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Verdict) -> None:
+        await set_bid_verdict(
+            self._db,
+            company_id=company_id,
+            bid_id=bid_id,
+            verdict=verdict.model_dump(mode="json"),
         )
 
 
@@ -249,6 +264,10 @@ async def _project(
             company_id=company_id, bid_id=bid_id, rows=matrix
         )
         logger.info("Bid %s: %d matrix row(s) written to the read model", bid_id, written)
+    verdict: Verdict | None = update.get("verdict")
+    if verdict is not None:
+        await projection.set_verdict(company_id=company_id, bid_id=bid_id, verdict=verdict)
+        logger.info("Bid %s: verdict %s written to the read model", bid_id, verdict.decision)
 
 
 async def _request_review(
@@ -291,16 +310,19 @@ def _identity_of(state: BidState) -> tuple[str, str]:
 
 
 def fan_out_checks(state: BidState, *, concurrency: int) -> list[Send] | str:
-    """One `Send` per checking lane, or the interrupt when there is nothing to check.
+    """One `Send` per checking lane, or straight to scoring when there is nothing to check.
 
     The conditional edge out of `plan_checks`, and the only place the story's concurrency
     limit is decided — see decision 3. It returns a node *name* rather than an empty list
     for the empty case: an empty list of `Send`s leaves the superstep with no successor at
-    all, and the run would finish without ever parking for its reviewer.
+    all, and the run would finish without ever parking for its reviewer. The name is
+    `score_verdict` rather than the interrupt, because a bid whose extraction found nothing
+    still owes its reviewer an answer — `insufficient_evidence`, which S3.4.1 refuses to
+    let an empty matrix turn into a `go`.
     """
     lanes = lanes_of(state.get("requirements", []), concurrency)
     if not lanes:
-        return AWAIT_REVIEW
+        return SCORE_VERDICT
     return [Send(CHECK_REQS, lane_state(state, lane)) for lane in lanes]
 
 
@@ -312,15 +334,17 @@ def build_graph(
     extract_reqs: BidNode | None = None,
     plan_checks: BidNode | None = None,
     check_reqs: BidNode | None = None,
+    score_verdict: BidNode | None = None,
     projection: RunProjection | None = None,
     checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """The compiled outer graph — a deterministic workflow with a human interrupt.
 
     `START → parse_docs → extract_reqs → plan_checks →` a lane of `check_reqs` per
-    `agent.check_concurrency` `→ await_review → END`, compiled on the process checkpointer
+    `agent.check_concurrency` `→ score_verdict → await_review → END`, compiled on the
+    process checkpointer
     so that a run interrupted by a restart continues from its last completed node
-    (`runner.resume_unfinished_runs`). The six keyword seams exist for tests, which run the
+    (`runner.resume_unfinished_runs`). The seven keyword seams exist for tests, which run the
     real wiring over fake nodes, a recording projection and a `MemorySaver`; production
     passes none of them. Building the real `parse_docs` raises `StorageError` when Storage
     is not configured — see `build_parse_docs` — and that is left to the caller to answer.
@@ -329,6 +353,7 @@ def build_graph(
     extract = extract_reqs if extract_reqs is not None else build_extract_reqs(settings)
     plan = plan_checks if plan_checks is not None else build_plan_checks(db)
     check = check_reqs if check_reqs is not None else build_check_reqs(settings, db)
+    scorer = score_verdict if score_verdict is not None else build_score_verdict(db)
     project = projection if projection is not None else ReadModelProjection(db)
     saver = checkpointer if checkpointer is not None else db.checkpointer
     concurrency = settings.runtime.agent.check_concurrency
@@ -340,6 +365,7 @@ def build_graph(
     builder.add_node(EXTRACT_REQS, stage(BidStatus.EXTRACTING, extract, project))
     builder.add_node(PLAN_CHECKS, stage(BidStatus.CHECKING, plan, project))
     builder.add_node(CHECK_REQS, stage(BidStatus.CHECKING, check, project))
+    builder.add_node(SCORE_VERDICT, stage(BidStatus.SCORING, scorer, project))
     builder.add_node(AWAIT_REVIEW, stage(BidStatus.AWAITING_REVIEW, _request_review, project))
     builder.add_edge(START, PARSE_DOCS)
     builder.add_edge(PARSE_DOCS, EXTRACT_REQS)
@@ -347,9 +373,10 @@ def build_graph(
     builder.add_conditional_edges(
         PLAN_CHECKS,
         lambda state: fan_out_checks(state, concurrency=concurrency),
-        [CHECK_REQS, AWAIT_REVIEW],
+        [CHECK_REQS, SCORE_VERDICT],
     )
-    builder.add_edge(CHECK_REQS, AWAIT_REVIEW)
+    builder.add_edge(CHECK_REQS, SCORE_VERDICT)
+    builder.add_edge(SCORE_VERDICT, AWAIT_REVIEW)
     builder.add_edge(AWAIT_REVIEW, END)
     return builder.compile(checkpointer=saver)
 

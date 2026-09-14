@@ -66,6 +66,7 @@ from crossbid.models.requirement import (
     RequirementKind,
     RequirementSource,
     RequirementStage,
+    Threshold,
 )
 from crossbid.readmodel.companies import profile_document
 from crossbid.readmodel.documents import DocumentRecord, DocumentStatus, ReadModelError
@@ -855,24 +856,35 @@ def requirement(
     identifier: str | None = None,
     source: RequirementSource = RequirementSource.TENDER_DOCUMENT,
     document_name: str = DOCUMENT_NAME,
+    category: RequirementCategory = RequirementCategory.ECONOMIC_FINANCIAL,
+    kind: RequirementKind = RequirementKind.MANDATORY,
+    stage: RequirementStage = RequirementStage.BID_ELIGIBILITY,
+    threshold: Threshold | None = None,
+    translation: str | None = None,
 ) -> Requirement:
     """One extracted requirement, defaulting to the kind a company document can settle.
 
     `source` and `page` travel together: an `ESPD_REQUEST` row carries `page=None`, which
     `Requirement` enforces (S2.5.1), so a caller that flips one must flip the other.
+
+    `category`, `kind` and `stage` are keywords because S3.4.1's scorer turns on all three:
+    it reads only `bid_eligibility` rows, treats `mandatory` as the gate, and gives an
+    `exclusion_ground` its own severity whatever its kind says.
     """
     return Requirement(
         id=identifier or str(uuid.uuid5(uuid.NAMESPACE_URL, source_text)),
         bid_id=BID_ID,
-        category=RequirementCategory.ECONOMIC_FINANCIAL,
-        kind=RequirementKind.MANDATORY,
-        stage=RequirementStage.BID_ELIGIBILITY,
+        category=category,
+        kind=kind,
+        stage=stage,
         checkable=checkable,
         source=source,
         source_text=source_text,
         source_lang="de",
         document_name=document_name,
         page=page,
+        translation=translation,
+        threshold=threshold,
         ecertis_criterion_id=criterion_id,  # type: ignore[arg-type]
     )
 

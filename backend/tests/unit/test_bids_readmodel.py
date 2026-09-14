@@ -39,6 +39,7 @@ from crossbid.models.requirement import (
     ThresholdUnit,
 )
 from crossbid.models.tender import BidStatus, DocumentKind
+from crossbid.models.verdict import Decision
 from crossbid.readmodel import bids, matrix, requirements
 from crossbid.readmodel.bids import (
     MAX_BIDS_LISTED,
@@ -58,6 +59,7 @@ from crossbid.readmodel.bids import (
     mark_bid_failed,
     set_bid_problems,
     set_bid_status,
+    set_bid_verdict,
     thread_id_of,
     unfinished_bids,
 )
@@ -155,6 +157,7 @@ def bid_record(**overrides: Any) -> dict[str, Any]:
         "status": "queued",
         "failure_reason": None,
         "problems": [],
+        "verdict": None,
         "created_at": NOW,
         "updated_at": NOW,
         "bidder_language": "de",
@@ -373,6 +376,64 @@ async def test_set_bid_problems_on_a_missing_bid_is_not_found() -> None:
 
     with pytest.raises(BidNotFoundError):
         await set_bid_problems(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), problems=[])
+
+
+async def test_set_bid_verdict_sends_the_verdict_as_jsonb() -> None:
+    # Arrange
+    db = FakeDatabase(Scripted(rowcount=1))
+    verdict = {"decision": "conditional", "rationale": "x", "gaps": []}
+
+    # Act
+    await set_bid_verdict(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), verdict=verdict)
+
+    # Assert
+    sent = db.params()["verdict"]
+    assert isinstance(sent, Jsonb)
+    assert sent.obj == verdict
+
+
+async def test_set_bid_verdict_on_a_missing_bid_is_not_found() -> None:
+    db = FakeDatabase(Scripted(rowcount=0))
+
+    with pytest.raises(BidNotFoundError):
+        await set_bid_verdict(
+            db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), verdict={"decision": "go"}
+        )
+
+
+def test_a_scored_bid_carries_its_decision_into_the_dashboard_row() -> None:
+    # Arrange
+    row = _bid_row_model(verdict={"decision": "no_go", "rationale": "x"})
+
+    # Act / Assert
+    assert row.decision is Decision.NO_GO
+    assert row.summary().decision is Decision.NO_GO
+
+
+@pytest.mark.parametrize(
+    "verdict", [None, {}, {"decision": None}, {"decision": "go_with_open_items"}]
+)
+def test_an_absent_or_unreadable_verdict_leaves_the_decision_unset(
+    verdict: dict[str, Any] | None,
+) -> None:
+    """A row the dashboard cannot interpret must not blank the whole list. `0004` renamed
+    `go_with_open_items` out of the vocabulary, so a pre-rename row is the real case."""
+    assert _bid_row_model(verdict=verdict).summary().decision is None
+
+
+def _bid_row_model(**overrides: Any) -> BidRow:
+    values: dict[str, Any] = {
+        "id": str(BID_ID),
+        "company_id": str(COMPANY_ID),
+        "thread_id": thread_id_of(str(BID_ID)),
+        "notice_number": "614251-2026",
+        "title": "Netztechnik",
+        "source_language": "de",
+        "bidder_language": "de",
+        "status": BidStatus.QUEUED,
+        "created_at": NOW,
+    }
+    return BidRow(**(values | overrides))
 
 
 def test_bid_row_summary_is_the_dashboard_shape() -> None:

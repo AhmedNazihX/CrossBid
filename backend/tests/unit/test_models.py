@@ -363,6 +363,32 @@ def test_mandatory_supported_cannot_exceed_the_total() -> None:
         )
 
 
+def test_a_go_needs_at_least_one_mandatory_requirement_to_have_been_scored() -> None:
+    """Zero of zero is not a pass: extraction that found no mandatory requirement is the
+    likelier reading than a tender that asks for none (S3.4.1)."""
+    with pytest.raises(ValidationError, match="empty matrix"):
+        Verdict(
+            decision=Decision.GO,
+            rationale="x",
+            mandatory_total=0,
+            mandatory_supported=0,
+            partially_supported_rows=0,
+        )
+
+
+def test_an_empty_matrix_may_decline_to_judge_although_no_row_is_unsettled() -> None:
+    """The complement of the rule above: with nothing scored, declining is the only answer
+    left, so the "something must be unsettled" check must not refuse it."""
+    verdict = Verdict(
+        decision=Decision.INSUFFICIENT_EVIDENCE,
+        rationale="Die Extraktion hat keine Anforderung gefunden.",
+        mandatory_total=0,
+        mandatory_supported=0,
+        partially_supported_rows=0,
+    )
+    assert verdict.decision is Decision.INSUFFICIENT_EVIDENCE
+
+
 def test_insufficient_evidence_needs_something_unsettled() -> None:
     """The agent may decline to judge, but only when some row is genuinely unsettled."""
     with pytest.raises(ValidationError, match="nothing is insufficient"):

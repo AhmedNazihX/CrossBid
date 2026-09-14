@@ -9,6 +9,7 @@ registering the router, so the tests hold whether or not the lifespan has wired 
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Iterator, Sequence
 from datetime import UTC, datetime
@@ -33,6 +34,7 @@ from crossbid.models.requirement import (
     RequirementStage,
 )
 from crossbid.models.tender import BidStatus, DocumentKind
+from crossbid.models.verdict import Decision, Gap, GapSeverity, Verdict
 from crossbid.readmodel.bids import BidDocumentRow, BidRow, BidStateError, thread_id_of
 from crossbid.readmodel.documents import DocumentStatus
 from crossbid.routers import bids as bids_router
@@ -536,6 +538,66 @@ def test_get_bid_returns_the_polling_shape(
     ]
     assert body["created_at"] == "2026-09-11T12:00:00Z"
     assert set(body) == set(BidResponse.model_fields)
+
+
+def test_get_bid_carries_the_agents_verdict_once_it_has_been_scored(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    # Arrange
+    verdict = Verdict(
+        decision=Decision.NO_GO,
+        gaps=(
+            Gap(
+                requirement_id="TECH-06",
+                severity=GapSeverity.BLOCKING,
+                summary="Zu wenige Fachkräfte",
+                required="29 FTE",
+                actual="21 FTE",
+            ),
+        ),
+        rationale="Dieses Angebot wird nicht empfohlen.",
+        mandatory_total=21,
+        mandatory_supported=19,
+        partially_supported_rows=0,
+    )
+    bid = read_model.add_bid(
+        status=BidStatus.AWAITING_REVIEW, verdict=verdict.model_dump(mode="json")
+    )
+
+    # Act
+    response = client.get(f"/bids/{bid.id}", headers=headers())
+
+    # Assert
+    assert response.status_code == 200
+    assert response.json()["verdict"] == verdict.model_dump(mode="json")
+
+
+def test_get_bid_has_no_verdict_before_scoring_has_run(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    bid = read_model.add_bid(status=BidStatus.CHECKING)
+
+    assert client.get(f"/bids/{bid.id}", headers=headers()).json()["verdict"] is None
+
+
+def test_a_stored_verdict_the_contract_no_longer_recognises_is_omitted_not_a_500(
+    client: TestClient, read_model: InMemoryReadModel, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The column is a projection and the checkpoint is the authority (S3.4.3). A bid whose
+    verdict predates a vocabulary change must still open, so its reviewer can re-run it."""
+    # Arrange
+    bid = read_model.add_bid(
+        status=BidStatus.AWAITING_REVIEW, verdict={"decision": "go_with_open_items"}
+    )
+
+    # Act
+    with caplog.at_level(logging.WARNING, logger="crossbid.routers.bids"):
+        response = client.get(f"/bids/{bid.id}", headers=headers())
+
+    # Assert
+    assert response.status_code == 200
+    assert response.json()["verdict"] is None
+    assert "no longer validates" in caplog.text
 
 
 def test_get_bid_shows_a_failed_run_with_its_reason(

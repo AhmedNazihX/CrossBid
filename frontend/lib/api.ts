@@ -291,7 +291,7 @@ export interface components {
              * @description What requirements are explained in
              */
             bidder_language: string;
-            /** @description queued → parsing → extracting → checking → awaiting_review; failed carries failure_reason */
+            /** @description queued → parsing → extracting → checking → scoring → awaiting_review; failed carries failure_reason */
             status: components["schemas"]["BidStatus"];
             /**
              * Failure Reason
@@ -308,6 +308,8 @@ export interface components {
              * @description The compliance matrix, one row per checked requirement, in the same order as `requirements`. Fills in lane by lane while the status is `checking`.
              */
             matrix_rows: components["schemas"]["MatrixRow"][];
+            /** @description The agent's go/no-go with every gap behind it, written when the status reaches `scoring`. Null before that. Advisory: the reviewer confirms or overrides it before it is final. */
+            verdict: components["schemas"]["Verdict"] | null;
             /**
              * Problems
              * @description What parsing and extraction could not do, for the reviewer
@@ -829,6 +831,36 @@ export interface components {
          * @enum {string}
          */
         ExtractionProblemReason: "no_verbatim_quote" | "invalid_row" | "invalid_criterion_id" | "missing_translation" | "model_error" | "section_failed" | "unwrappable_section" | "unreadable_document" | "unparseable_document";
+        /**
+         * Gap
+         * @description One reason the bidder does not yet qualify, in terms they can act on.
+         */
+        Gap: {
+            /** Requirement Id */
+            requirement_id: string;
+            severity: components["schemas"]["GapSeverity"];
+            /**
+             * Summary
+             * @description What is missing, in the bidder's language
+             */
+            summary: string;
+            /**
+             * Required
+             * @description e.g. '29 FTE'
+             */
+            required?: string | null;
+            /**
+             * Actual
+             * @description e.g. '21 FTE'
+             */
+            actual?: string | null;
+        };
+        /**
+         * GapSeverity
+         * @description Whether a gap can still be closed before the deadline.
+         * @enum {string}
+         */
+        GapSeverity: "blocking" | "open_item";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1125,6 +1157,48 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * Verdict
+         * @description The scorer's output: a decision, and every reason behind it.
+         */
+        Verdict: {
+            decision: components["schemas"]["Decision"];
+            /**
+             * Gaps
+             * @default []
+             */
+            gaps: components["schemas"]["Gap"][];
+            score?: components["schemas"]["WeightedScore"] | null;
+            /**
+             * Rationale
+             * @description Plain-language explanation, in the bidder's language
+             */
+            rationale: string;
+            /** Mandatory Total */
+            mandatory_total: number;
+            /** Mandatory Supported */
+            mandatory_supported: number;
+            /** Partially Supported Rows */
+            partially_supported_rows: number;
+        };
+        /**
+         * WeightedScore
+         * @description A buyer's published points scale, when the tender uses one.
+         *
+         *     Present only for tenders that score selection; absent for pass/fail tenders. `threshold`
+         *     is the buyer's elimination cut-off, not ours.
+         */
+        WeightedScore: {
+            /** Points */
+            points: number;
+            /** Points Available */
+            points_available: number;
+            /**
+             * Threshold
+             * @description Below this the buyer eliminates the bid
+             */
+            threshold: number;
         };
     };
     responses: never;

@@ -34,6 +34,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.models.tender import BidStatus, BidSummary, DocumentKind
+from crossbid.models.verdict import Decision
 from crossbid.readmodel.documents import DocumentStatus
 
 THREAD_ID_PREFIX: Final = "bid:"
@@ -110,11 +111,21 @@ class BidRow(BaseModel):
     problems: list[Any] = Field(default_factory=list)
     """The `ExtractionProblem` list as stored — raw JSON here, validated by the router, so
     that this module never imports from `agent/`."""
+    verdict: dict[str, Any] | None = None
+    """The `Verdict` as stored, raw for the same reason `problems` is. `None` until
+    `score_verdict` has run (S3.4.1)."""
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
     def summary(self) -> BidSummary:
-        """The dashboard's shape, from `models/`. Verdict fields stay `None` until F3.4."""
+        """The dashboard's shape, from `models/`.
+
+        `decision` is read out of the stored verdict rather than kept in a column of its
+        own: two places recording the same answer is two places that can disagree, and the
+        column would have to be written by the same statement anyway. A verdict whose shape
+        the dashboard does not recognise leaves `decision` unset instead of failing the
+        list — one unreadable row must not blank a company's dashboard.
+        """
         return BidSummary(
             id=self.id,
             company_id=self.company_id,
@@ -122,9 +133,19 @@ class BidRow(BaseModel):
             title=self.title,
             source_language=self.source_language,
             status=self.status,
+            decision=self.decision,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
+
+    @property
+    def decision(self) -> Decision | None:
+        """The stored verdict's decision, or `None` when there is none or it is unreadable."""
+        raw = (self.verdict or {}).get("decision")
+        try:
+            return Decision(raw)
+        except ValueError:
+            return None
 
 
 class BidDocumentRow(BaseModel):
@@ -152,7 +173,7 @@ def thread_id_of(bid_id: str) -> str:
 
 _BID_COLUMNS: Final[LiteralString] = """
     b.id, b.company_id, b.thread_id, b.ted_publication_number, b.title, b.source_language,
-    b.status, b.failure_reason, b.problems, b.created_at, b.updated_at,
+    b.status, b.failure_reason, b.problems, b.verdict, b.created_at, b.updated_at,
     c.language as bidder_language
 """
 
@@ -211,6 +232,16 @@ set problems = %(problems)s, updated_at = now()
 where company_id = %(company_id)s and id = %(bid_id)s
 """
 
+UPDATE_BID_VERDICT: Final[LiteralString] = """
+update bids
+set verdict = %(verdict)s, updated_at = now()
+where company_id = %(company_id)s and id = %(bid_id)s
+"""
+"""S3.4.1 writes the agent's verdict here at scoring; S3.4.2 overwrites it with the
+reviewer's final one. One jsonb column rather than a table, for the reason `problems` is
+one: it is a projection of the graph state, read whole and never queried by field. The
+`reviews` table is the separate, append-only record of *who decided what*."""
+
 SELECT_COMPANY_LANGUAGE: Final[LiteralString] = """
 select language from companies where id = %(company_id)s
 """
@@ -246,6 +277,7 @@ SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     UPDATE_BID_STATUS,
     UPDATE_BID_FAILED,
     UPDATE_BID_PROBLEMS,
+    UPDATE_BID_VERDICT,
     SELECT_DOCUMENTS_BY_ID,
     SELECT_BID_DOCUMENTS,
     ATTACH_DOCUMENTS,
@@ -363,6 +395,23 @@ async def set_bid_problems(
         _require_one_row(cursor.rowcount, bid_id)
 
 
+async def set_bid_verdict(
+    db: ConnectionSource, *, company_id: str, bid_id: str, verdict: Mapping[str, Any]
+) -> None:
+    """Record the bid's verdict as the dashboard and the workspace read it.
+
+    Takes the already-dumped mapping rather than a `Verdict`, so this module keeps its rule
+    of importing nothing from `agent/` or `models/verdict`: the caller owns the contract,
+    the projection owns the column.
+    """
+    async with db.connection() as conn:
+        cursor = await conn.execute(
+            UPDATE_BID_VERDICT,
+            {"company_id": company_id, "bid_id": bid_id, "verdict": Jsonb(dict(verdict))},
+        )
+        _require_one_row(cursor.rowcount, bid_id)
+
+
 # ----------------------------------------------------------------- companies, documents
 
 
@@ -444,6 +493,7 @@ def _bid_row(record: Mapping[str, Any]) -> BidRow:
         status=BidStatus(record["status"]),
         failure_reason=_optional_str(record.get("failure_reason")),
         problems=list(record.get("problems") or []),
+        verdict=record.get("verdict"),
         created_at=record.get("created_at"),
         updated_at=record.get("updated_at"),
     )

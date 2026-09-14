@@ -33,6 +33,7 @@ from crossbid.agent.runner import (
 from crossbid.agent.state import BidState
 from crossbid.ingestion.storage import StorageError
 from crossbid.models.tender import BidStatus
+from crossbid.models.verdict import Decision, Verdict
 from crossbid.readmodel.bids import BidRow, thread_id_of
 from crossbid.settings import Settings, bid_run_config
 
@@ -75,6 +76,9 @@ class RecordingProjection:
     async def write_matrix_rows(self, *, company_id: str, bid_id: str, rows: Any) -> int:
         return len(rows)
 
+    async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Any) -> None:
+        pass
+
 
 class FakeDatabase:
     def __init__(self) -> None:
@@ -113,6 +117,19 @@ async def quiet_check(state: BidState, config: RunnableConfig | None = None) -> 
     return {"matrix_rows": []}
 
 
+async def quiet_score(state: BidState, config: RunnableConfig | None = None) -> Any:
+    """Stands in for `score_verdict`, which would otherwise read the companies table."""
+    return {
+        "verdict": Verdict(
+            decision=Decision.INSUFFICIENT_EVIDENCE,
+            rationale="nothing was extracted",
+            mandatory_total=0,
+            mandatory_supported=0,
+            partially_supported_rows=0,
+        )
+    }
+
+
 def graph_over(
     settings: Settings,
     saver: MemorySaver,
@@ -134,6 +151,7 @@ def graph_over(
         extract_reqs=extract,
         plan_checks=quiet_plan,
         check_reqs=quiet_check,
+        score_verdict=quiet_score,
         projection=projection,
         checkpointer=saver,
     )
@@ -187,6 +205,7 @@ async def test_start_runs_the_graph_in_the_background_and_tracks_the_task(
         BidStatus.PARSING,
         BidStatus.EXTRACTING,
         BidStatus.CHECKING,
+        BidStatus.SCORING,
         BidStatus.AWAITING_REVIEW,
     ]
     snapshot = await runner.graph.aget_state(bid_run_config(bid.id, thread_id=bid.thread_id))
@@ -292,6 +311,7 @@ async def test_resume_continues_from_the_checkpoint_after_a_crash(
     assert projection.statuses == [
         BidStatus.EXTRACTING,
         BidStatus.CHECKING,
+        BidStatus.SCORING,
         BidStatus.AWAITING_REVIEW,
     ]
     assert any("resuming from checkpoint" in r.getMessage() for r in caplog.records)

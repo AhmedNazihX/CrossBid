@@ -2179,3 +2179,84 @@ with a threshold that is currently failing.
 **The change to make next sprint:** record the demo *first*, not last. Every defect this sprint
 was reachable only by using the product end to end, and the demo is exactly that walk. Deferring
 it turned the walkthrough from a recording into a debugging session three times running.
+
+---
+
+## ADR-0024 — The scorer decides by rule, and the prose is a table
+
+**Date:** 2026-09-14 · **Stories:** S3.4.1 · **Status:** accepted
+
+S3.4.1 asks for "a clear go or no-go with the exact gaps in my language". Three things in that
+sentence had to be decided before any of it could be built.
+
+### Where the judgement lives
+
+**The decision is a pure function and nothing else may make it.** `agent/scoring.py` takes
+requirements, matrix rows, the bidder's profile and a language, and returns a `Verdict`. No
+model, no database, no clock. `tests/unit/test_scoring.py` is therefore the specification
+rather than a smoke test — if a decision cannot be re-derived from the matrix the bidder can
+see, it is not a decision this product is allowed to make. The node above it
+(`nodes/score_verdict.py`) exists only to fetch the one input the state does not carry.
+
+Five rules, each forced by something already in the repo rather than invented here:
+
+1. **Only `bid_eligibility` is scored.** SP.1's 579 "mandatory" requirements (ADR-0003) are
+   what happens without the filter. The DE golden key deliberately keeps `contract_performance`
+   rows so the filter can be scored in both directions, and the handover already warns that
+   anything scoring must apply it.
+2. **`unsupported` is fatal on a mandatory row and on *any* exclusion ground**, whatever the
+   extractor called the ground's `kind`. An exclusion ground marked `optional` is an extraction
+   defect, and reading it as a softer requirement would let that defect decide a bid.
+3. **A mandatory requirement with no row is an open item, never a pass.** Checking is total, so
+   a missing row means a lane never ran. "Not checked" must never read as "fine".
+4. **`insufficient_evidence` is "nothing was settled", not a proportion.** A cut-off like "fewer
+   than half the rows" would be a number nobody in the plan chose. An empty matrix is the same
+   answer for the same reason — which is why `Verdict` now refuses a `go` with
+   `mandatory_total == 0`, and permits declining when nothing was scored at all. Both are new
+   clauses in the model's validator, and both are the "never a `go` without evidence" criterion
+   restated where it cannot be bypassed.
+5. **A gap names numbers only where the comparison is honest.** `required` comes off the
+   requirement's own `Threshold`; `actual` comes off the typed profile, and only for `at_least`
+   against FTE or against turnover *in the same currency*. Converting currencies is
+   `currency_convert`'s job; a scorer that guessed would be inventing the bidder's answer.
+
+### The prose is data, not a model call
+
+The story also asks that the explanation follow the user's language and tone settings. It is
+rendered from a table of format strings — `agent/verdict_text.py`, nine `Phrasebook` entries
+keyed `(language, tone)` over `de`/`en`/`fr` × `plain`/`formal`/`brief`.
+
+**A model was the obvious alternative and was rejected.** The rules engine refuses a model's
+opinion on the decision; letting one write the sentence that explains the decision would
+readmit it one field later. It would also make the same bid come back differently on every run,
+which is precisely what makes a `live` recall measurement expensive to read (ADR-0021), and it
+would put a network failure inside a node that currently cannot fail.
+
+Splitting the table into "language chooses words, tone chooses structure" does not survive
+contact with the brief tone: `Kein Angebot.` is not the plain headline with clauses removed, it
+is a different sentence. Nine flat entries are greppable, and `test_verdict_text.py` walks every
+pair, every `Decision` and every field, asserting no unresolved brace survives — a derivation
+would not have made that checkable.
+
+Two smaller findings inside that table. **Thousands are grouped per language**: `3,000,000 EUR`
+in German prose reads as three point zero, because the comma is a decimal separator there, so
+German gets `.`, French a space, English `,`. And **the "and 35 more" line is not a bullet** —
+a reader counting bullets should be counting gaps.
+
+### Where it runs, and what it changed
+
+`plan_checks → check_reqs → score_verdict → await_review`, with `score_verdict` wrapped in the
+`scoring` stage like every other node. Two consequences worth naming:
+
+- **The empty-extraction path now goes to the scorer, not straight to the interrupt.** A bid
+  whose extraction found nothing still owes its reviewer an answer, and rule 4 makes that
+  answer `insufficient_evidence` rather than a silent park.
+- **The read model gains `set_bid_verdict`**, writing the `bids.verdict` column 0001 already
+  declared, and `BidSummary.decision` is read out of it rather than kept in a column of its
+  own — two places recording one answer is two places that can disagree. A stored verdict the
+  contract no longer recognises (a pre-0004 `go_with_open_items`, say) answers `null` and logs,
+  rather than 500-ing a bid its reviewer needs to re-run. This is the scoring half of S3.4.3;
+  the review half lands with S3.4.2.
+
+`Verdict.score` stays `None`. The French fixture's weighted 5-of-10 cut-off is real, but nothing
+in `Requirement` carries a buyer's points scale, so producing one would mean inventing it.

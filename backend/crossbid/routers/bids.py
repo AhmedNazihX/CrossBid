@@ -29,7 +29,7 @@ from datetime import datetime
 from typing import Final
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from crossbid.agent.runner import BidRunner, build_runner
 from crossbid.agent.state import ExtractionProblem
@@ -40,6 +40,7 @@ from crossbid.main import get_app_settings, get_database
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.tender import BidStatus, BidSummary
+from crossbid.models.verdict import Verdict
 from crossbid.readmodel.bids import (
     TENDER_DOCUMENT_KINDS,
     BidDocumentRow,
@@ -135,8 +136,8 @@ class BidResponse(BaseModel):
     bidder_language: str = Field(description="What requirements are explained in")
     status: BidStatus = Field(
         description=(
-            "queued → parsing → extracting → checking → awaiting_review; failed carries "
-            "failure_reason"
+            "queued → parsing → extracting → checking → scoring → awaiting_review; failed "
+            "carries failure_reason"
         )
     )
     failure_reason: str | None = Field(
@@ -149,6 +150,13 @@ class BidResponse(BaseModel):
         description=(
             "The compliance matrix, one row per checked requirement, in the same order as "
             "`requirements`. Fills in lane by lane while the status is `checking`."
+        )
+    )
+    verdict: Verdict | None = Field(
+        description=(
+            "The agent's go/no-go with every gap behind it, written when the status "
+            "reaches `scoring`. Null before that. Advisory: the reviewer confirms or "
+            "overrides it before it is final."
         )
     )
     problems: list[ExtractionProblem] = Field(
@@ -177,6 +185,7 @@ class BidResponse(BaseModel):
             failure_reason=bid.failure_reason,
             requirements=requirements,
             matrix_rows=list(matrix_rows or []),
+            verdict=_verdict_of(bid),
             problems=[ExtractionProblem.model_validate(problem) for problem in bid.problems],
             documents=[BidDocumentResponse.from_row(row) for row in documents],
             created_at=bid.created_at,
@@ -290,6 +299,23 @@ async def list_company_bids(
 
 
 # ------------------------------------------------------------------------------ helpers
+
+
+def _verdict_of(bid: BidRow) -> Verdict | None:
+    """The stored verdict, re-validated on the way out, or `None` if there is none.
+
+    A stored shape the contract no longer recognises answers `None` rather than a 500: the
+    column is a projection, the checkpoint is the authority (S3.4.3), and a bid whose
+    verdict predates a vocabulary change must still be openable so its reviewer can re-run
+    it. The row's own `decision` property makes the same choice for the dashboard.
+    """
+    if bid.verdict is None:
+        return None
+    try:
+        return Verdict.model_validate(bid.verdict)
+    except ValidationError:
+        logger.warning("Bid %s: the stored verdict no longer validates; omitting it", bid.id)
+        return None
 
 
 def _check_documents(document_ids: list[str], rows: list[BidDocumentRow]) -> None:

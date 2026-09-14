@@ -51,6 +51,7 @@ from crossbid.ingestion.parser import ParsedDocument, ParsedPage
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.tender import BidStatus
+from crossbid.models.verdict import Verdict
 
 DEFAULT_BIDDER_LANGUAGE: Final = "de"
 """The language requirements are explained in when the bid does not say otherwise.
@@ -307,6 +308,14 @@ class BidState(TypedDict, total=False):
     lanes run in one superstep and each returns only its own share; the row id is a `uuid5`
     over the requirement id, so a resumed run updates rather than doubles."""
 
+    verdict: Verdict
+    """The agent's go/no-go, written by `score_verdict` (S3.4.1). No reducer: unlike the
+    lanes above there is exactly one writer per superstep, and the later one — S3.4.2's
+    `apply_review`, re-scoring on the reviewer's statuses — runs in a superstep of its own
+    and is *meant* to replace this value rather than accumulate beside it. Absent until
+    scoring has run, which is what makes "has this bid been scored yet" answerable from the
+    checkpoint alone."""
+
 
 class ExtractionUpdate(TypedDict, total=False):
     """The partial state `extract_reqs` returns. A subset of `BidState`, asserted by a test."""
@@ -325,6 +334,12 @@ class CheckUpdate(TypedDict, total=False):
     """The partial state one `check_reqs` lane returns: its share of the matrix."""
 
     matrix_rows: list[MatrixRow]
+
+
+class ScoreUpdate(TypedDict, total=False):
+    """The partial state `score_verdict` returns: the verdict, and nothing else."""
+
+    verdict: Verdict
 
 
 class ParseUpdate(TypedDict, total=False):
