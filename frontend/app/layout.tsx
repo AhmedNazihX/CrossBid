@@ -5,6 +5,20 @@ import './globals.css'
 import { SessionProvider } from '@/components/auth/session-provider'
 
 /**
+ * Rendered per request, for the nonce (ADR-0036).
+ *
+ * `middleware.ts` mints a fresh CSP nonce per request and Next stamps its own inline
+ * hydration scripts with it — but only while it is *rendering* that request. A
+ * prerendered page carries whatever nonce existed at build time, which matches no header
+ * any visitor will ever receive, so every one of its scripts is blocked and the page is
+ * dead. Measured before this line existed: 17 script tags, none of them nonced.
+ *
+ * Declared on the root layout so it reaches every route, because the policy does: the
+ * session is in `localStorage`, which is scoped to the origin rather than to a page.
+ */
+export const dynamic = 'force-dynamic'
+
+/**
  * Geist and Geist Mono, the design system's single family (`tokens/fonts.css` lists the
  * same weights: 400/500/600/700 sans, 400/500 mono). `next/font` self-hosts them, so the
  * page never fetches from Google at run time; `globals.css` reads the two variables.

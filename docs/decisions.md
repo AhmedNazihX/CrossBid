@@ -3057,3 +3057,63 @@ rotate, and an API that authorises against the company the *token* resolves to r
 anything the client claims. What is worth adding is a Content-Security-Policy, which is the
 control that actually addresses the threat; it is not in this story and is recorded here as
 the open item. Revisit the BFF shape only if the app ever renders untrusted HTML.
+
+---
+
+## ADR-0036 — The Content-Security-Policy, and the nonce that has to be per request
+
+**Date:** 2026-09-14 · **Stories:** S4.1.1 (completes ADR-0035) · **Status:** accepted
+
+ADR-0035 left one control open and named it: the session lives in `localStorage`, so any
+script running on this origin can read it, and the thing that actually addresses that is
+stopping scripts we did not put there from running. The user chose this over the
+backend-for-frontend of option 2, on the reasoning that the app renders no untrusted content
+— no `dangerouslySetInnerHTML`, no `eval`, and the only untrusted input is tender text, which
+goes to a model inside a data block rather than into the DOM.
+
+**The policy covers every route, including the marketing page.** `localStorage` is scoped to
+the *origin*, not to the page: an injection on `/` reads the token `/dashboard` stored.
+Exempting the one public page would have exempted the one an attacker can reach without
+signing in.
+
+**Nonce, not `'unsafe-inline'`, and that decision has a cost that had to be paid.** Next emits
+its own inline hydration scripts, so a policy that does not name them must allow *all* inline
+script — the very thing being defended against, written as a header. A per-request nonce is
+the supported alternative, and `'strict-dynamic'` is what makes it hold: without it the policy
+is a list of origins and any of them serving one unsafe file re-opens the door; with it only
+the nonced script is trusted, plus what that script loads itself.
+
+**The trap, found by measuring rather than by reading.** With the middleware in place the
+build still reported twelve of thirteen routes as statically prerendered, and the served HTML
+carried **17 script tags and not one nonce** against a header demanding one — every script
+blocked, the page dead. A prerendered page carries whatever nonce existed at build time, which
+matches no header any visitor will ever receive. `export const dynamic = 'force-dynamic'` on
+the root layout is the fix, and it is why every route is now `ƒ`. Re-measured after: 15 script
+tags, 15 nonces, all matching the response header, and no CSP violation in the console on
+either `/` or `/login`.
+
+Losing static prerendering costs less here than it sounds: the app is served by a Node process
+in a container rather than from a CDN, and twelve of the thirteen routes are client-rendered
+screens that fetch everything they show. The marketing page is the one that genuinely loses
+something, and it keeps its full-route cache behaviour under a deployment that adds one.
+
+**What is in the policy, and why each line is there.** `connect-src` names exactly two
+origins, the API and the Supabase project — auth and storage. `frame-src` names the Supabase
+project because the source viewer iframes a signed Storage URL; nothing else may be framed.
+`style-src` keeps `'unsafe-inline'`: React writes two `style` props in `brand-reveal.tsx` as
+element attributes, there is no nonce mechanism for those, and inline *style* cannot execute.
+`'unsafe-eval'` appears in development only — it is the dev server's hot reload — and is never
+emitted by a real build.
+
+The constant headers (`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`,
+`X-Frame-Options`, HSTS) sit in `next.config.ts` rather than the middleware, so they also cover
+`_next/static` and the other assets the matcher deliberately skips. HSTS is inert over the
+plain http of local development and is carried anyway, because it is the one header that has
+to be right on the first https response a deployment ever serves.
+
+**What this does not do**, stated so nobody reads it as more than it is: an attacker who does
+get script onto the page still owns the session while the tab is open, and can still read the
+token out of `localStorage`. CSP raises the cost of getting there; it changes nothing
+afterwards, and it is no defence at all against a malicious dependency, which is nonced by
+construction. Option 2 remains the answer if this app ever renders untrusted HTML — S3.5.1's
+"ask the tender" is the story that would change that, and it must render model output as text.
