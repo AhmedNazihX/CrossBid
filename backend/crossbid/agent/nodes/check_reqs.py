@@ -24,9 +24,9 @@ the whole annex of cheap formalities and another the selection criteria.
 
 **2. One `EmbeddingsClient` per lane, injected through the `ToolContext`.** Every retrieval
 tool embeds its query, and `build_rag_tool` takes a client rather than making one
-(S2.4.2) — but `registry.build_enabled_tools` builds from a `ToolContext` alone and passes
-no `embedder=`, so left to itself each tool would construct its own and each would open its
-own `httpx` pool, closed by garbage collection. Three ways out were available: widen
+(S2.4.2) — but `registry.build_enabled_tools` builds each tool from a `ToolContext` and
+passes no `embedder=`, so left to itself each tool would construct its own and each would
+open its own `httpx` pool, closed by garbage collection. Three ways out were available: widen
 `ToolContext`, add a parameter to `build_enabled_tools`, or accept the default. Widening the
 context won because the context *is* the scope object — it already carries the tenant, the
 bid and the database for exactly this reason, and the alternative would have put a tool
@@ -103,6 +103,36 @@ ever added to `settings.default.yaml`, this constant is the one line to change.
 FALLBACK_MODEL_ROLE: Final = ModelRole.FALLBACK
 """Where a timed-out call goes after one retry (S3.4.4). A different vendor on purpose —
 see `llm.RETRYABLE` and the `fallback` entry in `settings.default.yaml`."""
+
+NODE_NAME: Final = "check_reqs"
+"""What the registry calls this node in a log line about its tools."""
+
+CHECK_TOOLS: Final = frozenset(
+    {
+        "company_rag_search",
+        "tender_rag_search",
+        "ecertis_evidence_lookup",
+        "currency_convert",
+    }
+)
+"""The tools a *check* is made of, which is not the same as the tools this deployment allows.
+
+One question is being answered in this loop: does the bidder's evidence satisfy this
+requirement? Each of these four is a step in answering it -- find the bidder's evidence,
+re-read the clause it has to satisfy, translate a foreign certificate into the national
+paper that stands for it, and compare a threshold stated in another currency.
+
+**`search_ted` is the one deliberately absent**, and it is why this constant exists rather
+than the node binding everything enabled. It searches for *other tenders*; no answer it can
+give bears on whether this company meets this requirement. It was bound here only because
+`enabled_tools` listed it and this node took the whole list, which put a live network call
+inside a loop that runs once per requirement on a run that has already spent a euro
+(ADR-0045, which recorded the problem and left the fix to a graph change -- this is it).
+
+Not a manifest field: which tools a node needs is a fact about the *node's job*, and
+`tools/manifest.py` describes tools to an operator. A tool should not have to know the graph
+to be added to it.
+"""
 
 
 class CompanyLookup(Protocol):
@@ -289,7 +319,7 @@ def openrouter_session(settings: Settings, db: ConnectionSource) -> SessionBuild
                 db=db,
                 embedder=embedder,
             )
-            tools = build_enabled_tools(context, settings)
+            tools = build_enabled_tools(context, settings, needed=CHECK_TOOLS, caller=NODE_NAME)
             model = chat_model(CHECK_MODEL_ROLE, settings)
             spare = chat_model(FALLBACK_MODEL_ROLE, settings)
             yield CheckContext(

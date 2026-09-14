@@ -1003,18 +1003,20 @@ async def test_the_production_session_builds_the_enabled_tools_and_closes_its_cl
         bidder = ctx.bidder
         prompt = ctx.system_prompt
 
-    # Assert -- every name in `enabled_tools`, and the client is closed after. `search_ted`
-    # (S1.2.2) and `currency_convert` (S1.3.1) are in this list because the node binds every
-    # enabled tool and the settings enable them. They are the two that open a socket, and the
-    # loop's `max_tool_calls_per_requirement` budget is what bounds a model that reaches for
-    # one while checking a certificate. See ADR-0045 if that needs narrowing to a per-node set.
+    # Assert -- `CHECK_TOOLS` ∩ `enabled_tools`, and the client is closed after.
+    # `search_ted` is enabled in the settings and still absent, which is the point: it
+    # searches for other tenders and no answer it gives bears on whether this company meets
+    # this requirement. ADR-0045 recorded that it was bound only because the node took the
+    # whole enabled list; ADR-0052 is the per-node set that stopped it.
     assert names == [
         "company_rag_search",
         "currency_convert",
         "ecertis_evidence_lookup",
-        "search_ted",
         "tender_rag_search",
     ]
+    assert "search_ted" in offline_settings.runtime.enabled_tools, (
+        "the settings must still enable it, or this test proves nothing"
+    )
     assert budget == offline_settings.runtime.agent.max_tool_calls_per_requirement
     assert bidder == BIDDER
     assert prompt == offline_settings.runtime.system_prompt

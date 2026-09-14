@@ -31,7 +31,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
+from typing import Final
 
 import pytest
 from langchain_core.tools import BaseTool
@@ -40,6 +41,7 @@ from crossbid.settings import AppSettingsRow, Settings, apply_app_settings_row
 from crossbid.tools.manifest import ToolContext, ToolManifest
 from crossbid.tools.rag import RagToolError
 from crossbid.tools.registry import (
+    DISABLED_NEEDED_MESSAGE,
     UNBUILT_TOOLS_MESSAGE,
     build_enabled_tools,
     manifests,
@@ -90,6 +92,25 @@ def names_of(tools: Sequence[BaseTool]) -> tuple[str, ...]:
     return tuple(tool.name for tool in tools)
 
 
+ANY_NODE: Final = "test_node"
+
+
+def build_for(
+    ctx: ToolContext, settings: Settings, *, needed: Collection[str] | None = None
+) -> tuple[BaseTool, ...]:
+    """`build_enabled_tools` with the node's key held wide open unless a test narrows it.
+
+    Two keys decide whether a tool is built: `enabled_tools` (the operator's) and `needed`
+    (the node's). Most tests in this file are about the operator's, so passing every tool
+    that exists keeps them measuring one dimension; the tests under "the node's key" pass
+    `needed` themselves.
+    """
+    every = {manifest.name for manifest in manifests()}
+    return build_enabled_tools(
+        ctx, settings, needed=every if needed is None else needed, caller=ANY_NODE
+    )
+
+
 # ------------------------------------------------------------------------- discovery
 
 
@@ -121,7 +142,7 @@ def test_the_order_does_not_follow_the_settings_file(offline_settings: Settings)
     backwards = with_tools(offline_settings, ECERTIS, COMPANY_RAG)
 
     # Act
-    built = [names_of(build_enabled_tools(context(s), s)) for s in (forwards, backwards)]
+    built = [names_of(build_for(context(s), s)) for s in (forwards, backwards)]
 
     # Assert
     assert built[0] == built[1] == (COMPANY_RAG, ECERTIS)
@@ -136,7 +157,7 @@ def test_only_the_configured_tools_are_built(offline_settings: Settings) -> None
     settings = with_tools(offline_settings, ECERTIS, TENDER_RAG)
 
     # Act
-    tools = build_enabled_tools(context(settings), settings)
+    tools = build_for(context(settings), settings)
 
     # Assert
     assert names_of(tools) == (ECERTIS, TENDER_RAG)
@@ -148,7 +169,7 @@ def test_a_tool_left_out_of_enabled_tools_is_not_built(offline_settings: Setting
     settings = with_tools(offline_settings, ECERTIS)
 
     # Act
-    tools = build_enabled_tools(context(settings), settings)
+    tools = build_for(context(settings), settings)
 
     # Assert
     assert COMPANY_RAG not in names_of(tools)
@@ -161,7 +182,7 @@ def test_no_enabled_tools_means_no_tools(offline_settings: Settings) -> None:
     settings = with_tools(offline_settings)
 
     # Act & Assert
-    assert build_enabled_tools(context(settings), settings) == ()
+    assert build_for(context(settings), settings) == ()
 
 
 def test_a_name_listed_twice_is_built_once(offline_settings: Settings) -> None:
@@ -170,7 +191,7 @@ def test_a_name_listed_twice_is_built_once(offline_settings: Settings) -> None:
     settings = with_tools(offline_settings, ECERTIS, ECERTIS)
 
     # Act
-    tools = build_enabled_tools(context(settings), settings)
+    tools = build_for(context(settings), settings)
 
     # Assert
     assert names_of(tools) == (ECERTIS,)
@@ -182,7 +203,7 @@ def test_the_built_tools_are_the_real_ones(offline_settings: Settings) -> None:
     settings = with_tools(offline_settings, ECERTIS)
 
     # Act
-    tool = build_enabled_tools(context(settings), settings)[0]
+    tool = build_for(context(settings), settings)[0]
 
     # Assert
     by_name = {manifest.name: manifest for manifest in manifests()}
@@ -198,7 +219,7 @@ def test_a_configured_name_with_no_module_is_skipped(offline_settings: Settings)
     settings = with_tools(offline_settings, ECERTIS, NOT_BUILT_YET)
 
     # Act
-    tools = build_enabled_tools(context(settings), settings)
+    tools = build_for(context(settings), settings)
 
     # Assert
     assert names_of(tools) == (ECERTIS,)
@@ -213,7 +234,7 @@ def test_the_skipped_name_is_logged_once_at_info(
 
     # Act
     with caplog.at_level(logging.INFO, logger="crossbid.tools.registry"):
-        build_enabled_tools(context(settings), settings)
+        build_for(context(settings), settings)
 
     # Assert
     records = [record for record in caplog.records if record.msg == UNBUILT_TOOLS_MESSAGE]
@@ -230,7 +251,7 @@ def test_nothing_is_logged_when_every_configured_tool_exists(
 
     # Act
     with caplog.at_level(logging.INFO, logger="crossbid.tools.registry"):
-        build_enabled_tools(context(settings), settings)
+        build_for(context(settings), settings)
 
     # Assert
     assert [record for record in caplog.records if record.msg == UNBUILT_TOOLS_MESSAGE] == []
@@ -276,7 +297,7 @@ def test_a_tool_that_cannot_be_built_for_its_context_is_not_swallowed(
 
     # Act & Assert
     with pytest.raises(RagToolError, match="bid_id"):
-        build_enabled_tools(context(settings, bid_id=None), settings)
+        build_for(context(settings, bid_id=None), settings)
 
 
 def test_the_tools_are_built_eagerly_so_the_failure_lands_here(
@@ -290,4 +311,86 @@ def test_the_tools_are_built_eagerly_so_the_failure_lands_here(
 
     # Act & Assert
     with pytest.raises(RagToolError):
-        build_enabled_tools(context(settings, bid_id=None), settings)
+        build_for(context(settings, bid_id=None), settings)
+
+
+# --------------------------------------------------------------- the node's key (ADR-0052)
+
+
+def test_a_tool_the_node_does_not_need_is_not_built_though_it_is_enabled(
+    offline_settings: Settings,
+) -> None:
+    """The failure ADR-0052 exists to stop: `search_ted` was enabled, so the check loop
+    bound it, so a live network search sat inside a loop that runs once per requirement."""
+    # Arrange
+    settings = with_tools(offline_settings, COMPANY_RAG, ECERTIS, SEARCH_TED)
+
+    # Act
+    tools = build_for(context(settings), settings, needed={COMPANY_RAG, ECERTIS})
+
+    # Assert
+    assert names_of(tools) == (COMPANY_RAG, ECERTIS)
+
+
+def test_the_operator_still_wins_over_a_node_that_asks_for_a_disabled_tool(
+    offline_settings: Settings,
+) -> None:
+    """Both keys must turn. A node may not re-enable what a deployment switched off —
+    `enabled_tools` is the operator's intention and code does not overrule it (ADR-0045)."""
+    # Arrange
+    settings = with_tools(offline_settings, COMPANY_RAG)
+
+    # Act
+    tools = build_for(context(settings), settings, needed={COMPANY_RAG, ECERTIS})
+
+    # Assert
+    assert names_of(tools) == (COMPANY_RAG,)
+
+
+def test_asking_for_a_disabled_tool_says_so_in_the_log(
+    offline_settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """ "Found no evidence" and "could not look" read alike in a matrix; not in a log."""
+    # Arrange
+    settings = with_tools(offline_settings, COMPANY_RAG)
+
+    # Act
+    with caplog.at_level(logging.INFO, logger="crossbid.tools.registry"):
+        build_for(context(settings), settings, needed={COMPANY_RAG, ECERTIS})
+
+    # Assert
+    records = [r for r in caplog.records if r.msg == DISABLED_NEEDED_MESSAGE]
+    assert len(records) == 1
+    assert records[0].args == (ANY_NODE, ECERTIS)
+
+
+def test_a_node_asking_for_a_tool_that_does_not_exist_raises(
+    offline_settings: Settings,
+) -> None:
+    """The opposite of how an unknown name in `enabled_tools` is treated, on purpose.
+
+    That file is the operator's and may name next month's tool; `needed` is written in this
+    repository, so a name matching nothing is a typo no deployment can fix.
+    """
+    # Act & Assert
+    with pytest.raises(ValueError, match="compayn_rag_search"):
+        build_for(context(offline_settings), offline_settings, needed={"compayn_rag_search"})
+
+
+def test_the_check_node_asks_for_tools_that_all_exist(offline_settings: Settings) -> None:
+    """`CHECK_TOOLS` is a set of strings; nothing but a test connects it to real modules."""
+    # Arrange
+    from crossbid.agent.nodes.check_reqs import CHECK_TOOLS
+
+    # Act & Assert
+    assert {manifest.name for manifest in manifests()} >= CHECK_TOOLS
+
+
+def test_the_check_node_does_not_ask_for_the_tender_search(offline_settings: Settings) -> None:
+    """Stated as its own test because it is the whole point of the constant, and a future
+    edit that adds it back should fail here rather than in a slow live run."""
+    # Arrange
+    from crossbid.agent.nodes.check_reqs import CHECK_TOOLS
+
+    # Act & Assert
+    assert SEARCH_TED not in CHECK_TOOLS

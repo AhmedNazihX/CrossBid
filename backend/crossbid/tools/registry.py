@@ -7,6 +7,20 @@ is off as well as what is on. `check_reqs` (F3.3) is the consumer: the list this
 what it hands to `bind_tools`, and it is the *only* place that turns configuration into a
 tool list, so no node gets to re-decide what the agent may call.
 
+**Two keys open a tool, and they are different kinds of fact.** `enabled_tools` is the
+*operator's* permission -- what this deployment allows the agent to reach at all -- and
+`needed` is the *node's* requirement: the tools that node's job is made of. A tool is built
+only when both agree, and neither can overrule the other. `search_ted` is why the second key
+exists: it was enabled, so `check_reqs` bound it, so a live network search sat inside a loop
+that runs once per requirement while checking whether a company holds a certificate
+(ADR-0045). Nothing was misconfigured -- searching for notices is a legitimate thing for this
+deployment to allow, it is simply not part of checking a requirement.
+
+`needed` is a required argument rather than an optional filter, so a future node cannot
+acquire the whole toolbox by forgetting to narrow it. That is the entire failure being
+designed out: the old signature was correct for its one caller and silently wrong for the
+next.
+
 **Discovery is a walk, not a list.** A hand-kept registry is the kind of file everyone
 forgets: a tool would be written, tested, and silently never bound. Walking the package
 means a module is registered by existing. `tests/unit/test_tool_manifests.py` imports
@@ -49,7 +63,7 @@ from __future__ import annotations
 import importlib
 import logging
 import pkgutil
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from functools import lru_cache
 from types import ModuleType
@@ -73,6 +87,14 @@ UNBUILT_TOOLS_MESSAGE: Final = (
 )
 """Logged once per build, with every missing name in one line. A module constant so the
 test can match the record without restating the sentence."""
+
+DISABLED_NEEDED_MESSAGE: Final = (
+    "%s needs %s, which this deployment has switched off in enabled_tools, so it will run "
+    "without them. The operator's setting wins; this is a note, not a fault."
+)
+"""A node asking for a tool an operator disabled is not an error (ADR-0045: the settings file
+is the operator's intention and the code may not overrule it). It is worth one line in the
+log, because "the check found no evidence" and "the check could not look" read alike."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,19 +163,46 @@ def unbuilt_tool_names(settings: Settings) -> tuple[str, ...]:
     return tuple(sorted(enabled_tool_names(settings) - known))
 
 
-def build_enabled_tools(context: ToolContext, settings: Settings) -> tuple[BaseTool, ...]:
-    """The tools the agent may call in this run: exactly `enabled_tools`, built for `context`.
+def build_enabled_tools(
+    context: ToolContext,
+    settings: Settings,
+    *,
+    needed: Collection[str],
+    caller: str,
+) -> tuple[BaseTool, ...]:
+    """The tools `caller` may call in this run: `enabled_tools` ∩ `needed`, built for `context`.
 
     The story's first criterion lives here — "given `enabled_tools`, when the graph builds,
     then only those tools are bound" — and the tuple is what `check_reqs` passes to
     `bind_tools`. Repeats in the configuration collapse (a permission list, not a
-    multiset), unknown names are logged and skipped, and a tool that refuses its context
-    raises. See the module docstring for why each of those is the way round it is.
+    multiset), unknown *configured* names are logged and skipped, and a tool that refuses
+    its context raises. See the module docstring for why each of those is the way round it
+    is, and for why `needed` is required rather than defaulted.
+
+    An unknown name in `needed` raises, which is the opposite of how an unknown name in
+    `enabled_tools` is treated, and deliberately so: the settings file is written by an
+    operator and allowed to name a tool that does not exist yet, while `needed` is written
+    in this repository and a name that matches nothing is a typo no deployment can fix.
+    `caller` names the node in both messages, because "some node wanted a missing tool" is
+    not a sentence anybody can act on.
     """
+    known = {entry.manifest.name for entry in tool_entries()}
+    wanted = frozenset(needed)
+    if unknown := sorted(wanted - known):
+        raise ValueError(
+            f"{caller} needs {', '.join(unknown)}, which no module in crossbid.tools "
+            "provides. Unlike a name in enabled_tools, this one is written in code: it is a "
+            f"typo or a tool that was renamed. Known tools: {', '.join(sorted(known))}."
+        )
+
     unbuilt = unbuilt_tool_names(settings)
     if unbuilt:
         logger.info(UNBUILT_TOOLS_MESSAGE, ", ".join(unbuilt))
     enabled = enabled_tool_names(settings)
+    if switched_off := sorted(wanted - enabled):
+        logger.info(DISABLED_NEEDED_MESSAGE, caller, ", ".join(switched_off))
     return tuple(
-        entry.build(context) for entry in tool_entries() if entry.manifest.name in enabled
+        entry.build(context)
+        for entry in tool_entries()
+        if entry.manifest.name in enabled and entry.manifest.name in wanted
     )

@@ -3885,3 +3885,60 @@ at F3.5. A `Rating` IntEnum (`UP = 1`, `DOWN = -1`) is pinned against the migrat
 only scans `text … in (…)` constraints and cannot see a smallint one.
 
 No migration: the `feedback` table from `0001_init.sql` is used exactly as declared.
+
+---
+
+## ADR-0052 — Two keys open a tool
+
+**Date:** 2026-09-14 · **Stories:** follow-up to S1.4.1 / S1.2.2 · **Status:** accepted
+
+ADR-0045 recorded a problem and deferred the fix: `check_reqs` bound **every** enabled tool to
+its per-requirement ReAct loop, so `search_ted` — a live call to a service we do not control —
+sat inside a loop that runs once per requirement, on a run that has already spent a euro by the
+time it gets there. Nothing was misconfigured. Searching TED is a legitimate thing for this
+deployment to allow; it is simply not part of checking whether a bidder's evidence satisfies a
+requirement. This is that graph change.
+
+### The two keys are different kinds of fact
+
+`build_enabled_tools` now takes `needed` and builds the **intersection**:
+
+* **`enabled_tools`** is the *operator's* permission — what this deployment allows the agent to
+  reach at all. It lives in `settings.default.yaml` and the developer panel.
+* **`needed`** is the *node's* requirement — the tools that node's job is made of. It lives in
+  the node, next to the code that uses them.
+
+Neither overrules the other, and the asymmetry between them is deliberate. A node asking for a
+tool the operator disabled gets a log line and runs without it: ADR-0045's rule stands, the
+settings file is the operator's intention and code does not overrule it. A node asking for a
+tool **no module provides** raises, which is the opposite of how an unknown name in
+`enabled_tools` is treated — that file may name next month's tool, while `needed` is written in
+this repository, so a name matching nothing is a typo no deployment can fix.
+
+**`needed` is required, not optional.** An optional filter would have been a smaller diff and
+would have re-created the same bug on the next node to forget it. The old signature was correct
+for its one caller and silently wrong for the next; a required argument is what makes "no node
+gets tools it does not need" a property of the type rather than of everyone's memory.
+
+### Where the list lives, and where it does not
+
+`CHECK_TOOLS` is a constant in `check_reqs.py`: `company_rag_search`, `tender_rag_search`,
+`ecertis_evidence_lookup`, `currency_convert`. Each is a step in answering the one question the
+loop asks — find the bidder's evidence, re-read the clause it must satisfy, translate a foreign
+certificate into the national paper that stands for it, compare a threshold stated in another
+currency. `search_ted` answers none of them.
+
+It is deliberately **not** a field on `ToolManifest`. Which tools a node needs is a fact about
+the node's job; the manifest describes a tool to an operator. A tool should not have to know
+the graph in order to be added to it.
+
+`check_reqs` is the only node that binds tools at all, so a per-node *registry* would have been
+a framework for one caller. The constant plus a required argument is the whole mechanism.
+
+### What pins it
+
+`test_check_reqs.py` asserts the bound set and, in the same test, that `search_ted` is still in
+`enabled_tools` — without that second line the first would pass for the wrong reason the day
+someone disables the tool in the settings. `test_tool_registry.py` covers both keys
+independently, and one test states on its own that `CHECK_TOOLS` does not contain `search_ted`,
+so an edit adding it back fails there rather than in a slow, expensive live run.
