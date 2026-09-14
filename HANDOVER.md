@@ -69,9 +69,22 @@ equivalence where a criterion id exists, and the matrix renders read-only in the
 
 | | state | what actually holds it open |
 |---|---|---|
-| **Milestone 1** | in progress | S3.2.1 (below) **and** a recorded end-to-end demo, which has never been made |
-| **Milestone 2** | in progress | all seven stories built; closes with Milestone 1's demo |
-| **Milestone 3** | in progress | backend done; S4.5.2 and S4.5.3 remain, then a walkthrough |
+| **Milestone 1** | in progress | **S3.2.1's recall, and only that**, plus a recorded demo |
+| **Milestone 2** | **closed 2026-09-14** | every criterion verified against Frankfurt, not asserted |
+| **Milestone 3** | code-complete | all seven stories built and walked end to end (ADR-0029) |
+
+**Milestone 2 closed on 2026-09-14** because its criteria were checked rather than assumed —
+including the one nobody had ever run: a French query for information-security certification
+returns `Zertifikat_ISO_IEC_27001_2022.pdf` as its top hit against the German evidence pack.
+
+**Milestone 1 is held by one thing: S3.2.1's recall gate, 0.72 against 0.90.** That changed
+character on 2026-09-14. It used to be "not yet measured against a verified key"; the key is
+verified now, so it is measured — and it fails. **Verifying the key made the figure
+trustworthy, not higher.** What to do about a threshold set before anything had been measured
+is an open decision the user deferred until after the demo is recorded; it is not an
+outstanding piece of work. The two candidate paths are in the Increment 2 retro: amend the
+criterion and report 0.74 ± 0.02 honestly, or spend time on extraction knowing the noise floor
+means a single $1.60 run can validate nothing.
 
 ---
 
