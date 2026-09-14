@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import httpx
@@ -36,6 +36,7 @@ from crossbid.ingestion.storage import (
 )
 from crossbid.models.ecertis_criteria import CRITERION_IDS
 from crossbid.models.requirement import RequirementSource
+from crossbid.models.ted import TedNotice
 from crossbid.models.tender import DocumentKind
 from crossbid.readmodel.bids import BidDocumentRow
 from crossbid.readmodel.documents import DocumentStatus
@@ -524,3 +525,232 @@ async def test_a_file_that_is_not_a_readable_espd_request_is_reported_and_the_ru
     ]
     assert [document.name for document in update["documents"]] == ["Reglement.pdf"]
     assert "not_really.xml" in caplog.text
+
+
+# ------------------------------------------------- the TED notice, read before extraction
+
+
+NOTICE = TedNotice(
+    publication_number="629758-2026",
+    title="Deutschland - Systemberatung",
+    buyer="GMSH",
+    description=None,
+    deadline=date(2026, 10, 7),
+    deadline_utc_offset_minutes=120,
+    official_languages=("DEU",),
+    submission_languages=("DEU",),
+    cpv=("72000000",),
+    notice_pdf_url=None,
+    documents_url=None,
+    selection_criteria=("Eigenerklaerung zur Eignung.",),
+)
+
+
+class NoticeSource:
+    """A fetcher and a recorder that record what the node asked of them."""
+
+    def __init__(
+        self,
+        notice: TedNotice | None = NOTICE,
+        *,
+        fetch_error: Exception | None = None,
+        record_error: Exception | None = None,
+    ) -> None:
+        self.notice = notice
+        self.asked: list[str] = []
+        self.recorded: list[tuple[str, str, TedNotice]] = []
+        self._fetch_error = fetch_error
+        self._record_error = record_error
+
+    async def fetch(self, notice_number: str) -> TedNotice | None:
+        self.asked.append(notice_number)
+        if self._fetch_error is not None:
+            raise self._fetch_error
+        return self.notice
+
+    async def record(self, company_id: str, bid_id: str, notice: TedNotice) -> None:
+        if self._record_error is not None:
+            raise self._record_error
+        self.recorded.append((company_id, bid_id, notice))
+
+
+def node_with_notice(source: NoticeSource, rows: Sequence[BidDocumentRow]) -> DocumentParser:
+    collaborators = Collaborators(list(rows))
+    return DocumentParser(
+        load_documents=collaborators.load,
+        fetch=collaborators.fetch,
+        parser=ScriptedParser({r.id: parsed(r.id, "text") for r in rows}),
+        fetch_notice=source.fetch,
+        record_deadline=source.record,
+    )
+
+
+@pytest.mark.anyio
+async def test_the_notices_stated_facts_become_requirements_before_extraction() -> None:
+    """S3.2.2. `requirements` is an appending channel precisely so this node and
+    `extract_reqs` can each contribute without knowing the other exists."""
+    source = NoticeSource()
+    node = node_with_notice(source, [row("rc.pdf")])
+
+    update = await node(state(notice_number="629758-2026"))
+
+    assert source.asked == ["629758-2026"]
+    sources = {req.source for req in update["requirements"]}
+    assert sources == {RequirementSource.NOTICE}
+
+
+@pytest.mark.anyio
+async def test_the_deadline_is_written_to_the_bid() -> None:
+    source = NoticeSource()
+
+    await node_with_notice(source, [row("rc.pdf")])(state(notice_number="629758-2026"))
+
+    assert [(company, bid) for company, bid, _ in source.recorded] == [(COMPANY_ID, BID_ID)]
+
+
+@pytest.mark.anyio
+async def test_a_notice_with_no_deadline_writes_nothing_to_the_bid() -> None:
+    source = NoticeSource(NOTICE.model_copy(update={"deadline": None}))
+
+    await node_with_notice(source, [row("rc.pdf")])(state(notice_number="629758-2026"))
+
+    assert source.recorded == []
+
+
+@pytest.mark.anyio
+async def test_an_unreachable_ted_does_not_end_the_run(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The pack is the source of record. A bid whose documents are already uploaded — and
+    whose extraction is about to be paid for — must not fail because a public API is slow."""
+    source = NoticeSource(fetch_error=RuntimeError("no route to host"))
+    node = node_with_notice(source, [row("rc.pdf")])
+
+    with caplog.at_level(logging.WARNING, logger="crossbid.agent.nodes.parse_docs"):
+        update = await node(state(notice_number="629758-2026"))
+
+    assert update["documents"]
+    assert "requirements" not in update
+    assert any("could not be read" in record.getMessage() for record in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_a_failed_deadline_write_does_not_end_the_run(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    source = NoticeSource(record_error=RuntimeError("database gone"))
+    node = node_with_notice(source, [row("rc.pdf")])
+
+    with caplog.at_level(logging.WARNING, logger="crossbid.agent.nodes.parse_docs"):
+        update = await node(state(notice_number="629758-2026"))
+
+    assert update["requirements"], "the rows still arrive; only the bid column is missed"
+
+
+@pytest.mark.anyio
+async def test_a_publication_number_ted_does_not_know_contributes_nothing() -> None:
+    source = NoticeSource(None)
+    node = node_with_notice(source, [row("rc.pdf")])
+
+    update = await node(state(notice_number="629758-2026"))
+
+    assert "requirements" not in update
+    assert source.recorded == []
+
+
+@pytest.mark.anyio
+async def test_a_bid_with_no_notice_number_asks_ted_nothing() -> None:
+    source = NoticeSource()
+    node = node_with_notice(source, [row("rc.pdf")])
+
+    await node(state(notice_number=""))
+
+    assert source.asked == []
+
+
+@pytest.mark.anyio
+async def test_a_node_built_without_ted_reads_no_notice() -> None:
+    """Every offline test, and a deployment whose operator switched the search off."""
+    collaborators = Collaborators([row("rc.pdf")])
+    node = DocumentParser(
+        load_documents=collaborators.load,
+        fetch=collaborators.fetch,
+        parser=ScriptedParser({r.id: parsed(r.id, "text") for r in collaborators.rows}),
+    )
+
+    update = await node(state())
+
+    assert "requirements" not in update
+
+
+async def test_build_parse_docs_wires_the_notice_lookup(
+    offline_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The real seam: by publication number, and off the event loop because the client is
+    synchronous httpx and a node that blocked the loop would stall every other bid."""
+    asked: list[str] = []
+
+    class FakeClient:
+        def __init__(self, *_: object, **__: object) -> None: ...
+
+        def search_by_publication_number(
+            self, number: str, *, language: str | None = None
+        ) -> TedNotice:
+            asked.append(number)
+            return NOTICE
+
+    monkeypatch.setattr(parse_docs_module, "TedSearchClient", FakeClient)
+    store = CompanyDocumentStore(FakeStore(), ttl_seconds=600)  # type: ignore[arg-type]
+    node = build_parse_docs(offline_settings, object(), store=store)  # type: ignore[arg-type]
+
+    assert node._fetch_notice is not None
+    found = await node._fetch_notice("629758-2026")
+
+    assert found is NOTICE
+    assert asked == ["629758-2026"]
+
+
+async def test_build_parse_docs_wires_the_conditional_deadline_write(
+    offline_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """TED's date is written as midnight UTC with the offset beside it: the column is a
+    timestamptz and the hour is genuinely unknown, so the offset is what carries the
+    buyer's wall clock (ADR-0030)."""
+    written: list[dict[str, object]] = []
+
+    async def set_deadline(db: object, **kwargs: object) -> bool:
+        written.append(kwargs)
+        return True
+
+    monkeypatch.setattr(parse_docs_module, "set_bid_deadline_if_unset", set_deadline)
+    store = CompanyDocumentStore(FakeStore(), ttl_seconds=600)  # type: ignore[arg-type]
+    node = build_parse_docs(offline_settings, object(), store=store)  # type: ignore[arg-type]
+
+    assert node._record_deadline is not None
+    with caplog.at_level(logging.INFO, logger="crossbid.agent.nodes.parse_docs"):
+        await node._record_deadline(COMPANY_ID, BID_ID, NOTICE)
+
+    assert written[0]["deadline_utc_offset_minutes"] == 120
+    assert written[0]["deadline"] == datetime(2026, 10, 7, tzinfo=UTC)
+    assert any("written to the bid" in record.getMessage() for record in caplog.records)
+
+
+async def test_the_deadline_write_says_when_the_bidders_own_was_kept(
+    offline_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def set_deadline(db: object, **kwargs: object) -> bool:
+        return False
+
+    monkeypatch.setattr(parse_docs_module, "set_bid_deadline_if_unset", set_deadline)
+    store = CompanyDocumentStore(FakeStore(), ttl_seconds=600)  # type: ignore[arg-type]
+    node = build_parse_docs(offline_settings, object(), store=store)  # type: ignore[arg-type]
+
+    assert node._record_deadline is not None
+    with caplog.at_level(logging.INFO, logger="crossbid.agent.nodes.parse_docs"):
+        await node._record_deadline(COMPANY_ID, BID_ID, NOTICE)
+
+    assert any("the bidder had given one" in r.getMessage() for r in caplog.records)

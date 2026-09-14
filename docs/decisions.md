@@ -3570,3 +3570,178 @@ spend tokens to say nothing.
 It is **total**, like every tool the loop calls (S3.3.1): `TedUnavailableError` comes back as
 `{"status": "unavailable", …}` rather than as an exception, because a third party being down
 must not end a run that has already cost money.
+
+---
+
+## ADR-0046 — The notice's own facts become requirements, and only a tender document has a page
+
+**Date:** 2026-09-14 · **Stories:** S3.2.2 · **Status:** accepted
+
+The second path in the system from an input to a matrix row with no model in it. The first is
+a published DUME (S2.5.1); this one is TED's structured notice fields — the deadline, the
+languages a tender may be written in, and any selection criteria the buyer stated.
+
+**The sparsity is the point, not a disappointment.**
+`selection-criterion-description-lot` is populated on **14-17 % of CPV-72 notices**, and 496
+of 600 English ones carried none. That measurement is the strongest single piece of evidence
+for the upload-the-pack design: the notice usually does *not* carry the requirements, so a
+product that read only notices would have almost nothing to check. Where the buyer *has*
+stated them, though, asking a model to infer what the buyer already declared can only make
+the answer worse — which is the same argument the DUME path rests on.
+
+**The quote is the buyer's own words, untranslated.** `notice-title` is resolved in the
+bidder's language because it is read; a criterion is resolved in the *notice's* language
+because it is evidence. `eval/matching.py` compares `source_text` and never `translation`, and
+a machine translation of a legal criterion is not the criterion.
+
+**Which rows the checking loop gets.** A stated selection criterion is `COMPANY_PROPERTY`: by
+definition a fact about the bidder their evidence pack can settle. The deadline and the
+submission language are `DOCUMENT_SUBMISSION` — no fact about the company settles them, they
+are met by acting, and sending them to the loop would spend tool calls to reach `unclear`,
+which is the failure SP.1 measured (ADR-0003). The category of a stated criterion stays
+`OTHER`: the notice states it in prose and nothing here classifies prose, so guessing would
+put a wrong label on a row a reviewer trusts.
+
+**The deadline row says what is not known.** TED publishes a date and an offset and never an
+hour (ADR-0043), so the row reads "TED publishes the date and the buyer's UTC offset (+02:00)
+and no time of day; the hour is in the notice itself" rather than rendering a timestamp
+nobody published.
+
+### The constraint that stopped describing itself
+
+Migration 0005 wrote `(source = 'espd_request') = (page is null)` — "a DUME row has no page".
+Adding a third structured source made that read as an exception rather than a rule, and the
+`Requirement` validator said the same thing in Python. Both now state the rule the system
+actually has: **only a tender document has a page**, because only a tender document is a
+parsed PDF. The next structured source is a name in an `in (...)` list rather than another
+carve-out.
+
+### The deadline on the bid, written once and never over
+
+`set_bid_deadline_if_unset` carries `and deadline is null` in the SQL rather than in a caller
+that might forget it. The bidder types the deadline off the notice PDF and it carries an
+**hour**; TED's never does. So the bidder's is strictly better information, and an
+unconditional update would replace it every time a bid resumed from its checkpoint. A zero
+row count means "already set", not "no such bid", which is why this is the one updater here
+that does not raise on it.
+
+### Nothing here may end a run
+
+The fetch and the deadline write are both wrapped, and deliberately broadly. By the time
+`parse_docs` runs, the bidder has uploaded a pack and the run is about to spend a euro on
+extraction; a public search API being slow is not permitted to end that. The pack is the
+source of record and this is the buyer's own words *in addition* to it, so nothing is the
+common answer and never a failure.
+
+`search_by_publication_number` is a search with one clause, because the v3 API has no by-id
+endpoint. It lifts the `cn-standard` filter: the caller already has a specific notice, and
+filtering it out for being an award notice would be a confusing nothing.
+
+---
+
+## ADR-0047 — Per-company rate limits on the two routes that spend money
+
+**Date:** 2026-09-14 · **Stories:** S2.3.3 · **Status:** accepted
+
+**A dependency on `POST /documents` and `POST /bids`, not middleware.** Those two are the only
+routes that start real work — an upload parses and embeds a pack, a run is about five minutes
+and $1.60. Everything else reads a projection, and the workspace polls `GET /bids/{id}` every
+two seconds *by design* (S4.5.1): a limiter over every route would either throttle that poll
+or be set so high it stops bounding the LLM bill, which is the only thing the story exists to
+bound.
+
+**Not in `guards/`.** That package is the *prompt* boundary and its one invariant is that
+nothing in it imports from the rest of `crossbid` (`test_wrap.py` asserts it), which is what
+lets every prompt builder depend on it without a layering argument. A limiter is the *HTTP*
+boundary: it needs `CompanyContext`, so it needs `auth`. It sits beside `auth.py` instead —
+the other module whose whole job is answering "may this caller do this at all".
+
+**Keyed on the authenticated company.** Not an IP, which would put a shared office behind one
+budget and hand a botnet a fresh one per host; and never on anything the caller chooses.
+
+**A sliding window log.** At tens of calls per hour the log is at most `limit` floats per
+company per route, so exactness costs nothing and accuracy is the only thing left to choose
+on. A fixed window lets a caller spend the whole limit at 10:59 and the whole limit again at
+11:01 — two hours of budget in two minutes — and can say no more than "wait until the window
+ends". A token bucket fixes that and turns "10 per hour" into a drip an operator has to
+translate. With a log, `Retry-After` is a fact: the oldest call in the window is the one whose
+expiry frees the next slot.
+
+**A refused call is not recorded.** Counting refusals would let a client that keeps retrying
+extend its own block, turning one stuck browser tab into an hour of lockout.
+
+**Defaults, with the arithmetic.** 10 bid runs per hour caps one company near $16/h of LLM
+spend — enough to start a bid, realise it was the wrong pack and restart several times; far
+too few to drain the budget unnoticed. 120 uploads per hour bounds storage and CPU rather than
+the bill (an upload is a parse plus embeddings at ~$0.027/1M tokens); the DE pack is 28 files,
+so that is four full packs an hour.
+
+**What it cannot promise, said rather than implied.** The counters are a dictionary in one
+process: N uvicorn workers hold N of them, so the effective limit is `workers × limit`, and a
+restart forgets every window. It bounds runaway spend from one account; it is not a quota
+anyone could bill against. `slowapi`, which the plan named, is the same in-process design with
+the same caveat and one more dependency.
+
+**The 429 is deliberately not in the OpenAPI schema yet.** Declaring it would change
+`frontend/lib/api.ts`, and no browser code shows the wait; the schema is byte-identical on
+both routes, which is what keeps CI's staleness check green. It goes in when the frontend is
+taught to render it.
+
+---
+
+## ADR-0048 — Converting at the ECB rate, and the endpoint that is not the ECB
+
+**Date:** 2026-09-14 · **Stories:** S1.3.1 · **Status:** accepted
+
+`currency_convert` is the fifth tool, which completes brief item Medium 6's enable/disable
+surface and empties the "configured but not built" list that `settings.default.yaml` has been
+running ahead of the code with since S1.4.1.
+
+**The finding that decides the whole story.** Frankfurter's v2 default,
+`GET /v2/rate/PLN/EUR`, is **a blend of about 100 central banks** — `/v2/providers` lists 99
+keys — and returns `0.23069`. The story says "at the ECB rate". The ECB-pinned path,
+`/v2/providers/ECB/rate/PLN/EUR`, returns `0.23032`, byte-identical to what the frozen v1
+endpoint serves. Taking the obvious URL would have converted a Polish turnover threshold at a
+number no European tender is denominated in, and nothing on the matrix row would have shown
+it. The provider prefix is load-bearing, and a live test asserts the two still differ so the
+day that stops being true is a test failure rather than a quiet drift.
+
+v1 was the alternative and was rejected: `GET /` self-describes it as `frozen` against v2
+`current`, and its responses carry a `deprecation` header and a `link: … rel="successor-version"`.
+
+**A 404 is not an outage, and is never served from cache.** Frankfurter answers `422` for a
+string that is not a currency and `404` for a real currency the ECB does not quote (AFN, and
+any future date). Neither is retried, and neither falls back to the remembered rate: if the
+ECB stops quoting a pair, saying so beats serving last week's number forever. The tool reports
+`unknown_currency` and `unavailable` as different statuses so a model stops asking rather than
+backing off.
+
+**The cache is a module-level singleton, and the cost is stated rather than hidden.** The tool
+builds a fresh client per call — the same shape `search_ted` uses — so an instance-scoped
+cache would be cold on every call and the story's second criterion ("the last cached rate is
+returned with a staleness flag") could never be met. Postgres was rejected: a public reference
+rate is not a tenant fact, and the story asks for a fallback, not a history. What this cannot
+do is help a process that has never seen the pair and meets a downed service; that returns
+`unavailable` rather than inventing a rate, and there is a test for exactly that.
+
+Staleness is applied with `model_copy`, so the remembered record is never mutated into a
+permanently-stale one.
+
+**Currency codes are a pattern, not a generated `Literal`.** `ecertis_evidence_lookup` binds
+its 56 UUIDs into the tool schema because they come from a committed cache; the ECB's list is
+live data, and a hard-coded enum would refuse a real currency at the schema boundary. The
+pattern does double duty: the code is interpolated into the URL **path**, so a value carrying
+`../` could otherwise walk out of the endpoint — tested with
+`../../providers/CBR/rate/EUR`.
+
+**The answer's pair is compared with the pair asked for.** A body about a different pair,
+applied under our own label, is a wrong number nothing downstream would give away.
+
+### A test constant that had gone stale twice
+
+`test_tool_registry.py` used the name of a real not-yet-built tool as its example of one —
+first `search_ted`, then `currency_convert`. Both have now been built, and the constant broke
+each time. It is `haruspex_lookup` now, plainly fictional and injected through `with_tools`
+rather than leaning on the shipped settings, so the example no longer depends on the shipped
+file having a gap. `PENDING_TOOLS` is kept as an empty `frozenset[str]` rather than deleted,
+so the next story that runs the settings ahead of the code has the exemption waiting.

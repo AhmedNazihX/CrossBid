@@ -100,6 +100,14 @@ class TedNotice(BaseModel):
         description="Languages a tender may be submitted in"
     )
     cpv: tuple[str, ...] = Field(description="CPV codes on the notice, deduplicated")
+    selection_criteria: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "The selection criteria the buyer stated on the notice, in the notice's own "
+            "language. Empty on most notices — populated on 14-17 % of CPV-72 ones, which "
+            "is the measurement the upload-the-pack design rests on (S3.2.2)."
+        ),
+    )
     notice_pdf_url: str | None = Field(
         description="The notice as published, in its own language. S1.2.2 opens this."
     )

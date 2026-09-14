@@ -1179,3 +1179,46 @@ async def test_a_bid_started_without_a_deadline_stores_neither_half_of_the_pair(
     params = db.params()
     assert params["deadline"] is None
     assert params["deadline_offset"] is None
+
+
+# ---------------------------------------------------- S3.2.2: TED's deadline, conditionally
+
+
+@pytest.mark.anyio
+async def test_teds_deadline_is_written_when_the_bid_has_none() -> None:
+    db = FakeDatabase(Scripted(rowcount=1))
+
+    written = await bids.set_bid_deadline_if_unset(
+        db,
+        company_id=str(COMPANY_ID),
+        bid_id=str(BID_ID),
+        deadline=datetime(2026, 10, 7, tzinfo=UTC),
+        deadline_utc_offset_minutes=120,
+    )
+
+    assert written is True
+    assert db.statements == [bids.UPDATE_BID_DEADLINE_IF_UNSET]
+    assert db.params()["company_id"] == str(COMPANY_ID)
+    assert db.params()["deadline_offset"] == 120
+
+
+@pytest.mark.anyio
+async def test_teds_deadline_never_overwrites_the_one_the_bidder_gave() -> None:
+    """The bidder's carries an hour and TED's never does (ADR-0043), so theirs is strictly
+    better information — and a resumed run must not quietly replace it."""
+    db = FakeDatabase(Scripted(rowcount=0))
+
+    written = await bids.set_bid_deadline_if_unset(
+        db,
+        company_id=str(COMPANY_ID),
+        bid_id=str(BID_ID),
+        deadline=datetime(2026, 10, 7, tzinfo=UTC),
+        deadline_utc_offset_minutes=120,
+    )
+
+    assert written is False, "zero rows means 'already set', not 'no such bid'"
+
+
+def test_the_conditional_update_refuses_to_touch_a_bid_that_has_a_deadline() -> None:
+    """The guard is in the SQL, not in a caller that might forget it."""
+    assert "deadline is null" in " ".join(bids.UPDATE_BID_DEADLINE_IF_UNSET.split())

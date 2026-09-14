@@ -42,12 +42,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable, Sequence
+from datetime import UTC, datetime, time
 from typing import Final, Optional
 
 import httpx
 from langchain_core.runnables import RunnableConfig
 
 from crossbid.agent.espd_requirements import requirements_from_espd
+from crossbid.agent.notice_requirements import requirements_from_notice
 from crossbid.agent.state import (
     BidState,
     ExtractionProblem,
@@ -64,8 +66,15 @@ from crossbid.ingestion.storage import (
     company_document_store,
 )
 from crossbid.models.requirement import Requirement
+from crossbid.models.ted import TedNotice
 from crossbid.models.tender import DocumentKind
-from crossbid.readmodel.bids import BidDocumentRow, ConnectionSource, bid_documents
+from crossbid.readmodel.bids import (
+    BidDocumentRow,
+    ConnectionSource,
+    bid_documents,
+    set_bid_deadline_if_unset,
+)
+from crossbid.reference.ted_client import REQUEST_TIMEOUT_S, TedSearchClient
 from crossbid.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -78,6 +87,17 @@ DocumentLoader = Callable[[str, str], Awaitable[Sequence[BidDocumentRow]]]
 to a `Database`, is the real one."""
 
 DocumentFetcher = Callable[[str, BidDocumentRow], Awaitable[bytes]]
+
+DeadlineRecorder = Callable[[str, str, "TedNotice"], Awaitable[None]]
+"""`(company_id, bid_id, notice)` — writes TED's deadline onto the bid (S3.2.2)."""
+
+NoticeFetcher = Callable[[str], Awaitable["TedNotice | None"]]
+"""Given a TED publication number, the notice or `None` (S3.2.2).
+
+A seam rather than a direct client call: every unit test in this package runs offline, and
+a node that reached the network on construction could not be one of them. The graph passes
+the real one; `None` means the graph was built without TED, which is also what an operator
+who has switched the search off is asking for."""
 """`(company_id, document) -> the file's bytes`. `storage_fetcher` is the real one."""
 
 
@@ -99,10 +119,14 @@ class DocumentParser:
         load_documents: DocumentLoader,
         fetch: DocumentFetcher,
         parser: Parser | None = None,
+        fetch_notice: NoticeFetcher | None = None,
+        record_deadline: DeadlineRecorder | None = None,
     ) -> None:
         self._load_documents = load_documents
         self._fetch = fetch
         self._parser: Parser = PyMuPDFParser() if parser is None else parser
+        self._fetch_notice = fetch_notice
+        self._record_deadline = record_deadline
 
     @property
     def parser(self) -> Parser:
@@ -145,12 +169,66 @@ class DocumentParser:
                     len(parsed.parsed.unread_pages),
                     parsed.parsed.unread_pages,
                 )
+        requirements.extend(await self._read_notice(state, company_id, bid_id))
         update: ParseUpdate = {"documents": documents, "extraction_problems": problems}
         if requirements:
             # Only when there are some: the channel appends, and an empty list written here
             # would still be a write, one superstep before extraction adds its own rows.
             update["requirements"] = requirements
         return update
+
+    async def _read_notice(
+        self, state: BidState, company_id: str, bid_id: str
+    ) -> tuple[Requirement, ...]:
+        """The buyer's structured notice fields as requirements (S3.2.2), or nothing.
+
+        **Nothing is the common answer and never an error.** Most notices state no selection
+        criteria — 14-17 % of CPV-72 ones do — and TED may be unreachable, and a bid whose
+        pack has already been uploaded must not fail because a public search API is slow.
+        The pack is the source of record; this is the buyer's own words where they exist, in
+        addition to it.
+
+        No fetcher configured means the graph was built without one, which is the case in
+        every offline test and in a deployment that has switched TED off.
+        """
+        if self._fetch_notice is None:
+            return ()
+        notice_number = state.get("notice_number", "")
+        if not notice_number:
+            return ()
+        try:
+            notice = await self._fetch_notice(notice_number)
+        # Deliberately broad: a public search API is not allowed to end a run whose pack
+        # has already been uploaded and whose extraction is about to be paid for.
+        except Exception:
+            logger.warning(
+                "Bid %s: the TED notice %s could not be read; continuing on the pack alone",
+                bid_id,
+                notice_number,
+                exc_info=True,
+            )
+            return ()
+        if notice is None:
+            logger.info("Bid %s: TED has no notice %s", bid_id, notice_number)
+            return ()
+        await self._store_deadline(company_id, bid_id, notice)
+        return requirements_from_notice(notice, bid_id=bid_id)
+
+    async def _store_deadline(self, company_id: str, bid_id: str, notice: TedNotice) -> None:
+        """The deadline on the bid, for the dashboard's countdown (S3.2.2).
+
+        Guarded the same way the fetch is: the read-model write is not allowed to end a run
+        either. The write itself refuses to overwrite a deadline the bidder already gave,
+        because theirs carries an hour and TED's never does (`set_bid_deadline_if_unset`).
+        """
+        if self._record_deadline is None or notice.deadline is None:
+            return
+        try:
+            await self._record_deadline(company_id, bid_id, notice)
+        except Exception:
+            logger.warning(
+                "Bid %s: TED's deadline could not be written to the bid", bid_id, exc_info=True
+            )
 
     async def _read_espd(
         self, company_id: str, row: BidDocumentRow, bid_id: str, language: str
@@ -220,7 +298,36 @@ def build_parse_docs(
     async def load(company_id: str, bid_id: str) -> Sequence[BidDocumentRow]:
         return await bid_documents(db, company_id=company_id, bid_id=bid_id)
 
-    return DocumentParser(load_documents=load, fetch=storage_fetcher(bucket))
+    async def fetch_notice(notice_number: str) -> TedNotice | None:
+        """The bid's own notice, by publication number. Exactly one match or none."""
+        client = TedSearchClient(httpx.Client(timeout=REQUEST_TIMEOUT_S))
+        page = await asyncio.to_thread(
+            client.search_by_publication_number, notice_number, language=None
+        )
+        return page
+
+    async def record_deadline(company_id: str, bid_id: str, notice: TedNotice) -> None:
+        if notice.deadline is None:  # pragma: no cover - the caller checks first
+            return
+        written = await set_bid_deadline_if_unset(
+            db,
+            company_id=company_id,
+            bid_id=bid_id,
+            deadline=datetime.combine(notice.deadline, time.min, tzinfo=UTC),
+            deadline_utc_offset_minutes=notice.deadline_utc_offset_minutes,
+        )
+        logger.info(
+            "Bid %s: TED's deadline %s",
+            bid_id,
+            "written to the bid" if written else "not used; the bidder had given one",
+        )
+
+    return DocumentParser(
+        load_documents=load,
+        fetch=storage_fetcher(bucket),
+        fetch_notice=fetch_notice,
+        record_deadline=record_deadline,
+    )
 
 
 def storage_fetcher(

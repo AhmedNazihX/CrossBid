@@ -4,1975 +4,1849 @@
  */
 
 export interface paths {
-  '/health': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Health
-     * @description Liveness probe. Used by Compose and by the smoke test.
-     */
-    get: operations['health_health_get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/documents': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * List the company's documents
-     * @description Every document of the calling company, newest first.
-     */
-    get: operations['list_documents_documents_get']
-    put?: never
-    /**
-     * Upload a document
-     * @description Accept the file and answer 202 at once; poll `GET /documents/{id}` until it is done.
-     *
-     *     Every kind but `tender_espd_request` must be a PDF; that one must be the buyer's ESPD
-     *     request (DUME) as XML, and nothing else may be (see the module docstring).
-     *
-     *     The status moves `uploaded → parsed → embedded → ready`. A failure carries a
-     *     `failure_reason` the bidder can act on.
-     */
-    post: operations['upload_document_documents_post']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/documents/{document_id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Poll one document
-     * @description One document of the calling company. Another company's id answers 404.
-     */
-    get: operations['get_document_documents__document_id__get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/documents/{document_id}/url': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * A short-lived URL for the document's file
-     * @description Sign the document's file for the browser's PDF viewer (S4.5.1's source panel).
-     *
-     *     The URL lives for the configured TTL, ten minutes at most; `expires_at` says when to
-     *     ask again. Another company's id, an unknown id and a file Storage no longer holds are
-     *     the same 404.
-     */
-    get: operations['get_document_url_documents__document_id__url_get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/bids': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * List the company's bids
-     * @description Every bid of the calling company, newest first, from the read model only.
-     */
-    get: operations['list_company_bids_bids_get']
-    put?: never
-    /**
-     * Start a bid
-     * @description Record a `queued` bid, attach its documents and start the graph in the background.
-     *
-     *     Answers 202 at once; poll `GET /bids/{id}` until the status is `awaiting_review` or
-     *     `failed`. Every document must be this company's, a tender document, unattached and
-     *     `ready`, or the answer names the one that is not.
-     */
-    post: operations['start_bid_bids_post']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/bids/{bid_id}/review': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Submit the review that finishes a bid
-     * @description Resume the parked run with the reviewer's edits and answer the finished bid.
-     *
-     *     The safety boundary: nothing leaves this system as final until a person has been here.
-     *     The run is waiting at its interrupt, this hands it the submission, the scorer re-runs on
-     *     the reviewer's statuses and the bid ends `complete`.
-     *
-     *     Answers **409** when the bid is not parked at `awaiting_review` — which is the same
-     *     answer for "somebody already reviewed it" and "it is still running", because the claim
-     *     is one conditional update and cannot tell them apart. That is deliberate: a second
-     *     submission must not half-apply. **422** names a row the matrix does not have, a status
-     *     the row cannot legally take, or a decision that differs from the agent's with no reason
-     *     given; the check happens here, before the graph is resumed, so a rejected review leaves
-     *     the bid exactly where it was.
-     */
-    post: operations['submit_review_bids__bid_id__review_post']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/bids/{bid_id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Poll one bid
-     * @description One bid of the calling company with its requirements so far. Another's id is 404.
-     */
-    get: operations['get_bid_bids__bid_id__get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/companies': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Create the calling user's company
-     * @description Onboarding: the first thing a newly signed-in bidder does (S0.3.1, S4.2.1).
-     *
-     *     This is the only route that takes `current_user` rather than `current_company`, and it
-     *     has to: a user with no company cannot be scoped to one, so every other route answers
-     *     404 until this has run. The owner comes from the verified token and never from the
-     *     body — a client that could name the owner could create a company for somebody else.
-     */
-    post: operations['post_company_companies_post']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/companies/me': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * The calling company's profile
-     * @description The facts the matrix checks a tender against. A company with no row answers 404.
-     */
-    get: operations['get_company_profile_companies_me_get']
-    /**
-     * Replace the calling company's profile
-     * @description Save the whole profile, then write it to the agent's memory.
-     *
-     *     The row is the source of truth and is written first, so a memory write that fails leaves
-     *     a genuinely saved profile: that answers 200 with `warning` set, not a 5xx. A company with
-     *     no row is the only 404 here.
-     *
-     *     The body is the domain model itself, so an unknown field or one outside its bounds is
-     *     FastAPI's own 422 and names the field — which is what S4.2.1 puts under the input.
-     */
-    put: operations['put_company_profile_companies_me_put']
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/dev/settings': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Developer settings
-     * @description What the agent may reach and how it is configured. Outside production only.
-     */
-    get: operations['read_dev_settings_dev_settings_get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/tenders/search': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Search TED for published contract notices
-     * @description One page of notices. A malformed CPV is 422 here rather than a 400 from TED.
-     */
-    get: operations['search_tenders_tenders_search_get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health
+         * @description Liveness probe. Used by Compose and by the smoke test.
+         */
+        get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the company's documents
+         * @description Every document of the calling company, newest first.
+         */
+        get: operations["list_documents_documents_get"];
+        put?: never;
+        /**
+         * Upload a document
+         * @description Accept the file and answer 202 at once; poll `GET /documents/{id}` until it is done.
+         *
+         *     Every kind but `tender_espd_request` must be a PDF; that one must be the buyer's ESPD
+         *     request (DUME) as XML, and nothing else may be (see the module docstring).
+         *
+         *     The status moves `uploaded → parsed → embedded → ready`. A failure carries a
+         *     `failure_reason` the bidder can act on.
+         */
+        post: operations["upload_document_documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll one document
+         * @description One document of the calling company. Another company's id answers 404.
+         */
+        get: operations["get_document_documents__document_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A short-lived URL for the document's file
+         * @description Sign the document's file for the browser's PDF viewer (S4.5.1's source panel).
+         *
+         *     The URL lives for the configured TTL, ten minutes at most; `expires_at` says when to
+         *     ask again. Another company's id, an unknown id and a file Storage no longer holds are
+         *     the same 404.
+         */
+        get: operations["get_document_url_documents__document_id__url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the company's bids
+         * @description Every bid of the calling company, newest first, from the read model only.
+         */
+        get: operations["list_company_bids_bids_get"];
+        put?: never;
+        /**
+         * Start a bid
+         * @description Record a `queued` bid, attach its documents and start the graph in the background.
+         *
+         *     Answers 202 at once; poll `GET /bids/{id}` until the status is `awaiting_review` or
+         *     `failed`. Every document must be this company's, a tender document, unattached and
+         *     `ready`, or the answer names the one that is not.
+         */
+        post: operations["start_bid_bids_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bids/{bid_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit the review that finishes a bid
+         * @description Resume the parked run with the reviewer's edits and answer the finished bid.
+         *
+         *     The safety boundary: nothing leaves this system as final until a person has been here.
+         *     The run is waiting at its interrupt, this hands it the submission, the scorer re-runs on
+         *     the reviewer's statuses and the bid ends `complete`.
+         *
+         *     Answers **409** when the bid is not parked at `awaiting_review` — which is the same
+         *     answer for "somebody already reviewed it" and "it is still running", because the claim
+         *     is one conditional update and cannot tell them apart. That is deliberate: a second
+         *     submission must not half-apply. **422** names a row the matrix does not have, a status
+         *     the row cannot legally take, or a decision that differs from the agent's with no reason
+         *     given; the check happens here, before the graph is resumed, so a rejected review leaves
+         *     the bid exactly where it was.
+         */
+        post: operations["submit_review_bids__bid_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bids/{bid_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll one bid
+         * @description One bid of the calling company with its requirements so far. Another's id is 404.
+         */
+        get: operations["get_bid_bids__bid_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create the calling user's company
+         * @description Onboarding: the first thing a newly signed-in bidder does (S0.3.1, S4.2.1).
+         *
+         *     This is the only route that takes `current_user` rather than `current_company`, and it
+         *     has to: a user with no company cannot be scoped to one, so every other route answers
+         *     404 until this has run. The owner comes from the verified token and never from the
+         *     body — a client that could name the owner could create a company for somebody else.
+         */
+        post: operations["post_company_companies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The calling company's profile
+         * @description The facts the matrix checks a tender against. A company with no row answers 404.
+         */
+        get: operations["get_company_profile_companies_me_get"];
+        /**
+         * Replace the calling company's profile
+         * @description Save the whole profile, then write it to the agent's memory.
+         *
+         *     The row is the source of truth and is written first, so a memory write that fails leaves
+         *     a genuinely saved profile: that answers 200 with `warning` set, not a 5xx. A company with
+         *     no row is the only 404 here.
+         *
+         *     The body is the domain model itself, so an unknown field or one outside its bounds is
+         *     FastAPI's own 422 and names the field — which is what S4.2.1 puts under the input.
+         */
+        put: operations["put_company_profile_companies_me_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Developer settings
+         * @description What the agent may reach and how it is configured. Outside production only.
+         */
+        get: operations["read_dev_settings_dev_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenders/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search TED for published contract notices
+         * @description One page of notices. A malformed CPV is 422 here rather than a 400 from TED.
+         */
+        get: operations["search_tenders_tenders_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
-export type webhooks = Record<string, never>
+export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /**
-     * AgentSettings
-     * @description Concurrency limits on the two fan-outs, each bounding calls to OpenRouter.
-     *
-     *     `extract_concurrency` is the deterministic one -- sections of `extract_reqs` (S3.2.1), a
-     *     fixed number of structured calls. `check_concurrency` is the agentic one -- per-requirement
-     *     ReAct loops in `check_reqs` (F3.3), each up to `max_tool_calls_per_requirement` calls.
-     *     Separate keys because the call shapes differ, so tuning one must not move the other.
-     */
-    AgentSettings: {
-      /** Extract Concurrency */
-      extract_concurrency: number
-      /** Check Concurrency */
-      check_concurrency: number
-      /** Max Tool Calls Per Requirement */
-      max_tool_calls_per_requirement: number
-      /** Run Budget Seconds */
-      run_budget_seconds: number
-      /** Run Budget Usd */
-      run_budget_usd: number
-      /** Llm Timeout Seconds */
-      llm_timeout_seconds: number
-    }
-    /**
-     * BidDocumentResponse
-     * @description One document of the bid, as the workspace lists it beside the matrix.
-     */
-    BidDocumentResponse: {
-      /**
-       * Id
-       * Format: uuid
-       * @description The document id; `GET /documents/{id}` polls it
-       */
-      id: string
-      /**
-       * Name
-       * @description The filename the bidder uploaded
-       */
-      name: string
-      /**
-       * Pages
-       * @description Total pages once parsed
-       */
-      pages: number
-      /**
-       * Unread Pages
-       * @description Pages with no text layer, never read
-       */
-      unread_pages: number[]
-    }
-    /**
-     * BidListResponse
-     * @description The calling company's bids, newest first.
-     */
-    BidListResponse: {
-      /**
-       * Bids
-       * @description Newest first, at most 200
-       */
-      bids: components['schemas']['BidSummary'][]
-    }
-    /**
-     * BidResponse
-     * @description One bid and how far its run has got. `GET /bids/{id}` is polled for it.
-     */
-    BidResponse: {
-      /**
-       * Id
-       * Format: uuid
-       * @description The bid id; poll `GET /bids/{id}` with it
-       */
-      id: string
-      /**
-       * Notice Number
-       * @description TED publication number
-       */
-      notice_number: string | null
-      /**
-       * Title
-       * @description What the dashboard calls this bid
-       */
-      title: string
-      /**
-       * Source Language
-       * @description The tender's language, BCP 47
-       */
-      source_language: string | null
-      /**
-       * Bidder Language
-       * @description What requirements are explained in
-       */
-      bidder_language: string
-      /** @description queued → parsing → extracting → checking → scoring → awaiting_review; failed carries failure_reason */
-      status: components['schemas']['BidStatus']
-      /**
-       * Failure Reason
-       * @description Why a failed run stopped: the stage and the error type, no more
-       */
-      failure_reason: string | null
-      /**
-       * Requirements
-       * @description Every extracted requirement; empty until extraction has finished
-       */
-      requirements: components['schemas']['Requirement'][]
-      /**
-       * Matrix Rows
-       * @description The compliance matrix, one row per checked requirement, in the same order as `requirements`. Fills in lane by lane while the status is `checking`.
-       */
-      matrix_rows: components['schemas']['MatrixRow'][]
-      /** @description The agent's go/no-go with every gap behind it, written when the status reaches `scoring`, and re-scored on the reviewer's statuses once they have reviewed. Null before scoring. Advisory: what the *rules* say about the matrix. */
-      verdict: components['schemas']['Verdict'] | null
-      /** @description What the reviewer decided. Null until a human has. Deliberately not the same field as `verdict.decision`: that is what the rules say about the matrix as the reviewer left it, and this is what the reviewer concluded. The difference between them is the override. */
-      decision: components['schemas']['Decision'] | null
-      /**
-       * Problems
-       * @description What parsing and extraction could not do, for the reviewer
-       */
-      problems: components['schemas']['ExtractionProblem'][]
-      /**
-       * Documents
-       * @description The pack this bid parses
-       */
-      documents: components['schemas']['BidDocumentResponse'][]
-      /**
-       * Created At
-       * @description When the bid was started
-       */
-      created_at: string | null
-      /**
-       * Updated At
-       * @description When the status last changed
-       */
-      updated_at: string | null
-    }
-    /**
-     * BidStatus
-     * @description Where a bid has got to.
-     *
-     *     The browser polls `GET /bids/{id}` every 2s and renders the stage, so these names are
-     *     user-visible. `AWAITING_REVIEW` is the interrupt: the graph stops and waits for a human.
-     * @enum {string}
-     */
-    BidStatus:
-      | 'queued'
-      | 'parsing'
-      | 'extracting'
-      | 'checking'
-      | 'scoring'
-      | 'awaiting_review'
-      | 'applying_review'
-      | 'complete'
-      | 'failed'
-    /**
-     * BidSummary
-     * @description A bid as the dashboard lists it. Read from the read-model tables, never a checkpoint.
-     */
-    BidSummary: {
-      /** Id */
-      id: string
-      /** Company Id */
-      company_id: string
-      /** Ted Publication Number */
-      ted_publication_number?: string | null
-      /** Title */
-      title: string
-      /** Buyer */
-      buyer?: string | null
-      /** Source Language */
-      source_language?: string | null
-      /** Deadline */
-      deadline?: string | null
-      /**
-       * Deadline Utc Offset Minutes
-       * @description The UTC offset the buyer's notice stated, so the deadline can be printed on the buyer's clock (S4.4.1). Null when no deadline is recorded. Only an offset and never an IANA zone: neither a notice nor TED publishes one, so a zone name would be an inference — and one that changes answer twice a year.
-       */
-      deadline_utc_offset_minutes?: number | null
-      status: components['schemas']['BidStatus']
-      /** @description Final decision once reviewed; None while in flight */
-      decision?: components['schemas']['Decision'] | null
-      /**
-       * Open Items
-       * @description Matrix rows that still need somebody: `partially_supported` or `unsupported`. Counted from the matrix rather than from the verdict's gaps, because a bid that has not been scored yet has no gaps and still has work in it — and because a reviewer who confirmed a partially supported row has confirmed that it is still unproven, not that it is settled.
-       * @default 0
-       */
-      open_items: number
-      /** Created At */
-      created_at?: string | null
-      /** Updated At */
-      updated_at?: string | null
-    }
-    /** Body_upload_document_documents_post */
-    Body_upload_document_documents_post: {
-      /**
-       * File
-       * @description The PDF, at most 50 MB — or, for the kind `tender_espd_request`, the buyer's ESPD request XML, at most 4194304 bytes
-       */
-      file: string
-      /** @description What the document is; it also decides which file types are accepted */
-      kind: components['schemas']['DocumentKind']
-    }
-    /**
-     * CertificateHeld
-     * @description A certificate the company holds, with the expiry the matrix must respect.
-     *
-     *     An expired certificate is not evidence, which is why `expires_on` is not optional
-     *     decoration: `GET /companies/me` flags it on the profile form, and `agent/flags.py` warns
-     *     on any matrix row that cites one (S3.4.4).
-     */
-    CertificateHeld: {
-      /**
-       * Name
-       * @description e.g. 'ISO/IEC 27001:2022'
-       */
-      name: string
-      /** Issuer */
-      issuer?: string | null
-      /** Number */
-      number?: string | null
-      /** Issued On */
-      issued_on?: string | null
-      /** Expires On */
-      expires_on?: string | null
-      /**
-       * Scope
-       * @description What the certificate actually covers
-       */
-      scope?: string | null
-    }
-    /**
-     * CertificateResponse
-     * @description One certificate the company holds, with the expiry flags the form shows beside it.
-     */
-    CertificateResponse: {
-      /**
-       * Name
-       * @description e.g. 'ISO/IEC 27001:2022'
-       */
-      name: string
-      /**
-       * Issuer
-       * @description Who issued it, if recorded
-       */
-      issuer: string | null
-      /**
-       * Number
-       * @description The certificate number, if recorded
-       */
-      number: string | null
-      /**
-       * Issued On
-       * @description When it was issued, if recorded
-       */
-      issued_on: string | null
-      /**
-       * Expires On
-       * @description When it expires; null when not recorded
-       */
-      expires_on: string | null
-      /**
-       * Scope
-       * @description What the certificate actually covers
-       */
-      scope: string | null
-      /**
-       * Is Expired
-       * @description The recorded expiry is before checked_on — this is no longer evidence
-       */
-      is_expired: boolean
-      /**
-       * Is Valid
-       * @description Valid on checked_on. False when no expiry is recorded: without a date the profile cannot claim validity, which is not the same as being expired
-       */
-      is_valid: boolean
-    }
-    /**
-     * Checkability
-     * @description Whether evidence can settle this requirement at all.
-     *
-     *     SP.1's first checking round returned `unclear` for all eight rows it tried, because they
-     *     were all document-submission duties and no corpus of company facts can establish "we
-     *     submitted form X". Only `COMPANY_PROPERTY` rows are worth spending tool calls on;
-     *     `DOCUMENT_SUBMISSION` rows go to the reviewer as "attach this" (ADR-0003).
-     * @enum {string}
-     */
-    Checkability: 'company_property' | 'document_submission' | 'neither'
-    /**
-     * CompanyProfile
-     * @description The bidder, as the matrix sees them.
-     */
-    CompanyProfile: {
-      /** Name */
-      name: string
-      /**
-       * Country
-       * @description ISO 3166-1 alpha-2, lower case. The pattern is `companies.country`'s own check constraint, so the same value the column would refuse is refused here — as a 422 naming the field rather than a CheckViolation surfacing as a 500. 'DE' is rejected, not lower-cased: a PUT that rewrote its own body would answer with something the caller never sent, and the pattern reaches the generated client, so the form can say so before the request leaves the browser.
-       */
-      country: string
-      legal_form: components['schemas']['LegalForm']
-      /**
-       * Registration Number
-       * @description e.g. 'HRB 84512'
-       */
-      registration_number?: string | null
-      /** Registration Court */
-      registration_court?: string | null
-      /**
-       * Language
-       * @description BCP 47
-       * @default de
-       */
-      language: string
-      /** @default plain */
-      tone: components['schemas']['Tone']
-      /**
-       * Staff Fte
-       * @description Total full-time equivalents
-       */
-      staff_fte?: number | null
-      /**
-       * Staff Fte Relevant
-       * @description FTE in the field of the contract, which is what tenders ask for
-       */
-      staff_fte_relevant?: number | null
-      /**
-       * Turnover
-       * @default []
-       */
-      turnover: components['schemas']['TurnoverYear'][]
-      /**
-       * Certificates
-       * @default []
-       */
-      certificates: components['schemas']['CertificateHeld'][]
-    }
-    /**
-     * CompanyProfileResponse
-     * @description The calling company's profile as the form reads it back, expiry already checked.
-     */
-    CompanyProfileResponse: {
-      /**
-       * Name
-       * @description Legal name, as it appears on the register
-       */
-      name: string
-      /**
-       * Country
-       * @description ISO 3166-1 alpha-2, lowercase — where the bidder is
-       */
-      country: string
-      /** @description Legal form; 'other' when none of them fits */
-      legal_form: components['schemas']['LegalForm']
-      /**
-       * Registration Number
-       * @description e.g. 'HRB 84512'
-       */
-      registration_number: string | null
-      /**
-       * Registration Court
-       * @description The register the number belongs to
-       */
-      registration_court: string | null
-      /**
-       * Language
-       * @description BCP 47; requirements are explained in this language
-       */
-      language: string
-      /** @description How explanations are written */
-      tone: components['schemas']['Tone']
-      /**
-       * Staff Fte
-       * @description Total full-time equivalents
-       */
-      staff_fte: number | null
-      /**
-       * Staff Fte Relevant
-       * @description FTE in the field of the contract, which is what tenders ask for
-       */
-      staff_fte_relevant: number | null
-      /**
-       * Turnover
-       * @description Turnover per fiscal year in the field of the contract
-       */
-      turnover: components['schemas']['TurnoverYear'][]
-      /**
-       * Certificates
-       * @description Certificates held, each flagged against checked_on
-       */
-      certificates: components['schemas']['CertificateResponse'][]
-      /**
-       * Has Expired Certificates
-       * @description At least one certificate has expired; the form warns about it
-       */
-      has_expired_certificates: boolean
-      /**
-       * Checked On
-       * Format: date
-       * @description The day the expiry flags were computed for, UTC
-       */
-      checked_on: string
-      /**
-       * Warning
-       * @description Null unless a save only partly succeeded. Set when the profile was stored but the agent's memory of it was not: the facts above are saved, and saving again repairs the rest. A read never sets it
-       */
-      warning?: string | null
-    }
-    /**
-     * Decision
-     * @description The recommendation, in the design system's fixed vocabulary (ADR-0013).
-     *
-     *     Advisory only -- a human confirms before it is final. `insufficient_evidence` is the
-     *     agent declining to judge: nothing blocks the bid, but the documents do not settle enough
-     *     rows for a recommendation either way.
-     * @enum {string}
-     */
-    Decision: 'go' | 'conditional' | 'no_go' | 'insufficient_evidence'
-    /**
-     * DevSettingsResponse
-     * @description The developer panel's read model. Runtime settings only — never the environment.
-     */
-    DevSettingsResponse: {
-      /** @description The OpenRouter slug in use for each role */
-      models: components['schemas']['ModelSlugs']
-      /**
-       * Available Models
-       * @description Slugs the picker may offer: the verified set, not OpenRouter's catalogue
-       */
-      available_models: string[]
-      /** Temperature */
-      temperature: number
-      /** Max Tokens */
-      max_tokens: number
-      /**
-       * System Prompt Set
-       * @description Whether a system prompt is configured. The text itself is never returned: it is the prompt-injection defence's standing instructions.
-       */
-      system_prompt_set: boolean
-      /** @description Concurrency limits, the per-requirement tool budget and the run budgets */
-      agent: components['schemas']['AgentSettings']
-      /**
-       * Tools
-       * @description Every tool that exists, enabled or not, sorted by name
-       */
-      tools: components['schemas']['ToolDescriptor'][]
-      /**
-       * Unbuilt Tools
-       * @description Names enabled in settings that no module provides yet — a story that has not landed. Listed rather than dropped, so 'off' and 'not built' stay distinct.
-       */
-      unbuilt_tools: string[]
-    }
-    /**
-     * DocumentKind
-     * @description What a stored file is — and, since S2.5.1, which reader is allowed to open it.
-     *
-     *     A company's evidence pack outlives any single bid; a tender's documents belong to one bid
-     *     and are deleted with it. The notice is kept apart from the procurement documents because
-     *     it comes from TED's documented API while the rest is uploaded by the bidder.
-     *
-     *     `TENDER_ESPD_REQUEST` is the odd one and deliberately so: it is the only kind that is not
-     *     a PDF. A published DUME is an XML form carrying the buyer's ESPD criteria as canonical
-     *     UUIDs, so it is read by `ingestion/espd.py` and never by the PDF parser. Keeping it a
-     *     *kind* rather than an exception to the PDF rule is what lets the upload boundary stay an
-     *     accept-list: every other kind is still PDF-only, and this one is XML-only (see
-     *     `routers/documents.py`).
-     * @enum {string}
-     */
-    DocumentKind:
-      'company_evidence' | 'tender_document' | 'tender_notice' | 'tender_espd_request'
-    /**
-     * DocumentListResponse
-     * @description Every document of the calling company, newest first.
-     */
-    DocumentListResponse: {
-      /**
-       * Documents
-       * @description Newest first
-       */
-      documents: components['schemas']['DocumentResponse'][]
-    }
-    /**
-     * DocumentResponse
-     * @description One uploaded document and how far it has got. `GET /documents/{id}` is polled for it.
-     */
-    DocumentResponse: {
-      /**
-       * Id
-       * Format: uuid
-       * @description The document id; use it to poll and to start a bid
-       */
-      id: string
-      /** @description Company evidence, tender document, tender notice, or the buyer's published ESPD request (DUME), which is the one kind that is XML rather than PDF */
-      kind: components['schemas']['DocumentKind']
-      /**
-       * Name
-       * @description The filename as uploaded
-       */
-      name: string
-      /**
-       * Bid Id
-       * @description The bid this document is attached to; null until a bid is started with it
-       */
-      bid_id: string | null
-      /** @description uploaded → parsed → embedded → ready, or failed with failure_reason */
-      status: components['schemas']['DocumentStatus']
-      /**
-       * Failure Reason
-       * @description Why the document failed, in a sentence to act on; null otherwise
-       */
-      failure_reason: string | null
-      /**
-       * Pages
-       * @description Total pages, known once the document is parsed
-       */
-      pages: number
-      /**
-       * Unread Pages
-       * @description Pages with no text layer; the agent cannot read them and says so
-       */
-      unread_pages: number[]
-      /**
-       * Unread Page Count
-       * @description len(unread_pages), for a badge
-       */
-      unread_page_count: number
-      /**
-       * Created At
-       * Format: date-time
-       * @description When the upload was accepted
-       */
-      created_at: string
-      /**
-       * Updated At
-       * Format: date-time
-       * @description When the status last changed
-       */
-      updated_at: string
-    }
-    /**
-     * DocumentStatus
-     * @description How far an upload has got. The browser polls it, so the names are user-visible.
-     *
-     *     Linear on the happy path: `UPLOADED` (the row exists; the bytes may still be on their way
-     *     to Storage) → `PARSED` (every page is accounted for, unread ones listed) → `EMBEDDED`
-     *     (chunks and vectors are in the chunk table) → `READY` (the agent may use it). `FAILED` is
-     *     terminal and always carries a `failure_reason`.
-     * @enum {string}
-     */
-    DocumentStatus: 'uploaded' | 'parsed' | 'embedded' | 'ready' | 'failed'
-    /**
-     * DocumentUrlResponse
-     * @description A short-lived URL the browser's PDF viewer can load; ask again once it has expired.
-     */
-    DocumentUrlResponse: {
-      /**
-       * Url
-       * @description Signed download URL; append #page=N to open a page
-       */
-      url: string
-      /**
-       * Expires At
-       * Format: date-time
-       * @description When the URL stops working, UTC
-       */
-      expires_at: string
-    }
-    /**
-     * EcertisEvidence
-     * @description Which national document proves an EU criterion, per eCertis.
-     *
-     *     This is the cross-border wedge in one object: the same `criterion_id` yields
-     *     `Freistellungsbescheinigung` for DE and `Cerfa n. 3666` for FR.
-     *
-     *     A country with no national entry is normal, not an error — France has none for 17 of the
-     *     56 criteria (ADR-0007). `evidence_names` is then empty and `found` is False.
-     */
-    EcertisEvidence: {
-      /**
-       * Criterion Id
-       * @enum {string}
-       */
-      criterion_id:
-        | '005eb9ed-1347-4ca3-bb29-9bc0db64e1ab'
-        | '07301031-2270-41af-8e7e-66fe0c777107'
-        | '074f6031-55f9-4e99-b9a4-c4363e8bc315'
-        | '166536e2-77f7-455c-b018-70582474e4f6'
-        | '1f49b3f0-d50f-43f6-8b30-4bafab108b9b'
-        | '297d2323-3ede-424e-94bc-a91561e6f320'
-        | '3293e92b-7f3e-42f1-bee6-a7641bb04251'
-        | '396f288a-e267-4c20-851a-ed4f7498f137'
-        | '3a18a175-1863-4b1d-baef-588ce61960ca'
-        | '3aaca389-4a7b-406b-a4b9-080845d127e7'
-        | '47112079-6fec-47a3-988f-e561668c3aef'
-        | '499efc97-2ac1-4af2-9e84-323c2ca67747'
-        | '4bf996d9-439c-40c6-9ab9-980a48cb55a1'
-        | '514d3fde-1e3e-4dcd-b02a-9f984d5bbda3'
-        | '56d13e3d-76e8-4f23-8af6-13e60a2ee356'
-        | '5e506c16-26ab-4e32-bb78-b27f87dc0565'
-        | '612a1625-118d-4ea4-a6db-413184e7c0a8'
-        | '61874050-5130-4f1c-a174-720939c7b483'
-        | '6346959b-e097-4ea1-89cd-d1b4c131ea4d'
-        | '63adb07d-db1b-4ef0-a14e-a99785cf8cf6'
-        | '68918c7a-f5bc-4a1a-a62f-ad8983600d48'
-        | '696a75b2-6107-428f-8b74-82affb67e184'
-        | '6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f'
-        | '73f10e36-ed7a-412e-995c-aa76463e3776'
-        | '7604bd40-4462-4086-8763-a50da51a869c'
-        | '7662b7a9-bcb8-4763-a0a7-7505d8e8470d'
-        | '77f481ce-ffb6-483f-8e2b-c78db5e68292'
-        | '7d85e333-bbab-49c0-be8d-c36d71a72f5e'
-        | '87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7'
-        | '8ed65e48-fd0d-444f-97bd-4f58da632999'
-        | '8fda202a-0c37-41bb-9d7d-de3f49edbfcb'
-        | '90a2e100-44cc-45d3-9970-69d6714f1596'
-        | '9460457e-b43d-48a9-acd1-615de6ddd33e'
-        | '9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4'
-        | 'a261a395-ed17-4939-9c75-b9ff1109ca6e'
-        | 'a34b70d6-c43d-4726-9a88-8e2b438424bf'
-        | 'a7669d7d-9297-43e1-9d10-691a1660187c'
-        | 'a80ddb62-d25b-4e4e-ae22-3968460dc0a9'
-        | 'ab0e7f2e-6418-40e2-8870-6713123e41ad'
-        | 'b16cb9fc-6cb7-4585-9302-9533b415cf48'
-        | 'b1b5ac18-f393-4280-9659-1367943c1a2e'
-        | 'b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4'
-        | 'bdf0601d-2480-4250-b870-658d0ee95be6'
-        | 'c27b7c4e-c837-4529-b867-ed55ce639db5'
-        | 'c599c130-b29f-461e-a187-4e16c7d40db7'
-        | 'c8809aa1-29b6-4f27-ae2f-27e612e394db'
-        | 'cc18c023-211d-484d-a32e-52f3f970285f'
-        | 'cdd3bb3e-34a5-43d5-b668-2aab86a73822'
-        | 'd3732c09-7d62-4edc-a172-241da6636e7c'
-        | 'd3dfb714-f558-4512-bbc5-e456fa2339de'
-        | 'd486fb70-86b3-4e75-97f2-0d71b5697c7d'
-        | 'd726bac9-e153-4e75-bfca-c5385587766d'
-        | 'd789d01a-fe03-4ccd-9898-73f9cfa080d1'
-        | 'daffa2a9-9f8f-4568-8be8-7b8bf306d096'
-        | 'dc12a151-7fdf-4733-a8f0-30f667292e66'
-        | 'e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46'
-      /** Criterion Name */
-      criterion_name: string
-      /**
-       * Country
-       * @description ISO 3166-1 alpha-2, lowercase
-       */
-      country: string
-      /**
-       * Found
-       * @description False means this country records no evidence
-       */
-      found: boolean
-      /**
-       * Evidence Names
-       * @default []
-       */
-      evidence_names: string[]
-      /**
-       * Issuers
-       * @default []
-       */
-      issuers: string[]
-      /** Description */
-      description?: string | null
-    }
-    /**
-     * Evidence
-     * @description A pointer into the bidder's own documents. Never a summary — a locatable quote.
-     */
-    Evidence: {
-      /** Document Id */
-      document_id: string
-      /** Document Name */
-      document_name: string
-      /** Page */
-      page: number
-      /** Quote */
-      quote: string
-    }
-    /**
-     * ExtractionProblem
-     * @description One thing extraction could not do, addressed to the reviewer.
-     *
-     *     Frozen, and carries no document text: `document_name`, the pages, and a closed reason
-     *     are enough to open the paragraph and see for yourself.
-     */
-    ExtractionProblem: {
-      reason: components['schemas']['ExtractionProblemReason']
-      /**
-       * Document Name
-       * @description File the trouble was in, as a reviewer sees it
-       */
-      document_name: string
-      /**
-       * Pages
-       * @description Pages involved; empty when the document had no pages to involve
-       * @default []
-       */
-      pages: number[]
-      /**
-       * Fields
-       * @description Field names that failed validation — locations only, never values
-       * @default []
-       */
-      fields: string[]
-    }
-    /**
-     * ExtractionProblemReason
-     * @description Why a row, a section or a document produced less than it should have.
-     *
-     *     Closed, and stated as a reason rather than a message, because the natural message would
-     *     be built from model output — which is derived from an untrusted document, and an error
-     *     built from untrusted input is how untrusted input escapes (ADR-0008).
-     * @enum {string}
-     */
-    ExtractionProblemReason:
-      | 'no_verbatim_quote'
-      | 'invalid_row'
-      | 'invalid_criterion_id'
-      | 'missing_translation'
-      | 'model_error'
-      | 'section_failed'
-      | 'unwrappable_section'
-      | 'unreadable_document'
-      | 'unparseable_document'
-    /**
-     * Gap
-     * @description One reason the bidder does not yet qualify, in terms they can act on.
-     */
-    Gap: {
-      /** Requirement Id */
-      requirement_id: string
-      severity: components['schemas']['GapSeverity']
-      /**
-       * Summary
-       * @description What is missing, in the bidder's language
-       */
-      summary: string
-      /**
-       * Required
-       * @description e.g. '29 FTE'
-       */
-      required?: string | null
-      /**
-       * Actual
-       * @description e.g. '21 FTE'
-       */
-      actual?: string | null
-    }
-    /**
-     * GapSeverity
-     * @description Whether a gap can still be closed before the deadline.
-     * @enum {string}
-     */
-    GapSeverity: 'blocking' | 'open_item'
-    /** HTTPValidationError */
-    HTTPValidationError: {
-      /** Detail */
-      detail?: components['schemas']['ValidationError'][]
-    }
-    /** Health */
-    Health: {
-      /** Status */
-      status: string
-      /** Service */
-      service: string
-    }
-    /**
-     * LegalForm
-     * @description Common EU legal forms. `OTHER` keeps the enum closed without losing real companies.
-     * @enum {string}
-     */
-    LegalForm:
-      'gmbh' | 'ug' | 'ag' | 'sarl' | 'sas' | 'sa' | 'bv' | 'sp_zoo' | 'sole_trader' | 'other'
-    /**
-     * MatrixRow
-     * @description The agent's verdict on one requirement, plus the reviewer's disposition.
-     */
-    MatrixRow: {
-      /** Id */
-      id: string
-      /** Requirement Id */
-      requirement_id: string
-      status: components['schemas']['RowStatus']
-      /**
-       * Evidence
-       * @default []
-       */
-      evidence: components['schemas']['Evidence'][]
-      ecertis_evidence?: components['schemas']['EcertisEvidence'] | null
-      /**
-       * Agent Rationale
-       * @description Why the agent chose this status, in one or two sentences
-       */
-      agent_rationale: string
-      /** @default pending */
-      reviewer_status: components['schemas']['ReviewerStatus']
-      /** Override Reason */
-      override_reason?: string | null
-      /**
-       * Attached Doc Ids
-       * @default []
-       */
-      attached_doc_ids: string[]
-      /** Reviewed At */
-      reviewed_at?: string | null
-    }
-    /**
-     * ModelSlugs
-     * @description Role -> OpenRouter slug. Every slug was confirmed with a live call (ADR-0004/0005).
-     */
-    ModelSlugs: {
-      /** Extract */
-      extract: string
-      /** Cheap */
-      cheap: string
-      /** Embed */
-      embed: string
-      /** Judge */
-      judge: string
-      /** Fallback */
-      fallback: string
-    }
-    /**
-     * Requirement
-     * @description One obligation, with the evidence trail back to the page it was read from.
-     */
-    Requirement: {
-      /** Id */
-      id: string
-      /** Bid Id */
-      bid_id: string
-      category: components['schemas']['RequirementCategory']
-      kind: components['schemas']['RequirementKind']
-      stage: components['schemas']['RequirementStage']
-      checkable: components['schemas']['Checkability']
-      /** @default tender_document */
-      source: components['schemas']['RequirementSource']
-      /**
-       * Source Text
-       * @description Verbatim quote in the tender's own language. Never paraphrased.
-       */
-      source_text: string
-      /**
-       * Source Lang
-       * @description BCP 47, e.g. 'de'
-       */
-      source_lang: string
-      /**
-       * Document Name
-       * @description File the quote came from, for the citation
-       */
-      document_name: string
-      /**
-       * Page
-       * @description 1-indexed, so it matches what the PDF viewer shows. Null for an ESPD request: a DUME is XML and has no pages, and the criterion id is its locator instead.
-       */
-      page?: number | null
-      /**
-       * Translation
-       * @description Bidder-language rendering; None until translated
-       */
-      translation?: string | null
-      /** Ecertis Criterion Id */
-      ecertis_criterion_id?:
-        | (
-            | '005eb9ed-1347-4ca3-bb29-9bc0db64e1ab'
-            | '07301031-2270-41af-8e7e-66fe0c777107'
-            | '074f6031-55f9-4e99-b9a4-c4363e8bc315'
-            | '166536e2-77f7-455c-b018-70582474e4f6'
-            | '1f49b3f0-d50f-43f6-8b30-4bafab108b9b'
-            | '297d2323-3ede-424e-94bc-a91561e6f320'
-            | '3293e92b-7f3e-42f1-bee6-a7641bb04251'
-            | '396f288a-e267-4c20-851a-ed4f7498f137'
-            | '3a18a175-1863-4b1d-baef-588ce61960ca'
-            | '3aaca389-4a7b-406b-a4b9-080845d127e7'
-            | '47112079-6fec-47a3-988f-e561668c3aef'
-            | '499efc97-2ac1-4af2-9e84-323c2ca67747'
-            | '4bf996d9-439c-40c6-9ab9-980a48cb55a1'
-            | '514d3fde-1e3e-4dcd-b02a-9f984d5bbda3'
-            | '56d13e3d-76e8-4f23-8af6-13e60a2ee356'
-            | '5e506c16-26ab-4e32-bb78-b27f87dc0565'
-            | '612a1625-118d-4ea4-a6db-413184e7c0a8'
-            | '61874050-5130-4f1c-a174-720939c7b483'
-            | '6346959b-e097-4ea1-89cd-d1b4c131ea4d'
-            | '63adb07d-db1b-4ef0-a14e-a99785cf8cf6'
-            | '68918c7a-f5bc-4a1a-a62f-ad8983600d48'
-            | '696a75b2-6107-428f-8b74-82affb67e184'
-            | '6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f'
-            | '73f10e36-ed7a-412e-995c-aa76463e3776'
-            | '7604bd40-4462-4086-8763-a50da51a869c'
-            | '7662b7a9-bcb8-4763-a0a7-7505d8e8470d'
-            | '77f481ce-ffb6-483f-8e2b-c78db5e68292'
-            | '7d85e333-bbab-49c0-be8d-c36d71a72f5e'
-            | '87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7'
-            | '8ed65e48-fd0d-444f-97bd-4f58da632999'
-            | '8fda202a-0c37-41bb-9d7d-de3f49edbfcb'
-            | '90a2e100-44cc-45d3-9970-69d6714f1596'
-            | '9460457e-b43d-48a9-acd1-615de6ddd33e'
-            | '9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4'
-            | 'a261a395-ed17-4939-9c75-b9ff1109ca6e'
-            | 'a34b70d6-c43d-4726-9a88-8e2b438424bf'
-            | 'a7669d7d-9297-43e1-9d10-691a1660187c'
-            | 'a80ddb62-d25b-4e4e-ae22-3968460dc0a9'
-            | 'ab0e7f2e-6418-40e2-8870-6713123e41ad'
-            | 'b16cb9fc-6cb7-4585-9302-9533b415cf48'
-            | 'b1b5ac18-f393-4280-9659-1367943c1a2e'
-            | 'b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4'
-            | 'bdf0601d-2480-4250-b870-658d0ee95be6'
-            | 'c27b7c4e-c837-4529-b867-ed55ce639db5'
-            | 'c599c130-b29f-461e-a187-4e16c7d40db7'
-            | 'c8809aa1-29b6-4f27-ae2f-27e612e394db'
-            | 'cc18c023-211d-484d-a32e-52f3f970285f'
-            | 'cdd3bb3e-34a5-43d5-b668-2aab86a73822'
-            | 'd3732c09-7d62-4edc-a172-241da6636e7c'
-            | 'd3dfb714-f558-4512-bbc5-e456fa2339de'
-            | 'd486fb70-86b3-4e75-97f2-0d71b5697c7d'
-            | 'd726bac9-e153-4e75-bfca-c5385587766d'
-            | 'd789d01a-fe03-4ccd-9898-73f9cfa080d1'
-            | 'daffa2a9-9f8f-4568-8be8-7b8bf306d096'
-            | 'dc12a151-7fdf-4733-a8f0-30f667292e66'
-            | 'e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46'
-          )
-        | null
-      threshold?: components['schemas']['Threshold'] | null
-      /** Deadline */
-      deadline?: string | null
-    }
-    /**
-     * RequirementCategory
-     * @description Which part of the qualification decision this requirement belongs to.
-     * @enum {string}
-     */
-    RequirementCategory:
-      'formal' | 'economic_financial' | 'technical_professional' | 'exclusion_ground' | 'other'
-    /**
-     * RequirementKind
-     * @description How badly non-compliance hurts.
-     * @enum {string}
-     */
-    RequirementKind: 'mandatory' | 'optional' | 'informational'
-    /**
-     * RequirementSource
-     * @description Which kind of artefact the requirement was read out of.
-     *
-     *     Two, because the two are read in completely different ways and a reviewer must be able
-     *     to tell them apart at a glance. A `TENDER_DOCUMENT` row is a verbatim quote a model
-     *     found on a numbered page of a PDF and that was checked against that page. An
-     *     `ESPD_REQUEST` row is a criterion the buyer *declared* in machine-readable form in a
-     *     published DUME — no model, no inference, no page — and it is the only kind that arrives
-     *     with an `ecertis_criterion_id` nobody had to guess (S2.5.1).
-     * @enum {string}
-     */
-    RequirementSource: 'tender_document' | 'espd_request'
-    /**
-     * RequirementStage
-     * @description When the obligation bites.
-     *
-     *     The test is: *would the company still have to do this if it never won the contract?*
-     *     If no, it is `CONTRACT_PERFORMANCE` and it does not belong in a go/no-go matrix.
-     *
-     *     Without this discriminator the SP.1 spike extracted 579 "mandatory" requirements from one
-     *     tender, because the AGB, EVB-IT, VOL/B, framework agreement and data-processing agreement
-     *     are all genuinely phrased as obligations. Adding it cut the set to 238 with no loss of
-     *     recall (ADR-0003).
-     * @enum {string}
-     */
-    RequirementStage: 'bid_eligibility' | 'contract_performance'
-    /**
-     * ReviewSubmission
-     * @description What the reviewer sends back to resume the graph.
-     *
-     *     `decision` is the reviewer's own call. It may disagree with the agent's, and when it does
-     *     the disagreement is recorded rather than smoothed over — that record is what a feedback
-     *     loop would later learn from.
-     */
-    ReviewSubmission: {
-      decision: components['schemas']['Decision']
-      /**
-       * Row Edits
-       * @default []
-       */
-      row_edits: components['schemas']['RowEdit'][]
-      /**
-       * Override Reason
-       * @description Required when the reviewer's decision differs from the agent's
-       */
-      override_reason?: string | null
-    }
-    /**
-     * ReviewerStatus
-     * @description What the human did with the agent's finding. The review step is the safety boundary.
-     * @enum {string}
-     */
-    ReviewerStatus: 'pending' | 'confirmed' | 'overridden'
-    /**
-     * RowEdit
-     * @description A reviewer's change to one matrix row.
-     */
-    RowEdit: {
-      /** Matrix Row Id */
-      matrix_row_id: string
-      /** @description None leaves the agent's status */
-      status?: components['schemas']['RowStatus'] | null
-      /** Override Reason */
-      override_reason?: string | null
-      /**
-       * Attached Doc Ids
-       * @default []
-       */
-      attached_doc_ids: string[]
-    }
-    /**
-     * RowStatus
-     * @description The agent's finding for one requirement, in the design system's words (ADR-0013).
-     *
-     *     `supported` is cited evidence; `partially_supported` is the honest answer when the
-     *     documents do not settle it and the reviewer must; `unsupported` is evidence *against*.
-     * @enum {string}
-     */
-    RowStatus: 'supported' | 'partially_supported' | 'unsupported' | 'not_applicable'
-    /**
-     * StartBidRequest
-     * @description What it takes to start a bid: the notice, the tender's language, and the pack.
-     */
-    StartBidRequest: {
-      /**
-       * Notice Number
-       * @description TED publication number the bid is opened against
-       */
-      notice_number: string
-      /**
-       * Document Ids
-       * @description Ready tender documents to parse; at least one
-       */
-      document_ids: string[]
-      /**
-       * Source Language
-       * @description The tender's own language, BCP 47; S1.2.1 takes it from TED later
-       */
-      source_language: string
-      /**
-       * Title
-       * @description Dashboard title; defaults to the notice number
-       */
-      title?: string | null
-      /**
-       * Buyer
-       * @description The contracting authority, as the notice names it. S1.2.1 takes it from TED later; until then the bidder has the notice in front of them.
-       */
-      buyer?: string | null
-      /**
-       * Deadline
-       * @description When tenders are due, as an ISO-8601 timestamp **with the offset the notice states** — e.g. `2026-10-09T16:00:00+02:00`. The offset is kept alongside the instant so the dashboard can print the deadline on the buyer's own clock (S4.4.1); a timestamp with no offset is refused rather than assumed to be UTC, because guessing a zone silently moves a deadline by hours.
-       */
-      deadline?: string | null
-    }
-    /**
-     * TedNotice
-     * @description One published notice, with every language-keyed field already resolved.
-     */
-    TedNotice: {
-      /**
-       * Publication Number
-       * @description TED's own id, e.g. '629621-2026'
-       */
-      publication_number: string
-      /**
-       * Title
-       * @description The notice title, in the bidder's language where TED has one
-       */
-      title: string
-      /**
-       * Buyer
-       * @description The contracting authority, or null when the notice names none
-       */
-      buyer: string | null
-      /**
-       * Description
-       * @description The procedure's own summary, in its source language
-       */
-      description: string | null
-      /**
-       * Deadline
-       * @description The earliest lot deadline. A DATE and never a time: across 58 sampled lot deadlines not one carried an hour, so the hour comes from the notice PDF or from the bidder (S4.4.1), never from here.
-       */
-      deadline: string | null
-      /**
-       * Deadline Utc Offset Minutes
-       * @description The offset TED published with that date, which is the buyer's wall clock.
-       */
-      deadline_utc_offset_minutes: number | null
-      /**
-       * Official Languages
-       * @description ISO 639-3, as TED writes them
-       */
-      official_languages: string[]
-      /**
-       * Submission Languages
-       * @description Languages a tender may be submitted in
-       */
-      submission_languages: string[]
-      /**
-       * Cpv
-       * @description CPV codes on the notice, deduplicated
-       */
-      cpv: string[]
-      /**
-       * Notice Pdf Url
-       * @description The notice as published, in its own language. S1.2.2 opens this.
-       */
-      notice_pdf_url: string | null
-      /**
-       * Documents Url
-       * @description The national platform hosting the procurement documents. Almost never TED itself, which is why the bidder uploads the pack by hand (no-scraping rule).
-       */
-      documents_url: string | null
-      /** Published On */
-      published_on?: string | null
-    }
-    /**
-     * TedSearchPage
-     * @description One page of results, and enough context to know what is not on it.
-     */
-    TedSearchPage: {
-      /** Notices */
-      notices: components['schemas']['TedNotice'][]
-      /**
-       * Total
-       * @description What TED says matched, which may exceed what can be paged to
-       */
-      total: number
-      /** Page */
-      page: number
-      /** Limit */
-      limit: number
-      /**
-       * Reachable Total
-       * @description Results actually fetchable: `min(total, 600)`. TED refuses to page beyond that, so a screen offering more would offer a 400.
-       */
-      reachable_total: number
-    }
-    /**
-     * Threshold
-     * @description A number the bidder must clear.
-     *
-     *     Every quantified requirement in the German fixture reduced to one of these — turnover
-     *     >= EUR 3,000,000 per year, >= 29 FTE, >= 25 person-days, references no older than 3 years.
-     *     Keeping it typed is what lets the scorer compare rather than ask a model to judge.
-     */
-    Threshold: {
-      comparator: components['schemas']['ThresholdComparator']
-      /** Value */
-      value: number
-      unit: components['schemas']['ThresholdUnit']
-      /**
-       * Currency
-       * @description ISO 4217 code, set only when unit is CURRENCY
-       */
-      currency?: string | null
-      /**
-       * Period
-       * @description e.g. 'per_year', 'last_three_fiscal_years'
-       */
-      period?: string | null
-    }
-    /**
-     * ThresholdComparator
-     * @description How a measured value is compared with the required one.
-     * @enum {string}
-     */
-    ThresholdComparator: 'at_least' | 'at_most' | 'max_age' | 'equals'
-    /**
-     * ThresholdUnit
-     * @description What is being measured. Closed, because a free-text unit cannot be compared.
-     * @enum {string}
-     */
-    ThresholdUnit:
-      'currency' | 'fte' | 'headcount' | 'person_days' | 'references' | 'years' | 'percent'
-    /**
-     * Tone
-     * @description How explanations are written. Graded Easy 2 (personality / tone).
-     * @enum {string}
-     */
-    Tone: 'plain' | 'formal' | 'brief'
-    /**
-     * ToolDescriptor
-     * @description One tool as the panel shows it: its manifest, plus whether this process will bind it.
-     */
-    ToolDescriptor: {
-      /**
-       * Name
-       * @description The name the model calls the tool by
-       */
-      name: string
-      /**
-       * Description
-       * @description The text the model decides on; written for it
-       */
-      description: string
-      /**
-       * External
-       * @description True when a call leaves the process. Cached reference data is false.
-       */
-      external: boolean
-      /**
-       * Default Enabled
-       * @description Whether the tool ships enabled in settings.default.yaml
-       */
-      default_enabled: boolean
-      /**
-       * Enabled
-       * @description Whether this process will bind it, after any app_settings override
-       */
-      enabled: boolean
-    }
-    /**
-     * TurnoverYear
-     * @description One fiscal year's turnover in the contract's field of activity.
-     *
-     *     Tenders ask for the last three years in *the field of the contract*, not total revenue,
-     *     so `field_of_activity` is part of the fact.
-     */
-    TurnoverYear: {
-      /** Year */
-      year: number
-      /** Amount */
-      amount: number
-      /**
-       * Currency
-       * @description ISO 4217
-       */
-      currency: string
-      /** Field Of Activity */
-      field_of_activity?: string | null
-    }
-    /** ValidationError */
-    ValidationError: {
-      /** Location */
-      loc: (string | number)[]
-      /** Message */
-      msg: string
-      /** Error Type */
-      type: string
-      /** Input */
-      input?: unknown
-      /** Context */
-      ctx?: Record<string, never>
-    }
-    /**
-     * Verdict
-     * @description The scorer's output: a decision, and every reason behind it.
-     */
-    Verdict: {
-      decision: components['schemas']['Decision']
-      /**
-       * Gaps
-       * @default []
-       */
-      gaps: components['schemas']['Gap'][]
-      score?: components['schemas']['WeightedScore'] | null
-      /**
-       * Rationale
-       * @description Plain-language explanation, in the bidder's language
-       */
-      rationale: string
-      /** Mandatory Total */
-      mandatory_total: number
-      /** Mandatory Supported */
-      mandatory_supported: number
-      /** Partially Supported Rows */
-      partially_supported_rows: number
-    }
-    /**
-     * WeightedScore
-     * @description A buyer's published points scale, when the tender uses one.
-     *
-     *     Present only for tenders that score selection; absent for pass/fail tenders. `threshold`
-     *     is the buyer's elimination cut-off, not ours.
-     */
-    WeightedScore: {
-      /** Points */
-      points: number
-      /** Points Available */
-      points_available: number
-      /**
-       * Threshold
-       * @description Below this the buyer eliminates the bid
-       */
-      threshold: number
-    }
-  }
-  responses: never
-  parameters: never
-  requestBodies: never
-  headers: never
-  pathItems: never
+    schemas: {
+        /**
+         * AgentSettings
+         * @description Concurrency limits on the two fan-outs, each bounding calls to OpenRouter.
+         *
+         *     `extract_concurrency` is the deterministic one -- sections of `extract_reqs` (S3.2.1), a
+         *     fixed number of structured calls. `check_concurrency` is the agentic one -- per-requirement
+         *     ReAct loops in `check_reqs` (F3.3), each up to `max_tool_calls_per_requirement` calls.
+         *     Separate keys because the call shapes differ, so tuning one must not move the other.
+         */
+        AgentSettings: {
+            /** Extract Concurrency */
+            extract_concurrency: number;
+            /** Check Concurrency */
+            check_concurrency: number;
+            /** Max Tool Calls Per Requirement */
+            max_tool_calls_per_requirement: number;
+            /** Run Budget Seconds */
+            run_budget_seconds: number;
+            /** Run Budget Usd */
+            run_budget_usd: number;
+            /** Llm Timeout Seconds */
+            llm_timeout_seconds: number;
+        };
+        /**
+         * BidDocumentResponse
+         * @description One document of the bid, as the workspace lists it beside the matrix.
+         */
+        BidDocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The document id; `GET /documents/{id}` polls it
+             */
+            id: string;
+            /**
+             * Name
+             * @description The filename the bidder uploaded
+             */
+            name: string;
+            /**
+             * Pages
+             * @description Total pages once parsed
+             */
+            pages: number;
+            /**
+             * Unread Pages
+             * @description Pages with no text layer, never read
+             */
+            unread_pages: number[];
+        };
+        /**
+         * BidListResponse
+         * @description The calling company's bids, newest first.
+         */
+        BidListResponse: {
+            /**
+             * Bids
+             * @description Newest first, at most 200
+             */
+            bids: components["schemas"]["BidSummary"][];
+        };
+        /**
+         * BidResponse
+         * @description One bid and how far its run has got. `GET /bids/{id}` is polled for it.
+         */
+        BidResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The bid id; poll `GET /bids/{id}` with it
+             */
+            id: string;
+            /**
+             * Notice Number
+             * @description TED publication number
+             */
+            notice_number: string | null;
+            /**
+             * Title
+             * @description What the dashboard calls this bid
+             */
+            title: string;
+            /**
+             * Source Language
+             * @description The tender's language, BCP 47
+             */
+            source_language: string | null;
+            /**
+             * Bidder Language
+             * @description What requirements are explained in
+             */
+            bidder_language: string;
+            /** @description queued → parsing → extracting → checking → scoring → awaiting_review; failed carries failure_reason */
+            status: components["schemas"]["BidStatus"];
+            /**
+             * Failure Reason
+             * @description Why a failed run stopped: the stage and the error type, no more
+             */
+            failure_reason: string | null;
+            /**
+             * Requirements
+             * @description Every extracted requirement; empty until extraction has finished
+             */
+            requirements: components["schemas"]["Requirement"][];
+            /**
+             * Matrix Rows
+             * @description The compliance matrix, one row per checked requirement, in the same order as `requirements`. Fills in lane by lane while the status is `checking`.
+             */
+            matrix_rows: components["schemas"]["MatrixRow"][];
+            /** @description The agent's go/no-go with every gap behind it, written when the status reaches `scoring`, and re-scored on the reviewer's statuses once they have reviewed. Null before scoring. Advisory: what the *rules* say about the matrix. */
+            verdict: components["schemas"]["Verdict"] | null;
+            /** @description What the reviewer decided. Null until a human has. Deliberately not the same field as `verdict.decision`: that is what the rules say about the matrix as the reviewer left it, and this is what the reviewer concluded. The difference between them is the override. */
+            decision: components["schemas"]["Decision"] | null;
+            /**
+             * Problems
+             * @description What parsing and extraction could not do, for the reviewer
+             */
+            problems: components["schemas"]["ExtractionProblem"][];
+            /**
+             * Documents
+             * @description The pack this bid parses
+             */
+            documents: components["schemas"]["BidDocumentResponse"][];
+            /**
+             * Created At
+             * @description When the bid was started
+             */
+            created_at: string | null;
+            /**
+             * Updated At
+             * @description When the status last changed
+             */
+            updated_at: string | null;
+        };
+        /**
+         * BidStatus
+         * @description Where a bid has got to.
+         *
+         *     The browser polls `GET /bids/{id}` every 2s and renders the stage, so these names are
+         *     user-visible. `AWAITING_REVIEW` is the interrupt: the graph stops and waits for a human.
+         * @enum {string}
+         */
+        BidStatus: "queued" | "parsing" | "extracting" | "checking" | "scoring" | "awaiting_review" | "applying_review" | "complete" | "failed";
+        /**
+         * BidSummary
+         * @description A bid as the dashboard lists it. Read from the read-model tables, never a checkpoint.
+         */
+        BidSummary: {
+            /** Id */
+            id: string;
+            /** Company Id */
+            company_id: string;
+            /** Ted Publication Number */
+            ted_publication_number?: string | null;
+            /** Title */
+            title: string;
+            /** Buyer */
+            buyer?: string | null;
+            /** Source Language */
+            source_language?: string | null;
+            /** Deadline */
+            deadline?: string | null;
+            /**
+             * Deadline Utc Offset Minutes
+             * @description The UTC offset the buyer's notice stated, so the deadline can be printed on the buyer's clock (S4.4.1). Null when no deadline is recorded. Only an offset and never an IANA zone: neither a notice nor TED publishes one, so a zone name would be an inference — and one that changes answer twice a year.
+             */
+            deadline_utc_offset_minutes?: number | null;
+            status: components["schemas"]["BidStatus"];
+            /** @description Final decision once reviewed; None while in flight */
+            decision?: components["schemas"]["Decision"] | null;
+            /**
+             * Open Items
+             * @description Matrix rows that still need somebody: `partially_supported` or `unsupported`. Counted from the matrix rather than from the verdict's gaps, because a bid that has not been scored yet has no gaps and still has work in it — and because a reviewer who confirmed a partially supported row has confirmed that it is still unproven, not that it is settled.
+             * @default 0
+             */
+            open_items: number;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** Body_upload_document_documents_post */
+        Body_upload_document_documents_post: {
+            /**
+             * File
+             * @description The PDF, at most 50 MB — or, for the kind `tender_espd_request`, the buyer's ESPD request XML, at most 4194304 bytes
+             */
+            file: string;
+            /** @description What the document is; it also decides which file types are accepted */
+            kind: components["schemas"]["DocumentKind"];
+        };
+        /**
+         * CertificateHeld
+         * @description A certificate the company holds, with the expiry the matrix must respect.
+         *
+         *     An expired certificate is not evidence, which is why `expires_on` is not optional
+         *     decoration: `GET /companies/me` flags it on the profile form, and `agent/flags.py` warns
+         *     on any matrix row that cites one (S3.4.4).
+         */
+        CertificateHeld: {
+            /**
+             * Name
+             * @description e.g. 'ISO/IEC 27001:2022'
+             */
+            name: string;
+            /** Issuer */
+            issuer?: string | null;
+            /** Number */
+            number?: string | null;
+            /** Issued On */
+            issued_on?: string | null;
+            /** Expires On */
+            expires_on?: string | null;
+            /**
+             * Scope
+             * @description What the certificate actually covers
+             */
+            scope?: string | null;
+        };
+        /**
+         * CertificateResponse
+         * @description One certificate the company holds, with the expiry flags the form shows beside it.
+         */
+        CertificateResponse: {
+            /**
+             * Name
+             * @description e.g. 'ISO/IEC 27001:2022'
+             */
+            name: string;
+            /**
+             * Issuer
+             * @description Who issued it, if recorded
+             */
+            issuer: string | null;
+            /**
+             * Number
+             * @description The certificate number, if recorded
+             */
+            number: string | null;
+            /**
+             * Issued On
+             * @description When it was issued, if recorded
+             */
+            issued_on: string | null;
+            /**
+             * Expires On
+             * @description When it expires; null when not recorded
+             */
+            expires_on: string | null;
+            /**
+             * Scope
+             * @description What the certificate actually covers
+             */
+            scope: string | null;
+            /**
+             * Is Expired
+             * @description The recorded expiry is before checked_on — this is no longer evidence
+             */
+            is_expired: boolean;
+            /**
+             * Is Valid
+             * @description Valid on checked_on. False when no expiry is recorded: without a date the profile cannot claim validity, which is not the same as being expired
+             */
+            is_valid: boolean;
+        };
+        /**
+         * Checkability
+         * @description Whether evidence can settle this requirement at all.
+         *
+         *     SP.1's first checking round returned `unclear` for all eight rows it tried, because they
+         *     were all document-submission duties and no corpus of company facts can establish "we
+         *     submitted form X". Only `COMPANY_PROPERTY` rows are worth spending tool calls on;
+         *     `DOCUMENT_SUBMISSION` rows go to the reviewer as "attach this" (ADR-0003).
+         * @enum {string}
+         */
+        Checkability: "company_property" | "document_submission" | "neither";
+        /**
+         * CompanyProfile
+         * @description The bidder, as the matrix sees them.
+         */
+        CompanyProfile: {
+            /** Name */
+            name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2, lower case. The pattern is `companies.country`'s own check constraint, so the same value the column would refuse is refused here — as a 422 naming the field rather than a CheckViolation surfacing as a 500. 'DE' is rejected, not lower-cased: a PUT that rewrote its own body would answer with something the caller never sent, and the pattern reaches the generated client, so the form can say so before the request leaves the browser.
+             */
+            country: string;
+            legal_form: components["schemas"]["LegalForm"];
+            /**
+             * Registration Number
+             * @description e.g. 'HRB 84512'
+             */
+            registration_number?: string | null;
+            /** Registration Court */
+            registration_court?: string | null;
+            /**
+             * Language
+             * @description BCP 47
+             * @default de
+             */
+            language: string;
+            /** @default plain */
+            tone: components["schemas"]["Tone"];
+            /**
+             * Staff Fte
+             * @description Total full-time equivalents
+             */
+            staff_fte?: number | null;
+            /**
+             * Staff Fte Relevant
+             * @description FTE in the field of the contract, which is what tenders ask for
+             */
+            staff_fte_relevant?: number | null;
+            /**
+             * Turnover
+             * @default []
+             */
+            turnover: components["schemas"]["TurnoverYear"][];
+            /**
+             * Certificates
+             * @default []
+             */
+            certificates: components["schemas"]["CertificateHeld"][];
+        };
+        /**
+         * CompanyProfileResponse
+         * @description The calling company's profile as the form reads it back, expiry already checked.
+         */
+        CompanyProfileResponse: {
+            /**
+             * Name
+             * @description Legal name, as it appears on the register
+             */
+            name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2, lowercase — where the bidder is
+             */
+            country: string;
+            /** @description Legal form; 'other' when none of them fits */
+            legal_form: components["schemas"]["LegalForm"];
+            /**
+             * Registration Number
+             * @description e.g. 'HRB 84512'
+             */
+            registration_number: string | null;
+            /**
+             * Registration Court
+             * @description The register the number belongs to
+             */
+            registration_court: string | null;
+            /**
+             * Language
+             * @description BCP 47; requirements are explained in this language
+             */
+            language: string;
+            /** @description How explanations are written */
+            tone: components["schemas"]["Tone"];
+            /**
+             * Staff Fte
+             * @description Total full-time equivalents
+             */
+            staff_fte: number | null;
+            /**
+             * Staff Fte Relevant
+             * @description FTE in the field of the contract, which is what tenders ask for
+             */
+            staff_fte_relevant: number | null;
+            /**
+             * Turnover
+             * @description Turnover per fiscal year in the field of the contract
+             */
+            turnover: components["schemas"]["TurnoverYear"][];
+            /**
+             * Certificates
+             * @description Certificates held, each flagged against checked_on
+             */
+            certificates: components["schemas"]["CertificateResponse"][];
+            /**
+             * Has Expired Certificates
+             * @description At least one certificate has expired; the form warns about it
+             */
+            has_expired_certificates: boolean;
+            /**
+             * Checked On
+             * Format: date
+             * @description The day the expiry flags were computed for, UTC
+             */
+            checked_on: string;
+            /**
+             * Warning
+             * @description Null unless a save only partly succeeded. Set when the profile was stored but the agent's memory of it was not: the facts above are saved, and saving again repairs the rest. A read never sets it
+             */
+            warning?: string | null;
+        };
+        /**
+         * Decision
+         * @description The recommendation, in the design system's fixed vocabulary (ADR-0013).
+         *
+         *     Advisory only -- a human confirms before it is final. `insufficient_evidence` is the
+         *     agent declining to judge: nothing blocks the bid, but the documents do not settle enough
+         *     rows for a recommendation either way.
+         * @enum {string}
+         */
+        Decision: "go" | "conditional" | "no_go" | "insufficient_evidence";
+        /**
+         * DevSettingsResponse
+         * @description The developer panel's read model. Runtime settings only — never the environment.
+         */
+        DevSettingsResponse: {
+            /** @description The OpenRouter slug in use for each role */
+            models: components["schemas"]["ModelSlugs"];
+            /**
+             * Available Models
+             * @description Slugs the picker may offer: the verified set, not OpenRouter's catalogue
+             */
+            available_models: string[];
+            /** Temperature */
+            temperature: number;
+            /** Max Tokens */
+            max_tokens: number;
+            /**
+             * System Prompt Set
+             * @description Whether a system prompt is configured. The text itself is never returned: it is the prompt-injection defence's standing instructions.
+             */
+            system_prompt_set: boolean;
+            /** @description Concurrency limits, the per-requirement tool budget and the run budgets */
+            agent: components["schemas"]["AgentSettings"];
+            /**
+             * Tools
+             * @description Every tool that exists, enabled or not, sorted by name
+             */
+            tools: components["schemas"]["ToolDescriptor"][];
+            /**
+             * Unbuilt Tools
+             * @description Names enabled in settings that no module provides yet — a story that has not landed. Listed rather than dropped, so 'off' and 'not built' stay distinct.
+             */
+            unbuilt_tools: string[];
+        };
+        /**
+         * DocumentKind
+         * @description What a stored file is — and, since S2.5.1, which reader is allowed to open it.
+         *
+         *     A company's evidence pack outlives any single bid; a tender's documents belong to one bid
+         *     and are deleted with it. The notice is kept apart from the procurement documents because
+         *     it comes from TED's documented API while the rest is uploaded by the bidder.
+         *
+         *     `TENDER_ESPD_REQUEST` is the odd one and deliberately so: it is the only kind that is not
+         *     a PDF. A published DUME is an XML form carrying the buyer's ESPD criteria as canonical
+         *     UUIDs, so it is read by `ingestion/espd.py` and never by the PDF parser. Keeping it a
+         *     *kind* rather than an exception to the PDF rule is what lets the upload boundary stay an
+         *     accept-list: every other kind is still PDF-only, and this one is XML-only (see
+         *     `routers/documents.py`).
+         * @enum {string}
+         */
+        DocumentKind: "company_evidence" | "tender_document" | "tender_notice" | "tender_espd_request";
+        /**
+         * DocumentListResponse
+         * @description Every document of the calling company, newest first.
+         */
+        DocumentListResponse: {
+            /**
+             * Documents
+             * @description Newest first
+             */
+            documents: components["schemas"]["DocumentResponse"][];
+        };
+        /**
+         * DocumentResponse
+         * @description One uploaded document and how far it has got. `GET /documents/{id}` is polled for it.
+         */
+        DocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The document id; use it to poll and to start a bid
+             */
+            id: string;
+            /** @description Company evidence, tender document, tender notice, or the buyer's published ESPD request (DUME), which is the one kind that is XML rather than PDF */
+            kind: components["schemas"]["DocumentKind"];
+            /**
+             * Name
+             * @description The filename as uploaded
+             */
+            name: string;
+            /**
+             * Bid Id
+             * @description The bid this document is attached to; null until a bid is started with it
+             */
+            bid_id: string | null;
+            /** @description uploaded → parsed → embedded → ready, or failed with failure_reason */
+            status: components["schemas"]["DocumentStatus"];
+            /**
+             * Failure Reason
+             * @description Why the document failed, in a sentence to act on; null otherwise
+             */
+            failure_reason: string | null;
+            /**
+             * Pages
+             * @description Total pages, known once the document is parsed
+             */
+            pages: number;
+            /**
+             * Unread Pages
+             * @description Pages with no text layer; the agent cannot read them and says so
+             */
+            unread_pages: number[];
+            /**
+             * Unread Page Count
+             * @description len(unread_pages), for a badge
+             */
+            unread_page_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When the upload was accepted
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description When the status last changed
+             */
+            updated_at: string;
+        };
+        /**
+         * DocumentStatus
+         * @description How far an upload has got. The browser polls it, so the names are user-visible.
+         *
+         *     Linear on the happy path: `UPLOADED` (the row exists; the bytes may still be on their way
+         *     to Storage) → `PARSED` (every page is accounted for, unread ones listed) → `EMBEDDED`
+         *     (chunks and vectors are in the chunk table) → `READY` (the agent may use it). `FAILED` is
+         *     terminal and always carries a `failure_reason`.
+         * @enum {string}
+         */
+        DocumentStatus: "uploaded" | "parsed" | "embedded" | "ready" | "failed";
+        /**
+         * DocumentUrlResponse
+         * @description A short-lived URL the browser's PDF viewer can load; ask again once it has expired.
+         */
+        DocumentUrlResponse: {
+            /**
+             * Url
+             * @description Signed download URL; append #page=N to open a page
+             */
+            url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             * @description When the URL stops working, UTC
+             */
+            expires_at: string;
+        };
+        /**
+         * EcertisEvidence
+         * @description Which national document proves an EU criterion, per eCertis.
+         *
+         *     This is the cross-border wedge in one object: the same `criterion_id` yields
+         *     `Freistellungsbescheinigung` for DE and `Cerfa n. 3666` for FR.
+         *
+         *     A country with no national entry is normal, not an error — France has none for 17 of the
+         *     56 criteria (ADR-0007). `evidence_names` is then empty and `found` is False.
+         */
+        EcertisEvidence: {
+            /**
+             * Criterion Id
+             * @enum {string}
+             */
+            criterion_id: "005eb9ed-1347-4ca3-bb29-9bc0db64e1ab" | "07301031-2270-41af-8e7e-66fe0c777107" | "074f6031-55f9-4e99-b9a4-c4363e8bc315" | "166536e2-77f7-455c-b018-70582474e4f6" | "1f49b3f0-d50f-43f6-8b30-4bafab108b9b" | "297d2323-3ede-424e-94bc-a91561e6f320" | "3293e92b-7f3e-42f1-bee6-a7641bb04251" | "396f288a-e267-4c20-851a-ed4f7498f137" | "3a18a175-1863-4b1d-baef-588ce61960ca" | "3aaca389-4a7b-406b-a4b9-080845d127e7" | "47112079-6fec-47a3-988f-e561668c3aef" | "499efc97-2ac1-4af2-9e84-323c2ca67747" | "4bf996d9-439c-40c6-9ab9-980a48cb55a1" | "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3" | "56d13e3d-76e8-4f23-8af6-13e60a2ee356" | "5e506c16-26ab-4e32-bb78-b27f87dc0565" | "612a1625-118d-4ea4-a6db-413184e7c0a8" | "61874050-5130-4f1c-a174-720939c7b483" | "6346959b-e097-4ea1-89cd-d1b4c131ea4d" | "63adb07d-db1b-4ef0-a14e-a99785cf8cf6" | "68918c7a-f5bc-4a1a-a62f-ad8983600d48" | "696a75b2-6107-428f-8b74-82affb67e184" | "6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f" | "73f10e36-ed7a-412e-995c-aa76463e3776" | "7604bd40-4462-4086-8763-a50da51a869c" | "7662b7a9-bcb8-4763-a0a7-7505d8e8470d" | "77f481ce-ffb6-483f-8e2b-c78db5e68292" | "7d85e333-bbab-49c0-be8d-c36d71a72f5e" | "87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7" | "8ed65e48-fd0d-444f-97bd-4f58da632999" | "8fda202a-0c37-41bb-9d7d-de3f49edbfcb" | "90a2e100-44cc-45d3-9970-69d6714f1596" | "9460457e-b43d-48a9-acd1-615de6ddd33e" | "9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4" | "a261a395-ed17-4939-9c75-b9ff1109ca6e" | "a34b70d6-c43d-4726-9a88-8e2b438424bf" | "a7669d7d-9297-43e1-9d10-691a1660187c" | "a80ddb62-d25b-4e4e-ae22-3968460dc0a9" | "ab0e7f2e-6418-40e2-8870-6713123e41ad" | "b16cb9fc-6cb7-4585-9302-9533b415cf48" | "b1b5ac18-f393-4280-9659-1367943c1a2e" | "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4" | "bdf0601d-2480-4250-b870-658d0ee95be6" | "c27b7c4e-c837-4529-b867-ed55ce639db5" | "c599c130-b29f-461e-a187-4e16c7d40db7" | "c8809aa1-29b6-4f27-ae2f-27e612e394db" | "cc18c023-211d-484d-a32e-52f3f970285f" | "cdd3bb3e-34a5-43d5-b668-2aab86a73822" | "d3732c09-7d62-4edc-a172-241da6636e7c" | "d3dfb714-f558-4512-bbc5-e456fa2339de" | "d486fb70-86b3-4e75-97f2-0d71b5697c7d" | "d726bac9-e153-4e75-bfca-c5385587766d" | "d789d01a-fe03-4ccd-9898-73f9cfa080d1" | "daffa2a9-9f8f-4568-8be8-7b8bf306d096" | "dc12a151-7fdf-4733-a8f0-30f667292e66" | "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46";
+            /** Criterion Name */
+            criterion_name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2, lowercase
+             */
+            country: string;
+            /**
+             * Found
+             * @description False means this country records no evidence
+             */
+            found: boolean;
+            /**
+             * Evidence Names
+             * @default []
+             */
+            evidence_names: string[];
+            /**
+             * Issuers
+             * @default []
+             */
+            issuers: string[];
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * Evidence
+         * @description A pointer into the bidder's own documents. Never a summary — a locatable quote.
+         */
+        Evidence: {
+            /** Document Id */
+            document_id: string;
+            /** Document Name */
+            document_name: string;
+            /** Page */
+            page: number;
+            /** Quote */
+            quote: string;
+        };
+        /**
+         * ExtractionProblem
+         * @description One thing extraction could not do, addressed to the reviewer.
+         *
+         *     Frozen, and carries no document text: `document_name`, the pages, and a closed reason
+         *     are enough to open the paragraph and see for yourself.
+         */
+        ExtractionProblem: {
+            reason: components["schemas"]["ExtractionProblemReason"];
+            /**
+             * Document Name
+             * @description File the trouble was in, as a reviewer sees it
+             */
+            document_name: string;
+            /**
+             * Pages
+             * @description Pages involved; empty when the document had no pages to involve
+             * @default []
+             */
+            pages: number[];
+            /**
+             * Fields
+             * @description Field names that failed validation — locations only, never values
+             * @default []
+             */
+            fields: string[];
+        };
+        /**
+         * ExtractionProblemReason
+         * @description Why a row, a section or a document produced less than it should have.
+         *
+         *     Closed, and stated as a reason rather than a message, because the natural message would
+         *     be built from model output — which is derived from an untrusted document, and an error
+         *     built from untrusted input is how untrusted input escapes (ADR-0008).
+         * @enum {string}
+         */
+        ExtractionProblemReason: "no_verbatim_quote" | "invalid_row" | "invalid_criterion_id" | "missing_translation" | "model_error" | "section_failed" | "unwrappable_section" | "unreadable_document" | "unparseable_document";
+        /**
+         * Gap
+         * @description One reason the bidder does not yet qualify, in terms they can act on.
+         */
+        Gap: {
+            /** Requirement Id */
+            requirement_id: string;
+            severity: components["schemas"]["GapSeverity"];
+            /**
+             * Summary
+             * @description What is missing, in the bidder's language
+             */
+            summary: string;
+            /**
+             * Required
+             * @description e.g. '29 FTE'
+             */
+            required?: string | null;
+            /**
+             * Actual
+             * @description e.g. '21 FTE'
+             */
+            actual?: string | null;
+        };
+        /**
+         * GapSeverity
+         * @description Whether a gap can still be closed before the deadline.
+         * @enum {string}
+         */
+        GapSeverity: "blocking" | "open_item";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** Health */
+        Health: {
+            /** Status */
+            status: string;
+            /** Service */
+            service: string;
+        };
+        /**
+         * LegalForm
+         * @description Common EU legal forms. `OTHER` keeps the enum closed without losing real companies.
+         * @enum {string}
+         */
+        LegalForm: "gmbh" | "ug" | "ag" | "sarl" | "sas" | "sa" | "bv" | "sp_zoo" | "sole_trader" | "other";
+        /**
+         * MatrixRow
+         * @description The agent's verdict on one requirement, plus the reviewer's disposition.
+         */
+        MatrixRow: {
+            /** Id */
+            id: string;
+            /** Requirement Id */
+            requirement_id: string;
+            status: components["schemas"]["RowStatus"];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["Evidence"][];
+            ecertis_evidence?: components["schemas"]["EcertisEvidence"] | null;
+            /**
+             * Agent Rationale
+             * @description Why the agent chose this status, in one or two sentences
+             */
+            agent_rationale: string;
+            /** @default pending */
+            reviewer_status: components["schemas"]["ReviewerStatus"];
+            /** Override Reason */
+            override_reason?: string | null;
+            /**
+             * Attached Doc Ids
+             * @default []
+             */
+            attached_doc_ids: string[];
+            /** Reviewed At */
+            reviewed_at?: string | null;
+        };
+        /**
+         * ModelSlugs
+         * @description Role -> OpenRouter slug. Every slug was confirmed with a live call (ADR-0004/0005).
+         */
+        ModelSlugs: {
+            /** Extract */
+            extract: string;
+            /** Cheap */
+            cheap: string;
+            /** Embed */
+            embed: string;
+            /** Judge */
+            judge: string;
+            /** Fallback */
+            fallback: string;
+        };
+        /**
+         * Requirement
+         * @description One obligation, with the evidence trail back to the page it was read from.
+         */
+        Requirement: {
+            /** Id */
+            id: string;
+            /** Bid Id */
+            bid_id: string;
+            category: components["schemas"]["RequirementCategory"];
+            kind: components["schemas"]["RequirementKind"];
+            stage: components["schemas"]["RequirementStage"];
+            checkable: components["schemas"]["Checkability"];
+            /** @default tender_document */
+            source: components["schemas"]["RequirementSource"];
+            /**
+             * Source Text
+             * @description Verbatim quote in the tender's own language. Never paraphrased.
+             */
+            source_text: string;
+            /**
+             * Source Lang
+             * @description BCP 47, e.g. 'de'
+             */
+            source_lang: string;
+            /**
+             * Document Name
+             * @description File the quote came from, for the citation
+             */
+            document_name: string;
+            /**
+             * Page
+             * @description 1-indexed, so it matches what the PDF viewer shows. Null for an ESPD request: a DUME is XML and has no pages, and the criterion id is its locator instead.
+             */
+            page?: number | null;
+            /**
+             * Translation
+             * @description Bidder-language rendering; None until translated
+             */
+            translation?: string | null;
+            /** Ecertis Criterion Id */
+            ecertis_criterion_id?: ("005eb9ed-1347-4ca3-bb29-9bc0db64e1ab" | "07301031-2270-41af-8e7e-66fe0c777107" | "074f6031-55f9-4e99-b9a4-c4363e8bc315" | "166536e2-77f7-455c-b018-70582474e4f6" | "1f49b3f0-d50f-43f6-8b30-4bafab108b9b" | "297d2323-3ede-424e-94bc-a91561e6f320" | "3293e92b-7f3e-42f1-bee6-a7641bb04251" | "396f288a-e267-4c20-851a-ed4f7498f137" | "3a18a175-1863-4b1d-baef-588ce61960ca" | "3aaca389-4a7b-406b-a4b9-080845d127e7" | "47112079-6fec-47a3-988f-e561668c3aef" | "499efc97-2ac1-4af2-9e84-323c2ca67747" | "4bf996d9-439c-40c6-9ab9-980a48cb55a1" | "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3" | "56d13e3d-76e8-4f23-8af6-13e60a2ee356" | "5e506c16-26ab-4e32-bb78-b27f87dc0565" | "612a1625-118d-4ea4-a6db-413184e7c0a8" | "61874050-5130-4f1c-a174-720939c7b483" | "6346959b-e097-4ea1-89cd-d1b4c131ea4d" | "63adb07d-db1b-4ef0-a14e-a99785cf8cf6" | "68918c7a-f5bc-4a1a-a62f-ad8983600d48" | "696a75b2-6107-428f-8b74-82affb67e184" | "6ee55a59-6adb-4c3a-b89f-e62a7ad7be7f" | "73f10e36-ed7a-412e-995c-aa76463e3776" | "7604bd40-4462-4086-8763-a50da51a869c" | "7662b7a9-bcb8-4763-a0a7-7505d8e8470d" | "77f481ce-ffb6-483f-8e2b-c78db5e68292" | "7d85e333-bbab-49c0-be8d-c36d71a72f5e" | "87b3fa26-3549-4f92-b8e0-3fd8f04bf5c7" | "8ed65e48-fd0d-444f-97bd-4f58da632999" | "8fda202a-0c37-41bb-9d7d-de3f49edbfcb" | "90a2e100-44cc-45d3-9970-69d6714f1596" | "9460457e-b43d-48a9-acd1-615de6ddd33e" | "9eeb6d5c-0eb8-48e8-a4c5-5087a7c095a4" | "a261a395-ed17-4939-9c75-b9ff1109ca6e" | "a34b70d6-c43d-4726-9a88-8e2b438424bf" | "a7669d7d-9297-43e1-9d10-691a1660187c" | "a80ddb62-d25b-4e4e-ae22-3968460dc0a9" | "ab0e7f2e-6418-40e2-8870-6713123e41ad" | "b16cb9fc-6cb7-4585-9302-9533b415cf48" | "b1b5ac18-f393-4280-9659-1367943c1a2e" | "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4" | "bdf0601d-2480-4250-b870-658d0ee95be6" | "c27b7c4e-c837-4529-b867-ed55ce639db5" | "c599c130-b29f-461e-a187-4e16c7d40db7" | "c8809aa1-29b6-4f27-ae2f-27e612e394db" | "cc18c023-211d-484d-a32e-52f3f970285f" | "cdd3bb3e-34a5-43d5-b668-2aab86a73822" | "d3732c09-7d62-4edc-a172-241da6636e7c" | "d3dfb714-f558-4512-bbc5-e456fa2339de" | "d486fb70-86b3-4e75-97f2-0d71b5697c7d" | "d726bac9-e153-4e75-bfca-c5385587766d" | "d789d01a-fe03-4ccd-9898-73f9cfa080d1" | "daffa2a9-9f8f-4568-8be8-7b8bf306d096" | "dc12a151-7fdf-4733-a8f0-30f667292e66" | "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46") | null;
+            threshold?: components["schemas"]["Threshold"] | null;
+            /** Deadline */
+            deadline?: string | null;
+        };
+        /**
+         * RequirementCategory
+         * @description Which part of the qualification decision this requirement belongs to.
+         * @enum {string}
+         */
+        RequirementCategory: "formal" | "economic_financial" | "technical_professional" | "exclusion_ground" | "other";
+        /**
+         * RequirementKind
+         * @description How badly non-compliance hurts.
+         * @enum {string}
+         */
+        RequirementKind: "mandatory" | "optional" | "informational";
+        /**
+         * RequirementSource
+         * @description Which kind of artefact the requirement was read out of.
+         *
+         *     Three, because each is read in a completely different way and a reviewer must be able
+         *     to tell them apart at a glance. A `TENDER_DOCUMENT` row is a verbatim quote a model
+         *     found on a numbered page of a PDF and that was checked against that page. An
+         *     `ESPD_REQUEST` row is a criterion the buyer *declared* in machine-readable form in a
+         *     published DUME — no model, no inference, no page — and it is the only kind that arrives
+         *     with an `ecertis_criterion_id` nobody had to guess (S2.5.1). A `NOTICE` row is a fact
+         *     the buyer published in TED's own structured fields — the deadline, the languages a
+         *     tender may be written in, a stated selection criterion — read out of JSON rather than
+         *     out of prose, and therefore also with no page and no model (S3.2.2). It carries no
+         *     criterion id either: a notice states criteria in words, and ADR-0007 forbids inferring
+         *     an id from wording.
+         * @enum {string}
+         */
+        RequirementSource: "tender_document" | "espd_request" | "notice";
+        /**
+         * RequirementStage
+         * @description When the obligation bites.
+         *
+         *     The test is: *would the company still have to do this if it never won the contract?*
+         *     If no, it is `CONTRACT_PERFORMANCE` and it does not belong in a go/no-go matrix.
+         *
+         *     Without this discriminator the SP.1 spike extracted 579 "mandatory" requirements from one
+         *     tender, because the AGB, EVB-IT, VOL/B, framework agreement and data-processing agreement
+         *     are all genuinely phrased as obligations. Adding it cut the set to 238 with no loss of
+         *     recall (ADR-0003).
+         * @enum {string}
+         */
+        RequirementStage: "bid_eligibility" | "contract_performance";
+        /**
+         * ReviewSubmission
+         * @description What the reviewer sends back to resume the graph.
+         *
+         *     `decision` is the reviewer's own call. It may disagree with the agent's, and when it does
+         *     the disagreement is recorded rather than smoothed over — that record is what a feedback
+         *     loop would later learn from.
+         */
+        ReviewSubmission: {
+            decision: components["schemas"]["Decision"];
+            /**
+             * Row Edits
+             * @default []
+             */
+            row_edits: components["schemas"]["RowEdit"][];
+            /**
+             * Override Reason
+             * @description Required when the reviewer's decision differs from the agent's
+             */
+            override_reason?: string | null;
+        };
+        /**
+         * ReviewerStatus
+         * @description What the human did with the agent's finding. The review step is the safety boundary.
+         * @enum {string}
+         */
+        ReviewerStatus: "pending" | "confirmed" | "overridden";
+        /**
+         * RowEdit
+         * @description A reviewer's change to one matrix row.
+         */
+        RowEdit: {
+            /** Matrix Row Id */
+            matrix_row_id: string;
+            /** @description None leaves the agent's status */
+            status?: components["schemas"]["RowStatus"] | null;
+            /** Override Reason */
+            override_reason?: string | null;
+            /**
+             * Attached Doc Ids
+             * @default []
+             */
+            attached_doc_ids: string[];
+        };
+        /**
+         * RowStatus
+         * @description The agent's finding for one requirement, in the design system's words (ADR-0013).
+         *
+         *     `supported` is cited evidence; `partially_supported` is the honest answer when the
+         *     documents do not settle it and the reviewer must; `unsupported` is evidence *against*.
+         * @enum {string}
+         */
+        RowStatus: "supported" | "partially_supported" | "unsupported" | "not_applicable";
+        /**
+         * StartBidRequest
+         * @description What it takes to start a bid: the notice, the tender's language, and the pack.
+         */
+        StartBidRequest: {
+            /**
+             * Notice Number
+             * @description TED publication number the bid is opened against
+             */
+            notice_number: string;
+            /**
+             * Document Ids
+             * @description Ready tender documents to parse; at least one
+             */
+            document_ids: string[];
+            /**
+             * Source Language
+             * @description The tender's own language, BCP 47; S1.2.1 takes it from TED later
+             */
+            source_language: string;
+            /**
+             * Title
+             * @description Dashboard title; defaults to the notice number
+             */
+            title?: string | null;
+            /**
+             * Buyer
+             * @description The contracting authority, as the notice names it. S1.2.1 takes it from TED later; until then the bidder has the notice in front of them.
+             */
+            buyer?: string | null;
+            /**
+             * Deadline
+             * @description When tenders are due, as an ISO-8601 timestamp **with the offset the notice states** — e.g. `2026-10-09T16:00:00+02:00`. The offset is kept alongside the instant so the dashboard can print the deadline on the buyer's own clock (S4.4.1); a timestamp with no offset is refused rather than assumed to be UTC, because guessing a zone silently moves a deadline by hours.
+             */
+            deadline?: string | null;
+        };
+        /**
+         * TedNotice
+         * @description One published notice, with every language-keyed field already resolved.
+         */
+        TedNotice: {
+            /**
+             * Publication Number
+             * @description TED's own id, e.g. '629621-2026'
+             */
+            publication_number: string;
+            /**
+             * Title
+             * @description The notice title, in the bidder's language where TED has one
+             */
+            title: string;
+            /**
+             * Buyer
+             * @description The contracting authority, or null when the notice names none
+             */
+            buyer: string | null;
+            /**
+             * Description
+             * @description The procedure's own summary, in its source language
+             */
+            description: string | null;
+            /**
+             * Deadline
+             * @description The earliest lot deadline. A DATE and never a time: across 58 sampled lot deadlines not one carried an hour, so the hour comes from the notice PDF or from the bidder (S4.4.1), never from here.
+             */
+            deadline: string | null;
+            /**
+             * Deadline Utc Offset Minutes
+             * @description The offset TED published with that date, which is the buyer's wall clock.
+             */
+            deadline_utc_offset_minutes: number | null;
+            /**
+             * Official Languages
+             * @description ISO 639-3, as TED writes them
+             */
+            official_languages: string[];
+            /**
+             * Submission Languages
+             * @description Languages a tender may be submitted in
+             */
+            submission_languages: string[];
+            /**
+             * Cpv
+             * @description CPV codes on the notice, deduplicated
+             */
+            cpv: string[];
+            /**
+             * Selection Criteria
+             * @description The selection criteria the buyer stated on the notice, in the notice's own language. Empty on most notices — populated on 14-17 % of CPV-72 ones, which is the measurement the upload-the-pack design rests on (S3.2.2).
+             * @default []
+             */
+            selection_criteria: string[];
+            /**
+             * Notice Pdf Url
+             * @description The notice as published, in its own language. S1.2.2 opens this.
+             */
+            notice_pdf_url: string | null;
+            /**
+             * Documents Url
+             * @description The national platform hosting the procurement documents. Almost never TED itself, which is why the bidder uploads the pack by hand (no-scraping rule).
+             */
+            documents_url: string | null;
+            /** Published On */
+            published_on?: string | null;
+        };
+        /**
+         * TedSearchPage
+         * @description One page of results, and enough context to know what is not on it.
+         */
+        TedSearchPage: {
+            /** Notices */
+            notices: components["schemas"]["TedNotice"][];
+            /**
+             * Total
+             * @description What TED says matched, which may exceed what can be paged to
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Limit */
+            limit: number;
+            /**
+             * Reachable Total
+             * @description Results actually fetchable: `min(total, 600)`. TED refuses to page beyond that, so a screen offering more would offer a 400.
+             */
+            reachable_total: number;
+        };
+        /**
+         * Threshold
+         * @description A number the bidder must clear.
+         *
+         *     Every quantified requirement in the German fixture reduced to one of these — turnover
+         *     >= EUR 3,000,000 per year, >= 29 FTE, >= 25 person-days, references no older than 3 years.
+         *     Keeping it typed is what lets the scorer compare rather than ask a model to judge.
+         */
+        Threshold: {
+            comparator: components["schemas"]["ThresholdComparator"];
+            /** Value */
+            value: number;
+            unit: components["schemas"]["ThresholdUnit"];
+            /**
+             * Currency
+             * @description ISO 4217 code, set only when unit is CURRENCY
+             */
+            currency?: string | null;
+            /**
+             * Period
+             * @description e.g. 'per_year', 'last_three_fiscal_years'
+             */
+            period?: string | null;
+        };
+        /**
+         * ThresholdComparator
+         * @description How a measured value is compared with the required one.
+         * @enum {string}
+         */
+        ThresholdComparator: "at_least" | "at_most" | "max_age" | "equals";
+        /**
+         * ThresholdUnit
+         * @description What is being measured. Closed, because a free-text unit cannot be compared.
+         * @enum {string}
+         */
+        ThresholdUnit: "currency" | "fte" | "headcount" | "person_days" | "references" | "years" | "percent";
+        /**
+         * Tone
+         * @description How explanations are written. Graded Easy 2 (personality / tone).
+         * @enum {string}
+         */
+        Tone: "plain" | "formal" | "brief";
+        /**
+         * ToolDescriptor
+         * @description One tool as the panel shows it: its manifest, plus whether this process will bind it.
+         */
+        ToolDescriptor: {
+            /**
+             * Name
+             * @description The name the model calls the tool by
+             */
+            name: string;
+            /**
+             * Description
+             * @description The text the model decides on; written for it
+             */
+            description: string;
+            /**
+             * External
+             * @description True when a call leaves the process. Cached reference data is false.
+             */
+            external: boolean;
+            /**
+             * Default Enabled
+             * @description Whether the tool ships enabled in settings.default.yaml
+             */
+            default_enabled: boolean;
+            /**
+             * Enabled
+             * @description Whether this process will bind it, after any app_settings override
+             */
+            enabled: boolean;
+        };
+        /**
+         * TurnoverYear
+         * @description One fiscal year's turnover in the contract's field of activity.
+         *
+         *     Tenders ask for the last three years in *the field of the contract*, not total revenue,
+         *     so `field_of_activity` is part of the fact.
+         */
+        TurnoverYear: {
+            /** Year */
+            year: number;
+            /** Amount */
+            amount: number;
+            /**
+             * Currency
+             * @description ISO 4217
+             */
+            currency: string;
+            /** Field Of Activity */
+            field_of_activity?: string | null;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
+        /**
+         * Verdict
+         * @description The scorer's output: a decision, and every reason behind it.
+         */
+        Verdict: {
+            decision: components["schemas"]["Decision"];
+            /**
+             * Gaps
+             * @default []
+             */
+            gaps: components["schemas"]["Gap"][];
+            score?: components["schemas"]["WeightedScore"] | null;
+            /**
+             * Rationale
+             * @description Plain-language explanation, in the bidder's language
+             */
+            rationale: string;
+            /** Mandatory Total */
+            mandatory_total: number;
+            /** Mandatory Supported */
+            mandatory_supported: number;
+            /** Partially Supported Rows */
+            partially_supported_rows: number;
+        };
+        /**
+         * WeightedScore
+         * @description A buyer's published points scale, when the tender uses one.
+         *
+         *     Present only for tenders that score selection; absent for pass/fail tenders. `threshold`
+         *     is the buyer's elimination cut-off, not ours.
+         */
+        WeightedScore: {
+            /** Points */
+            points: number;
+            /** Points Available */
+            points_available: number;
+            /**
+             * Threshold
+             * @description Below this the buyer eliminates the bid
+             */
+            threshold: number;
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
-export type $defs = Record<string, never>
+export type $defs = Record<string, never>;
 export interface operations {
-  health_health_get: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['Health']
-        }
-      }
-    }
-  }
-  list_documents_documents_get: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['DocumentListResponse']
-        }
-      }
-    }
-  }
-  upload_document_documents_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'multipart/form-data': components['schemas']['Body_upload_document_documents_post']
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      202: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['DocumentResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  get_document_documents__document_id__get: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        document_id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['DocumentResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  get_document_url_documents__document_id__url_get: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        document_id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['DocumentUrlResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  list_company_bids_bids_get: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['BidListResponse']
-        }
-      }
-    }
-  }
-  start_bid_bids_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['StartBidRequest']
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      202: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['BidResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  submit_review_bids__bid_id__review_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        bid_id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ReviewSubmission']
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['BidResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  get_bid_bids__bid_id__get: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        bid_id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['BidResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  post_company_companies_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CompanyProfile']
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['CompanyProfileResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  get_company_profile_companies_me_get: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['CompanyProfileResponse']
-        }
-      }
-    }
-  }
-  put_company_profile_companies_me_put: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CompanyProfile']
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['CompanyProfileResponse']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  read_dev_settings_dev_settings_get: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['DevSettingsResponse']
-        }
-      }
-    }
-  }
-  search_tenders_tenders_search_get: {
-    parameters: {
-      query?: {
-        /** @description CPV codes, full eight digits */
-        cpv?: string[]
-        /** @description ISO 3166-1 alpha-2 */
-        country?: string[]
-        /** @description Free text across the notice */
-        keyword?: string | null
-        contract_notices_only?: boolean
-        limit?: number
-        page?: number
-        /** @description Read titles in this language where TED has one */
-        language?: string | null
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['TedSearchPage']
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
+    health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    list_documents_documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentListResponse"];
+                };
+            };
+        };
+    };
+    upload_document_documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_document_documents_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_document_documents__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_document_url_documents__document_id__url_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentUrlResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_company_bids_bids_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidListResponse"];
+                };
+            };
+        };
+    };
+    start_bid_bids_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartBidRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_review_bids__bid_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSubmission"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bid_bids__bid_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_company_companies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyProfile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_profile_companies_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfileResponse"];
+                };
+            };
+        };
+    };
+    put_company_profile_companies_me_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyProfile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_dev_settings_dev_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevSettingsResponse"];
+                };
+            };
+        };
+    };
+    search_tenders_tenders_search_get: {
+        parameters: {
+            query?: {
+                /** @description CPV codes, full eight digits */
+                cpv?: string[];
+                /** @description ISO 3166-1 alpha-2 */
+                country?: string[];
+                /** @description Free text across the notice */
+                keyword?: string | null;
+                contract_notices_only?: boolean;
+                limit?: number;
+                page?: number;
+                /** @description Read titles in this language where TED has one */
+                language?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TedSearchPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
 }

@@ -457,3 +457,131 @@ def test_a_notice_with_no_publication_date_and_a_blank_deadline_still_loads() ->
 
     assert notice.published_on is None
     assert notice.deadline is None
+
+
+# ------------------------------------------------- one notice, by its publication number
+
+
+def test_the_stated_selection_criteria_come_back_in_the_notices_own_language() -> None:
+    """They become requirement *quotes*, and a machine translation of a legal criterion is
+    not the criterion — so the bidder's language is deliberately not consulted here."""
+    body = {
+        **BODY,
+        "notices": [
+            {
+                **NOTICE,
+                "official-language": ["DEU"],
+                "selection-criterion-description-lot": {
+                    "deu": ["Eigenerklaerung zur Eignung.", "Mindestumsatz 3 000 000 EUR."],
+                    "eng": ["Declaration of suitability.", "Minimum turnover EUR 3 000 000."],
+                },
+            }
+        ],
+    }
+    notice = client_for(answering(body)).search(TedSearchQuery(), language="en").notices[0]
+
+    assert notice.selection_criteria == (
+        "Eigenerklaerung zur Eignung.",
+        "Mindestumsatz 3 000 000 EUR.",
+    )
+
+
+def test_a_notice_stating_no_criteria_reports_none() -> None:
+    """The common case: 14-17 % of CPV-72 notices state any, which is the measurement the
+    upload-the-pack design rests on."""
+    assert (
+        client_for(answering(BODY)).search(TedSearchQuery()).notices[0].selection_criteria == ()
+    )
+
+
+def test_criteria_in_a_language_we_did_not_ask_for_are_still_returned() -> None:
+    """Better the buyer's words in a language nobody picked than no criteria at all."""
+    body = {
+        **BODY,
+        "notices": [
+            {**NOTICE, "selection-criterion-description-lot": {"pol": ["Warunek udzialu."]}}
+        ],
+    }
+
+    assert client_for(answering(body)).search(TedSearchQuery()).notices[
+        0
+    ].selection_criteria == ("Warunek udzialu.",)
+
+
+def test_a_criteria_field_that_is_not_a_mapping_is_ignored() -> None:
+    body = {**BODY, "notices": [{**NOTICE, "selection-criterion-description-lot": ["loose"]}]}
+
+    assert (
+        client_for(answering(body)).search(TedSearchQuery()).notices[0].selection_criteria == ()
+    )
+
+
+def test_a_lookup_by_publication_number_asks_ted_for_exactly_that_notice() -> None:
+    """The v3 API has no by-id endpoint, so it is a search with one clause."""
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        seen.append(json.loads(request.content)["query"])
+        return httpx.Response(200, json=BODY)
+
+    found = client_for(handler).search_by_publication_number("629621-2026")
+
+    assert found is not None
+    assert found.publication_number == "629621-2026"
+    assert seen[0] == "publication-number IN (629621-2026)"
+
+
+def test_a_lookup_does_not_filter_by_notice_type() -> None:
+    """The caller already has a specific notice; filtering it out for being an award notice
+    would be a confusing nothing."""
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        seen.append(json.loads(request.content)["query"])
+        return httpx.Response(200, json=BODY)
+
+    client_for(handler).search_by_publication_number("629621-2026")
+
+    assert "notice-type" not in seen[0]
+
+
+def test_a_publication_number_ted_does_not_know_answers_none() -> None:
+    body = {"notices": [], "totalNoticeCount": 0}
+
+    assert client_for(answering(body)).search_by_publication_number("000000-2026") is None
+
+
+def test_a_language_whose_criteria_are_all_blank_falls_through_to_the_next() -> None:
+    """An empty list under the notice's own language is not an answer; the next one is."""
+    body = {
+        **BODY,
+        "notices": [
+            {
+                **NOTICE,
+                "official-language": ["DEU"],
+                "selection-criterion-description-lot": {
+                    "deu": ["", "  "],
+                    "eng": ["A criterion."],
+                },
+            }
+        ],
+    }
+
+    assert client_for(answering(body)).search(TedSearchQuery()).notices[
+        0
+    ].selection_criteria == ("A criterion.",)
+
+
+def test_a_criteria_mapping_with_nothing_usable_in_it_reports_none() -> None:
+    body = {
+        **BODY,
+        "notices": [{**NOTICE, "selection-criterion-description-lot": {"deu": [], "eng": ""}}],
+    }
+
+    assert (
+        client_for(answering(body)).search(TedSearchQuery()).notices[0].selection_criteria == ()
+    )

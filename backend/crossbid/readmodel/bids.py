@@ -276,6 +276,24 @@ set status = %(status)s, failure_reason = %(reason)s, updated_at = now()
 where company_id = %(company_id)s and id = %(bid_id)s
 """
 
+UPDATE_BID_DEADLINE_IF_UNSET: Final[LiteralString] = """
+update bids
+set deadline = %(deadline)s,
+    deadline_utc_offset_minutes = %(deadline_offset)s,
+    updated_at = now()
+where company_id = %(company_id)s and id = %(bid_id)s and deadline is null
+"""
+"""S3.2.2 — the deadline TED published, written only where the bidder gave none.
+
+`and deadline is null` is the whole point of the statement. The bidder types the deadline
+from the notice PDF and it carries an **hour**; TED publishes a date and never a time
+(ADR-0043). So the one the bidder gave is strictly better information, and a notice fetched
+later in the run must not overwrite it — which is what an unconditional update would do
+every time a bid was resumed from its checkpoint.
+
+A zero row count therefore means "already set", not "no such bid", so this is the one
+updater here that does not call `_require_one_row`."""
+
 UPDATE_BID_PROBLEMS: Final[LiteralString] = """
 update bids
 set problems = %(problems)s, updated_at = now()
@@ -366,6 +384,7 @@ SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     SELECT_BIDS,
     UPDATE_BID_STATUS,
     UPDATE_BID_FAILED,
+    UPDATE_BID_DEADLINE_IF_UNSET,
     UPDATE_BID_PROBLEMS,
     UPDATE_BID_VERDICT,
     UPDATE_BID_DECISION,
@@ -464,6 +483,33 @@ async def set_bid_status(
             {"company_id": company_id, "bid_id": bid_id, "status": status.value},
         )
         _require_one_row(cursor.rowcount, bid_id)
+
+
+async def set_bid_deadline_if_unset(
+    db: ConnectionSource,
+    *,
+    company_id: str,
+    bid_id: str,
+    deadline: datetime,
+    deadline_utc_offset_minutes: int | None,
+) -> bool:
+    """Write TED's deadline onto the bid unless one is already there (S3.2.2).
+
+    Answers whether it was written, so a caller can log which source the dashboard is now
+    counting down from. Never raises for a bid that already had one: that is the expected
+    case whenever the bidder typed the hour on the start form.
+    """
+    async with db.connection() as conn:
+        cursor = await conn.execute(
+            UPDATE_BID_DEADLINE_IF_UNSET,
+            {
+                "company_id": company_id,
+                "bid_id": bid_id,
+                "deadline": deadline,
+                "deadline_offset": deadline_utc_offset_minutes,
+            },
+        )
+        return cursor.rowcount == 1
 
 
 async def mark_bid_failed(

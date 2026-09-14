@@ -73,6 +73,7 @@ FIELDS: Final[tuple[str, ...]] = (
     "description-proc",
     "buyer-name",
     "deadline-receipt-tender-date-lot",
+    "selection-criterion-description-lot",
     "official-language",
     "submission-language",
     "classification-cpv",
@@ -158,10 +159,22 @@ class TedSearchClient:
         self._http = http
         self._max_attempts = max_attempts
 
-    def search(self, query: TedSearchQuery, *, language: str | None = None) -> TedSearchPage:
-        """One page of notices, with every language-keyed field resolved for `language`."""
+    def search(
+        self,
+        query: TedSearchQuery,
+        *,
+        language: str | None = None,
+        query_override: str | None = None,
+    ) -> TedSearchPage:
+        """One page of notices, with every language-keyed field resolved for `language`.
+
+        `query_override` replaces the built expert query outright, for the one caller that
+        needs a clause `TedSearchQuery` cannot express — a lookup by publication number.
+        It is a seam and not a general escape hatch: everything else goes through
+        `build_query`, which is where the rules about `OR`, sorting and CPV length live.
+        """
         payload = {
-            "query": build_query(query),
+            "query": build_query(query) if query_override is None else query_override,
             "fields": list(FIELDS),
             "limit": query.limit,
             "page": query.page,
@@ -182,6 +195,26 @@ class TedSearchClient:
             limit=query.limit,
             reachable_total=min(total, MAX_REACHABLE_RESULTS),
         )
+
+    def search_by_publication_number(
+        self, publication_number: str, *, language: str | None = None
+    ) -> TedNotice | None:
+        """One notice by its TED publication number, or `None` if TED has no such notice.
+
+        A search rather than a fetch, because the v3 API has no by-id endpoint —
+        `publication-number IN (629621-2026)` answers with exactly one match (probed
+        2026-09-14). The notice-type filter is lifted: the caller already has a specific
+        notice and filtering it out because it is an award notice would be a confusing
+        nothing.
+        """
+        page = self.search(
+            TedSearchQuery(
+                contract_notices_only=False, limit=1, keyword=None, cpv=(), countries=()
+            ),
+            language=language,
+            query_override=f"publication-number IN ({publication_number})",
+        )
+        return page.notices[0] if page.notices else None
 
     def _post(self, payload: Mapping[str, Any]) -> Mapping[str, Any]:
         last_error: Exception | None = None
@@ -272,6 +305,13 @@ def _notice(raw: Mapping[str, Any], preferred: str | None) -> TedNotice:
         official_languages=official,
         submission_languages=_codes(raw.get("submission-language")),
         cpv=_unique(raw.get("classification-cpv")),
+        # In the notice's own language and never the bidder's: these become requirement
+        # *quotes*, and a quote is evidence. `notice-title` may be translated because it is
+        # read; a criterion the bidder will be held to must be the buyer's own words.
+        selection_criteria=_all_in_language(
+            raw.get("selection-criterion-description-lot"),
+            tuple(code.lower() for code in official),
+        ),
         notice_pdf_url=_notice_pdf(links, official),
         documents_url=_first(raw.get("document-url-lot")),
         published_on=_date_only(_first(raw.get("publication-date"))),
@@ -297,6 +337,28 @@ def _in_language(field: object, fallbacks: Sequence[str | None]) -> str | None:
         if isinstance(text, str) and text.strip():
             return text.strip()
     return None
+
+
+def _all_in_language(field: object, official: Sequence[str]) -> tuple[str, ...]:
+    """Every entry of a language-keyed list field, in the source language.
+
+    Unlike `_in_language`, which wants one string a human will read, this wants the whole
+    list and wants it untranslated: `selection-criterion-description-lot` maps a language to
+    a *list* of criteria, and each becomes a requirement the bidder is measured against.
+    English is the last resort rather than the second, because a machine translation of a
+    legal criterion is not the criterion.
+    """
+    if not isinstance(field, Mapping):
+        return ()
+    for code in (*official, ENGLISH, *sorted(field)):
+        value = field.get(code)
+        if isinstance(value, list):
+            found = tuple(
+                text.strip() for text in value if isinstance(text, str) and text.strip()
+            )
+            if found:
+                return found
+    return ()
 
 
 def _earliest_deadline(field: object) -> tuple[date | None, int | None]:

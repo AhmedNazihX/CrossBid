@@ -23,16 +23,22 @@ MAX_QUOTE_CHARS = 2000
 class RequirementSource(StrEnum):
     """Which kind of artefact the requirement was read out of.
 
-    Two, because the two are read in completely different ways and a reviewer must be able
+    Three, because each is read in a completely different way and a reviewer must be able
     to tell them apart at a glance. A `TENDER_DOCUMENT` row is a verbatim quote a model
     found on a numbered page of a PDF and that was checked against that page. An
     `ESPD_REQUEST` row is a criterion the buyer *declared* in machine-readable form in a
     published DUME — no model, no inference, no page — and it is the only kind that arrives
-    with an `ecertis_criterion_id` nobody had to guess (S2.5.1).
+    with an `ecertis_criterion_id` nobody had to guess (S2.5.1). A `NOTICE` row is a fact
+    the buyer published in TED's own structured fields — the deadline, the languages a
+    tender may be written in, a stated selection criterion — read out of JSON rather than
+    out of prose, and therefore also with no page and no model (S3.2.2). It carries no
+    criterion id either: a notice states criteria in words, and ADR-0007 forbids inferring
+    an id from wording.
     """
 
     TENDER_DOCUMENT = "tender_document"
     ESPD_REQUEST = "espd_request"
+    NOTICE = "notice"
 
 
 class RequirementCategory(StrEnum):
@@ -181,16 +187,23 @@ class Requirement(BaseModel):
         position in the file — would render in the workspace as `DUME_acheteur.xml p. 1`, a
         citation that looks followable and is not. A citation a reviewer cannot follow is
         worse than none, so the row says `page: null` and names its criterion instead.
+
+        **The rule is "only a tender document has a page", not "an ESPD request has none".**
+        It read the second way until S3.2.2 added a third source, and a notice read out of
+        TED's JSON has no page for exactly the reason a DUME has none. Stated as a property
+        of the sources that *do* paginate, the next structured source is a name on the
+        tuple below rather than another exception (migration 0008 says the same in SQL).
         """
-        has_pages = self.source is not RequirementSource.ESPD_REQUEST
+        has_pages = self.source is RequirementSource.TENDER_DOCUMENT
         if has_pages and self.page is None:
             raise ValueError(
                 "a requirement read from a tender document must carry the page it was read "
-                "from; only an ESPD request has no page"
+                "from; only a structured source (an ESPD request, a TED notice) has no page"
             )
         if not has_pages and self.page is not None:
             raise ValueError(
-                "a requirement read from an ESPD request must not carry a page: a DUME is "
-                "XML and has no pages, and a page a reviewer cannot open is a false citation"
+                f"a requirement read from {self.source.value} must not carry a page: it is "
+                "structured data with no pages, and a page a reviewer cannot open is a "
+                "false citation"
             )
         return self
