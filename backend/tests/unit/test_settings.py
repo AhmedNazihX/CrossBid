@@ -64,6 +64,7 @@ MANAGED_ENV_VARS = (
     "SUPABASE_STORAGE_BUCKET",
     "SIGNED_URL_TTL_SECONDS",
     "WEB_ORIGIN",
+    "DEVELOPER_EMAILS",
 )
 
 
@@ -530,9 +531,59 @@ def test_supabase_auth_mode_is_allowed_in_production(
     # Arrange
     monkeypatch.setenv("AUTH_MODE", "supabase")
     monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
 
     # Act / Assert
     assert load().env.environment is Environment.PRODUCTION
+
+
+def test_supabase_auth_mode_without_a_project_url_is_refused(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S0.3.1: the JWKS URL is derived from SUPABASE_URL, so there is nothing to verify
+    tokens against without it, and the first request is a worse place to find that out."""
+    # Arrange
+    monkeypatch.setenv("AUTH_MODE", "supabase")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+
+    # Act
+    with pytest.raises(SettingsError) as raised:
+        load()
+
+    # Assert
+    assert "SUPABASE_URL" in str(raised.value)
+
+
+@pytest.mark.parametrize(
+    ("listed", "email", "expected"),
+    [
+        ("a@example.de,b@example.de", "b@example.de", True),
+        ("  A@Example.DE , b@example.de ", "a@example.de", True),
+        ("a@example.de", "b@example.de", False),
+        ("", "a@example.de", False),
+        ("a@example.de", None, False),
+        ("a@example.de", "   ", False),
+    ],
+)
+def test_the_developer_list_decides_who_reaches_a_dev_route(
+    valid_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    listed: str,
+    email: str | None,
+    expected: bool,
+) -> None:
+    """S0.3.1's third criterion. Every failure direction here is the closed one."""
+    monkeypatch.setenv("DEVELOPER_EMAILS", listed)
+
+    assert load().env.is_developer_email(email) is expected
+
+
+def test_an_unset_developer_list_admits_nobody(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DEVELOPER_EMAILS", raising=False)
+
+    assert load().env.is_developer_email("anyone@example.de") is False
 
 
 # ------------------------------------------------- S0.2.2 guard: the pooler DSN rule

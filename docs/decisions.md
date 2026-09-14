@@ -2816,3 +2816,88 @@ every page names this repository and the story, and `README.md` in the fixture d
 to feed one to a real assistant. The footer is constant across every page of every document,
 plant or no plant, so it cannot become the signal a guard learns instead of the attack.
 
+---
+
+## ADR-0033 — Magic-link sign-in, and the four things verification had to get right
+
+**Date:** 2026-09-14 · **Stories:** S0.3.1 (unblocks S4.1.1 → S4.2.1, S4.3.1) · **Status:** accepted
+
+The plan settled the mechanism a year of notes ago — "FastAPI verifies the signature against
+Supabase's public keys (JWKS), reads the user id, loads the user's company". Building it
+settled five things the plan did not.
+
+**1. This project signs ES256, and the keys are public.** Probed live on 2026-09-14:
+`{SUPABASE_URL}/auth/v1/.well-known/jwks.json` returns one `ES256` key (`kty: EC`, P-256) and
+needs no `apikey` header to read. So the backend holds **no auth secret at all** — no
+`SUPABASE_JWT_SECRET`, nothing that could be leaked into a token factory. `SUPABASE_URL` is
+the only new requirement, and `load_settings` refuses `AUTH_MODE=supabase` without it rather
+than 500ing on the first request.
+
+**2. The accepted algorithms are named, and that *is* the defence.** `ES256`/`RS256` only.
+Two published attacks die there, and both are tests: `alg: none`, and an HS256 token signed
+with the public key we ourselves publish as though it were a shared secret. PyJWT refuses to
+*encode* the second one, which says nothing about what we accept — so the test hand-rolls it
+from base64 and an HMAC rather than trusting the library's signing-side courtesy. Issuer and
+audience are pinned; `exp`, `sub`, `aud`, `iss` are required; a blank or non-string `sub` is
+refused after that, because `require` only asks that a claim be *present*.
+
+**3. Every rejection is the same 401 with the same words.** A verifier that tells the caller
+"expired" rather than "bad signature" is an oracle. The reason stays in the exception and
+never reaches the response, and the test asserts the token itself appears nowhere in either.
+
+**4. A JWKS outage is a 503, not a 401.** Telling users their token is invalid because
+Supabase is unreachable sends them to re-authenticate against a service that is down and
+hides an incident behind what looks like user error. Separate exception, separate status.
+
+**5. Key rotation without a restart, and without becoming a DoS amplifier.** The key set is
+cached per process; an unknown `kid` triggers a refetch, but **at most one per 60 s**. Without
+that floor a stream of forged `kid`s is free amplification pointed at Supabase. The cost is
+that a freshly rotated key can take up to a minute to be accepted, which is acceptable because
+Supabase publishes the outgoing and incoming keys together during a rotation.
+
+### Two structural decisions the wiring forced
+
+**Both new providers are mode-aware, returning `None` under `AUTH_MODE=dev`.** FastAPI
+resolves a dependency *before* the function declaring it runs, so `Depends(get_database)` on
+`current_company` made every dev-mode request demand a connection pool the dev bridge never
+touches — the whole offline test suite went red at once. `get_token_verifier` and
+`get_company_lookup` therefore answer `None` outside supabase mode, and the two `assert`s that
+follow are type narrowing, not belief.
+
+**`POST /companies` had to land with this story.** `companies.owner_user_id` is `NOT NULL` and
+there was no route that created a company — under the dev bridge the seed script did it. Under
+real sign-in that means a first-time user is authenticated, has no company, and can never get
+one: every route answers 404 forever. The plan lists `POST /companies` in its endpoint surface;
+this is where it belongs. The owner comes from the verified token and never from the body, and
+a body that names one is **422, not silently ignored** — a client that could name the owner
+could create a company for somebody else, and a dropped field would leave them believing they
+had.
+
+A user who is signed in but not onboarded gets **404 with a message naming `POST /companies`**,
+never 403: there is nothing there to be forbidden from, and the web app routes on it.
+
+### The developer gate, and the order of the two gates
+
+`DEVELOPER_EMAILS` is compared against the token's `email` claim, trimmed and case-folded on
+both sides. Every failure direction is the closed one: an unset list admits nobody, and a token
+with no email (Supabase omits it for phone and anonymous sign-ins) is never a developer.
+
+`/dev/*` now carries **two** router-level dependencies, and their order is load-bearing:
+`refuse_in_production` (404) before `require_developer` (403). FastAPI resolves a dependency
+list in order, so in production an unauthenticated request gets the 404 that hides the route
+rather than the 401 that gives it away. ADR-0012's note that the environment gate was standing
+in for a role check until S4.6.2 is now settled here instead: the role exists, and the
+environment gate stays underneath it.
+
+Under `AUTH_MODE=dev` every caller is a developer and no company header is demanded for
+`/dev/*`, which is exactly the door the environment gate already opened. Dev mode also acts as
+one fixed synthetic user (`DEV_USER_ID`) rather than reusing the company id from the header —
+`owner_user_id` is unique, so reusing the header would let dev mode mint a second company per
+header value and quietly break the one-company-per-user rule.
+
+### Dependency
+
+`pyjwt[crypto]` is now a **direct** dependency. It was already installed as a transitive
+dependency of `supabase-auth`, so nothing new entered the environment — but a module that
+imports a package has to declare it, or the day `supabase` drops it the failure is an
+ImportError in the auth path.

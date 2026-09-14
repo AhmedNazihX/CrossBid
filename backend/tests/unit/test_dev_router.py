@@ -65,10 +65,13 @@ def production_settings(
     """A deployed configuration, through the real loader so its guards run too.
 
     `AUTH_MODE=supabase` because `settings.py` refuses the dev bridge in production; that
-    refusal is exactly why this route needs a gate of its own.
+    refusal is exactly why this route needs a gate of its own. `SUPABASE_URL` comes with it
+    for the same reason -- the loader refuses supabase auth with no project to verify
+    against (S0.3.1).
     """
     monkeypatch.setenv("ENV", "production")
     monkeypatch.setenv("AUTH_MODE", "supabase")
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
     return load_settings(env_file=None)
 
 

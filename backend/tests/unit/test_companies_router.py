@@ -26,7 +26,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from crossbid.auth import DEV_COMPANY_HEADER
+from crossbid.auth import DEV_COMPANY_HEADER, DEV_USER_ID
 from crossbid.main import create_app
 from crossbid.models import CertificateHeld, CompanyProfile, LegalForm, Tone, TurnoverYear
 from crossbid.readmodel.companies import CompaniesReadModel
@@ -77,16 +77,32 @@ PROFILE = CompanyProfile(
 class InMemoryCompanies:
     """`CompaniesReadModel`'s two methods over a dict, so a save and a read share state.
 
-    A company that is not in the dict was never seeded: `save` reports it the way the real
-    `update ... returning` does, by answering `None` rather than creating a row. There is no
-    route that creates one — `owner_user_id` comes from sign-up, not from this form.
+    A company that is not in the dict was never created: `save` reports it the way the real
+    `update ... returning` does, by answering `None` rather than creating a row. `create` is
+    the one route that makes one, and it takes the owner from the verified token (S0.3.1).
     """
 
     def __init__(self, **profiles: CompanyProfile) -> None:
         self.profiles = {uuid.UUID(key): value for key, value in profiles.items()}
+        self.owners: dict[uuid.UUID, uuid.UUID] = {}
 
     async def get(self, *, company_id: uuid.UUID) -> CompanyProfile | None:
         return self.profiles.get(company_id)
+
+    async def company_id_for_owner(self, *, owner_user_id: uuid.UUID) -> uuid.UUID | None:
+        for company_id, owner in self.owners.items():
+            if owner == owner_user_id:
+                return company_id
+        return None
+
+    async def create(
+        self, *, company_id: uuid.UUID, owner_user_id: uuid.UUID, profile: CompanyProfile
+    ) -> CompanyProfile | None:
+        if company_id in self.profiles:
+            return None
+        self.profiles[company_id] = profile
+        self.owners[company_id] = owner_user_id
+        return profile
 
     async def save(
         self, *, company_id: uuid.UUID, profile: CompanyProfile
@@ -449,3 +465,73 @@ async def test_the_production_dependencies_are_the_pool_and_langgraphs_own_store
         assert get_profile_store(db) is db.store
     finally:
         await db.close()
+
+
+# ------------------------------------------------------- POST /companies (S0.3.1)
+
+
+def test_creating_a_company_returns_201_and_the_saved_profile(
+    offline_settings: Settings, records: InMemoryCompanies, store: RecordingStore
+) -> None:
+    with build_api(offline_settings, records, store) as client:
+        response = client.post("/companies", json=PROFILE.model_dump(mode="json"))
+
+    assert response.status_code == 201
+    assert response.json()["name"] == PROFILE.name
+
+
+def test_the_new_company_is_owned_by_the_calling_user(
+    offline_settings: Settings, records: InMemoryCompanies, store: RecordingStore
+) -> None:
+    """The owner comes from the caller's identity, never from anything they sent."""
+    with build_api(offline_settings, records, store) as client:
+        client.post("/companies", json=PROFILE.model_dump(mode="json"))
+
+    assert list(records.owners.values()) == [uuid.UUID(DEV_USER_ID)]
+
+
+def test_a_body_naming_an_owner_is_refused_rather_than_ignored(
+    offline_settings: Settings, records: InMemoryCompanies, store: RecordingStore
+) -> None:
+    """A client that could name the owner could create a company for somebody else, and a
+    silently dropped field would leave them believing they had."""
+    with build_api(offline_settings, records, store) as client:
+        response = client.post(
+            "/companies",
+            json={**PROFILE.model_dump(mode="json"), "owner_user_id": str(OTHER_COMPANY)},
+        )
+
+    assert response.status_code == 422
+    assert records.owners == {}
+
+
+def test_a_second_company_for_the_same_user_is_409(
+    offline_settings: Settings, records: InMemoryCompanies, store: RecordingStore
+) -> None:
+    """One company per user, enforced by the unique index and answered as a conflict."""
+    with build_api(offline_settings, records, store) as client:
+        client.post("/companies", json=PROFILE.model_dump(mode="json"))
+        response = client.post("/companies", json=PROFILE.model_dump(mode="json"))
+
+    assert response.status_code == 409
+    assert "PUT /companies/me" in response.json()["detail"]
+
+
+def test_creating_a_company_validates_the_body(
+    offline_settings: Settings, records: InMemoryCompanies, store: RecordingStore
+) -> None:
+    with build_api(offline_settings, records, store) as client:
+        response = client.post("/companies", json={"name": "No country given"})
+
+    assert response.status_code == 422
+
+
+def test_creating_a_company_flags_an_expired_certificate(
+    offline_settings: Settings, records: InMemoryCompanies, store: RecordingStore
+) -> None:
+    """The same response model as the other two routes, so onboarding shows the gap at once."""
+    with build_api(offline_settings, records, store) as client:
+        response = client.post("/companies", json=PROFILE.model_dump(mode="json"))
+
+    expired = [item for item in response.json()["certificates"] if item["is_expired"]]
+    assert [item["name"] for item in expired] == [EXPIRED.name]

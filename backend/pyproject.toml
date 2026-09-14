@@ -24,6 +24,9 @@ dependencies = [
     # ingestion
     "pymupdf4llm>=0.0.17",
     "supabase>=2.9",                  # Storage only: upload + signed URLs (S2.2.2)
+    # auth: verifying Supabase's ES256 magic-link tokens against its JWKS (S0.3.1). Already
+    # in the tree as a dependency of supabase-auth; declared here because we import it.
+    "pyjwt[crypto]>=2.10",
     # observability
     "langsmith>=0.1",
 ]

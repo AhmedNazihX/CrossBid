@@ -36,17 +36,16 @@ before a story counts as delivered, not a knob a panel turns: moving it from a b
 would change the number the course reports without changing anything the agent does. It is
 read by `scripts/recall.py` from the YAML and stays off the wire.
 
-**The gate is `ENV != production`, and the refusal is a 404.** S4.6.2's criterion is "given
-a non-developer account, the route is not reachable", but there is no developer role to
-check: authentication is still the `X-Dev-Company` bridge of S0.3.1's notes, and the plan
-lists the role mechanism (an env-var email list) as open. Inventing one here would be a
-security control nobody reviewed. So the route is gated on what exists and what
-`seed_dev_company.py` and `settings._refuse_dev_auth_in_production` already gate on: the
-environment. **S4.6.2 tightens this to a real role check** and the environment gate stays
-underneath it. The refusal is 404 with FastAPI's own not-found body, because a 403 is a
-route confirming it is there to be reached. No tenant header is required: the answer holds
-no tenant data, `X-Dev-Company` is self-asserted and so authorises nothing, and demanding
-it would turn that 404 into a 401 that gives the route away.
+**Two gates, and their order is the security-relevant part.** The environment is checked
+first and answers **404** with FastAPI's own not-found body, because a 403 is a route
+confirming it is there to be reached; then S0.3.1's developer check answers **403** for an
+account that is not on `DEVELOPER_EMAILS`. Declared in that order on the router, and FastAPI
+resolves a dependency list in order, so in production an unauthenticated request gets the
+404 rather than the 401 that would give the route away.
+
+Under `AUTH_MODE=dev` every caller is a developer (`auth.current_user`), which is the same
+door the environment gate already opened and needs no tenant header: the answer holds no
+tenant data, and `X-Dev-Company` is self-asserted and so authorises nothing.
 
 The route stays in the OpenAPI schema in production — the generated `frontend/lib/api.ts`
 must not depend on which environment the API was booted in — and answers 404 there.
@@ -59,17 +58,29 @@ from typing import Final
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from crossbid.auth import require_developer
 from crossbid.main import get_app_settings
 from crossbid.settings import AgentSettings, Environment, ModelSlugs, Settings
 from crossbid.tools.registry import enabled_tool_names, manifests, unbuilt_tool_names
-
-router = APIRouter(prefix="/dev", tags=["dev"])
 
 DEV_SETTINGS_PATH: Final = "/dev/settings"
 """The full path, so a test states it once rather than reassembling the prefix."""
 
 NOT_FOUND_DETAIL: Final = "Not Found"
 """Starlette's own 404 body, copied so the refusal reads exactly like an unknown path."""
+
+
+def refuse_in_production(settings: Settings = Depends(get_app_settings)) -> None:
+    """The first gate. Declared before the developer check so production answers 404."""
+    if settings.env.environment is Environment.PRODUCTION:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_DETAIL)
+
+
+router = APIRouter(
+    prefix="/dev",
+    tags=["dev"],
+    dependencies=[Depends(refuse_in_production), Depends(require_developer)],
+)
 
 
 class ToolDescriptor(BaseModel):
@@ -121,12 +132,6 @@ class DevSettingsResponse(BaseModel):
     )
 
 
-def _refuse_in_production(settings: Settings) -> None:
-    """The gate. See the module docstring: environment now, developer role at S4.6.2."""
-    if settings.env.environment is Environment.PRODUCTION:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND_DETAIL)
-
-
 def _describe_tools(settings: Settings) -> tuple[ToolDescriptor, ...]:
     enabled = enabled_tool_names(settings)
     return tuple(
@@ -146,7 +151,6 @@ async def read_dev_settings(
     settings: Settings = Depends(get_app_settings),
 ) -> DevSettingsResponse:
     """What the agent may reach and how it is configured. Outside production only."""
-    _refuse_in_production(settings)
     runtime = settings.runtime
     return DevSettingsResponse(
         models=runtime.models,

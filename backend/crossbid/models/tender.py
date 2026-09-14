@@ -115,8 +115,3 @@ class BidSummary(BaseModel):
     )
     created_at: datetime | None = None
     updated_at: datetime | None = None
-
-    @property
-    def is_awaiting_review(self) -> bool:
-        """The one state that is owed an answer by a person. The dashboard sorts on it."""
-        return self.status is BidStatus.AWAITING_REVIEW

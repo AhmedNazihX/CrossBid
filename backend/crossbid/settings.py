@@ -249,12 +249,34 @@ class EnvSettings(BaseSettings):
     """How long a document's signed URL stays valid. The default is the cap."""
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "crossbid"
+    developer_emails: str = ""
+    """Comma-separated list of the emails `/dev/*` is open to (S0.3.1).
+
+    A plain string rather than a `tuple`, because pydantic-settings parses a complex type
+    out of the environment as **JSON** and would reject `a@b.de,c@d.de` before any
+    validator ran. `is_developer_email` below is the one reader, so the split happens in
+    exactly one place. Unset means nobody: an empty list must close the door, not open it."""
     web_origin: str = "http://localhost:3000"
     """The one browser origin allowed by CORS: the web app. Custom headers such as
     `X-Dev-Company` need an explicit allow-list, so the middleware is built from settings."""
     verify_model_slugs: bool = False
     """Opt-in live check of every configured chat slug at startup (ADR-0005). Off by
     default: CI has no real key and unit tests must not open a socket."""
+
+    def is_developer_email(self, email: str | None) -> bool:
+        """Whether `email` is on `DEVELOPER_EMAILS`, trimmed and case-folded on both sides.
+
+        A token with no email is never a developer: Supabase omits the claim for phone and
+        anonymous sign-ins, and an absent identity must not match an absent list.
+        """
+        if email is None or not email.strip():
+            return False
+        listed = {
+            entry.strip().casefold()
+            for entry in self.developer_emails.split(",")
+            if entry.strip()
+        }
+        return email.strip().casefold() in listed
 
     @field_validator("openrouter_api_key", "app_encryption_key", mode="after")
     @classmethod
@@ -351,6 +373,17 @@ def check_database_dsn(dsn: str) -> None:
         )
 
 
+def _require_supabase_url_for_supabase_auth(env: EnvSettings) -> None:
+    """S0.3.1: the JWKS URL is derived from `SUPABASE_URL`, so there is nothing to verify
+    tokens against without it. Refused at startup rather than 500ing on the first request."""
+    if env.auth_mode is AuthMode.SUPABASE and env.supabase_url is None:
+        raise SettingsError(
+            "AUTH_MODE=supabase needs SUPABASE_URL: the signing keys are read from "
+            "{SUPABASE_URL}/auth/v1/.well-known/jwks.json (S0.3.1). Set SUPABASE_URL, or "
+            "run with AUTH_MODE=dev outside production."
+        )
+
+
 def _refuse_dev_auth_in_production(env: EnvSettings) -> None:
     """S0.3.1: dev auth mode trusts an `X-Dev-Company` header, so it may never be deployed."""
     if env.auth_mode is AuthMode.DEV and env.environment is Environment.PRODUCTION:
@@ -406,6 +439,7 @@ def load_settings(
     """
     env = _load_env_settings(env_file)
     _refuse_dev_auth_in_production(env)
+    _require_supabase_url_for_supabase_auth(env)
     if env.database_url is not None:
         check_database_dsn(env.database_url.get_secret_value())
     return Settings(env=env, runtime=load_runtime_settings(defaults_file))

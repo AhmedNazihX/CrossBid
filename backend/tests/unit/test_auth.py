@@ -1,6 +1,9 @@
-"""The dev-mode auth bridge (S0.3.1 Notes): `X-Dev-Company` is believed, and only in dev mode.
+"""The dev-mode auth bridge: `X-Dev-Company` is believed, and only in dev mode.
 
-Offline. A throwaway route wired to `current_company` stands in for every router.
+Offline. A throwaway route wired to `current_company` stands in for every router. Supabase
+token verification is S0.3.1 proper and lives in `test_supabase_auth.py`; what is left here
+is the bridge that let Increments 1-3 run before it, and the two guards that keep the bridge
+from ever being the thing a deployment runs on.
 """
 
 from __future__ import annotations
@@ -15,7 +18,7 @@ from pydantic import SecretStr
 
 from crossbid.auth import DEV_COMPANY_HEADER, CompanyContext, current_company
 from crossbid.main import create_app, get_app_settings
-from crossbid.settings import AuthMode, Settings
+from crossbid.settings import AuthMode, Settings, SettingsError, load_settings
 
 COMPANY_ID = str(uuid.uuid4())
 
@@ -37,13 +40,6 @@ def app_for(settings: Settings) -> FastAPI:
 @pytest.fixture
 def dev_client(offline_settings: Settings) -> Iterator[TestClient]:
     with TestClient(app_for(offline_settings)) as client:
-        yield client
-
-
-@pytest.fixture
-def supabase_client(offline_settings: Settings) -> Iterator[TestClient]:
-    env = offline_settings.env.model_copy(update={"auth_mode": AuthMode.SUPABASE})
-    with TestClient(app_for(Settings(env=env, runtime=offline_settings.runtime))) as client:
         yield client
 
 
@@ -78,11 +74,29 @@ def test_a_malformed_dev_header_is_401(dev_client: TestClient, value: str) -> No
     assert value not in response.json()["detail"]
 
 
-def test_supabase_mode_refuses_rather_than_pretends(supabase_client: TestClient) -> None:
-    """Until S0.3.1 lands, a deployment configured for real auth must not look authenticated."""
-    response = supabase_client.get("/whoami", headers={DEV_COMPANY_HEADER: COMPANY_ID})
-    assert response.status_code == 501
-    assert "S0.3.1" in response.json()["detail"]
+def test_dev_auth_is_refused_in_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A header is not a credential, so the mode that trusts one may never be deployed."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    monkeypatch.setenv("APP_ENCRYPTION_KEY", "0" * 44)
+    monkeypatch.setenv("AUTH_MODE", AuthMode.DEV.value)
+    monkeypatch.setenv("ENV", "production")
+
+    with pytest.raises(SettingsError, match="AUTH_MODE=dev is refused"):
+        load_settings(env_file=None)
+
+
+def test_supabase_auth_without_a_project_url_is_refused_at_startup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The signing keys are read from SUPABASE_URL; without it there is nothing to verify
+    against, and the failure belongs at startup rather than on the first request."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    monkeypatch.setenv("APP_ENCRYPTION_KEY", "0" * 44)
+    monkeypatch.setenv("AUTH_MODE", AuthMode.SUPABASE.value)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+
+    with pytest.raises(SettingsError, match="AUTH_MODE=supabase needs SUPABASE_URL"):
+        load_settings(env_file=None)
 
 
 def test_get_app_settings_returns_the_injected_settings(offline_settings: Settings) -> None:

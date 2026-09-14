@@ -50,7 +50,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from langgraph.store.base import BaseStore
 from pydantic import BaseModel, ConfigDict, Field
 
-from crossbid.auth import CompanyContext, current_company
+from crossbid.auth import AuthenticatedUser, CompanyContext, current_company, current_user
 from crossbid.db import Database
 from crossbid.main import get_database
 from crossbid.memory.profile import PROFILE_STORE_KEY, profile_namespace
@@ -62,6 +62,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/companies", tags=["companies"])
 
 NO_SUCH_COMPANY_DETAIL: Final = "No such company."
+ALREADY_HAS_A_COMPANY_DETAIL: Final = (
+    "This account already has a company. Change it with PUT /companies/me."
+)
+"""One company per user is enforced by `companies_owner_user_id_key`, so a second create is
+a 409 rather than a second row. The message names the route that does what they meant."""
 MEMORY_NOT_UPDATED_WARNING: Final = (
     "Your profile was saved, but the agent's memory of it could not be updated. Save again "
     "before you start a bid, so the agent checks requirements against these facts."
@@ -178,6 +183,37 @@ def get_today() -> date:
 
 
 # ------------------------------------------------------------------------------- routes
+
+
+@router.post(
+    "",
+    response_model=CompanyProfileResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create the calling user's company",
+)
+async def post_company(
+    profile: CompanyProfile,
+    user: AuthenticatedUser = Depends(current_user),
+    records: CompaniesReadModel = Depends(get_company_records),
+    today: date = Depends(get_today),
+) -> CompanyProfileResponse:
+    """Onboarding: the first thing a newly signed-in bidder does (S0.3.1, S4.2.1).
+
+    This is the only route that takes `current_user` rather than `current_company`, and it
+    has to: a user with no company cannot be scoped to one, so every other route answers
+    404 until this has run. The owner comes from the verified token and never from the
+    body — a client that could name the owner could create a company for somebody else.
+    """
+    owner = uuid.UUID(user.user_id)
+    if await records.company_id_for_owner(owner_user_id=owner) is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=ALREADY_HAS_A_COMPANY_DETAIL)
+    created = await records.create(
+        company_id=uuid.uuid4(), owner_user_id=owner, profile=profile
+    )
+    if created is None:  # pragma: no cover - a fresh uuid4 cannot collide
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=ALREADY_HAS_A_COMPANY_DETAIL)
+    logger.info("Company created for user %s", owner)
+    return CompanyProfileResponse.flagged(created, today=today)
 
 
 @router.get(

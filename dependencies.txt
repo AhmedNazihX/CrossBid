@@ -74,7 +74,7 @@ pydantic                                     2.13.5          direct
 pydantic-core                                2.46.5          transitive
 pydantic-settings                            2.15.0          direct
 pygments                                     2.21.0          transitive
-pyjwt                                        2.13.0          transitive
+pyjwt                                        2.13.0          direct
 pymupdf                                      1.28.2          transitive
 pymupdf-layout                               1.28.2          transitive
 pymupdf4llm                                  1.28.2          direct

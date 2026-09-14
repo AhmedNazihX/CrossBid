@@ -134,10 +134,23 @@ Unlike every statement above it, this one carries no `where`: the tenant is the 
 created, so the scope is the `company_id` *value*. `documents.py`'s insert makes the same
 trade for the same reason, and a test pins the binding rather than the predicate."""
 
+SELECT_COMPANY_ID_BY_OWNER_SQL: Final[LiteralString] = """
+select id
+from companies
+where owner_user_id = %(owner_user_id)s
+"""
+"""The one statement that is *not* scoped by a company, because it is how a company is
+found: S0.3.1 turns the `sub` claim of a verified Supabase token into the tenant every other
+statement here is then scoped by. `companies_owner_user_id_key` is unique, so this answers at
+most one row -- one company per user is a settled decision, and the index is what enforces it
+rather than a `limit` written here. It returns the id alone: a caller that wanted the profile
+would go on to `get`, and answering with more would invite a route to skip the scope."""
+
 SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     SELECT_COMPANY_SQL,
     UPDATE_COMPANY_SQL,
     INSERT_COMPANY_SQL,
+    SELECT_COMPANY_ID_BY_OWNER_SQL,
 )
 """Every statement in the module. The test asserts the two filtering ones carry the tenant
 predicate and that the insert binds the tenant into the row it creates."""
@@ -169,6 +182,19 @@ class CompaniesReadModel:
         """
         row = await self._fetch_one(SELECT_COMPANY_SQL, {"company_id": company_id})
         return None if row is None else _profile(row)
+
+    async def company_id_for_owner(self, *, owner_user_id: uuid.UUID) -> uuid.UUID | None:
+        """The company this user owns, or `None` when they have not created one yet.
+
+        The one lookup that takes a *user* rather than a company: S0.3.1's `current_company`
+        resolves the tenant with it, and every other method here is scoped by what it
+        answers. `None` is the not-onboarded case and becomes a 404 pointing at
+        `POST /companies`, never a 403 -- there is nothing here to be forbidden from.
+        """
+        row = await self._fetch_one(
+            SELECT_COMPANY_ID_BY_OWNER_SQL, {"owner_user_id": owner_user_id}
+        )
+        return None if row is None else uuid.UUID(str(row["id"]))
 
     async def create(
         self, *, company_id: uuid.UUID, owner_user_id: uuid.UUID, profile: CompanyProfile

@@ -32,6 +32,7 @@ from crossbid.readmodel.companies import (
     INSERT_COMPANY_SQL,
     JSONB_FIELDS,
     SCOPED_STATEMENTS,
+    SELECT_COMPANY_ID_BY_OWNER_SQL,
     SELECT_COMPANY_SQL,
     TENANT_PARAMETER,
     UPDATE_COMPANY_SQL,
@@ -77,9 +78,12 @@ def _one_line(sql: str) -> str:
 
 
 WHERE_SCOPED_STATEMENTS = tuple(
-    sql for sql in SCOPED_STATEMENTS if sql is not INSERT_COMPANY_SQL
+    sql
+    for sql in SCOPED_STATEMENTS
+    if sql not in (INSERT_COMPANY_SQL, SELECT_COMPANY_ID_BY_OWNER_SQL)
 )
-"""Every statement that filters rows. The insert is the one that creates the row instead."""
+"""Every statement scoped by a company. Two are not: the insert creates the row instead, and
+the owner lookup is how S0.3.1 *finds* the company the others are then scoped by."""
 
 
 @pytest.mark.parametrize("sql", WHERE_SCOPED_STATEMENTS, ids=lambda sql: sql.split()[0])
@@ -103,7 +107,26 @@ def test_the_insert_binds_the_tenant_into_the_row_it_creates() -> None:
     assert "%(owner_user_id)s" in values, "a company arrives with its owner or not at all"
 
 
-@pytest.mark.parametrize("sql", SCOPED_STATEMENTS, ids=lambda sql: sql.split()[0])
+def test_the_owner_lookup_is_scoped_by_the_owner_and_answers_an_id_alone() -> None:
+    """The statement that establishes the tenant, so its scope is the *user* (S0.3.1).
+
+    It must answer the id and nothing else: a lookup that returned the profile would let a
+    route serve a company without ever binding `company_id`, which is the one predicate
+    standing between two tenants (ADR-0009).
+    """
+    statement = _one_line(SELECT_COMPANY_ID_BY_OWNER_SQL)
+
+    assert statement.startswith("select id from companies where")
+    assert "owner_user_id = %(owner_user_id)s" in statement
+    assert TENANT_PARAMETER not in statement
+
+
+COLUMN_LIST_STATEMENTS = tuple(
+    sql for sql in SCOPED_STATEMENTS if sql is not SELECT_COMPANY_ID_BY_OWNER_SQL
+)
+
+
+@pytest.mark.parametrize("sql", COLUMN_LIST_STATEMENTS, ids=lambda sql: sql.split()[0])
 def test_every_statement_returns_the_same_column_list(sql: str) -> None:
     """The list is written out in each statement, so this is what stops the two drifting.
 
@@ -114,8 +137,13 @@ def test_every_statement_returns_the_same_column_list(sql: str) -> None:
     assert COMPANY_COLUMNS in _one_line(sql)
 
 
-def test_the_statements_are_the_three_the_module_defines() -> None:
-    assert SCOPED_STATEMENTS == (SELECT_COMPANY_SQL, UPDATE_COMPANY_SQL, INSERT_COMPANY_SQL)
+def test_the_statements_are_the_four_the_module_defines() -> None:
+    assert SCOPED_STATEMENTS == (
+        SELECT_COMPANY_SQL,
+        UPDATE_COMPANY_SQL,
+        INSERT_COMPANY_SQL,
+        SELECT_COMPANY_ID_BY_OWNER_SQL,
+    )
 
 
 def test_the_column_list_is_the_id_the_scalar_columns_and_the_jsonb() -> None:
@@ -226,6 +254,45 @@ async def test_a_jsonb_key_the_profile_does_not_know_is_a_loud_failure_too() -> 
 
 
 # ------------------------------------------------------------------------------- save
+
+
+# ------------------------------------------------------- finding the company (S0.3.1)
+
+
+@pytest.mark.anyio
+async def test_the_owner_lookup_binds_the_user_and_nothing_else() -> None:
+    # Arrange
+    records, source = read_model(({"id": COMPANY_ID},))
+
+    # Act
+    await records.company_id_for_owner(owner_user_id=OWNER_USER_ID)
+
+    # Assert
+    assert source.only.sql == SELECT_COMPANY_ID_BY_OWNER_SQL
+    assert source.only.params == {"owner_user_id": OWNER_USER_ID}
+
+
+@pytest.mark.anyio
+async def test_the_owner_lookup_answers_the_company_the_user_owns() -> None:
+    records, _ = read_model(({"id": COMPANY_ID},))
+
+    assert await records.company_id_for_owner(owner_user_id=OWNER_USER_ID) == COMPANY_ID
+
+
+@pytest.mark.anyio
+async def test_the_owner_lookup_answers_none_for_a_user_who_has_not_onboarded() -> None:
+    """Signed in, no company yet: a 404 pointing at `POST /companies`, never a 403."""
+    records, _ = read_model(())
+
+    assert await records.company_id_for_owner(owner_user_id=OWNER_USER_ID) is None
+
+
+@pytest.mark.anyio
+async def test_the_owner_lookup_accepts_the_id_as_the_driver_returns_it() -> None:
+    """psycopg hands back a `uuid.UUID`; a string is what a fake or a text column gives."""
+    records, _ = read_model(({"id": str(COMPANY_ID)},))
+
+    assert await records.company_id_for_owner(owner_user_id=OWNER_USER_ID) == COMPANY_ID
 
 
 @pytest.mark.anyio
