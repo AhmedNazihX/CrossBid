@@ -43,10 +43,10 @@ import { AUTH_MODE, configurationProblem } from '@/lib/auth-mode'
 import { safeNextPath } from '@/lib/safe-next-path'
 
 type Stage = 'form' | 'sending' | 'sent'
-type Method = 'password' | 'link'
+type Method = 'password' | 'link' | 'register'
 
 export function SignInCard() {
-  const { sendMagicLink, signInWithPassword, status } = useSession()
+  const { sendMagicLink, signInWithPassword, register, status } = useSession()
   const router = useRouter()
   const next = safeNextPath(useSearchParams().get('next'))
   const [method, setMethod] = useState<Method>('password')
@@ -69,6 +69,14 @@ export function SignInCard() {
       if (method === 'link') {
         await sendMagicLink(email.trim(), next)
         setStage('sent')
+        return
+      }
+      if (method === 'register') {
+        const { needsConfirmation } = await register(email.trim(), password, next)
+        // With "Confirm email" off, Supabase hands back a session and the effect above
+        // redirects; with it on, there is a mail to go and read. Only the second is a
+        // screen, and it is the same "check your inbox" one the link uses.
+        if (needsConfirmation) setStage('sent')
         return
       }
       await signInWithPassword(email.trim(), password)
@@ -130,25 +138,34 @@ export function SignInCard() {
 
   const busy = stage === 'sending'
   const usingLink = method === 'link'
+  const registering = method === 'register'
   const incomplete = email.trim() === '' || (!usingLink && password === '')
 
   return (
     <Card>
       <div className="flex flex-col gap-2">
         <h1 className="m-0 text-[length:var(--text-lg)] font-semibold text-text-primary">
-          Sign in
+          {registering ? 'Create your account' : 'Sign in'}
         </h1>
         <p className="m-0 [font:var(--type-body)] text-text-secondary">
-          {usingLink
-            ? 'We email you a link. Nothing to remember, and nothing to lose.'
-            : 'With the password on your account, or ask for a link instead.'}
+          {registering
+            ? 'Your email and a password. Next you tell Crossbid about your company.'
+            : usingLink
+              ? 'We email you a link. Nothing to remember, and nothing to lose.'
+              : 'With the password on your account, or ask for a link instead.'}
         </p>
       </div>
 
       {error !== undefined && (
         <Notice
           tone="danger"
-          title={usingLink ? 'The link could not be sent' : 'Not signed in'}
+          title={
+            usingLink
+              ? 'The link could not be sent'
+              : registering
+                ? 'Account not created'
+                : 'Not signed in'
+          }
         >
           {error}
         </Notice>
@@ -172,7 +189,8 @@ export function SignInCard() {
             label="Password"
             type="password"
             name="password"
-            autoComplete="current-password"
+            autoComplete={registering ? 'new-password' : 'current-password'}
+            hint={registering ? 'Choose one you do not use anywhere else.' : undefined}
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -180,26 +198,55 @@ export function SignInCard() {
           />
         )}
         <Button type="submit" fullWidth disabled={busy || incomplete}>
-          {busy
-            ? usingLink
-              ? 'Sending…'
-              : 'Signing in…'
-            : usingLink
-              ? 'Email me a sign-in link'
-              : 'Sign in'}
+          {busy ? BUSY_LABELS[method] : SUBMIT_LABELS[method]}
         </Button>
       </form>
 
-      <button
-        type="button"
-        className="rounded-sm [font:var(--type-body-sm)] text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
-        onClick={() => chooseMethod(usingLink ? 'password' : 'link')}
-        disabled={busy}
-      >
-        {usingLink ? 'Use a password instead' : 'Email me a sign-in link instead'}
-      </button>
+      <div className="flex flex-col gap-2 border-t border-border-subtle pt-4">
+        {OTHER_METHODS[method].map((other) => (
+          <button
+            key={other}
+            type="button"
+            className="rounded-sm text-left [font:var(--type-body-sm)] text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
+            onClick={() => chooseMethod(other)}
+            disabled={busy}
+          >
+            {SWITCH_LABELS[other]}
+          </button>
+        ))}
+      </div>
     </Card>
   )
+}
+
+const SUBMIT_LABELS: Readonly<Record<Method, string>> = {
+  password: 'Sign in',
+  link: 'Email me a sign-in link',
+  register: 'Create my account',
+}
+
+const BUSY_LABELS: Readonly<Record<Method, string>> = {
+  password: 'Signing in…',
+  link: 'Sending…',
+  register: 'Creating…',
+}
+
+/** How each way in is offered from the others. Phrased as the action, not as the method. */
+const SWITCH_LABELS: Readonly<Record<Method, string>> = {
+  password: 'I already have an account',
+  link: 'Email me a sign-in link instead',
+  register: 'Create an account',
+}
+
+/**
+ * What the footer offers from each screen. Sign-up is not offered from the link screen: the
+ * link already creates the account when there is none, so a second route to the same place
+ * would be a choice without a difference.
+ */
+const OTHER_METHODS: Readonly<Record<Method, readonly Method[]>> = {
+  password: ['link', 'register'],
+  link: ['password'],
+  register: ['password'],
 }
 
 function Card({ children }: Readonly<{ children: React.ReactNode }>) {

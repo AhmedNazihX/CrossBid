@@ -44,6 +44,19 @@ export interface SessionState {
    * above then reports `signedIn` and the screen redirects, exactly as it does for a link.
    */
   readonly signInWithPassword: (email: string, password: string) => Promise<void>
+  /**
+   * Register with a password, answering whether a confirmation email was sent (ADR-0039).
+   *
+   * Which of the two happens is the project's "Confirm email" setting, not ours: with it
+   * off, Supabase returns a session and the screen redirects; with it on, it returns a
+   * user and no session, and the person has to go to their inbox. The caller cannot know
+   * in advance, so it is told which happened rather than guessing.
+   */
+  readonly register: (
+    email: string,
+    password: string,
+    next?: string
+  ) => Promise<{ readonly needsConfirmation: boolean }>
   readonly signOut: () => Promise<void>
 }
 
@@ -99,6 +112,18 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
     if (error !== null) throw error
   }, [])
 
+  const register = useCallback(async (email: string, password: string, next?: string) => {
+    const supabase = await getSupabaseClient()
+    if (supabase === null) throw new Error('Sign-in is not configured for this build.')
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: authCallbackUrl(next) },
+    })
+    if (error !== null) throw error
+    return { needsConfirmation: data.session === null }
+  }, [])
+
   const signOut = useCallback(async () => {
     const supabase = await getSupabaseClient()
     if (supabase === null) return
@@ -112,9 +137,10 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
       email: session?.user.email,
       sendMagicLink,
       signInWithPassword,
+      register,
       signOut,
     }),
-    [status, session, sendMagicLink, signInWithPassword, signOut]
+    [status, session, sendMagicLink, signInWithPassword, register, signOut]
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

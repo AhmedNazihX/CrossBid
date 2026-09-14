@@ -3232,3 +3232,61 @@ an enumeration oracle.
 and a wrong credential comes back as `Invalid login credentials` in an alert with the form
 re-enabled. A successful password sign-in needs an account with a password on it, which is a
 dashboard action rather than something this repo can do.
+
+---
+
+## ADR-0039 — Registration, and the CSP directive that only broke one browser
+
+**Date:** 2026-09-14 · **Stories:** S4.1.1 (completes ADR-0038) · **Status:** accepted
+
+Two defects, both found by using the product rather than by testing it.
+
+### `upgrade-insecure-requests` has no business on `http://localhost`
+
+Reported as "3000 works in Chrome and not in Safari", which is the shape a CSP bug takes when
+two engines disagree about one directive. ADR-0036 emitted `upgrade-insecure-requests`
+unconditionally. It tells the browser to rewrite every `http://` subresource to `https://` —
+and `http://localhost:3000` has no https counterpart, so the chunks fail and the page renders
+without its JavaScript. Chrome exempts localhost from the upgrade; Safari has not.
+
+The fix is not a browser workaround, which is why it is worth an entry: **the directive is
+meaningless on a plain-http origin and can only do harm there.** It exists to stop mixed
+content on a real https deployment. It is now emitted only when the request actually arrives
+over https — `x-forwarded-proto` first, because a terminating load balancer leaves
+`nextUrl.protocol` reading http while the browser's connection is not.
+
+The lesson generalises past this directive: a policy assembled once and served everywhere
+will eventually contain something that is right for production and wrong for a laptop.
+
+### There was no way to register
+
+ADR-0038 said the magic link "remains the sign-*up* path", because `signInWithOtp` creates the
+user when there is none. True, and useless the moment the same user deleted their account
+while the two-an-hour mailer was exhausted: the only route to a new account went through the
+mailbox that was rate-limited. **The one path that could create an account was the one path
+that could not be used.**
+
+`POST` registration with a password closes it, and it is the same shape as the rest of the
+screen: `signUp` with the email and password, and `emailRedirectTo` carrying `next` for the
+case where a confirmation is required.
+
+**Whether a confirmation is required is the project's setting, not this app's, so the screen
+is told rather than guessing.** `register` answers `{ needsConfirmation }` from whether
+Supabase returned a session: with "Confirm email" off it does, and the person is signed in
+immediately; with it on it does not, and they get the same "check your inbox" screen the link
+uses. A screen that assumed either would be wrong on half the projects it runs against, and
+wrong silently.
+
+**The card is now three ways in, and the footer states which are available from where.**
+Sign-up is offered from the password screen and not from the link screen: the link already
+creates the account when there is none, so a second route to the same place would be a choice
+without a difference. The labels and the transitions live in four `Record<Method, …>` tables
+rather than in nested ternaries, so a fourth way in cannot be half-added.
+
+Verified in a browser: all three modes render, the heading, hint, submit label and footer
+change with the method, and the password submit reaches Supabase — a wrong credential returns
+`Invalid login credentials` in an alert with the form re-enabled.
+
+**Still true, and still the recommendation:** the built-in mailer's two messages an hour make
+every email-bearing path fragile. Custom SMTP is the fix before any demo, and an account
+created in the Supabase dashboard with "Auto Confirm User" needs no email at all.

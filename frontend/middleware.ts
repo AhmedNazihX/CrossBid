@@ -38,7 +38,7 @@ const IS_DEVELOPMENT = process.env.NODE_ENV === 'development'
 
 export function middleware(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID())
-  const policy = contentSecurityPolicy(nonce)
+  const policy = contentSecurityPolicy(nonce, isSecure(request))
 
   // Next reads the nonce back out of this header to stamp its own inline scripts, so the
   // policy has to travel with the request, not only with the response.
@@ -51,7 +51,18 @@ export function middleware(request: NextRequest) {
   return response
 }
 
-function contentSecurityPolicy(nonce: string): string {
+/**
+ * Whether this response is being served over https, directly or behind a proxy.
+ *
+ * `x-forwarded-proto` is what a terminating load balancer sets, and `nextUrl.protocol` is
+ * http in that case even though the browser's connection is not — so both are consulted.
+ */
+function isSecure(request: NextRequest): boolean {
+  const forwarded = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  return forwarded === 'https' || request.nextUrl.protocol === 'https:'
+}
+
+function contentSecurityPolicy(nonce: string, secure: boolean): string {
   const connect = ["'self'", API_ORIGIN, SUPABASE_ORIGIN, IS_DEVELOPMENT ? 'ws:' : undefined]
   const frame = ["'self'", SUPABASE_ORIGIN]
   return [
@@ -70,8 +81,18 @@ function contentSecurityPolicy(nonce: string): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    'upgrade-insecure-requests',
-  ].join('; ')
+    /*
+     * Only where there is something to upgrade. On a plain-http origin this directive has
+     * nothing to protect — everything is already local — and it actively breaks: it tells
+     * the browser to rewrite every http subresource to https, and `http://localhost:3000`
+     * has no https counterpart, so the chunks 404 and the page renders without its
+     * JavaScript. Chrome exempts localhost from the upgrade and Safari has not, which is
+     * how this arrives as "works in one browser, not the other" rather than as an error.
+     */
+    secure ? 'upgrade-insecure-requests' : undefined,
+  ]
+    .filter((directive): directive is string => directive !== undefined)
+    .join('; ')
 }
 
 function join(sources: readonly (string | undefined)[]): string {
