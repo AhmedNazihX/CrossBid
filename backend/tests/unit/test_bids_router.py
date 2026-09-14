@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable, Iterator, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -174,6 +174,9 @@ class InMemoryReadModel:
         title: str,
         source_language: str,
         bidder_language: str,
+        buyer: str | None = None,
+        deadline: datetime | None = None,
+        deadline_utc_offset_minutes: int | None = None,
     ) -> BidRow:
         return self.add_bid(
             company_id=company_id,
@@ -181,6 +184,9 @@ class InMemoryReadModel:
             title=title,
             source_language=source_language,
             bidder_language=bidder_language,
+            buyer=buyer,
+            deadline=deadline,
+            deadline_utc_offset_minutes=deadline_utc_offset_minutes,
         )
 
     async def attach_documents(
@@ -1158,3 +1164,112 @@ def test_a_review_already_in_flight_is_the_same_conflict_as_a_second_submission(
     # Assert
     assert response.status_code == 409
     assert response.json()["detail"] == bids_router.NOT_AWAITING_REVIEW_DETAIL
+
+
+# -------------------------------------------- S4.4.1: the buyer and deadline the list needs
+
+
+def test_a_bid_may_be_started_with_the_buyer_and_a_deadline_carrying_its_offset(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """Until S1.2.1 pulls these from TED, the bidder has the notice in front of them."""
+    # Arrange
+    document = read_model.add_document(*document_row())
+
+    # Act
+    response = client.post(
+        "/bids",
+        json=start_body(
+            document.id,
+            buyer="Ministère de l'Intérieur",
+            deadline="2026-10-09T16:00:00+02:00",
+        ),
+        headers=headers(),
+    )
+
+    # Assert
+    assert response.status_code == 202
+    stored = read_model.bids[response.json()["id"]]
+    assert stored.buyer == "Ministère de l'Intérieur"
+    assert stored.deadline is not None
+    # The instant, and separately the offset the notice stated — see migration 0007.
+    assert stored.deadline.utcoffset() == timedelta(hours=2)
+    assert stored.deadline_utc_offset_minutes == 120
+
+
+def test_a_deadline_with_no_offset_is_refused_rather_than_assumed_to_be_utc(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """Guessing a zone silently moves a deadline by hours, which is the one field where that
+    is a real error rather than a tidiness one."""
+    # Arrange
+    document = read_model.add_document(*document_row())
+
+    # Act
+    response = client.post(
+        "/bids",
+        json=start_body(document.id, deadline="2026-10-09T16:00:00"),
+        headers=headers(),
+    )
+
+    # Assert
+    assert response.status_code == 422
+    assert "offset" in response.text
+
+
+def test_a_bid_started_without_them_keeps_both_null(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    # Arrange
+    document = read_model.add_document(*document_row())
+
+    # Act
+    response = client.post("/bids", json=start_body(document.id), headers=headers())
+
+    # Assert
+    stored = read_model.bids[response.json()["id"]]
+    assert (stored.buyer, stored.deadline, stored.deadline_utc_offset_minutes) == (
+        None,
+        None,
+        None,
+    )
+
+
+def test_a_blank_buyer_is_stored_as_absent_rather_than_as_an_empty_cell(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    # Arrange
+    document = read_model.add_document(*document_row())
+
+    # Act
+    response = client.post(
+        "/bids", json=start_body(document.id, buyer="   "), headers=headers()
+    )
+
+    # Assert
+    assert read_model.bids[response.json()["id"]].buyer is None
+
+
+def test_the_list_carries_what_the_dashboard_renders(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """S4.4.1's row: a verdict badge, a deadline countdown, and the count of open items."""
+    # Arrange
+    read_model.add_bid(
+        status=BidStatus.AWAITING_REVIEW,
+        buyer="Ministère de l'Intérieur",
+        deadline=datetime(2026, 10, 9, 14, 0, tzinfo=UTC),
+        deadline_utc_offset_minutes=120,
+        open_items=7,
+        verdict=AGENT_VERDICT.model_dump(mode="json"),
+    )
+
+    # Act
+    [row] = client.get("/bids", headers=headers()).json()["bids"]
+
+    # Assert
+    assert row["buyer"] == "Ministère de l'Intérieur"
+    assert row["deadline"] == "2026-10-09T14:00:00Z"
+    assert row["deadline_utc_offset_minutes"] == 120
+    assert row["open_items"] == 7
+    assert row["decision"] == "no_go"

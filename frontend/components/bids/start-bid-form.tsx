@@ -50,11 +50,55 @@ type ListState =
  * and Start analysis → `POST /bids` → the workspace. Documents still processing are listed
  * but cannot be chosen, with their status; the API's `detail` is shown on any refusal.
  */
+type OffsetValue = '' | '0' | '60' | '120' | '180'
+
+/**
+ * The offsets a European notice actually prints, and **no default**.
+ *
+ * Defaulting this to the browser's own offset is the tempting thing and is wrong: a German
+ * bidder reading a French notice would submit Berlin's clock for Paris's deadline and never
+ * see it happen. The backend refuses a timestamp with no offset for the same reason
+ * (`routers/bids.py`), so the form asks rather than guesses — and a deadline is the one field
+ * where a silent few hours is a real error rather than a tidiness one.
+ */
+const DEADLINE_NEEDS_ITS_ZONE =
+  'Give the zone the notice states, or clear the deadline. A time with no zone would move it.'
+
+const DEADLINE_OFFSETS: readonly { value: OffsetValue; label: string }[] = [
+  { value: '', label: 'As the notice states…' },
+  { value: '0', label: 'UTC+00:00 · UK, Portugal, Ireland' },
+  { value: '60', label: 'UTC+01:00 · most of the EU, winter' },
+  { value: '120', label: 'UTC+02:00 · most of the EU, summer' },
+  { value: '180', label: 'UTC+03:00 · Finland, Greece, the Baltics, summer' },
+]
+
+/**
+ * `2026-10-09T16:00` plus `120` becomes `2026-10-09T16:00:00+02:00` — the wall clock the
+ * buyer printed, carrying the offset they printed it in. `null` unless both halves are
+ * present, because either alone describes nothing the backend will accept.
+ */
+function deadlineAt(local: string, offsetMinutes: OffsetValue): string | null {
+  if (local === '' || offsetMinutes === '') {
+    return null
+  }
+  const minutes = Number(offsetMinutes)
+  const sign = minutes < 0 ? '-' : '+'
+  const absolute = Math.abs(minutes)
+  const hh = String(Math.floor(absolute / 60)).padStart(2, '0')
+  const mm = String(absolute % 60).padStart(2, '0')
+  // `datetime-local` yields `YYYY-MM-DDTHH:mm`, and omits `:ss` unless a step demands it.
+  const withSeconds = local.length === 16 ? `${local}:00` : local
+  return `${withSeconds}${sign}${hh}:${mm}`
+}
+
 export function StartBidForm() {
   const router = useRouter()
   const [listState, setListState] = useState<ListState>({ phase: 'loading' })
   const [noticeNumber, setNoticeNumber] = useState('')
   const [sourceLanguage, setSourceLanguage] = useState<SourceLanguage>('fr')
+  const [buyer, setBuyer] = useState('')
+  const [deadlineLocal, setDeadlineLocal] = useState('')
+  const [deadlineOffset, setDeadlineOffset] = useState<OffsetValue>('')
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [error, setError] = useState<string | undefined>(undefined)
   const [isStarting, setIsStarting] = useState(false)
@@ -81,7 +125,12 @@ export function StartBidForm() {
     [listState]
   )
   const readyCount = tenderDocuments.filter((document) => document.status === 'ready').length
-  const canStart = selected.size > 0 && noticeNumber.trim().length > 0 && !isStarting
+  // A deadline with no offset is not "a deadline we can almost use": it is refused by the
+  // backend and, worse, would be dropped silently here. So it blocks the submit rather than
+  // being discarded — a reviewer who typed a date must not find the bid has none.
+  const isDeadlineIncomplete = deadlineLocal !== '' && deadlineOffset === ''
+  const canStart =
+    selected.size > 0 && noticeNumber.trim().length > 0 && !isDeadlineIncomplete && !isStarting
 
   function toggle(documentId: string, isChecked: boolean) {
     setSelected((current) => {
@@ -107,6 +156,8 @@ export function StartBidForm() {
         notice_number: noticeNumber.trim(),
         document_ids: [...selected],
         source_language: sourceLanguage,
+        buyer: buyer.trim() === '' ? null : buyer.trim(),
+        deadline: deadlineAt(deadlineLocal, deadlineOffset),
       })
       router.push(`/bids/${encodeURIComponent(bid.id)}`)
     } catch (cause) {
@@ -157,6 +208,34 @@ export function StartBidForm() {
             options={SOURCE_LANGUAGES}
             hint="The language the procurement documents are written in."
           />
+          <Input
+            label="Buyer (optional)"
+            name="buyer"
+            value={buyer}
+            onChange={(event) => setBuyer(event.target.value)}
+            placeholder="Ministère de l’Intérieur"
+            autoComplete="off"
+            hint="The contracting authority, as the notice names it."
+          />
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+            <Input
+              label="Deadline (optional)"
+              name="deadline"
+              type="datetime-local"
+              value={deadlineLocal}
+              onChange={(event) => setDeadlineLocal(event.target.value)}
+              hint="The date and time the notice states, exactly as it prints them."
+            />
+            <Select
+              label="Its time zone"
+              name="deadline_offset"
+              value={deadlineOffset}
+              onValueChange={setDeadlineOffset}
+              options={DEADLINE_OFFSETS}
+              error={isDeadlineIncomplete ? DEADLINE_NEEDS_ITS_ZONE : undefined}
+              hint={isDeadlineIncomplete ? undefined : 'Exactly as the notice prints it.'}
+            />
+          </div>
         </div>
 
         <fieldset className="m-0 mt-5 min-w-0 border-0 p-0">

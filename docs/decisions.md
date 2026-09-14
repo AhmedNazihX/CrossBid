@@ -2643,3 +2643,83 @@ The pattern is sharp enough to state as a rule: **a seam between two correctly-b
 not covered by either piece's tests, and only a walk crosses it.** Both halves of Increment 3's
 frontend were built in parallel against a written contract, and the contract was honoured on
 both sides; the gap was in what neither side was asked to own.
+
+---
+
+## ADR-0030 — S4.4.1 moved to Increment 3, and the deadline that had no source
+
+**Date:** 2026-09-14 · **Stories:** S4.4.1 · **Status:** accepted
+
+Increment 3's third criterion is "dashboard shows the final verdict from the read model". The
+story that builds the dashboard, **S4.4.1, sat in Increment 4** — so read literally the
+increment could not close until the one after it did. Read loosely it was already satisfied:
+`/verdicts` renders the final verdict from `GET /bids` and nothing else.
+
+The user's decision was to take it literally and **move S4.4.1 into Increment 3** rather than
+reword the criterion. Increment 4 is now 17 stories.
+
+### The gap that only building it exposed
+
+`bids.deadline` and `bids.buyer` have existed since 0001 and **nothing has ever written
+either**. Extraction sets no `Requirement.deadline` (0 rows on the real FR run), and TED search
+— which would carry both — is S1.2.1, in Increment 4. So "a deadline countdown" had no data
+source at all, and the column would have rendered an em dash for the life of the increment.
+
+The source now is the start form: the bidder has the notice in front of them. That is a smaller
+claim than it sounds — S1.2.1 will replace typing with TED's own fields, and the columns it
+writes are the ones already here.
+
+### An offset, and deliberately not a zone
+
+"A countdown **in the buyer's time zone**" cannot be served by `bids.deadline timestamptz`
+alone. Postgres keeps the *instant* and returns it in whatever zone the session asks for, so
+the wall clock the buyer printed is lost on the way in. A German bidder looking at a French
+tender would be shown Berlin's hour for Paris's deadline.
+
+Migration **0007** adds `deadline_utc_offset_minutes`. The offset and **never an IANA zone**:
+a published notice states `09.10.2026 16:00 (UTC+02:00)` and TED's
+`deadline-receipt-tender-date-lot` likewise carries an offset, so `Europe/Paris` would be an
+inference — and one whose answer changes twice a year. Two constraints keep it honest: a
+plausible range, and *an offset cannot exist without its deadline*, because an offset alone
+would print as a time zone on a bid that has no date.
+
+The two fields answer two different questions and the code never mixes them. **The countdown is
+the distance between two instants and has no zone at all.** The **displayed** deadline is the
+instant shifted by the offset and then formatted as UTC — exact for a fixed offset, independent
+of the viewer, and unable to drift with a DST rule.
+
+**A timestamp with no offset is refused, not assumed to be UTC.** `POST /bids` rejects it and
+the start form blocks the submit rather than silently dropping what was typed; the form's zone
+select has **no default**, because defaulting to the browser's offset is exactly how a German
+bidder submits Berlin's clock for a Paris deadline and never sees it happen. A deadline is the
+one field where a silent few hours is a real error rather than a tidiness one.
+
+### Verified the only way that discriminates
+
+The developer machine sits at UTC+02:00 and so does the French tender, so rendering "16:00"
+proves nothing on its own. The stored offset was flipped to zero and the same instant printed
+**14:00 (UTC)** — while the countdown stayed at 25 days, because the instant never moved.
+Restored afterwards. On the real completed bid the row reads *9 Oct · 25 days / 16:00
+(UTC+02:00) · Ministère de l'éducation nationale · Conditional · confirmed · 142 open items*.
+
+### Two tiles refused
+
+The artboard shows *Requirements checked / last 7 days* and *Go rate*. Neither was built.
+`BidSummary` carries no requirement count and no history, so the first cannot be computed at
+all; the second is arithmetic over a handful of decided bids rendered as a trend, which is a
+number that would be quoted and should not be. A third tile, *Value*, needs a contract value
+nothing carries. Saying so here is cheaper than a screen that implies data the product has not
+got.
+
+**`open_items` is counted from the matrix, not from the verdict's gaps.** A bid that has not
+been scored has no gaps and still has work in it; and a reviewer who confirmed a
+`partially_supported` row confirmed that it is *still unproven*, not that it is settled.
+
+### One thing the tenant guard caught
+
+The open-items count is a correlated subquery, and it was first written scoped by
+`m.company_id = b.company_id` — correct, since the outer query pins `b` to the parameter.
+`test_the_startup_query_is_the_one_deliberately_unscoped_statement` rejected it anyway, and was
+right to: the rule is that every statement carries the tenant predicate **in its own text**, so
+that a fragment is safe on its own terms rather than by where it happens to be spliced. The API
+connects as a `BYPASSRLS` role (ADR-0009), which is the whole reason that rule is absolute.

@@ -89,9 +89,34 @@ class BidSummary(BaseModel):
     buyer: str | None = None
     source_language: str | None = None
     deadline: datetime | None = None
+    deadline_utc_offset_minutes: int | None = Field(
+        default=None,
+        description=(
+            "The UTC offset the buyer's notice stated, so the deadline can be printed on "
+            "the buyer's clock (S4.4.1). Null when no deadline is recorded. Only an offset "
+            "and never an IANA zone: neither a notice nor TED publishes one, so a zone "
+            "name would be an inference — and one that changes answer twice a year."
+        ),
+    )
     status: BidStatus
     decision: Decision | None = Field(
         default=None, description="Final decision once reviewed; None while in flight"
     )
+    open_items: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Matrix rows that still need somebody: `partially_supported` or `unsupported`. "
+            "Counted from the matrix rather than from the verdict's gaps, because a bid that "
+            "has not been scored yet has no gaps and still has work in it — and because a "
+            "reviewer who confirmed a partially supported row has confirmed that it is still "
+            "unproven, not that it is settled."
+        ),
+    )
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    @property
+    def is_awaiting_review(self) -> bool:
+        """The one state that is owed an answer by a person. The dashboard sorts on it."""
+        return self.status is BidStatus.AWAITING_REVIEW

@@ -12,7 +12,9 @@ export const metadata: Metadata = {
 
 /**
  * Tenders: every bid of the company, newest first, in the dashboard artboard's table shape
- * (story S4.5.1 brings the list forward; S4.4.1 adds verdict, deadline and open items).
+ * (story S4.5.1 brings the list forward). Verdict, deadline and open items are S4.4.1,
+ * which landed on the dashboard rather than here: this page answers "what did I start", the
+ * dashboard answers "what needs me today", and one table cannot lead with both.
  */
 export default function BidsPage() {
   return (

@@ -404,3 +404,26 @@ def test_migrations_are_idempotent_against_a_real_database() -> None:
     # Assert
     assert second == 0, "a second run must apply nothing"
     assert first >= 0
+
+
+def test_a_deadline_offset_cannot_exist_without_its_deadline() -> None:
+    """0007's pair rule, in the database as well as in the request model.
+
+    An offset alone describes nothing and would print as a time zone on a bid that has no
+    date. The API refuses a naive timestamp for the mirror-image reason, so both halves of
+    the rule are enforced at both ends.
+    """
+    sql = _sql()
+
+    assert "bids_deadline_offset_needs_a_deadline_check" in sql
+    definition = sql[sql.rindex("bids_deadline_offset_needs_a_deadline_check check") :]
+    assert "deadline is not null" in definition[: definition.index(")") + 1]
+
+
+def test_the_deadline_offset_is_stored_as_an_offset_and_not_as_a_zone_name() -> None:
+    """Neither a notice nor TED publishes an IANA zone, so a zone name would be an inference
+    — and one whose answer changes twice a year. 0007 keeps the offset the buyer published."""
+    sql = _sql()
+
+    assert "deadline_utc_offset_minutes smallint" in sql
+    assert "bids_deadline_offset_range_check" in sql

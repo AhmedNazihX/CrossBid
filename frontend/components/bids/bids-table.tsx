@@ -20,9 +20,12 @@ type ListState =
 /**
  * The tenders table — the "Next 30 days" table shape of `Dashboard.dc.html` over
  * `GET /bids`: title with the notice number and language underneath in the citation face,
- * the phase badge, and when the status last changed; each title opens the workspace. The
- * deadline, buyer, value and verdict columns are S4.4.1 (Increment 4), when the API carries
- * them.
+ * the phase badge, and when the status last changed; each title opens the workspace.
+ *
+ * Deliberately the shorter table. S4.4.1 gives the dashboard the deadline, buyer, verdict
+ * and open-item columns ordered by what closes first; this page answers the other question —
+ * what did I start last — and a second copy of the same five columns would only make the
+ * two screens harder to tell apart.
  */
 export function BidsTable() {
   const [state, setState] = useState<ListState>({ phase: 'loading' })

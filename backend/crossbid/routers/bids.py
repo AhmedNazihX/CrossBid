@@ -30,7 +30,7 @@ from datetime import datetime
 from typing import Final
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from crossbid.agent.runner import BidRunner, RunnerError, build_runner
 from crossbid.agent.state import ExtractionProblem
@@ -78,6 +78,9 @@ STORAGE_NOT_CONFIGURED_DETAIL: Final = (
     "Document storage is not configured on this server, so bids cannot be started."
 )
 ATTACH_FAILED_REASON_PREFIX: Final = "attaching documents failed"
+MAX_BUYER_CHARS: Final = 300
+"""A contracting authority's legal name, with room to spare. Bounded because it is free text
+from a request body and it is rendered in a table cell."""
 NOT_AWAITING_REVIEW_DETAIL: Final = (
     "This bid is not waiting for a review. It has either been reviewed already or has not "
     "finished running."
@@ -113,6 +116,45 @@ class StartBidRequest(BaseModel):
     title: str | None = Field(
         default=None, description="Dashboard title; defaults to the notice number"
     )
+    buyer: str | None = Field(
+        default=None,
+        max_length=MAX_BUYER_CHARS,
+        description="The contracting authority, as the notice names it. S1.2.1 takes it "
+        "from TED later; until then the bidder has the notice in front of them.",
+    )
+    deadline: datetime | None = Field(
+        default=None,
+        description=(
+            "When tenders are due, as an ISO-8601 timestamp **with the offset the notice "
+            "states** — e.g. `2026-10-09T16:00:00+02:00`. The offset is kept alongside the "
+            "instant so the dashboard can print the deadline on the buyer's own clock "
+            "(S4.4.1); a timestamp with no offset is refused rather than assumed to be UTC, "
+            "because guessing a zone silently moves a deadline by hours."
+        ),
+    )
+
+    @field_validator("deadline")
+    @classmethod
+    def _deadline_states_its_offset(cls, value: datetime | None) -> datetime | None:
+        """A naive timestamp is refused. See the field description for why.
+
+        Pydantic parses `2026-10-09T16:00:00` happily and hands back a naive `datetime`; the
+        column would then store it as whatever the session's zone happens to be. A deadline
+        is the one field where that is a real error rather than a tidiness one.
+        """
+        if value is not None and value.utcoffset() is None:
+            raise ValueError(
+                "deadline must carry the notice's UTC offset, e.g. 2026-10-09T16:00:00+02:00"
+            )
+        return value
+
+    @property
+    def deadline_utc_offset_minutes(self) -> int | None:
+        """The offset the notice stated, in minutes, for `bids.deadline_utc_offset_minutes`."""
+        if self.deadline is None:
+            return None
+        offset = self.deadline.utcoffset()
+        return None if offset is None else int(offset.total_seconds() // 60)
 
 
 # ----------------------------------------------------------------------- response models
@@ -275,6 +317,9 @@ async def start_bid(
         title=(body.title or "").strip() or body.notice_number.strip(),
         source_language=body.source_language.strip(),
         bidder_language=bidder_language,
+        buyer=(body.buyer or "").strip() or None,
+        deadline=body.deadline,
+        deadline_utc_offset_minutes=body.deadline_utc_offset_minutes,
     )
     try:
         await attach_documents(

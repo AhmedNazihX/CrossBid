@@ -71,11 +71,17 @@ equivalence where a criterion id exists, and the matrix renders read-only in the
 |---|---|---|
 | **Milestone 1** | in progress | **S3.2.1's recall, and only that**, plus a recorded demo |
 | **Milestone 2** | **closed 2026-09-14** | every criterion verified against Frankfurt, not asserted |
-| **Milestone 3** | code-complete | all seven stories built and walked end to end (ADR-0029) |
+| **Milestone 3** | **closed 2026-09-14** | eight stories — S4.4.1 was pulled in; walked end to end |
 
 **Milestone 2 closed on 2026-09-14** because its criteria were checked rather than assumed —
 including the one nobody had ever run: a French query for information-security certification
 returns `Zertifikat_ISO_IEC_27001_2022.pdf` as its top hit against the German evidence pack.
+
+**Milestone 3 closed on 2026-09-14.** Its third criterion — "dashboard shows the final verdict
+from the read model" — named a surface whose story (S4.4.1) sat in Increment 4, which would have
+made the two increments circular. **S4.4.1 was pulled into Increment 3 and built**, and building
+it found that nothing had ever written `bids.deadline` or `bids.buyer`: migration 0007 and the
+start form's new fields are the fix. Increment 4 is therefore 17 stories, not 18.
 
 **Milestone 1 is held by one thing: S3.2.1's recall gate, 0.72 against 0.90.** That changed
 character on 2026-09-14. It used to be "not yet measured against a verified key"; the key is

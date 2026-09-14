@@ -106,6 +106,12 @@ class BidRow(BaseModel):
     title: str
     source_language: str | None
     bidder_language: str
+    buyer: str | None = None
+    deadline: datetime | None = None
+    deadline_utc_offset_minutes: int | None = None
+    open_items: int = 0
+    """Only `list_bids` fills this: see `SELECT_BIDS`. A bid read on its own carries its whole
+    matrix, so the caller counts what it already has rather than paying for a subquery."""
     status: BidStatus
     failure_reason: str | None = None
     problems: list[Any] = Field(default_factory=list)
@@ -135,9 +141,13 @@ class BidRow(BaseModel):
             company_id=self.company_id,
             ted_publication_number=self.notice_number,
             title=self.title,
+            buyer=self.buyer,
             source_language=self.source_language,
+            deadline=self.deadline,
+            deadline_utc_offset_minutes=self.deadline_utc_offset_minutes,
             status=self.status,
             decision=self.decision,
+            open_items=self.open_items,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -189,10 +199,31 @@ def thread_id_of(bid_id: str) -> str:
 
 _BID_COLUMNS: Final[LiteralString] = """
     b.id, b.company_id, b.thread_id, b.ted_publication_number, b.title, b.source_language,
+    b.buyer, b.deadline, b.deadline_utc_offset_minutes,
     b.status, b.failure_reason, b.problems, b.verdict, b.decision, b.created_at,
     b.updated_at,
     c.language as bidder_language
 """
+
+_OPEN_ITEMS: Final[LiteralString] = """
+    (select count(*) from matrix_rows m
+      where m.company_id = %(company_id)s and m.bid_id = b.id
+        and m.status in ('partially_supported', 'unsupported')) as open_items
+"""
+"""What the dashboard counts per bid (S4.4.1). A correlated subquery rather than a join with
+a `group by`, because the outer query is already bounded at `MAX_BIDS_LISTED` and a left join
+onto a table with one row per requirement would make the bid list's row count depend on the
+size of its matrices.
+
+**It carries the tenant parameter itself rather than leaning on `b.company_id`.** The two are
+the same value — the outer query pins `b` to the parameter — but the fragment is then scoped
+on its own terms rather than by where it happens to be spliced, which is what
+`test_the_startup_query_is_the_one_deliberately_unscoped_statement` insists on for every
+statement in this module. That guard caught this subquery written the other way (ADR-0009:
+the API connects as a `BYPASSRLS` role, so a missing predicate is the whole of a leak).
+
+The statuses are spelled out rather than derived from `RowStatus`: `LiteralString` is what
+keeps a run-time value out of this SQL, and `test_bids_readmodel.py` asserts the two agree."""
 
 """Spliced into the selects below with an f-string, which ruff's S608 flags as query
 construction. Every part is a module literal -- nothing from a request reaches these strings
@@ -201,9 +232,9 @@ silenced per statement (as `readmodel/documents.py` does) rather than worked aro
 
 INSERT_BID: Final[LiteralString] = """
 insert into bids (id, company_id, thread_id, ted_publication_number, title, source_language,
-                  status)
+                  buyer, deadline, deadline_utc_offset_minutes, status)
 values (%(id)s, %(company_id)s, %(thread_id)s, %(notice_number)s, %(title)s,
-        %(source_language)s, %(status)s)
+        %(source_language)s, %(buyer)s, %(deadline)s, %(deadline_offset)s, %(status)s)
 """
 
 SELECT_BID: Final[LiteralString] = f"""
@@ -214,13 +245,15 @@ where b.company_id = %(company_id)s and b.id = %(bid_id)s
 """  # noqa: S608 -- module literals only
 
 SELECT_BIDS: Final[LiteralString] = f"""
-select {_BID_COLUMNS}
+select {_BID_COLUMNS}, {_OPEN_ITEMS}
 from bids b
 join companies c on c.id = b.company_id
 where b.company_id = %(company_id)s
 order by b.created_at desc
 limit %(limit)s
 """  # noqa: S608 -- module literals only
+"""The dashboard's query, and the only one that carries `open_items`: `SELECT_BID` answers a
+workspace that already holds every row and can count them itself."""
 
 SELECT_UNFINISHED_BIDS: Final[LiteralString] = f"""
 select {_BID_COLUMNS}
@@ -357,6 +390,9 @@ async def create_bid(
     title: str,
     source_language: str,
     bidder_language: str,
+    buyer: str | None = None,
+    deadline: datetime | None = None,
+    deadline_utc_offset_minutes: int | None = None,
 ) -> BidRow:
     """Insert a `queued` bid on a fresh thread and return it as the graph will see it.
 
@@ -374,6 +410,9 @@ async def create_bid(
                 "notice_number": notice_number,
                 "title": title,
                 "source_language": source_language,
+                "buyer": buyer,
+                "deadline": deadline,
+                "deadline_offset": deadline_utc_offset_minutes,
                 "status": BidStatus.QUEUED.value,
             },
         )
@@ -636,6 +675,10 @@ def _bid_row(record: Mapping[str, Any]) -> BidRow:
         status=BidStatus(record["status"]),
         failure_reason=_optional_str(record.get("failure_reason")),
         problems=list(record.get("problems") or []),
+        buyer=_optional_str(record.get("buyer")),
+        deadline=record.get("deadline"),
+        deadline_utc_offset_minutes=_optional_int(record.get("deadline_utc_offset_minutes")),
+        open_items=int(record.get("open_items") or 0),
         verdict=record.get("verdict"),
         reviewed_decision=_optional_decision(record.get("decision")),
         created_at=record.get("created_at"),
@@ -666,6 +709,10 @@ def _optional_decision(value: object) -> Decision | None:
 
 def _optional_str(value: object) -> str | None:
     return None if value is None else str(value)
+
+
+def _optional_int(value: object) -> int | None:
+    return None if value is None else int(value)  # type: ignore[call-overload]
 
 
 def _uuids(ids: Sequence[str]) -> list[uuid.UUID]:

@@ -1,18 +1,22 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
-import { EmptyState } from '@/components/common/empty-state'
+import { DashboardOverview } from '@/components/bids/dashboard-overview'
 import { PageHeader } from '@/components/layout/page-header'
+import { Button } from '@/components/ui/button'
+import { Icon } from '@/components/ui/icons'
 
 export const metadata: Metadata = {
   title: 'Dashboard · CrossBid',
 }
 
 /**
- * The landing screen of the shell.
+ * The landing screen of the shell, on `Dashboard.dc.html` (story S4.4.1).
  *
- * It shows the first-run empty state only. The bid list itself — status, verdict
- * badge, deadline countdown, open-item count — is S4.4.1, which is blocked on the
- * S4.0.1 design confirmation, so nothing here reads `GET /bids`.
+ * It answers one question — what needs you today — so the page itself stays a header and a
+ * heading, and everything that depends on `GET /bids` lives below the client boundary in
+ * `DashboardOverview`: the metric tiles, and the tenders table with each bid's verdict, its
+ * deadline on the buyer's clock, and how many matrix rows are still open.
  */
 export default function DashboardPage() {
   return (
@@ -20,18 +24,18 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Every bid you have checked, and what needs you today."
+        actions={
+          <Button asChild>
+            <Link href="/bids/new">
+              <span className="inline-flex size-4">
+                <Icon name="spark" size={16} />
+              </span>
+              Analyse tender
+            </Link>
+          </Button>
+        }
       />
-      <EmptyState
-        title="No bids yet"
-        description="A bid is one tender you are deciding whether to enter. CrossBid reads the tender's documents, lists what the buyer requires, and matches each requirement to your own evidence — then you confirm or overrule its verdict."
-        steps={[
-          'Fill in your company details, so checks run against your own facts.',
-          'Start a new bid: find the tender on TED and upload the procurement documents the buyer published.',
-          'Review the requirement matrix and confirm the go/no-go verdict.',
-        ]}
-        action={{ href: '/bids/new', label: 'Start a new bid' }}
-        secondaryAction={{ href: '/company', label: 'Fill in company details' }}
-      />
+      <DashboardOverview />
     </>
   )
 }

@@ -168,6 +168,9 @@ def bid_record(**overrides: Any) -> dict[str, Any]:
         "problems": [],
         "verdict": None,
         "decision": None,
+        "buyer": None,
+        "deadline": None,
+        "deadline_utc_offset_minutes": None,
         "created_at": NOW,
         "updated_at": NOW,
         "bidder_language": "de",
@@ -1061,3 +1064,118 @@ async def test_the_status_a_release_restores_is_the_one_the_claim_will_accept() 
     # And it is not a status the startup resume would also pick up, which would race the
     # reviewer's own retry.
     assert BidStatus.AWAITING_REVIEW not in UNFINISHED_STATUSES
+
+
+# ------------------------------------------------------- S4.4.1: what the dashboard counts
+
+
+def test_the_open_item_statuses_are_the_two_a_row_can_be_unsettled_in() -> None:
+    """Spelled out in SQL because `LiteralString` is what keeps a run-time value out of it,
+    so the two definitions have to be compared by hand — which is this test."""
+    # Arrange
+    unsettled = {RowStatus.PARTIALLY_SUPPORTED.value, RowStatus.UNSUPPORTED.value}
+
+    # Act / Assert -- every unsettled status is counted, and no settled one is
+    for status in RowStatus:
+        named = f"'{status.value}'" in bids._OPEN_ITEMS
+        assert named == (status.value in unsettled), status
+
+
+def test_the_open_item_subquery_carries_the_tenant_itself() -> None:
+    """Not `m.company_id = b.company_id`: the fragment must be scoped on its own terms
+    rather than by where it is spliced. The unscoped-statement guard caught it written the
+    other way."""
+    assert TENANT_PREDICATE in bids._OPEN_ITEMS
+    assert "b.company_id" not in bids._OPEN_ITEMS
+
+
+def test_only_the_list_query_pays_for_the_open_item_count() -> None:
+    """A bid read on its own carries its whole matrix and can count what it already has."""
+    assert "open_items" in bids.SELECT_BIDS
+    assert "open_items" not in bids.SELECT_BID
+
+
+async def test_a_listed_bid_carries_its_buyer_deadline_and_open_items() -> None:
+    # Arrange
+    deadline = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
+    db = FakeDatabase(
+        Scripted(
+            [
+                bid_record(
+                    buyer="Ministère de l'Intérieur",
+                    deadline=deadline,
+                    deadline_utc_offset_minutes=120,
+                    decision="conditional",
+                    open_items=7,
+                )
+            ]
+        )
+    )
+
+    # Act
+    [row] = await list_bids(db, company_id=str(COMPANY_ID))
+    summary = row.summary()
+
+    # Assert
+    assert summary.buyer == "Ministère de l'Intérieur"
+    assert summary.deadline == deadline
+    assert summary.deadline_utc_offset_minutes == 120
+    assert summary.open_items == 7
+    assert summary.decision is Decision.CONDITIONAL
+
+
+async def test_a_bid_read_on_its_own_reports_no_open_items_rather_than_a_wrong_count() -> None:
+    """`SELECT_BID` does not compute it, so the column is absent and the default stands —
+    zero here means "not counted", and the workspace counts its own rows."""
+    db = FakeDatabase(Scripted([bid_record()]))
+
+    row = await fetch_bid(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
+
+    assert row is not None
+    assert row.open_items == 0
+
+
+async def test_starting_a_bid_stores_the_buyer_and_the_deadline_with_its_offset() -> None:
+    # Arrange
+    deadline = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
+    db = FakeDatabase(Scripted(), Scripted([bid_record()]))
+
+    # Act
+    await create_bid(
+        db,
+        company_id=str(COMPANY_ID),
+        notice_number="618320-2026",
+        title="Conseil en architecture SI",
+        source_language="fr",
+        bidder_language="de",
+        buyer="Ministère de l'Intérieur",
+        deadline=deadline,
+        deadline_utc_offset_minutes=120,
+    )
+
+    # Assert
+    params = db.params()
+    assert params["buyer"] == "Ministère de l'Intérieur"
+    assert params["deadline"] == deadline
+    assert params["deadline_offset"] == 120
+
+
+async def test_a_bid_started_without_a_deadline_stores_neither_half_of_the_pair() -> None:
+    """Migration 0007 refuses an offset with no deadline: an offset alone describes nothing."""
+    # Arrange
+    db = FakeDatabase(Scripted(), Scripted([bid_record()]))
+
+    # Act
+    await create_bid(
+        db,
+        company_id=str(COMPANY_ID),
+        notice_number="618320-2026",
+        title="x",
+        source_language="fr",
+        bidder_language="de",
+    )
+
+    # Assert
+    params = db.params()
+    assert params["deadline"] is None
+    assert params["deadline_offset"] is None

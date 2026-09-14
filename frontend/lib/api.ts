@@ -395,9 +395,20 @@ export interface components {
             source_language?: string | null;
             /** Deadline */
             deadline?: string | null;
+            /**
+             * Deadline Utc Offset Minutes
+             * @description The UTC offset the buyer's notice stated, so the deadline can be printed on the buyer's clock (S4.4.1). Null when no deadline is recorded. Only an offset and never an IANA zone: neither a notice nor TED publishes one, so a zone name would be an inference — and one that changes answer twice a year.
+             */
+            deadline_utc_offset_minutes?: number | null;
             status: components["schemas"]["BidStatus"];
             /** @description Final decision once reviewed; None while in flight */
             decision?: components["schemas"]["Decision"] | null;
+            /**
+             * Open Items
+             * @description Matrix rows that still need somebody: `partially_supported` or `unsupported`. Counted from the matrix rather than from the verdict's gaps, because a bid that has not been scored yet has no gaps and still has work in it — and because a reviewer who confirmed a partially supported row has confirmed that it is still unproven, not that it is settled.
+             * @default 0
+             */
+            open_items: number;
             /** Created At */
             created_at?: string | null;
             /** Updated At */
@@ -1128,6 +1139,16 @@ export interface components {
              * @description Dashboard title; defaults to the notice number
              */
             title?: string | null;
+            /**
+             * Buyer
+             * @description The contracting authority, as the notice names it. S1.2.1 takes it from TED later; until then the bidder has the notice in front of them.
+             */
+            buyer?: string | null;
+            /**
+             * Deadline
+             * @description When tenders are due, as an ISO-8601 timestamp **with the offset the notice states** — e.g. `2026-10-09T16:00:00+02:00`. The offset is kept alongside the instant so the dashboard can print the deadline on the buyer's own clock (S4.4.1); a timestamp with no offset is refused rather than assumed to be UTC, because guessing a zone silently moves a deadline by hours.
+             */
+            deadline?: string | null;
         };
         /**
          * Threshold
