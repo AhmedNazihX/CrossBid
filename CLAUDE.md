@@ -130,6 +130,12 @@ These were checked against live endpoints; rely on them rather than re-deriving.
   - pgvector 0.5's psycopg adapter returns a **`Vector` object that is not iterable**: use `.to_list()`. Getting a `Vector` back at all (rather than a string) is the proof that `register_vector_async` ran on that connection.
   - Async tests use **`@pytest.mark.anyio`** — the `anyio` pytest plugin ships with the existing dependency tree, and `tests/conftest.py` pins `anyio_backend` to `asyncio`. Do not add `pytest-asyncio`.
   - **LangGraph reads the *string* of a node's `config` annotation.** Under `from __future__ import annotations`, `config: RunnableConfig | None = None` matches nothing on its accept-list, so the graph emits a `UserWarning` and **never injects the config** — silently, because the default keeps the call working. Spell it `Optional[RunnableConfig]` with `# noqa: UP045`; `tests/unit/test_extract_reqs.py` compiles a real graph with warnings promoted to errors to pin it.
+  - **`datetime.fromisoformat` cannot read a date with an offset and no time, and fails
+    silently.** TED publishes deadlines as `'2026-10-07+02:00'`; Python returns
+    `datetime(2026, 10, 7, 2, 0)` with **no tzinfo** — the offset has been read as the hour,
+    `utcoffset()` is `None`, and the zone is lost with no error. The date survives by luck,
+    which is what hides it. Parse the shape yourself (`ted_client._date_and_offset`); the
+    stdlib is only correct once a time component is present.
   - `pymupdf4llm` renders emphasis as markdown (`**Umsatz**`), and SP.1 read `page.get_text()` instead. A strict-substring "verbatim quote" check therefore rejects honest quotes whenever the clause carries a bold word; `extract_reqs._normalised` strips inline `*_\`` runs on both sides before comparing (whitespace collapsed, case never folded).
   - pgvector's psycopg adapter registers dumpers for **`pgvector.Vector` and `numpy.ndarray` only, never a plain `list`** — a `list[float]` parameter is sent as a Postgres array and rejected by a `vector` column. Bind `Vector(...)`; it narrows to float32, which is what the column stores. Bind a chunk's `pages` as a `list`, not a `tuple`: psycopg adapts a tuple to a composite record.
   - psycopg's `execute` / `executemany` are typed on **`LiteralString`**, so pyright refuses a query assembled at run time — a free guard that no code path can build an unscoped `WHERE`. Keep SQL as `Final[LiteralString]` module constants.

@@ -128,10 +128,11 @@ def _routers() -> list[APIRouter]:
     from crossbid.routers.companies import router as companies_router
     from crossbid.routers.dev import router as dev_router
     from crossbid.routers.documents import router as documents_router
+    from crossbid.routers.tenders import router as tenders_router
 
     # Appended, never inserted: a new router at the front would renumber every generated
     # component in `frontend/lib/api.ts` for no reason.
-    return [documents_router, bids_router, companies_router, dev_router]
+    return [documents_router, bids_router, companies_router, dev_router, tenders_router]
 
 
 def get_app_settings(request: Request) -> Settings:

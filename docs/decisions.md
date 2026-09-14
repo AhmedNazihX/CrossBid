@@ -3400,3 +3400,71 @@ set" for a field that is set — so a loaded country outside the list is appende
 options rather than disappearing from them. That is not hypothetical tidiness: it is what
 stops a seed row, or a row from a future connector, quietly losing its country on the next
 save.
+
+---
+
+## ADR-0043 — TED search, and two things the unit tests were happy to get wrong
+
+**Date:** 2026-09-14 · **Stories:** S1.2.1 (unblocks S1.2.2, S3.2.2, S4.3.1) · **Status:** accepted
+
+`POST https://api.ted.europa.eu/v3/notices/search` — public, documented, no key. Most of what
+`reference/ted_client.py` does is refuse to build a query TED would reject, and the rules it
+enforces are the ones `CLAUDE.md` recorded from live probing rather than from documentation.
+
+### Two defects the offline tests could not see
+
+**The sort is a suffix, not a clause.** `build_query` joined it with the others, producing
+`… AND SORT BY publication-date DESC`, which is `QUERY_SYNTAX_ERROR: mismatched input 'SORT'`.
+Thirty-three unit tests passed on that string — including one asserting the query *ends with*
+the sort clause, which it did. The **live test found it on its first run**, which is the whole
+argument for having one: the mapping can be pinned against a recording, but only TED can say
+whether the query is legal. A unit test now pins the suffix form explicitly.
+
+**`datetime.fromisoformat` reads a date-with-offset as a time of day, silently.** TED
+publishes `'2026-10-07+02:00'` — a date, an offset, no hour. Python returns
+`datetime(2026, 10, 7, 2, 0)` with **no tzinfo**: the offset has become the hour, `utcoffset()`
+answers `None`, and the buyer's wall clock is gone with no error anywhere. The date survives by
+luck, which is what makes it dangerous — `2026-10-07-03:00` would have been mangled the same
+way. `_date_and_offset` parses the shape with a regex and falls through to the stdlib only for
+a value that genuinely carries a time. This belongs in `CLAUDE.md`'s library-behaviour list
+beside the `pymupdf4llm` findings, and has been added there.
+
+### What the client decides, and why
+
+* **A CPV is eight digits or it is refused here.** `IN (72)` is HTTP 400
+  `QUERY_UNSUPPORTED_FIELD_VALUE`. The model's pattern and the route's parameter annotation
+  both carry it, so a bidder gets a 422 naming the field rather than a 400 from Luxembourg.
+* **`IN (...)` values are separated by spaces and never by `OR`** — the story's own criterion.
+  `_values` is the one place a list becomes a clause, so there is nowhere else for an `OR` to
+  get in, and a test asserts the built string contains none.
+* **Newest first is not a preference.** `ASC` is a 400 and a JSON `sort` field is rejected
+  outright, so `SORT BY publication-date DESC` is the only order TED will serve.
+* **Paging stops at 600 whatever `totalNoticeCount` says**, so the page reports
+  `reachable_total` instead of offering a page that would 400.
+* **The deadline is the earliest lot's, and it is a date.** One entry per lot; across 58
+  sampled deadlines not one carried an hour. Inventing midnight would put a false countdown on
+  the dashboard, so the hour still comes from the notice PDF or the bidder (S4.4.1), and the
+  offset is carried beside the date as the buyer's wall clock (migration 0007).
+* **A keyword is a quoted phrase with its quotes removed rather than escaped.** TED's expert
+  syntax documents no escape, so a `"` cannot be passed through safely. An `OR` surviving
+  *inside* the phrase is harmless — it is text to search for; what must never happen is the
+  phrase ending early, which the quote count pins.
+
+### The wedge, for free
+
+TED publishes every notice title in **all 24 EU languages**. So `_in_language` prefers the
+bidder's own language, then the notice's official one, then English — and a German bidder
+reads a French tender's title in German **without a single model call**. That is the cheapest
+instance of the cross-border wedge in the product, and it was found by probing rather than
+planned: `buyer-name` is a language-keyed mapping of *lists*, `notice-title` a mapping of
+strings, and both needed resolving anyway.
+
+### The route
+
+`GET /tenders/search` proxies it rather than letting the browser call TED directly, which
+keeps the plan's boundary intact and means the query rules, the language resolution and the
+retry are tested once instead of reimplemented in TypeScript. It is behind `current_company`
+even though notices are public — an unauthenticated route here is a free proxy for anybody who
+finds it — and `TedUnavailableError` becomes **503, never an empty page**: "nothing matched"
+and "TED did not answer" are different facts, and a bidder told the first will widen a query
+that was never the problem.
