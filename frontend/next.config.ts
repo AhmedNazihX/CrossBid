@@ -24,6 +24,14 @@ const nextConfig: NextConfig = {
    *
    * Unset everywhere that matters — CI, the Dockerfile and `make dev-web` all use `.next`
    * exactly as before, and `output: 'standalone'` writes inside whichever is chosen.
+   *
+   * **This reduces the blast radius; it does not make the two safe to run together.** A
+   * build still rewrites `tsconfig.json` (Next adds its own generated-types path), which a
+   * running dev server watches and reacts to with a full recompile — and a route's client
+   * chunk was observed missing from `.next` afterwards, leaving a page that renders,
+   * refuses to hydrate, and answers no clicks. The rule that actually holds is process
+   * discipline: **do not build while a dev server is serving this project**, and restart
+   * the dev server after a batch of edits rather than trusting an HTTP 200.
    */
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
 
