@@ -9,16 +9,18 @@ langchain, not about us. The thing S3.3.1 will pass to `bind_tools` is
 directions, because "the disabled tool is absent" is the half that actually constrains
 what the agent may reach.
 
-The three tools are built for real, not faked. Building them opens no socket
-(`EmbeddingsClient` connects lazily, the eCertis cache is committed JSON) and the database
-is `conftest`'s recording source, so the registry's contract with each module — the
+The tools are built for real, not faked. Building them opens no socket (`EmbeddingsClient`
+connects lazily, the eCertis cache is committed JSON, and the two external tools construct
+their HTTP client inside the call rather than in `build_tool`) and the database is
+`conftest`'s recording source, so the registry's contract with each module — the
 `build_tool(context)` shape — is exercised rather than described.
 
 Two policies are pinned here because a later reader will otherwise assume the opposite:
 
 * A **configured name with no module** is skipped and logged, never raised. The settings
-  file is allowed to run ahead of the code (`search_ted` and `currency_convert` are
-  Increment 4) and a run must not die because an operator's YAML names next month's tool.
+  file is allowed to run ahead of the code -- `search_ted` and `currency_convert` both sat in
+  it before they were written -- and a run must not die because an operator's YAML names next
+  month's tool.
 * A **tool that cannot be built for its context** propagates. `tender_rag_search` with no
   `bid_id` is the case, and it is a programming error in the caller, not a configuration:
   swallowing it would hand `check_reqs` a shorter tool list and a confident answer about a
@@ -53,10 +55,23 @@ COMPANY_RAG = "company_rag_search"
 TENDER_RAG = "tender_rag_search"
 ECERTIS = "ecertis_evidence_lookup"
 SEARCH_TED = "search_ted"
-NOT_BUILT_YET = "currency_convert"
-"""A name `settings.default.yaml` enables with no module behind it. `search_ted` played this
-part until S1.2.2 built it; `currency_convert` is S1.3.1 and takes it over."""
-"""In `settings.default.yaml`'s `enabled_tools`, with no module until Increment 4."""
+CURRENCY = "currency_convert"
+
+NOT_BUILT_YET = "haruspex_lookup"
+"""A name no module provides — and, as of S1.3.1, an invented one.
+
+This constant used to be a real story: `search_ted` played the part until S1.2.2 built it and
+`currency_convert` until S1.3.1, and each time the name moved the tests below went on proving
+the same thing. There is now nothing left in `enabled_tools` that is not built, so the next
+substitution would be a lie of a different kind — a name that exists.
+
+The policy, though, still has to be pinned: `build_enabled_tools` must skip a configured name
+it cannot provide rather than raise, because the settings file is the operator's intention and
+is allowed to run ahead of the code. So the name here is plainly fictional, and the tests that
+use it put it into `enabled_tools` themselves (`with_tools`) instead of leaning on the shipped
+file. That makes the coverage independent of what the settings happen to enable this month,
+which is what let this constant go stale twice.
+"""
 
 
 def context(settings: Settings, *, bid_id: str | None = BID_ID) -> ToolContext:
@@ -84,7 +99,7 @@ def test_discovery_finds_every_module_that_exports_a_manifest() -> None:
     found = {entry.manifest.name for entry in tool_entries()}
 
     # Assert
-    assert found == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED}
+    assert found == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED, CURRENCY}
 
 
 def test_manifests_lists_the_tools_that_exist_not_the_ones_that_are_on() -> None:
@@ -178,7 +193,7 @@ def test_the_built_tools_are_the_real_ones(offline_settings: Settings) -> None:
 
 
 def test_a_configured_name_with_no_module_is_skipped(offline_settings: Settings) -> None:
-    """`settings.default.yaml` ships with two of these; neither may take a run down."""
+    """The shipped file has none of these today; the policy is what must not take a run down."""
     # Arrange
     settings = with_tools(offline_settings, ECERTIS, NOT_BUILT_YET)
 
@@ -224,12 +239,18 @@ def test_nothing_is_logged_when_every_configured_tool_exists(
 def test_unbuilt_names_are_the_configured_ones_no_module_provides(
     offline_settings: Settings,
 ) -> None:
-    """What the panel prints as "configured, not built" — the settings file as shipped."""
-    # Act
-    unbuilt = unbuilt_tool_names(offline_settings)
+    """What the panel prints as "configured, not built".
 
-    # Assert
-    assert unbuilt == ("currency_convert",)
+    Empty against the settings file as shipped, which is S1.3.1's doing: every name in
+    `enabled_tools` is now a module. Both halves are asserted, because "nothing is missing"
+    and "the function found nothing" are the same tuple and only the second is a bug.
+    """
+    # Arrange
+    with_a_gap = with_tools(offline_settings, ECERTIS, NOT_BUILT_YET)
+
+    # Act & Assert
+    assert unbuilt_tool_names(offline_settings) == ()
+    assert unbuilt_tool_names(with_a_gap) == (NOT_BUILT_YET,)
 
 
 def test_a_built_tool_that_is_switched_off_is_not_called_unbuilt(

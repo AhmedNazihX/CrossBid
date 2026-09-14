@@ -10,10 +10,12 @@ rather than the day someone remembers to add a test for it.
 
 The two directions are not symmetric, deliberately:
 
-* A **configured name with no module** is fine. `enabled_tools` still lists `currency_convert`,
-  which is an Increment 4 story — the file is the operator's
-  intention, and it is allowed to run ahead of the code. `PENDING_TOOLS` names them, so a
-  typo in the settings file is still caught.
+* A **configured name with no module** is fine. The file is the operator's intention, and it
+  is allowed to run ahead of the code. `PENDING_TOOLS` names them, so a typo in the settings
+  file is still caught. It is empty as of S1.3.1 — every name in `enabled_tools` is now
+  built — and the set stays rather than the test collapsing to "there are none", because the
+  next story to enable a tool ahead of writing it needs the exemption back, and an empty set
+  is the honest way to say the exemption is currently unused.
 * A **module whose flag disagrees with the file** is never fine, in either direction: an
   enabled tool declaring itself off understates what the agent can reach, and a disabled one
   declaring itself on is the panel telling an operator something the runtime will not do.
@@ -32,12 +34,19 @@ import pytest
 from crossbid.settings import Settings
 from crossbid.tools.registry import ToolEntry, tool_entries
 
-PENDING_TOOLS = frozenset({"currency_convert"})
-"""Listed in `enabled_tools` with no module yet. `search_ted` left this set when S1.2.2 built
-it; `currency_convert` is S1.3.1."""
+PENDING_TOOLS: frozenset[str] = frozenset()
+"""Listed in `enabled_tools` with no module yet — empty since S1.3.1 built the last of them.
+`search_ted` left this set at S1.2.2 and `currency_convert` at S1.3.1. See the module
+docstring for why it stays as an empty set rather than going away."""
 
 BUILT_TOOLS = frozenset(
-    {"company_rag_search", "tender_rag_search", "ecertis_evidence_lookup", "search_ted"}
+    {
+        "company_rag_search",
+        "tender_rag_search",
+        "ecertis_evidence_lookup",
+        "search_ted",
+        "currency_convert",
+    }
 )
 """What discovery must find at minimum, so a sweep that finds nothing cannot pass silently."""
 
@@ -85,7 +94,12 @@ def test_the_sweep_covers_every_tool_that_exists() -> None:
 def test_every_configured_name_is_either_built_or_a_named_pending_story(
     enabled_tools: tuple[str, ...],
 ) -> None:
-    """`enabled_tools` may run ahead of the code, but only on purpose — a typo is not ahead."""
+    """`enabled_tools` may run ahead of the code, but only on purpose — a typo is not ahead.
+
+    With `PENDING_TOOLS` empty this reads as "every configured name is built", which is the
+    state S1.3.1 leaves the settings file in. The relation is what is asserted, so the day a
+    story enables a tool before writing it, naming it in `PENDING_TOOLS` is the whole fix.
+    """
     # Act
     unbuilt = set(enabled_tools) - {entry.manifest.name for entry in TOOL_ENTRIES}
 

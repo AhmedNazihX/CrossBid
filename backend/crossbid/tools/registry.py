@@ -19,17 +19,18 @@ with and never in which order it is shown them. An operator's line order is inci
 stable tool list keeps one bid's prompt identical to the next's.
 
 **A configured name with no module is skipped, not raised.** `settings.default.yaml`
-already enables `search_ted` (S1.2.2) and `currency_convert` (S1.3.1), which land in
-Increment 4: the settings file is the operator's intention and is allowed to run ahead of
-the code. At run time a typo (`companyrag_search`) and a not-yet-built story are the same
-observation — a name nothing provides — so there is nothing here that could tell them
-apart, and refusing would mean a run dies because the YAML names next month's tool. Hence a
+enabled `search_ted` and `currency_convert` before either existed (S1.2.2 and S1.3.1 have
+since built them, so as of Increment 4 nothing configured is missing): the settings file is
+the operator's intention and is allowed to run ahead of the code. At run time a typo
+(`companyrag_search`) and a not-yet-built story are the same observation — a name nothing
+provides — so there is nothing here that could tell them apart, and refusing would mean a
+run dies because the YAML names next month's tool. Hence a
 warning-shaped fact logged at info: "the agent is not reaching these" is worth saying out
 loud, and it is what makes "disabled" distinguishable from "not built yet" in the log as
 well as in the panel. The typo is caught at *test* time instead, by
 `test_every_configured_name_is_either_built_or_a_named_pending_story` in
 `test_tool_manifests.py`, which compares `enabled_tools` with the modules that exist and
-allows only the two names it lists as pending.
+allows only the names it lists as pending — a list that is empty today.
 
 **A tool that cannot be built for its context propagates.** `tender_rag_search` raises
 `RagToolError` when its `ToolContext` carries no `bid_id`, and `company_rag_search` when it
@@ -133,7 +134,8 @@ def unbuilt_tool_names(settings: Settings) -> tuple[str, ...]:
     """Configured names no module provides, sorted and deduplicated.
 
     The panel prints these as "configured, not built" rather than dropping them, so that an
-    operator reading the settings file and the panel side by side sees the same five names.
+    operator reading the settings file and the panel side by side sees the same names. Empty
+    as the settings ship, and it has not always been — see the module docstring.
     """
     known = {entry.manifest.name for entry in tool_entries()}
     return tuple(sorted(enabled_tool_names(settings) - known))

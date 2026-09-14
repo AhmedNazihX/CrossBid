@@ -46,6 +46,8 @@ from tests.conftest import FAKE_ENCRYPTION_KEY, FAKE_OPENROUTER_KEY
 COMPANY_RAG = "company_rag_search"
 TENDER_RAG = "tender_rag_search"
 ECERTIS = "ecertis_evidence_lookup"
+SEARCH_TED = "search_ted"
+CURRENCY = "currency_convert"
 PATH = DEV_SETTINGS_PATH
 UNKNOWN_PATH = "/dev/no-such-route"
 
@@ -95,7 +97,7 @@ def test_it_lists_every_manifest_that_exists(client: TestClient) -> None:
     listed = tools_by_name(fetch(client))
 
     # Assert
-    assert set(listed) == {COMPANY_RAG, TENDER_RAG, ECERTIS, "search_ted"}
+    assert set(listed) == {COMPANY_RAG, TENDER_RAG, ECERTIS, SEARCH_TED, CURRENCY}
 
 
 def test_each_manifest_carries_what_the_panel_shows(client: TestClient) -> None:
@@ -106,6 +108,7 @@ def test_each_manifest_carries_what_the_panel_shows(client: TestClient) -> None:
     # Assert
     assert listed[ECERTIS]["external"] is False, "the cache is committed; it opens no socket"
     assert listed[COMPANY_RAG]["external"] is True
+    assert listed[CURRENCY]["external"] is True, "it reaches the ECB rate service"
     assert listed[ECERTIS]["default_enabled"] is True
     assert "eCertis" in listed[ECERTIS]["description"]
 
@@ -130,12 +133,15 @@ def test_the_enabled_flag_follows_the_settings_not_the_manifest(
 
 
 def test_it_names_the_tools_that_are_configured_but_not_built(client: TestClient) -> None:
-    """`settings.default.yaml` enables two Increment 4 stories; dropping them would lie."""
+    """Empty since S1.3.1 built the last configured name — and the field stays, because a
+    panel that dropped it would have nowhere to say so the next time the settings run ahead
+    of the code. The disjointness is the part that keeps meaning something: a name can never
+    be listed as a manifest and as missing at once."""
     # Act
     body = fetch(client)
 
     # Assert
-    assert body["unbuilt_tools"] == ["currency_convert"]
+    assert body["unbuilt_tools"] == []
     assert set(body["unbuilt_tools"]).isdisjoint(tools_by_name(body))
 
 
