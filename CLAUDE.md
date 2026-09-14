@@ -93,6 +93,28 @@ These were checked against live endpoints; rely on them rather than re-deriving.
   - Pagination caps at **600 results** — `limit=100, page=7` is HTTP 400 even when `totalNoticeCount` is higher. Narrow the query rather than paging past it.
   - `selection-criterion-description-lot` is **much sparser than assumed**: populated on 14% of French and 17% of English CPV-72 notices; 496 of 600 English notices had none. Notices routinely answer "Sources: Procurement Document" for both criteria fields. This is the strongest evidence for the upload-the-pack design — the notice usually does not carry the requirements.
   - `links` also exposes `links.pdfs.<official-language>` and `links.htmlDirect.<LANG>` alongside `links.pdf.<LANG>`.
+
+  Re-probed live on 2026-09-14, before S1.2.1 starts. The endpoint is up and these four facts
+  are what the story has to build against:
+  - **A CPV value must be the full eight digits.** `classification-cpv IN (72)` is HTTP 400
+    `QUERY_UNSUPPORTED_FIELD_VALUE`; `IN (72000000)` works and matches 398 133 notices.
+  - **Sorting lives inside the query string, not beside it.** A JSON `"sort"` field is rejected
+    outright (`Unrecognized field "sort"`); it is `... SORT BY publication-date DESC` appended
+    to `query`. (`DESC` only — `ASC` is 400, as recorded above.)
+  - **`deadline-receipt-tender-date-lot` is a list, one entry per lot, and carries a DATE with
+    an offset and no time of day.** Example: `['2026-10-07+02:00']`. Across 58 lot deadlines in
+    a fresh CPV-72 sample, **zero carried a time component**; offsets seen were `+02:00`,
+    `+03:00`, `+01:00` and bare `Z`. So TED can fill `bids.deadline_utc_offset_minutes`
+    (migration 0007) but **cannot fill the hour** — only the notice PDF or the bidder can, which
+    is why the start form takes a date *and* a time (S4.4.1). Most notices have one lot; up to
+    four were seen.
+  - **Fill rate depends entirely on the notice type.** 44 % of a mixed sample carried a
+    deadline, but that is an artefact: `can-standard` award notices have none by nature. Among
+    **`cn-standard` contract notices — the ones a bidder acts on — it is 84 %.** Filter on
+    notice type before quoting a coverage figure.
+  - **`buyer-name` is a language-keyed dict of lists**, e.g.
+    `{'spa': ['Dirección General de Racionalización…']}`, not a string. `bids.buyer` is plain
+    text, so S1.2.1 has to choose a language rather than assume one.
   - **No German or French CPV-72 notice sampled hosts its documents on TED.** The EU Funding & Tenders Portal (EU institutions and agencies, notices in English) is the only platform found that serves procurement documents as plain unauthenticated `GET` URLs, including a download-all zip. Its JSON APIs are not usable — `api.sedia-backoffice-production.eu/.../{uuid}-CN` is 403 and `api.tech.ec.europa.eu/search-api` does not index tender records.
 - **ESPD / DUME XML is the bridge to eCertis, confirmed on real data.** A French buyer's `DUME_acheteur.xml` (committed in the FR fixture) declares 30 `ccv:Criterion` elements carrying the canonical ESPD criterion UUIDs — e.g. `499efc97-2ac1-4af2-9e84-323c2ca67747` "Chiffre d'affaires annuel général", `1f49b3f0-d50f-43f6-8b30-4bafab108b9b` "Effectifs moyens annuels". These are the same ids eCertis is keyed on, so where a tender publishes a DUME the criterion mapping needs no LLM inference at all. Treat a published DUME as a high-confidence structured input, not as prose to extract.
 - **LLM provider is OpenRouter only** (the user holds no OpenAI or Anthropic key). Verified 2026-09-10 against `https://openrouter.ai/api/v1/models`: `openai/gpt-5.6-terra` ($2/$12 per 1M) and `openai/gpt-5.6-luna` ($0.20/$1.20) support `structured_outputs`, `response_format`, and `tools`; For the eval judge and the multi-model demo, **`anthropic/claude-sonnet-5` is NOT available on this account** (HTTP 404). Re-probed with live calls 2026-09-10 — the account's data policy filters most providers. The non-OpenAI models that actually answer are `anthropic/claude-haiku-4.5` ($1/$5, the eval judge), `google/gemini-2.5-flash` ($0.30/$2.50) and `google/gemini-2.5-flash-lite` ($0.10/$0.40). Also 404: `claude-opus-5`, `claude-sonnet-4.5`, `gemini-2.5-pro`, `deepseek-chat-v3.1`, `llama-4-maverick`, `qwen3-235b`, `mistral-medium-3.1`, `nova-pro-v1`, `command-a`. **Presence in `/models` does not mean usable — always probe with a live call** (ADR-0005). OpenRouter's `/api/v1/embeddings`, probed 2026-09-10, serves exactly three usable embeddings on this account: **`openai/text-embedding-3-small` (1536 dims, ~$0.027/1M) — the default**, `openai/text-embedding-3-large` (3072 dims, $0.13/1M) as the quality switch, and `qwen/qwen3-embedding-8b` (4096 dims, ~$0.057/1M) as the non-OpenAI multilingual option. 3-small is the default because 1536 dims is under pgvector's 2000-dim index cap (ADR-0004). `baai/bge-m3`, `google/gemini-embedding-001` and `openai/text-embedding-ada-002` return **HTTP 404** on this account's data policy; Cohere, Voyage, Mistral, Jina and Nomic embeddings do not exist on OpenRouter at all. There is no `/models` listing for embeddings — probe the endpoint. `gpt-4o` is legacy. Use `ChatOpenAI(base_url="https://openrouter.ai/api/v1")` with `extra_body={"usage": {"include": true}}` for per-response cost. Keep slugs in `backend/settings.default.yaml`; never hard-code a model name. Users may store their own OpenAI/Anthropic/OpenRouter key (bring your own key): encrypted with Fernet, scoped by company, last-4 hint only, verified on save, never logged; embeddings always use the app's OpenRouter route.
