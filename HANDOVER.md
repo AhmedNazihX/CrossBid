@@ -230,6 +230,10 @@ blend that paints a visibly darker rectangle across the hero.
 
 ## What to do next
 
+**Increments 0, 2 and 3 are closed. Only Milestone 1 is open**, and it is held by S3.2.1's
+recall gate plus the unrecorded demo — see below. For Increment 4, jump to *Starting
+Increment 4*.
+
 Three options, in the order I would take them.
 
 1. **Record the end-to-end demo.** It is the only thing besides S3.2.1 holding Milestone 1 open,
@@ -251,7 +255,7 @@ defensible story for the grader than a number chased to 0.9.
 
 ---
 
-## Finishing Increment 3 — read this first
+## Increment 3, as it was finished (history)
 
 The backend is done. What is left is `S4.5.2` and `S4.5.3`, which are independent of each
 other, and then walking the round trip in a browser.
@@ -301,6 +305,61 @@ the product end to end. Increment 3 has now produced a fourth of exactly that sh
 reviewer edits reached `complete` without ever reaching the database, and only writing
 S3.4.3's consistency test found it. The walk is what finds these; a test that walks is the
 cheap version of it.
+
+---
+
+## Starting Increment 4 — read this first
+
+**Increment 4 is 17 stories, not the plan's original 18**: S4.4.1 moved into Increment 3
+(ADR-0030). Every dependency is satisfied except one chain, and the two external services were
+probed on 2026-09-14 before this was written.
+
+### The order, and why
+
+| # | Story | Size | Why here |
+|---|---|---|---|
+| 1 | **S6.5** | S | Three adversarial PDFs with planted instructions. **No dependencies, and it is the only thing blocking anything** — S2.3.1 needs it and S5.3 needs S2.3.1. One small story unblocks two. It was an Increment 3 wait-filler that never got picked up. |
+| 2 | **S0.3.1** | M | Magic-link sign-in, backend half. The longest chain in the increment starts here, so it starts first. `SUPABASE_ANON_KEY` and `DEVELOPER_EMAILS` are **already in `.env`** — `settings.py` has no fields for them and `auth.py` still answers 501 for `AUTH_MODE=supabase`, which is exactly this story's work. |
+| 3 | **S4.1.1 → S4.2.1, S4.3.1** | M each | The frontend of sign-in, then the company form and the TED-search start step. S4.2.1 and S4.3.1 are independent of each other once S4.1.1 lands. |
+| 4 | **S2.3.1 → S5.3** | M, S | The injection guard, unblocked by step 1. |
+| — | **S1.2.1 → S1.2.2, S3.2.2** | M, S, S | TED search. Independent of everything above; can run in parallel from day one. See the warning below. |
+| — | **S1.3.1, S2.3.3, S4.6.3** | S each | No dependencies at all. Good filler whenever something upstream is in flight. |
+| — | **S5.1** | M | Needs S1.4.1 ✅ (Increment 2). Independent. |
+| — | **S5.2 → S4.6.2** | M, M | Cost per node, then the model picker. `S5.2` needs S0.3.2 ✅. |
+| — | **S3.5.1 → S4.6.1** | M, M | "Ask the tender". Needs S2.4.2 ✅ and S3.4.3 ✅ — both landed in Increment 3. |
+
+Wait-filler for the increment: **S7.2**.
+
+### What S1.2.1 will actually get from TED
+
+Re-probed live on 2026-09-14; the full findings are in `CLAUDE.md`'s verified-facts section.
+The one that changes the story's shape:
+
+**TED's `deadline-receipt-tender-date-lot` is a list, one entry per lot, carrying a DATE with a
+UTC offset and no time of day** — zero of 58 sampled lot deadlines had an hour. So TED can fill
+`bids.deadline_utc_offset_minutes` (migration 0007) and the date, but **never the hour**. The
+start form's date-and-time input is therefore *richer* than TED, not redundant with it: S1.2.1
+should fill what it has and leave the hour to the bidder rather than overwrite it with midnight.
+
+Also: a CPV value must be the full eight digits (`IN (72)` is a 400), sorting goes inside the
+query string rather than beside it, `buyer-name` is a language-keyed dict rather than a string,
+and the deadline fill rate is **84 % among `cn-standard` contract notices** but only 44 % across
+a mixed sample, because award notices have no deadline by nature.
+
+### The CI was red for three days and the code was never the reason
+
+Fixed on 2026-09-14. Every push from 2026-09-11 reported a failed run while **every real check
+was green** — backend, frontend, `dependencies.txt`, `api.ts` all passed. The `generated files
+are current` job backgrounds the API to regenerate `api.ts` and nothing ever stopped it;
+`astral-sh/setup-uv`'s post-job `Pruning cache...` then blocked on what the live interpreter
+held and was killed after exactly five minutes with `exit code 2`, after which the runner logged
+`Terminate orphan process: pid (uv)` and `pid (uvicorn)` and named the cause itself. A
+`Stop the API` step with `if: always()` is the fix; it also takes about five minutes off the run.
+
+**Still outstanding, and a warning rather than a failure today:** `actions/checkout@v4`,
+`setup-node@v4`, `setup-python@v5` and `astral-sh/setup-uv@v5` all target Node 20, which is
+deprecated and is being forced onto Node 24. That becomes a hard failure when the runners drop
+the shim. Bumping them is a separate change and was deliberately not bundled with the fix above.
 
 ---
 

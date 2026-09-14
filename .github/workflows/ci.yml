@@ -182,3 +182,15 @@ jobs:
             echo "::error::frontend/lib/api.ts is stale. Run 'npm run gen:api' and commit it."
             exit 1
           }
+
+      # Kill what this job started. Nothing else does, and a surviving uvicorn is why every
+      # push from 2026-09-11 to 2026-09-14 reported a red CI while every real check was
+      # green: the process outlives the job's steps, `astral-sh/setup-uv`'s post-job
+      # `Pruning cache...` then blocks on the cache entries the live interpreter holds, and
+      # the runner kills it after exactly five minutes with `exit code 2` — after which it
+      # logs `Terminate orphan process: pid (uv)` and `pid (uvicorn)` and names the cause
+      # itself. `if: always()` because a stale `api.ts` must still leave a clean runner;
+      # `|| true` because `pkill` exits 1 when it matches nothing, which is a success here.
+      - name: Stop the API
+        if: always()
+        run: pkill -f "uvicorn crossbid.main:app" || true
