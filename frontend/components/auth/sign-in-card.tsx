@@ -9,11 +9,12 @@
  * marketing page's canvas and brand lockup, and invents no spacing, colour or type of its
  * own. ADR-0034 records that.
  *
- * **Two ways in, one screen (ADR-0038).** A password for an account that has one, and a
- * emailed link for everyone else. The link is also the sign-*up* path — `signInWithOtp`
- * creates the user when there is none — so a first-time bidder needs no separate form and
- * no password to invent, and the plan's original "never manage a password" promise is still
- * available to anyone who wants it.
+ * **Two ways in and one way up, one screen (ADR-0038).** A password for an account that has
+ * one, an emailed link for everyone else, and a third method that registers. The link used
+ * to double as the sign-up path, which meant a mistyped address quietly created an account
+ * rather than failing; it is now `shouldCreateUser: false` and registration is its own
+ * method. The plan's "never manage a password" promise survives — the link still signs in
+ * without one, it just will not invent an account to sign in to.
  *
  * **The link half has two states and they are not the same screen.** Before sending, an
  * email field; after sending, the link has gone to an address and the useful thing to show

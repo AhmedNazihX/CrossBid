@@ -35,8 +35,12 @@ export interface SessionState {
    * Ask Supabase to email a magic link. Resolves when the mail has been accepted for
    * sending. `next` is the path to land on afterwards, carried through the mailbox.
    *
-   * This is also the sign-*up* path: `signInWithOtp` creates the user when there is none,
-   * so a first-time bidder needs no separate form and no password to invent.
+   * Sign-*in* only. `signInWithOtp` defaults to `shouldCreateUser: true`, which made this
+   * a silent sign-up path: a mistyped address did not fail, it registered a second account
+   * and mailed the link there. That is how `ahmed.nazih.eslayed@…` came to exist beside
+   * `…elsayed@…` — one transposition, a real-looking account, and no error to notice.
+   * Registration has had its own button since ADR-0038, so nothing is lost by refusing;
+   * an unknown address now gets an error instead of an account.
    */
   readonly sendMagicLink: (email: string, next?: string) => Promise<void>
   /**
@@ -100,7 +104,8 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
     if (supabase === null) throw new Error('Sign-in is not configured for this build.')
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: authCallbackUrl(next) },
+      // Never create an account from the sign-in form; see the interface docstring.
+      options: { emailRedirectTo: authCallbackUrl(next), shouldCreateUser: false },
     })
     if (error !== null) throw error
   }, [])
