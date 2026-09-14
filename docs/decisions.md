@@ -3117,3 +3117,66 @@ token out of `localStorage`. CSP raises the cost of getting there; it changes no
 afterwards, and it is no defence at all against a malicious dependency, which is nonced by
 construction. Option 2 remains the answer if this app ever renders untrusted HTML — S3.5.1's
 "ask the tender" is the story that would change that, and it must render model output as text.
+
+---
+
+## ADR-0037 — The company form, and the 404 a new account used to hit
+
+**Date:** 2026-09-14 · **Stories:** S4.2.1 · **Status:** accepted
+
+Written after the first real magic-link sign-in, which worked and then landed on
+*"Your bids could not be loaded — This account has no company yet. Create one with
+POST /companies before using the app."*
+
+That message is correct, it is the 404 ADR-0033 deliberately chose over a 403, and it is the
+wrong thing to show a person: **the first screen after somebody's first sign-in should not
+name an HTTP verb.** The gap was structural rather than a bug — S0.3.1 and S4.1.1 shipped the
+lock and the key, and S4.2.1 is the door.
+
+**One form, two routes, and the person is never asked which.** `owner_user_id` is `NOT NULL`,
+so a company arrives with its owner or not at all; a brand-new account therefore has nothing
+to be scoped to and every tenant route answers 404 until one exists. `lib/companies` decides
+between `POST /companies` and `PUT /companies/me` from whether the load found a row. Only the
+heading and the button change — "Save changes" for something that does not exist yet reads as
+a no-op, and "have you been here before" is not a question to put to a user.
+
+**`RequireCompany` is where the 404 stops being a dead end.** It sits in the `(app)` shell
+beside `RequireSession` and sends a bidder with no company to `/company` rather than to a
+dashboard that can only fail. It runs the same `GET /companies/me` the form is about to run,
+so it costs one request either way, and it is skipped entirely on the dev bridge — where the
+header already names a company — and while the session is still loading.
+
+A failure of that check renders the screen rather than redirecting: the API being unreachable
+is not the same as having no company, and bouncing somebody to onboarding on a network blip
+would be worse than the error they came for.
+
+**Validation errors are read, not re-implemented.** The story asks that they name the field,
+and the backend already names it: `CompanyProfile` is the request body, so a value out of
+bounds is FastAPI's own 422 with a `loc` path. `fieldErrorsFrom` turns `['body','turnover',0,
+'year']` into `turnover.0.year` and puts the message under that input. Re-implementing the
+bounds in the browser would be a second source of truth that drifts the first time a `ge=`
+moves — and the row editors are exactly where that drift would be invisible.
+
+**Turnover and certificates repeat, rather than being fixed.** Tenders ask for "the last three
+financial years", but a company founded two years ago has two, and a year that was never
+filled in would be checked as a failed requirement rather than a missing fact. `field_of_activity`
+is on the turnover row for the same reason it is on the demo pack's `Eigenerklaerung`: a
+selection criterion is routinely turnover *in the field of the contract*, which one
+company-wide figure cannot answer.
+
+Every certificate field but the name is optional. A bidder knows they hold ISO 27001 long
+before they can find the certificate number, and a form demanding all six would be answered
+with invented ones. The expiry carries its own hint, because a certificate with no expiry
+recorded is **not** the same as a valid one — the response model reports `is_valid: false` for
+it — so leaving it blank should be a decision rather than an omission.
+
+**Explanation language and tone live here**, not on a settings page, because the plan puts
+them here on purpose: brief item Easy 2 (personality and tone) must not depend on the provider
+page, which is Could-priority and may never be built.
+
+**Verified against Frankfurt**, not asserted: the form loaded the demo GmbH's real profile —
+five scalars, three turnover years, four certificates with their dates — the select showed
+`GmbH` selected out of the ten legal forms the column's check constraint allows, and saving
+answered `PUT /companies/me → 200` with the "Saved" notice and no memory warning. The create
+path is covered by the router's own tests (201, the owner taken from the token and not the
+body, 409 on a second company, 422 on a bad body).

@@ -1,3 +1,4 @@
+import { RequireCompany } from '@/components/auth/require-company'
 import { RequireSession } from '@/components/auth/require-session'
 import { MobileHeader } from '@/components/layout/mobile-header'
 import { MAIN_CONTENT_ID } from '@/components/layout/nav-items'
@@ -23,16 +24,18 @@ export default function AppLayout({
 }>) {
   return (
     <RequireSession>
-      <div className="flex min-h-screen flex-col bg-surface-canvas shell:flex-row">
-        <SkipToContent />
-        <Sidebar />
-        <MobileHeader />
-        <main id={MAIN_CONTENT_ID} className="min-w-0 flex-1 shell:py-7 shell:pr-7">
-          <div className="flex min-h-full flex-col px-4 py-5 shell:min-h-[calc(100vh-56px)] shell:rounded-[14px] shell:border shell:border-border-default shell:bg-surface-card shell:p-8 shell:shadow-xs">
-            {children}
-          </div>
-        </main>
-      </div>
+      <RequireCompany>
+        <div className="flex min-h-screen flex-col bg-surface-canvas shell:flex-row">
+          <SkipToContent />
+          <Sidebar />
+          <MobileHeader />
+          <main id={MAIN_CONTENT_ID} className="min-w-0 flex-1 shell:py-7 shell:pr-7">
+            <div className="flex min-h-full flex-col px-4 py-5 shell:min-h-[calc(100vh-56px)] shell:rounded-[14px] shell:border shell:border-border-default shell:bg-surface-card shell:p-8 shell:shadow-xs">
+              {children}
+            </div>
+          </main>
+        </div>
+      </RequireCompany>
     </RequireSession>
   )
 }
