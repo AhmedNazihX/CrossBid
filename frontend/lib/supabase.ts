@@ -37,11 +37,14 @@ export function getSupabaseClient(): Promise<SupabaseClient | null> {
   client ??= import('@supabase/supabase-js').then(({ createClient }) =>
     createClient(SUPABASE_URL as string, SUPABASE_ANON_KEY as string, {
       auth: {
-        // The magic link lands on /auth/callback carrying a code; `detectSessionInUrl` is
-        // what exchanges it for a session there, and PKCE is what stops that code being
-        // replayable by anyone who sees the URL in a referrer or a mail scanner's logs.
+        // PKCE is what stops the code in the callback URL being replayable by anyone
+        // who sees it in a referrer or a mail scanner's logs.
         flowType: 'pkce',
-        detectSessionInUrl: true,
+        // `/auth/callback` exchanges the code itself (ADR-0040). Detection here would
+        // be a second exchanger of a single-use code and - worse - a silent one: it
+        // declines to act when the stored verifier is missing, which is exactly the
+        // case that most needs reporting rather than waiting through.
+        detectSessionInUrl: false,
         persistSession: true,
         autoRefreshToken: true,
       },

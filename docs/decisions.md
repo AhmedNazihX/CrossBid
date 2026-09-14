@@ -3290,3 +3290,59 @@ change with the method, and the password submit reaches Supabase — a wrong cre
 **Still true, and still the recommendation:** the built-in mailer's two messages an hour make
 every email-bearing path fragile. Custom SMTP is the fix before any demo, and an account
 created in the Supabase dashboard with "Auto Confirm User" needs no email at all.
+
+---
+
+## ADR-0040 — The callback exchanges the code itself, and every arrival resolves
+
+**Date:** 2026-09-14 · **Stories:** S4.1.1 (corrects ADR-0034) · **Status:** accepted
+
+Reported as a sign-up link landing on `/auth/callback?code=…&next=%2Fcompany` and sitting on
+"Signing you in…" forever. Two defects, one of them mine by design rather than by accident.
+
+### Waiting for `detectSessionInUrl` was the wrong shape
+
+ADR-0034 had this page *wait* rather than exchange, reasoning that two exchanges of a
+single-use code would race and the loser would report a failure for a sign-in that had in
+fact worked. The reasoning holds. The design did not, because of what supabase-js does when
+it decides there is nothing to exchange: **it treats a URL as a PKCE callback only when the
+`code` *and* a stored `code_verifier` are both present**, and the verifier is written in the
+browser that began the sign-up. Open the link in a different browser — or after clearing site
+data — and supabase-js declines, silently. Nothing happened, nothing failed, and a page whose
+only instruction was "wait" waited on a session that was never coming.
+
+The case is not exotic. It is what happens the first time anybody signs up in one browser and
+opens their mail in another, which is most people.
+
+So `detectSessionInUrl` is now `false` and this page calls `exchangeCodeForSession`. **There is
+still exactly one exchanger** — the original concern is satisfied — and its failure is now a
+sentence on the screen. Measured after the change, against a code this browser never
+requested, the screen reads Supabase's own diagnosis: *"PKCE code verifier not found in
+storage. This can happen if the auth flow was initiated in a different browser or device, or
+if the storage was cleared."* That is the message that was missing.
+
+The exchange is attempted once per code, guarded at module scope rather than by a ref, because
+React's development double-mount would otherwise spend the code on the first attempt and
+report the second one's failure — which is the race ADR-0034 was worried about, arriving from
+the direction nobody was watching.
+
+### One fall-through was rendering a spinner for three different states
+
+`return <Waiting />` was the last line, so `loading`, `disabled`, and "arrived with no code at
+all" all rendered the same indefinite "Signing you in…". Only `signedOut` and an explicit
+`?error=` had screens.
+
+All five arrivals now resolve: a code that works redirects, a code that does not names why, an
+`?error=` from Supabase shows its text, a build with sign-in switched off says so, and a bare
+`/auth/callback` says there was nothing to sign in with. **A screen with a fall-through that
+renders a spinner has a bug in it by construction** — the fall-through is the state nobody
+enumerated, and a spinner is the one thing that cannot be recovered from.
+
+### What this does not fix, and cannot
+
+A verifier in one browser's storage is not in another's, and no amount of client code changes
+that. Supabase's message recommends `@supabase/ssr` to keep the verifier in cookies, which
+solves the *server/client* split rather than the cross-*browser* one. The instruction under
+the error says the thing that actually works: ask for a new link in the browser you intend to
+use it in. Sign-up with a password and "Confirm email" off avoids the round trip entirely,
+which is the recommendation for development and for a demo (ADR-0038, ADR-0039).
