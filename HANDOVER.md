@@ -8,37 +8,42 @@ scope. This file only covers what changed, what it cost, and what is genuinely o
 
 ## Where the project stands
 
-**Increment 3's backend is code-complete: S3.4.1, S3.4.2, S3.4.3 and S3.4.4 are built and
-committed.** The graph now runs `parse_docs → extract_reqs → plan_checks → check_reqs →
-score_verdict → await_review → apply_review → finalize`, and a bid ends `complete` with a
-verdict, a reviewed matrix and an audit row. ADR-0024 to ADR-0027 record the decisions.
-Migration **0006** is applied to Frankfurt. **4 217 tests, 100 % coverage, `make lint` clean.**
+**Increment 4 is complete: 17 of 17 stories, on `origin/main` at `f99d97b` (2026-09-15).**
+**4 871 tests, 100 % coverage, `make lint` clean.** ADR-0032 to ADR-0059 record everything it
+decided. **Check migrations first.** A probe on 2026-09-15 found 0007 applied: True, 0008 applied: False. Run `make migrate` before any live work.
 
-**What is left in Increment 3 is the two workspace screens** — S4.5.2 (L, row editing) and
-S4.5.3 (confirm or override the verdict) — and then a walkthrough of the round trip against
-Frankfurt.
+What a bidder can now do, end to end: sign in with a password, a magic link, register, or reset
+a password (S4.1.1, ADR-0038, ADR-0053); describe their company (S4.2.1); search TED and start a
+bid from a notice, with the notice's own deadline and buyer written to the bid (S1.2.1, S3.2.2,
+S4.3.1); upload a pack whose text is scanned for planted instructions before anything is
+embedded, with a cheap-model second opinion on every flag (S2.3.1, S5.3, ADR-0049, ADR-0054);
+ask the tender questions and get answers whose citations open the page they came from (S3.5.1,
+S4.6.1, ADR-0055, ADR-0058); rate any matrix row (S4.6.3). An operator can see cost per bid and
+per node, and switch models per role, tune the prompt and toggle tools from `/runs` without a
+redeploy (S5.1, S5.2, S4.6.2, ADR-0050, ADR-0056, ADR-0059).
 
-Four things from that work that a later story must not undo:
+**Three things this increment found that were never built, each described by a docstring as
+if it were.** `verify_configured_models` had no caller (ADR-0050). `tender_chunks` had no writer
+for three increments — `tender_rag_search` searched an empty table and answered "nothing found"
+to every question, well-formed and useless — while `pipeline.py` said "the graph owns its
+vectors" (ADR-0057; fixed, and proven against Frankfurt: 21 passages from the real FR document).
+`fetch_app_settings_row` raised `NotImplementedError` since S0.3.2 while the YAML's first line
+said "overridden by the `app_settings` row" (ADR-0059). Each was found only when adjacent work
+needed the missing piece. **Treat prose about a caller as a claim to `grep`, not as evidence.**
 
-1. **The reviewer's decision and the re-scored verdict are different facts** and live in
-   different columns (`bids.decision`, `bids.verdict`). A reviewer may mark two rows
-   `not_applicable` and still say `no_go`; that difference *is* the override, and `Verdict`
-   refuses a decision contradicting its own gaps, so collapsing them was never expressible
-   (ADR-0025).
-2. **The agent's matrix upsert must stay unable to write a reviewer's column.** S3.4.2 shipped
-   without the second statement and every reviewer edit was silently dropped — the bid reached
-   `complete`, the audit row was written, and the matrix still read `pending`. `write_reviewed_rows`
-   is that statement; `test_bids_readmodel.py` asserts the upsert still cannot name those
-   columns (ADR-0026).
-3. **`matrix_rows` is a merge-by-id channel, not an appending one.** `apply_review` returns the
-   whole matrix; under `operator.add` that is 135 rows becoming 270 with the re-score running
-   over both copies (`state.merged_rows`).
-4. **`ChatOpenAI` retries twice by itself** and `max_retries=0` is now set, so S3.4.4's "one
-   retry, then the smaller model" is true rather than approximately true (ADR-0027).
+Four things a later story must not undo:
 
-**A verdict a live run will now produce that looks wrong and is not:** a bid whose extraction
-found nothing scores `insufficient_evidence`, never `go`. `Verdict` refuses a `go` with zero
-mandatory requirements, because zero of zero is not a pass (ADR-0024).
+1. **Two keys open a tool** (ADR-0052). `build_enabled_tools(..., needed=, caller=)` builds
+   `enabled_tools` ∩ `needed`. The operator's list may not be widened by code; a node may not be
+   handed the whole toolbox by forgetting to narrow. `needed` is required, not optional.
+2. **The injection guard withholds on the retrieval path and reports on the extraction path**
+   (ADR-0049). The same tender PDF is withheld from `tender_chunks` *and* extracted in full; that
+   asymmetry is the design. `ingestion/guarding.py` holds the rule once for both corpora.
+3. **A chat citation is built from the retrieval ledger, never from the model** (ADR-0055). The
+   model emits `(search, passage)` integers; a reference naming nothing is dropped and logged.
+4. **The settings panel's "applied" means the next run** (ADR-0059). The runner reads a
+   `SettingsProvider`; runs in flight keep the graph they started on. `confirm_flagged_chunks`
+   and `available_models` are deliberately not browser-editable.
 
 ---
 
@@ -239,26 +244,16 @@ blend that paints a visibly darker rectangle across the hero.
 
 ## What to do next
 
-**Increments 0, 2 and 3 are closed. Only Milestone 1 is open**, and since 2026-09-14 it is
-held by S3.2.1's recall gate and nothing else (ADR-0031). For Increment 4, jump to *Starting
-Increment 4*.
+**Increments 0–4 are closed. Milestone 1 is still held by S3.2.1's recall gate alone**
+(ADR-0031): measured ~0.74 ± 0.02 against a 0.90 threshold set before anything was measured.
+Carrying the honest figure with its variance into `REPORT.md` remains the more defensible story
+than a number chased to 0.9 — decide that when S7.1 writes the report, not before.
 
-Three options, in the order I would take them.
-
-1. **Decide what to do about S3.2.1's recall gate.** It is now the only thing holding
-   Milestone 1 open. Either amend the criterion to the measured 0.74 ± 0.02 and report it with
-   its variance, or spend time on extraction — knowing that the noise floor is wider than any
-   single prompt edit's effect, so a configuration needs several $1.60 runs to be validated at
-   all. The Increment 2 retro argues for the first and the plan time-boxes the second (R6).
-2. **Finish Increment 3.** Its backend is done (S3.4.1–S3.4.4); what remains is S4.5.2 and
-   S4.5.3, the two workspace screens, and a walkthrough of the round trip. See *Finishing
-   Increment 3* below. Once they land, the review demo is a second recording worth making
-   immediately — the increment's own end-to-end walk.
-3. **Keep attacking recall** — only with repeated runs per configuration, and knowing the noise
-   floor. The plan time-boxes this (R6) for good reason.
-
-Carrying ~0.74 with its variance into `REPORT.md` as an honest measured figure is a more
-defensible story for the grader than a number chased to 0.9.
+For Increment 5, jump to *Starting Increment 5*. **Do one thing before S7.1:** re-record the
+live bid baseline. `parse_docs` now embeds every tender document (ADR-0057), S5.2 now writes
+`llm_usage`, and S5.3 now reviews flagged chunks — none of which the last recorded run
+(2026-09-13: **$1.74, 243 s**, `de.live.json`; the 2026-09-11 figure was $1.38 / 290 s) ever
+exercised. `REPORT.md` will quote cost and duration, so measure them on the code that ships.
 
 ---
 
@@ -315,7 +310,14 @@ cheap version of it.
 
 ---
 
-## Starting Increment 4 — read this first
+## Increment 4, as it was finished (history)
+
+*Kept as written for Increment 4's start; everything below it landed. How it went: 17 stories in
+two calendar days with parallel subagents on mutually independent stories, integrated by one
+session that regenerated `api.ts`, wrote the ADRs and split shared files per commit. One red CI
+(`60367fa`): an enum member added after the client was regenerated — see the traps under
+Increment 5. Three "the docstring says it happens" gaps found and closed (see the top).*
+
 
 **Increment 4 is 17 stories, not the plan's original 18**: S4.4.1 moved into Increment 3
 (ADR-0030). Every dependency is satisfied except one chain, and the two external services were
@@ -370,14 +372,103 @@ the shim. Bumping them is a separate change and was deliberately not bundled wit
 
 ---
 
+## Starting Increment 5 — read this first
+
+**Increment 5 is the submission line (Milestone 5): evidence for the grader.** Five stories plus
+one left over — none of them changes the product, all of them prove it. The plan's rows: S7.1,
+S7.7, S7.4, S7.5, S7.6, with S7.2 (an ADR per decision) continuous. **S7.3, the architecture
+document, was Increment 3's wait-filler and was never picked up** — `docs/` has no
+`architecture.md`, and the increment table names "architecture doc" as submission evidence, so
+it belongs here.
+
+### The order, and why
+
+| # | Story | Size | Why here |
+|---|---|---|---|
+| 0 | **Re-record the live baseline** | — | See *What to do next*. One deliberate `make test-live` run on the shipping code, before any number is quoted. |
+| 1 | **S7.1** DeepEval suite + `REPORT.md` | M | The critical path (2 days in the Gantt). Recall, citation faithfulness, translation adequacy on the three golden tenders; judge from a different vendor. **Most of it exists**: `crossbid/eval/{matching,recall,report}.py` and `scripts/recall.py` are S3.2.3's matcher and recall — the plan says S7.1 *reuses* them, not reimplements. `make eval` already expects `backend/scripts/run_eval.py` and fails with a clear message until it exists. |
+| 2 | **S7.3** `docs/architecture.md` | M | Outer graph, the `check_reqs` fan-out, one paragraph naming what is a deterministic workflow and what is agentic (CLAUDE.md's conventions say how to describe it). Independent; can run alongside S7.1. |
+| 3 | **S7.7** Playwright smoke | M | Sign in → start a bid on the DE fixture → wait for `awaiting_review` → confirm → assert the verdict on the dashboard. Depends on the E4 Must stories, all landed. |
+| 4 | **S7.4** user guide | M | Three walkthroughs — German domestic, French cross-border, a no-go — with screenshots. `docs/demo-runbook.md` is the shot list and says where its stills come from. |
+| 5 | **S7.5** `docs/critique.md`, **S7.6** README / `project.md` / CLAUDE.md | S, S | Last, because the critique should see the finished thing and the README should describe it. |
+
+### What each story will actually find
+
+**S7.1.** DeepEval is named in the plan's tech stack (line 32) and so pre-approved — but it is
+**not installed**: `pyproject.toml` has no `deepeval`. Adding it is a dependency change, so
+`make deps` afterwards (CLAUDE.md). The judge is `anthropic/claude-haiku-4.5` through OpenRouter
+via DeepEval's OpenAI-compatible custom model; `claude-sonnet-5` 404s on this account (ADR-0005).
+The extraction results to score are already saved: `backend/tests/fixtures/extractions/{de,de.live,en,fr}.json`
+— `de.live.json` is a real run (`source: live_run`, 2026-09-13); **read each file's `source`
+field before quoting it**, the others may be SP.1-derived. The golden keys live at
+`backend/tests/fixtures/tenders/{de,fr,en}/golden.yaml` with a `VERIFICATION.md` beside each,
+**not** at the plan's `evaluations/golden/` path — do not move them; write `REPORT.md` where
+`make eval` writes it and let the plan's tree be the thing that is wrong. Faithfulness and
+translation are the two metrics with no code yet; recall is done.
+
+**S7.7.** Playwright is in the plan (pre-approved) and **not installed** — no dependency, no
+config, no `e2e/` directory. `make deps` after adding it. Two decisions the story forces:
+*how it signs in* — password sign-in needs no email (ADR-0038; the built-in mailer allows two
+messages an hour and there is no email `test_otp`, R7), and `AUTH_MODE=dev` with `X-Dev-Company`
+is the fully offline route; and *whether it runs the real graph* — "waits for `awaiting_review`"
+on the DE pack is a real bid, ~4 minutes and ~$1.74 per test run, so decide whether the smoke
+test spends that or runs against a seeded parked bid. The seed scripts are
+`scripts/seed_demo_company.py` and `scripts/seed_dev_company.py`.
+
+**S7.4.** Frankfurt currently holds the demo company (owned by your live account since
+2026-09-14 — it had been orphaned by a deleted user) with ten evidence documents, and one
+**completed FR bid `618320-2026`** (144 requirements). The runbook says reset before following
+it from the top; for a no-go walkthrough you will need a bid that fails, which nothing in the
+fixtures produces by default.
+
+**S7.5.** Ask a model that is not the extraction model — the judge, or `google/gemini-2.5-flash`.
+Feed it the accepted risks so it can agree or disagree with them on the record: user enumeration
+via `signInWithOtp` (ADR-0053, supabase/auth#1955, no toggle exists); no route reads the chat
+thread back, so a reload loses the visible log while the agent remembers (ADR-0058);
+last-write-wins on the `app_settings` row (ADR-0059); on the phone, a citation tap drops focus
+to `body` (inherited from S4.5.1); the frontend has **no test runner** — every screen this
+increment is typecheck/lint-verified only.
+
+**S7.6.** The README's *Status* says "Increment 1 of 7"; CLAUDE.md's *State of the repo* says
+the same and its command table still says `make eval` is not built. Both are false and both are
+what a grader reads first. `project.md` is to be trimmed to what was built.
+
+### Traps that cost time this increment, so they do not cost it again
+
+- **`api.ts` goes stale the moment a response model's enum changes.** `60367fa` added
+  `INDEXING_FAILED` after the client had been regenerated; CI's generated-files job caught it.
+  Regenerate after the **last** schema-touching change, and `git diff HEAD -- frontend/lib/api.ts`
+  before every push. Never regenerate from a working tree with agents mid-edit: `git archive` the
+  commit or use a worktree, and boot with CI's two placeholders
+  (`OPENROUTER_API_KEY=ci-placeholder-not-a-real-key`, `APP_ENCRYPTION_KEY=` same) — the schema
+  does not depend on their values, only on their presence.
+- **Never run `npm run build` while `next dev` serves this project, and never delete `.next`
+  under a running server** — stop it first. Both were done this increment; the second turned
+  every page into a downloaded "Internal Server Error" (a 500 with no `Content-Type` under our
+  own `nosniff`). `NEXT_DIST_DIR=.next-verify npm run build` is the safe verification build.
+- **`uvicorn --reload` can wedge with the socket bound and nothing answering.**
+  `curl -sm5 -o /dev/null -w "%{http_code}" localhost:8000/health` → `000` means wedged, not
+  free; Ctrl+C will not clear it (the lifespan never finished); `pkill -9 -f "uvicorn crossbid.main:app"`.
+  Errno 48 on restart is the same thing. Twice this increment; root cause not pinned — the last
+  line your terminal prints before it goes quiet is the evidence that was missing.
+- **`insert_tender_chunks` is dead and flagged** in its docstring; `replace_tender_chunks` is
+  the writer. A deletion candidate, deliberately not removed in the fix commit.
+- **The backend is 100 % covered; the frontend is 0 % tested.** Nothing frontend-side runs in
+  CI beyond `tsc`, `eslint`, `prettier` and `next build`. S7.7 is the first browser test the
+  repository will have.
+
+Wait-filler for the increment: **S7.2** — every ADR through 0059 is written; keep it that way.
+
+---
+
 ## Reproducing the state
 
 ```bash
-make install && make lint && make test          # 4 217 tests, 100 % coverage, all offline
-make migrate                                    # 0006 is the newest; applied to Frankfurt already
+make install && make lint && make test          # 4 871 tests, 100 % coverage, all offline
+make migrate                                    # 0008 is the newest in the repo; run this — the 2026-09-15 probe found it NOT applied to Frankfurt
 uv run scripts/recall.py                        # scores the committed fixtures
 uv run scripts/recall.py tests/fixtures/extractions/de.live.json   # the real DE figure; exits 1
-make test-live                                  # costs money; the DE bid run alone is ~$1.60
+make test-live                                  # costs money; the DE bid run alone was $1.74 on 2026-09-13, and will change (ADR-0057)
 ```
 
 `VERIFICATION.md` sits beside each of the three golden keys and records what a human
