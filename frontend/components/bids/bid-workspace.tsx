@@ -22,6 +22,7 @@ import { Icon } from '@/components/ui/icons'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Notice } from '@/components/ui/notice'
 import { Tabs } from '@/components/ui/tabs'
+import { VerdictChip } from '@/components/ui/verdict-chip'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { getBid, isAwaitingReview, isBidSettled, type BidResponse } from '@/lib/bids'
@@ -47,16 +48,17 @@ type LoadState =
  * two seconds until the run reaches the interrupt, completes or fails, lists requirements
  * as soon as they exist, and pairs the list with the source panel.
  *
- * **Where "ask the tender" sits (S4.6.1).** On the desktop the `AskPanel` is the second card
- * of the 400 px right-hand column, under the source panel: an answer's citation opens the
- * page in the card directly above it, so the answer and the page it rests on are read
- * together, and the matrix keeps the whole of its column — a chat beside the rows would
- * take width from the one thing the screen exists to show. Below `xl` the grid is one
- * column and the panel is last, after the source, never between the matrix and its pages.
- * On the phone it is a fourth segment, Ask, beside Matrix / Source / Verdict: a tap away,
- * and a citation tap lands on the Source tab exactly as a matrix citation does. Its state
- * lives in `useBidChat` here rather than in the panel, so a breakpoint change or a tab
- * switch does not lose the exchanges made so far.
+ * **The desktop right column is the phone's tab set, minus Matrix (ADR-0060).** Source, Ask
+ * and Verdict share one 400 px column under one `Tabs`, and the column is sticky, so all
+ * three stay in reach while the matrix scrolls. This replaced a stacked column (Source, then
+ * Ask beneath it) with the verdict rendered *after* the whole matrix: measured on the FR bid
+ * at 1440×900 the page was 23 204 px tall, "Ask the tender" began at y=1 351 and the verdict
+ * at y=13 876 — the product's one output, fifteen screens down. Now the decision is a line
+ * under the header, the header's "Review verdict" opens the Verdict tab, and a citation in
+ * an answer or a row switches the column to Source and lands on the page, exactly as the
+ * phone's tab does. On the phone nothing changed: Matrix / Source / Verdict / Ask, a tap
+ * away. Chat state lives in `useBidChat` here rather than in the panel, so a breakpoint
+ * change or a tab switch does not lose the exchanges made so far.
  */
 export function BidWorkspace({ bidId }: { readonly bidId: string }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
@@ -116,6 +118,13 @@ export function BidWorkspace({ bidId }: { readonly bidId: string }) {
 }
 
 type PhoneTab = 'matrix' | 'source' | 'verdict' | 'ask'
+/**
+ * The desktop right column's segments: the phone's set minus Matrix, which on desktop is the
+ * left column. Same vocabulary, same `Tabs`, so a bidder who learned the phone learns nothing
+ * new on a laptop — and so the verdict is one click from the top of the page rather than
+ * fifteen screens below it (ADR-0060).
+ */
+type SideTab = 'source' | 'ask' | 'verdict'
 
 const PHONE_TABS: readonly { value: PhoneTab; label: string }[] = [
   { value: 'matrix', label: 'Matrix' },
@@ -144,6 +153,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
   const [selection, setSelection] = useState<SourceSelection | undefined>(undefined)
   const [activeCitation, setActiveCitation] = useState<Citation | undefined>(undefined)
   const [phoneTab, setPhoneTab] = useState<PhoneTab>('matrix')
+  const [sideTab, setSideTab] = useState<SideTab>('source')
   const announcement = useStatusAnnouncement(bid)
   const edits = useRowEdits(bid.matrix_rows)
   // Loaded once per bid and passed to both layouts, so thirty rows share one request for
@@ -188,6 +198,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
         setSelection({ documentId: document.id, page: citation.page })
       }
       setPhoneTab('source')
+      setSideTab('source')
     },
     [sourceDocuments]
   )
@@ -213,6 +224,17 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
       onBackToMatrix={isDesktop === false ? backToMatrix : undefined}
     />
   )
+  const sideTabs: readonly { readonly value: SideTab; readonly label: string }[] =
+    bid.verdict === null
+      ? [
+          { value: 'source', label: 'Source' },
+          { value: 'ask', label: 'Ask' },
+        ]
+      : [
+          { value: 'source', label: 'Source' },
+          { value: 'ask', label: 'Ask' },
+          { value: 'verdict', label: 'Verdict' },
+        ]
   const reviewButton =
     bid.verdict === null ? (
       <Button
@@ -227,6 +249,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
       // so it should open in a new tab, be copyable, and move focus the way an anchor does.
       <Link
         href="#verdict"
+        onClick={() => setSideTab('verdict')}
         className="inline-flex h-9 items-center gap-2 rounded-md bg-accent-default px-3.5 [font:var(--type-body-sm)] font-medium text-text-inverse no-underline transition-colors hover:bg-accent-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-default"
       >
         <Icon name="shield" size={16} />
@@ -406,6 +429,26 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
           Could not refresh: {describeApiError(pollError)}
         </p>
       )}
+      {bid.verdict !== null && (
+        // The decision, where the eye lands first. The full panel — gaps, rationale, the
+        // reviewer's own decision — is one click away in the right column; this line exists
+        // because the measured page put that panel at y=13 876 and nothing above the fold
+        // said what CrossBid had concluded (ADR-0060).
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-[14px] border border-border-default bg-surface-card px-4 py-3 shadow-xs">
+          <VerdictChip
+            verdict={bid.verdict.decision}
+            size="lg"
+            confirmed={bid.decision !== null}
+          />
+          <p className="m-0 [font:var(--type-body-sm)] text-text-secondary">
+            <b className="font-semibold text-text-primary">
+              {bid.verdict.mandatory_supported} of {bid.verdict.mandatory_total}
+            </b>{' '}
+            mandatory requirements supported · {plural(bid.verdict.gaps.length, 'gap')}
+            {bid.decision !== null && ' · reviewed'}
+          </p>
+        </div>
+      )}
       <div className="mb-7 grid gap-4 md:grid-cols-3">
         <MetricCard
           label="Requirements extracted"
@@ -450,20 +493,43 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             review={review}
           />
         </div>
-        <div className="flex min-w-0 flex-col gap-5">
-          <SourcePanel
-            documents={sourceDocuments}
-            selection={selection}
-            onSelect={handleSelect}
+        {/* Below `xl` the grid is one column, and this panel goes FIRST (`order-first`): a
+            tabbed Source / Ask / Verdict under 144 rows would be the buried chat all over
+            again, just with tabs on it. Sticky at `xl`, so Source, Ask and Verdict stay in view while the matrix scrolls: the
+            measured page is 23 204 px tall and the column had left the screen by row 20.
+            It scrolls internally when taller than the viewport rather than pushing the page. */}
+        <div className="order-first flex min-w-0 flex-col gap-4 xl:order-none xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)] xl:overflow-y-auto">
+          <Tabs
+            items={sideTabs}
+            value={sideTab}
+            onChange={setSideTab}
+            fullWidth
+            aria-label="Workspace panels"
+            panelId={(value) => `side-panel-${value}`}
           />
-          {askPanel('panel')}
+          {/* All three stay mounted and are hidden, not unmounted: the PDF keeps its page, a
+              half-typed question survives a look at the source, and a half-written override
+              reason survives a look at the page it is about. The phone unmounts Source to
+              spare an iframe on a small device; a laptop has the memory. */}
+          <div id="side-panel-source" role="tabpanel" hidden={sideTab !== 'source'}>
+            <SourcePanel
+              documents={sourceDocuments}
+              selection={selection}
+              onSelect={handleSelect}
+            />
+          </div>
+          <div id="side-panel-ask" role="tabpanel" hidden={sideTab !== 'ask'}>
+            {askPanel('panel')}
+          </div>
+          {bid.verdict !== null && (
+            <div id="side-panel-verdict" role="tabpanel" hidden={sideTab !== 'verdict'}>
+              <div id="verdict" className="scroll-mt-4">
+                {verdictPanel}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-      {bid.verdict !== null && (
-        <div id="verdict" className="mt-6 scroll-mt-4">
-          {verdictPanel}
-        </div>
-      )}
     </>
   )
 }

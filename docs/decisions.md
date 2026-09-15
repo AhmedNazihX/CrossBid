@@ -4490,3 +4490,102 @@ No optimistic-concurrency guard on the row: two developers saving at once is las
 and `updated_at` could serve as an ETag later. No artboard — built from `Card`, `Select`,
 `Input`, `Checkbox`, `Notice`, `MetricCard`, `DataTable`, `Tag`, `Badge`, `Button` and declared
 so (ADR-0034). The frontend still has no test runner; nothing panel-side is unit-tested.
+
+---
+
+## ADR-0060 — The workspace measured, and the verdict brought above the fold
+
+**Date:** 2026-09-15 · **Stories:** follow-up to S4.5.1 / S4.6.1 · **Status:** accepted
+
+The user's verdict on the bid workspace was one sentence: the design is bad. Before changing
+anything the page was measured — not screenshotted (this headless Chromium hangs on every
+`page.screenshot`; the accessibility tree with bounding boxes was the instrument, and for
+questions of *position* it is the better one).
+
+### What the numbers said, desktop 1440×900, the completed FR bid
+
+| Landmark | Before, y (px) | After, y (px) |
+|---|---|---|
+| Filter tabs | 392 | 482 (the decision line sits above them) |
+| **"Ask"** | **1 351** — below the fold | **451** — a tab, first screen |
+| **Verdict** | **13 876** — fifteen screens down | **451** — a tab, first screen |
+| Page height | 23 204 (26 screens) | 13 975 |
+
+Phone 390×844: Matrix / Source / Verdict / Ask all at y=162, before and after. **The phone had
+it right and the desktop had it wrong.** The verdict — the product's one output — was rendered
+after all 144 requirement rows, and the header's "Review verdict" link scrolled fifteen screens
+to reach it. The chat, added by S4.6.1 under the source panel so a citation would open the page
+directly above it, was below the fold: sound reasoning once found, invisible until then.
+
+### What the canvas actually specifies
+
+`Main.dc.html` draws the matrix and the source panel — **no verdict and no chat**. The verdict
+is its own screen, `Verdict.dc.html`. So the built page had drifted in two ways: it swallowed
+the verdict screen into a footer, and bolted the chat on where no artboard put it. ADR-0014
+requires a deviation to be recorded rather than redrawn silently; this entry is that record,
+and the deviation chosen is the one an artboard *does* sanction.
+
+### The fix: the desktop right column becomes the phone's tab set
+
+**One vocabulary, two widths.** `WorkspacePhone.dc.html` already sanctions Matrix / Source /
+Verdict / Ask as segments. The desktop right column now carries the same `Tabs` minus Matrix
+(which is the left column): **Source | Ask | Verdict**. A bidder who learned the phone learns
+nothing new on a laptop, and the verdict is one click from the top of the page. Verdict appears
+as a segment only once `bid.verdict` exists — a tab to nothing would be a promise.
+
+**Sticky.** The column is `sticky` at `xl` and scrolls internally when taller than the
+viewport. Before, it had left the screen by row 20 of the matrix; now Source, Ask and Verdict
+stay in reach for all 144 rows. `items-start` on the grid is what makes sticky work in a grid
+child — it was already there.
+
+**All three panels stay mounted, hidden.** The PDF keeps its page, a half-typed question
+survives a look at the source, and a half-written override reason survives a look at the page
+it is about. The phone unmounts Source to spare an iframe on a small device; a laptop has the
+memory, and the two docstrings say so rather than leaving the difference to look like an
+inconsistency.
+
+**The decision, where the eye lands.** A line under the header: the `VerdictChip`, "*n* of *m*
+mandatory requirements supported · *k* gaps", and "reviewed" once the reviewer has decided. On
+the FR bid it reads "… · 142 gaps · reviewed", which is the data. The header's existing "Review
+verdict" keeps its `#verdict` anchor — copyable, opens in a new tab — and additionally opens the
+Verdict tab, which is where the anchor now points.
+
+**A citation switches the column to Source in both layouts.** `handleCite` already set the
+phone tab; it now sets the desktop tab too, so an answer's citation and a row's citation
+behave identically on every width.
+
+### Navigation: two dead ends hidden
+
+The sidebar led to two pages that said "not built yet" (Certificates: F1.1/F3.3; Settings:
+S4.6.4, Could-priority). A sidebar with dead ends teaches a first-time bidder that entries
+cannot be trusted, and they stop clicking the ones that work. `NavItem.placeholder` hides an
+entry until its page has something to show; the routes stay reachable by URL, so a bookmark or
+a link in the docs still lands, and `isNavItemVisible` decides it in one place for the sidebar
+and the phone drawer alike.
+
+### Two things the critique got wrong, corrected here
+
+The desktop H1 is `bid.title`, exactly as the artboard specifies; for this bid the *stored*
+title is the notice number, which is a data fact from S1.2.1, not a layout defect. And
+"Compliance" is not a duplicate of "Tenders": it resolves to the last-opened bid and falls back
+to `/bids` only when there is none. Both were left alone.
+
+### Housekeeping the measurement forced
+
+The screenshot server ran `next dev` with `NEXT_DIST_DIR=.next-shot`, a name nothing ignores;
+it polluted `prettier --check` and `eslint` with 84 findings in generated output and `next dev`
+rewrote `tsconfig.json` under it (restored). The documented `.next-verify` had the same gap on
+the lint side: it is gitignored but was neither prettier- nor eslint-ignored, so `make lint`
+failed for as long as a verification build existed. Both ignore files now list it. Rule: the
+only scratch dist dir is `.next-verify`, and a verification build is followed by
+`git status frontend/tsconfig.json`. And one more, learned the same hour: **never run
+`prettier --write` with a computed path, and never from the repository root** — an empty
+argument there formatted forty-eight files under the root's default config, `lib/api.ts`
+among them; every one was restored from `HEAD` before this was committed.
+
+### Left open
+
+The matrix is still 144 rows in one list with "All" selected by default; the sticky column
+makes that survivable rather than right. Virtualising or paging the list is the next
+improvement if the page is still judged too long. No artboard was redrawn; if the tabbed column
+is to become the canonical desktop design, `Main.dc.html` should be updated to show it.

@@ -1,4 +1,7 @@
 .next/
+# The verification build next.config.ts documents (NEXT_DIST_DIR=.next-verify): generated
+# output, never formatted — without this line `make lint` fails for as long as it exists.
+.next-verify/
 node_modules/
 public/
 package-lock.json
