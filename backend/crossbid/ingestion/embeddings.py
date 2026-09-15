@@ -538,7 +538,18 @@ class ChunkVectorStore:
         document_id: uuid.UUID,
         chunks: Sequence[EmbeddedChunk],
     ) -> int:
-        """Store a tender document's chunks. Returns how many rows were written."""
+        """Store a tender document's chunks. Returns how many rows were written.
+
+        **Unused in production, and a deletion candidate (ADR-0057).** For three increments
+        this was the only writer of `tender_chunks` and nothing called it; the fix that gave
+        the table a real writer used `replace_tender_chunks` instead, because indexing has
+        to be safe to run twice. Nothing now reaches this method outside its own tests.
+
+        Left in place deliberately rather than removed in the same commit as the fix, so
+        that one change did one thing. It is *not* a second writer — anything indexing a
+        tender document wants `replace_tender_chunks` — and if you are reading this while
+        wondering which to call, that is the answer.
+        """
         rows = [
             self._row(embedded, company_id=company_id, document_id=document_id)
             | {"bid_id": bid_id}
