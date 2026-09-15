@@ -4311,3 +4311,99 @@ indexing nothing in production. That one assertion is the difference.
 `insert_tender_chunks` is now unused in production — `replace_tender_chunks` replaced it at the
 only call site there has ever been. It is left in place rather than removed, but it is a
 candidate for deletion and is noted here so the next reader knows it is not a second writer.
+
+---
+
+## ADR-0058 — Ask the tender, on screen: the citation opens the page, and an uncited answer looks uncited
+
+**Date:** 2026-09-15 · **Stories:** S4.6.1 · **Status:** accepted
+
+The screen over S3.5.1's `POST /bids/{id}/chat` (ADR-0055). Three files: `lib/chat.ts` (the
+call, types from `components['schemas']`), `components/bids/use-bid-chat.ts` (the
+controller) and `components/bids/ask-panel.tsx` (the card). State lives in `LiveWorkspace`,
+not the panel, because the desktop and phone trees are separate and a breakpoint change would
+otherwise remount the panel and lose the exchange.
+
+### A chat citation is a matrix citation
+
+Clicking a source in an answer runs the **same** `onCite → handleCite → SourceSelection` path a
+matrix row uses, renders with the same `CitationLink`, and lands on the same page in the same
+`SourcePanel`. There is no parallel path. Two consequences follow and both were deliberate:
+`EvidenceList` is generalised from `Evidence[]` to a structural `CitedPassage[]` so an answer's
+citations and a row's evidence are one component, and `citableDocuments` takes a third list so
+a company file cited *only* by an answer opens in the viewer instead of lighting up and going
+nowhere. What a citation may name is still decided by the server — `Citation.document_id`
+comes off the retrieval ledger (ADR-0055), never from the model — so the viewer can only be
+pointed at a document the server already scoped to this company.
+
+### Where it sits
+
+**Desktop:** a second card in the 400 px right-hand column, directly under `SourcePanel`. An
+answer's citation opens the page in the card immediately above it, so the claim and the page it
+rests on are read together, and the matrix keeps its whole column. Below `xl` the layout is one
+column and the chat is last — after the source, never between the matrix and its pages.
+
+**Phone:** a fourth segment, **Ask**, beside Matrix / Source / Verdict. A citation tap runs the
+same `handleCite`, which already switches to Source. The Ask tabpanel stays mounted (only
+`hidden`), unlike Source, because there is no iframe to spare and a half-typed question must
+survive a look at the page it is about.
+
+**Artboard.** The ask bar of `Dashboard.dc.html` — which ADR-0014 lists for S4.6.1 — is the
+reference for the question box: search glyph, unadorned field, action row in one bordered
+`--shadow-xs` box, 14 px radius. It is reproduced at card scale (14 px type) rather than the
+artboard's hero scale (17 px), and the docstring says so. The log of turns has no artboard and
+is assembled from `Card`, `Eyebrow`, `EvidenceList`, `Notice` and `Button`, declared the way
+`row-feedback.tsx` declares it (ADR-0034).
+
+### The three honest states
+
+**Uncited is visibly uncited.** A cited answer carries a **Sources** eyebrow and its
+`CitationLink`s. An answer with `citations: []` gets a sunken `Notice` with the alert glyph:
+"No source behind this answer … Treat it as a lead, not as evidence." Both server cases —
+the fixed refusal when nothing was retrieved, and prose ending in `UNCITED_ANSWER` — fall into
+that branch **keyed on the empty list the API sent**, never on matching sentence text. Matching
+text would break the moment a sentence was reworded; the list is the contract.
+
+**In flight is not disabled.** Disabling the textarea would throw focus to the body and stop
+the bidder typing the next question. Instead the Ask button is disabled and reads "Asking…",
+Enter is ignored, and `useBidChat` refuses a second call through a ref regardless of what the
+render believed — a turn takes seconds and costs money, so a double-submit is a bug, not a
+nicety. A failed question stays in the log with the API's own sentence and an in-place "Ask
+again", so a failed paid call does not also cost what was typed; a retry replaces the entry
+rather than appending a twin. There is no abort on unmount: the server has already spent the
+money and written the thread.
+
+**A 429 says when.** The limiter writes `Retry-After` *and* the same number into `detail`.
+When the browser can read the header the form is disabled until that second and the hint
+reads "Ask again at 14:32", cleared by a timer with no reload. When it cannot, the `detail`
+sentence is shown verbatim — never "something went wrong", the same rule `sign-in-card.tsx`
+follows for Supabase's rate-limit message. `ApiError.retryAfterSeconds` parses either form
+RFC 9110 allows (a delay, or an HTTP-date) and answers `undefined` for anything else.
+
+**The header is invisible today, and the fallback is what a bidder sees.** `Retry-After` is
+not on the CORS safelist, and `main.py`'s `CORSMiddleware` sets no `expose_headers`, so across
+the 3000 → 8000 origin boundary the browser cannot read it. One line —
+`expose_headers=["Retry-After"]` — makes the clock-time path live; `rate_limit.py`'s own note
+that the 429 stays out of the OpenAPI schema "until the browser is taught to show the wait"
+names this moment. Both land with the integration commit, not here, because `main.py` was
+under concurrent edit when this screen was built.
+
+### What it does not do, on purpose
+
+**No history.** The server keeps the thread on the checkpointer (ADR-0055), but no route reads
+it back, so a reload loses the visible log while the agent still remembers. The empty state
+says exactly that. Inventing a history route here would have been a backend change wearing a
+frontend commit; it is a story for the plan to decide.
+
+**Question box at the top, newest answer beneath.** The card sits in page flow with no
+internal scroller, so a bottom-pinned input would slide off-screen with every answer. Anchored
+at the top, the box never moves and the answer lands under the words just typed — which is also
+the shape the ask bar has on the dashboard.
+
+**Accessibility as built:** sr-only label plus `aria-describedby`; `role="log"` on a wrapper
+around the `<ol>`, not on the list (that would strip list semantics); focus stays in the field
+after sending; answers carry `lang={bidderLanguage}` so a screen reader switches voice for the
+German paragraph while chrome stays English. One known gap is inherited, not introduced: on the
+phone a citation tap hides the tab that held focus, dropping focus to `body` — matrix citations
+have done the same since S4.5.1, and the fix belongs to the tab switch.
+

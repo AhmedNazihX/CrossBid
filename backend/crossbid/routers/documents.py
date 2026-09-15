@@ -83,7 +83,7 @@ from crossbid.ingestion.storage import (
 )
 from crossbid.main import get_app_settings, get_database
 from crossbid.models import DocumentKind
-from crossbid.rate_limit import document_upload_limit
+from crossbid.rate_limit import RATE_LIMITED_RESPONSES, document_upload_limit
 from crossbid.readmodel.documents import DocumentRecord, DocumentsReadModel, DocumentStatus
 from crossbid.settings import Settings
 
@@ -271,6 +271,7 @@ def get_pipeline(
     # S2.3.3. A route dependency rather than a parameter, so it is settled before the
     # multipart body is read: a caller over its limit never gets to send 50 MB.
     dependencies=[Depends(document_upload_limit)],
+    responses=RATE_LIMITED_RESPONSES,
 )
 async def upload_document(
     background: BackgroundTasks,

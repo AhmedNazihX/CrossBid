@@ -21,6 +21,19 @@ export function formatDateTime(iso: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? '—' : DATE_TIME.format(date)
 }
 
+const TIME_ONLY = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+/**
+ * "14:32" on the bidder's own clock — for a moment inside the current hour, such as when
+ * a rate limit lifts, where the date would be noise.
+ */
+export function formatTime(date: Date): string {
+  return Number.isNaN(date.getTime()) ? '—' : TIME_ONLY.format(date)
+}
+
 const DATE_ONLY = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
   month: 'short',

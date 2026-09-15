@@ -161,6 +161,8 @@ interface ApiErrorInit {
   readonly method: string
   readonly url: string
   readonly body: unknown
+  /** The response headers; absent when the request never reached the API. */
+  readonly headers?: Headers
   readonly cause?: unknown
 }
 
@@ -177,6 +179,16 @@ export class ApiError extends Error {
   readonly body: unknown
   /** FastAPI's `detail`, written for the bidder to read; `undefined` when the API sent none. */
   readonly detail: string | undefined
+  /**
+   * Whole seconds the API asked the caller to wait, from a 429's `Retry-After`;
+   * `undefined` when the answer carried none — or when the browser could not see it.
+   *
+   * The API is on another origin, and `Retry-After` is not on the CORS safelist, so the
+   * header reaches this code only if the API lists it in `Access-Control-Expose-Headers`.
+   * Until it does, a screen that wants the wait has to fall back to the `detail` sentence,
+   * which the rate limiter writes with the same number in it.
+   */
+  readonly retryAfterSeconds: number | undefined
 
   constructor(init: ApiErrorInit) {
     super(buildErrorMessage(init), init.cause === undefined ? undefined : { cause: init.cause })
@@ -187,6 +199,7 @@ export class ApiError extends Error {
     this.url = init.url
     this.body = init.body
     this.detail = extractDetail(init.body)
+    this.retryAfterSeconds = parseRetryAfter(init.headers)
   }
 }
 
@@ -250,6 +263,7 @@ export async function apiRequest<M extends HttpMethod, P extends PathFor<M>>(
       method: upperMethod,
       url,
       body,
+      headers: response.headers,
     })
   }
 
@@ -385,6 +399,28 @@ function buildErrorMessage(init: ApiErrorInit): string {
       ? `${init.method} ${init.url} failed: ${init.statusText}`
       : `${init.method} ${init.url} failed with ${init.status} ${init.statusText}`
   return detail === undefined ? prefix : `${prefix} — ${detail}`
+}
+
+const MILLISECONDS_PER_SECOND = 1000
+
+/**
+ * `Retry-After` as whole seconds from now, or `undefined`. RFC 9110 allows either a delay in
+ * seconds or an HTTP date; the API sends seconds, and the date form is read too so a proxy
+ * that rewrites the header does not turn a known wait into an unknown one.
+ */
+function parseRetryAfter(headers: Headers | undefined): number | undefined {
+  const value = headers?.get('Retry-After')?.trim()
+  if (value === undefined || value === '') {
+    return undefined
+  }
+  if (/^\d+$/.test(value)) {
+    return Number(value)
+  }
+  const at = Date.parse(value)
+  if (Number.isNaN(at)) {
+    return undefined
+  }
+  return Math.max(0, Math.ceil((at - Date.now()) / MILLISECONDS_PER_SECOND))
 }
 
 /** Pulls a human-readable message out of FastAPI's `{ detail: ... }` error payload. */

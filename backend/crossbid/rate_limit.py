@@ -52,11 +52,12 @@ the operator can pay — or move the counters to a shared store before scaling o
 project plan named `slowapi` for this; it is the same in-process design with a dependency
 and a decorator, and it does not make the multi-process caveat go away.
 
-**The 429 is deliberately not in the OpenAPI schema.** `frontend/lib/api.ts` is generated
-from that schema and CI fails when it is stale, so declaring a `429` response here would be
-a frontend change wearing a backend commit. Nothing is lost: the status and `Retry-After`
-are HTTP's own, and `lib/use-polling.ts` reads a status code rather than a generated union.
-Declare it when the browser is taught to show the wait, and regenerate the client with it.
+**The 429 is declared in the OpenAPI schema, since S4.6.1.** Until then it was deliberately
+left out: `frontend/lib/api.ts` is generated from the schema and CI fails when it is stale, so
+declaring it before any screen showed the wait would have been a frontend change wearing a
+backend commit. The ask panel now reads `Retry-After` and shows a clock time (ADR-0058), so
+the three limited routes declare `RATE_LIMITED_RESPONSES` and the generated client carries
+the 429. One definition here, three uses, so the wording cannot drift between routes.
 
 **Concurrency.** `hit` reads and writes without awaiting, and the only caller is an `async`
 dependency, so the event loop cannot interleave two of them inside the critical section. One
@@ -71,13 +72,31 @@ import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 from fastapi import Depends, HTTPException, Request, status
 
 from crossbid.auth import CompanyContext, current_company
 from crossbid.main import get_app_settings
 from crossbid.settings import LimitsSettings, Settings
+
+RATE_LIMITED_RESPONSES: Final[dict[int | str, dict[str, Any]]] = {
+    status.HTTP_429_TOO_MANY_REQUESTS: {
+        "description": (
+            "This company has used its hour's allowance for this action. `Retry-After` "
+            "carries whole seconds until the oldest call leaves the window; `detail` says the "
+            "same in a sentence."
+        ),
+        "headers": {
+            "Retry-After": {
+                "description": "Whole seconds to wait (RFC 9110 §10.2.3).",
+                "schema": {"type": "integer", "minimum": 1},
+            }
+        },
+    }
+}
+"""What a rate-limited route declares in its OpenAPI `responses`. See the module docstring."""
+
 
 HOUR_SECONDS: Final = 3600.0
 """The window, fixed rather than configured. The acceptance criterion and both setting

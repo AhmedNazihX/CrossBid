@@ -29,7 +29,9 @@ import { listDocuments } from '@/lib/documents'
 import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
 import { SHELL_MEDIA_QUERY, useMediaQuery } from '@/lib/use-media-query'
 import { usePolling } from '@/lib/use-polling'
+import { AskPanel } from './ask-panel'
 import { BID_STATUS_LABELS } from './bid-status'
+import { citationsOf, useBidChat } from './use-bid-chat'
 import { VerdictPanel } from './verdict-panel'
 
 type LoadState =
@@ -44,6 +46,17 @@ type LoadState =
  * Loads `GET /bids/{id}` once, then hands the row to `LiveWorkspace`, which polls it every
  * two seconds until the run reaches the interrupt, completes or fails, lists requirements
  * as soon as they exist, and pairs the list with the source panel.
+ *
+ * **Where "ask the tender" sits (S4.6.1).** On the desktop the `AskPanel` is the second card
+ * of the 400 px right-hand column, under the source panel: an answer's citation opens the
+ * page in the card directly above it, so the answer and the page it rests on are read
+ * together, and the matrix keeps the whole of its column — a chat beside the rows would
+ * take width from the one thing the screen exists to show. Below `xl` the grid is one
+ * column and the panel is last, after the source, never between the matrix and its pages.
+ * On the phone it is a fourth segment, Ask, beside Matrix / Source / Verdict: a tap away,
+ * and a citation tap lands on the Source tab exactly as a matrix citation does. Its state
+ * lives in `useBidChat` here rather than in the panel, so a breakpoint change or a tab
+ * switch does not lose the exchanges made so far.
  */
 export function BidWorkspace({ bidId }: { readonly bidId: string }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
@@ -102,12 +115,13 @@ export function BidWorkspace({ bidId }: { readonly bidId: string }) {
   return <LiveWorkspace initial={state.bid} />
 }
 
-type PhoneTab = 'matrix' | 'source' | 'verdict'
+type PhoneTab = 'matrix' | 'source' | 'verdict' | 'ask'
 
 const PHONE_TABS: readonly { value: PhoneTab; label: string }[] = [
   { value: 'matrix', label: 'Matrix' },
   { value: 'source', label: 'Source' },
   { value: 'verdict', label: 'Verdict' },
+  { value: 'ask', label: 'Ask' },
 ]
 
 function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
@@ -136,6 +150,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
   // the thumbs the bidder has already given (S4.6.3).
   const feedback = useRowFeedback(initial.id)
   const attachable = useAttachableDocuments(isAwaitingReview(bid))
+  const chat = useBidChat(initial.id)
 
   const status = BID_STATUS_LABELS[bid.status]
   const isRunning = !isBidSettled(bid)
@@ -145,9 +160,12 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
     () => indexRowsByRequirement(bid.matrix_rows),
     [bid.matrix_rows]
   )
+  // An answer may cite a company document no matrix row does; folding those in is what lets
+  // its citation open the source panel rather than light up and go nowhere.
+  const chatCitations = useMemo(() => citationsOf(chat.exchanges), [chat.exchanges])
   const sourceDocuments = useMemo(
-    () => citableDocuments(bid.documents, bid.matrix_rows),
-    [bid.documents, bid.matrix_rows]
+    () => citableDocuments(bid.documents, bid.matrix_rows, chatCitations),
+    [bid.documents, bid.matrix_rows, chatCitations]
   )
   const hasRows = bid.matrix_rows.length > 0
   // Only while the bid is parked: omitting it leaves the matrix exactly as S4.5.1 built it,
@@ -220,6 +238,15 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
     <p role="status" aria-live="polite" className="sr-only">
       {announcement}
     </p>
+  )
+  const askPanel = (variant: 'panel' | 'phone') => (
+    <AskPanel
+      chat={chat}
+      bidderLanguage={bid.bidder_language}
+      activeCitation={activeCitation}
+      onCite={handleCite}
+      variant={variant}
+    />
   )
 
   if (isDesktop === undefined) {
@@ -303,6 +330,11 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
           </div>
           <div id="phone-panel-verdict" role="tabpanel" hidden={phoneTab !== 'verdict'}>
             {phoneTab === 'verdict' && verdictPanel}
+          </div>
+          {/* Always mounted, unlike the source tab: there is no iframe to spare, and a
+              half-typed question must survive a look at the page it is about. */}
+          <div id="phone-panel-ask" role="tabpanel" hidden={phoneTab !== 'ask'}>
+            {askPanel('phone')}
           </div>
           {pollError !== undefined && (
             <p className="m-0 [font:var(--type-body-sm)] text-text-muted">
@@ -418,11 +450,14 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             review={review}
           />
         </div>
-        <SourcePanel
-          documents={sourceDocuments}
-          selection={selection}
-          onSelect={handleSelect}
-        />
+        <div className="flex min-w-0 flex-col gap-5">
+          <SourcePanel
+            documents={sourceDocuments}
+            selection={selection}
+            onSelect={handleSelect}
+          />
+          {askPanel('panel')}
+        </div>
       </div>
       {bid.verdict !== null && (
         <div id="verdict" className="mt-6 scroll-mt-4">

@@ -21,6 +21,7 @@ export function describeProblems(
   const sections = count('section_failed', 'model_error', 'unwrappable_section')
   const documentsFailed = count('unreadable_document', 'unparseable_document')
   const planted = count('planted_instruction')
+  const notIndexed = count('indexing_failed')
 
   return [
     planted > 0
@@ -37,6 +38,12 @@ export function describeProblems(
     sections > 0 ? `${plural(sections, 'section')} the model could not read` : undefined,
     documentsFailed > 0
       ? `${plural(documentsFailed, 'document')} could not be parsed`
+      : undefined,
+    // ADR-0057: the document was read and its requirements extracted, but its passages never
+    // reached the tender corpus — so a question about it, or a check that would have quoted
+    // it, finds nothing. Said out loud because silence is how the empty corpus went unnoticed.
+    notIndexed > 0
+      ? `${plural(notIndexed, 'document')} not searchable — checks and questions cannot quote from ${notIndexed === 1 ? 'it' : 'them'}`
       : undefined,
   ].filter((line): line is string => line !== undefined)
 }

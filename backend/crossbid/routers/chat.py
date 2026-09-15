@@ -47,7 +47,7 @@ from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
 from crossbid.main import get_app_settings, get_database
 from crossbid.models.review import MAX_COMMENT_CHARS, ChatTurn
-from crossbid.rate_limit import chat_question_limit
+from crossbid.rate_limit import RATE_LIMITED_RESPONSES, chat_question_limit
 from crossbid.readmodel.bids import fetch_bid
 from crossbid.settings import Settings
 
@@ -98,6 +98,7 @@ class ChatQuestion(BaseModel):
     # S2.3.3's third money-spending route. Settled before the bid, the tools or the model
     # are looked up, so a caller over its limit costs the server one read of a counter.
     dependencies=[Depends(chat_question_limit)],
+    responses=RATE_LIMITED_RESPONSES,
 )
 async def ask_about_bid(
     bid_id: uuid.UUID,

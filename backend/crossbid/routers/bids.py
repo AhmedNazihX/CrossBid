@@ -46,7 +46,7 @@ from crossbid.models.requirement import Requirement
 from crossbid.models.review import ReviewSubmission, RowEdit
 from crossbid.models.tender import BidStatus, BidSummary
 from crossbid.models.verdict import Decision, Verdict
-from crossbid.rate_limit import bid_start_limit
+from crossbid.rate_limit import RATE_LIMITED_RESPONSES, bid_start_limit
 from crossbid.readmodel.bids import (
     TENDER_DOCUMENT_KINDS,
     BidDocumentRow,
@@ -297,6 +297,7 @@ def get_bid_runner(
     # S2.3.3. This is the expensive route -- one run is ~5 minutes and ~$1.60 -- so the
     # limit is settled before the company, the documents or the graph are even looked up.
     dependencies=[Depends(bid_start_limit)],
+    responses=RATE_LIMITED_RESPONSES,
 )
 async def start_bid(
     body: StartBidRequest,
