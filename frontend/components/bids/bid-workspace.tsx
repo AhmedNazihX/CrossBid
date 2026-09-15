@@ -156,8 +156,8 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
   const [sideTab, setSideTab] = useState<SideTab>('source')
   const announcement = useStatusAnnouncement(bid)
   const edits = useRowEdits(bid.matrix_rows)
-  // Loaded once per bid and passed to both layouts, so thirty rows share one request for
-  // the thumbs the bidder has already given (S4.6.3).
+  // Loaded once per bid and passed to both layouts and to the Ask panel, so thirty rows and
+  // every chat answer share one request for the thumbs the bidder has already given (S4.6.3).
   const feedback = useRowFeedback(initial.id)
   const attachable = useAttachableDocuments(isAwaitingReview(bid))
   const chat = useBidChat(initial.id)
@@ -272,6 +272,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
   const askPanel = (variant: 'panel' | 'phone') => (
     <AskPanel
       chat={chat}
+      feedback={feedback}
       bidderLanguage={bid.bidder_language}
       activeCitation={activeCitation}
       onCite={handleCite}

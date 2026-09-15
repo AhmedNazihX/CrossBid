@@ -49,7 +49,9 @@ from crossbid.main import get_app_settings, get_database
 from crossbid.models.review import MAX_COMMENT_CHARS, ChatTurn
 from crossbid.rate_limit import RATE_LIMITED_RESPONSES, chat_question_limit
 from crossbid.readmodel.bids import fetch_bid
+from crossbid.readmodel.usage import DatabaseUsageSink
 from crossbid.settings import Settings
+from crossbid.usage import UsageNode, UsageRecorder, recording_usage
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +124,16 @@ async def ask_about_bid(
     if bid is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
 
+    # A question costs money like a node does, and this is the only place that knows whose
+    # bid it is. Without the scope every turn landed in `usage._warn_unattributed`, so
+    # `/dev/costs` understated any bid whose reviewer asked anything and the runner compared
+    # an understated total against `run_budget_usd`.
+    recorder = UsageRecorder(
+        sink=DatabaseUsageSink(db),
+        company_id=company_id,
+        bid_id=bid.id,
+        node=UsageNode.CHAT,
+    )
     try:
         async with openrouter_chat(
             settings,
@@ -131,11 +143,12 @@ async def ask_about_bid(
             language=bid.bidder_language,
         ) as context:
             graph = build_chat_graph(context, checkpointer=db.checkpointer)
-            turn = await run_chat_turn(
-                graph,
-                question=body.question.strip(),
-                thread_id=chat_thread_id(bid.thread_id),
-            )
+            with recording_usage(recorder):
+                turn = await run_chat_turn(
+                    graph,
+                    question=body.question.strip(),
+                    thread_id=chat_thread_id(bid.thread_id),
+                )
     except Exception as exc:
         # Deliberately broad and deliberately loud. Everything below this line — a provider
         # that will not answer, a schema violation, a retrieval error — is one event to the

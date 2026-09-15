@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { cn } from 'cn'
 
 import { Button } from '@/components/ui/button'
@@ -19,13 +19,47 @@ export interface RowFeedbackProps {
 /**
  * "Was this check right?" — the thumbs and the correction under one matrix row (S4.6.3).
  *
+ * The controls themselves are `FeedbackControls` below, shared with the chat panel's "Was
+ * this answer right?"; this is the row's wording for them, keyed on the row's id, so the
+ * two places a bidder can rate an answer look and behave the same and differ only in what
+ * they say the rating is kept with.
+ */
+export function RowFeedback({ row, feedback, isPhone = false }: RowFeedbackProps) {
+  return (
+    <FeedbackControls
+      target={row.id}
+      feedback={feedback}
+      question="Was this check right?"
+      keptNote="Kept with this row."
+      placeholder="The ISO 27001 certificate covers this scope."
+      isPhone={isPhone}
+    />
+  )
+}
+
+export interface FeedbackControlsProps {
+  /** The controller's key: a matrix row id, or `answerTarget(exchangeId)` for a chat answer. */
+  readonly target: string
+  readonly feedback: RowFeedbackController
+  /** The question beside the thumbs — "Was this check right?", "Was this answer right?". */
+  readonly question: string
+  /** What is said once a thumb is stored: where the rating went, honestly. */
+  readonly keptNote: string
+  /** An example correction, in the shape the answer above would take. */
+  readonly placeholder: string
+  readonly isPhone?: boolean
+}
+
+/**
+ * The thumbs and the comment box under one answer, for a matrix row or a chat answer alike.
+ *
  * There is no artboard for this one: the canvas of ADR-0014 draws the screens that existed
  * when it was confirmed, and none of them carries a rating. So, like
  * `components/auth/sign-in-card.tsx`, it is assembled from the primitives the artboards
  * already fixed — `Button` in its secondary and ghost weights, the `Field` label and hint
  * column, the review panel's own textarea — and invents no spacing, colour or type of its
- * own. It sits at the foot of the evidence block, under the reviewer's controls, because it
- * is about the answer above it and never about the tender.
+ * own. It sits at the foot of whatever it rates, because it is about the answer above it
+ * and never about the tender.
  *
  * **The thumb is filed on the click.** The story's criterion is that a rating is stored, so
  * it does not wait behind a Save the bidder might never press. The comment box only appears
@@ -37,40 +71,52 @@ export interface RowFeedbackProps {
  * bidder's earlier words are still in the record. Nothing here changes the matrix, the
  * verdict or the review — a rating is kept, never acted on (feedback-driven learning is cut
  * from the course build).
+ *
+ * **On the phone every control is at least 44 px tall** (`min-h-11` over the `md` button's
+ * 40 px), the same floor the phone card gives its citation link: a thumb is a one-tap
+ * answer and should not need a second tap.
  */
-export function RowFeedback({ row, feedback, isPhone = false }: RowFeedbackProps) {
+export function FeedbackControls({
+  target,
+  feedback,
+  question,
+  keptNote,
+  placeholder,
+  isPhone = false,
+}: FeedbackControlsProps) {
   const [draft, setDraft] = useState<string | undefined>(undefined)
-  const rating = feedback.ratingOf(row.id)
-  const stored = feedback.commentOf(row.id)
-  const error = feedback.errorOf(row.id)
-  const isSending = feedback.isSending(row.id)
+  const commentId = useId()
+  const hintId = `${commentId}-hint`
+  const rating = feedback.ratingOf(target)
+  const stored = feedback.commentOf(target)
+  const error = feedback.errorOf(target)
+  const isSending = feedback.isSending(target)
   const size = isPhone ? 'md' : 'sm'
   const comment = draft ?? stored ?? ''
   const isCommentSaved = comment.trim() !== '' && comment === stored
 
   async function rate(next: Rating) {
-    await feedback.rate(row.id, next)
+    await feedback.rate(target, next)
   }
 
   async function saveComment() {
     if (rating === undefined) {
       return
     }
-    await feedback.rate(row.id, rating, comment)
+    await feedback.rate(target, rating, comment)
   }
 
   return (
     <div className="flex flex-col gap-2 border-t border-border-default pt-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="[font:var(--type-body-sm)] text-text-secondary">
-          Was this check right?
-        </span>
+        <span className="[font:var(--type-body-sm)] text-text-secondary">{question}</span>
         <ThumbButton
           name="thumbUp"
           label="Yes"
           isChosen={rating === THUMB_UP}
           isSending={isSending}
           size={size}
+          isPhone={isPhone}
           onRate={() => void rate(THUMB_UP)}
         />
         <ThumbButton
@@ -79,12 +125,11 @@ export function RowFeedback({ row, feedback, isPhone = false }: RowFeedbackProps
           isChosen={rating === THUMB_DOWN}
           isSending={isSending}
           size={size}
+          isPhone={isPhone}
           onRate={() => void rate(THUMB_DOWN)}
         />
         {rating !== undefined && error === undefined && !isSending && (
-          <span className="[font:var(--type-body-sm)] text-text-muted">
-            Kept with this row.
-          </span>
+          <span className="[font:var(--type-body-sm)] text-text-muted">{keptNote}</span>
         )}
       </div>
 
@@ -97,26 +142,26 @@ export function RowFeedback({ row, feedback, isPhone = false }: RowFeedbackProps
       {rating !== undefined && (
         <div className={cn('flex flex-col gap-2', !isPhone && 'max-w-[420px]')}>
           <Field
-            id={`${row.id}-feedback-comment`}
+            id={commentId}
             label="What should it have said?"
             hint="Optional. Kept with the rating for whoever improves the agent next."
-            hintId={`${row.id}-feedback-comment-hint`}
+            hintId={hintId}
           >
             <textarea
-              id={`${row.id}-feedback-comment`}
+              id={commentId}
               rows={2}
               value={comment}
               maxLength={MAX_COMMENT_CHARS}
               onChange={(event) => setDraft(event.target.value)}
-              aria-describedby={`${row.id}-feedback-comment-hint`}
-              placeholder="The ISO 27001 certificate covers this scope."
+              aria-describedby={hintId}
+              placeholder={placeholder}
               className="w-full resize-y rounded-md border border-border-default bg-surface-card px-3 py-2 text-base leading-[1.5] text-text-primary shadow-xs outline-none placeholder:text-text-placeholder focus-visible:border-border-focus focus-visible:shadow-[var(--shadow-focus)]"
             />
           </Field>
           <Button
             variant="secondary"
             size={size}
-            className="self-start"
+            className={cn('self-start', isPhone && 'min-h-11')}
             disabled={isSending || comment.trim() === '' || isCommentSaved}
             onClick={() => void saveComment()}
           >
@@ -139,6 +184,7 @@ function ThumbButton({
   isChosen,
   isSending,
   size,
+  isPhone,
   onRate,
 }: {
   readonly name: 'thumbUp' | 'thumbDown'
@@ -146,6 +192,7 @@ function ThumbButton({
   readonly isChosen: boolean
   readonly isSending: boolean
   readonly size: 'sm' | 'md'
+  readonly isPhone: boolean
   readonly onRate: () => void
 }) {
   return (
@@ -156,7 +203,7 @@ function ThumbButton({
       aria-pressed={isChosen}
       disabled={isSending}
       onClick={onRate}
-      className={cn(isChosen && 'border-border-focus')}
+      className={cn(isChosen && 'border-border-focus', isPhone && 'min-h-11')}
     >
       {label}
     </Button>

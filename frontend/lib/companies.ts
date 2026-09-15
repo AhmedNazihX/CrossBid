@@ -20,6 +20,9 @@ export type LegalForm = components['schemas']['LegalForm']
 export type Tone = components['schemas']['Tone']
 export type TurnoverYear = components['schemas']['TurnoverYear']
 export type CertificateHeld = components['schemas']['CertificateHeld']
+/** A held certificate as the API reads it back: the fields above plus `is_expired` and
+ * `is_valid`, judged on the response's `checked_on`. */
+export type CertificateResponse = components['schemas']['CertificateResponse']
 
 /** The legal forms the column's check constraint allows, in the order the select offers them. */
 export const LEGAL_FORMS: readonly LegalForm[] = [

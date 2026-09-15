@@ -5,6 +5,8 @@ import { cn } from 'cn'
 
 import type { Citation } from '@/components/matrix/citation'
 import { EvidenceList } from '@/components/matrix/evidence-list'
+import { FeedbackControls } from '@/components/matrix/row-feedback'
+import { answerTarget, type RowFeedbackController } from '@/components/matrix/use-row-feedback'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Eyebrow } from '@/components/ui/eyebrow'
@@ -16,6 +18,8 @@ import type { BidChatController, ChatExchange } from './use-bid-chat'
 
 export interface AskPanelProps {
   readonly chat: BidChatController
+  /** The workspace's one feedback controller — the same map the matrix rows rate into (S4.6.3). */
+  readonly feedback: RowFeedbackController
   /** The language the answers arrive in — `lang` on every answer, for the screen reader. */
   readonly bidderLanguage: string
   readonly activeCitation: Citation | undefined
@@ -60,6 +64,18 @@ export interface AskPanelProps {
  * a German paragraph is skimmed. Both cases are keyed on the empty list the API sent, never
  * on matching the sentence's text.
  *
+ * **Every answer can be rated, and the panel is honest about where the rating goes.** Story
+ * S4.6.3 reads "rate a matrix row *or chat answer*", and the API's second target — a
+ * `matrix_row_id` of `null`, "the bid's own answer" (`routers/feedback.py`, ADR-0051) — is
+ * what an answer rates. The thumbs are `FeedbackControls`, the same piece as under a matrix
+ * row, keyed per exchange by `answerTarget` so a bidder who rates the first answer up and
+ * the second down sees both thumbs where they put them. The API, though, cannot tell two
+ * answers of one bid apart, so the "kept" line says the record holds the thumb and the
+ * comment but not which answer they were about — rather than "Kept with this answer", which
+ * would be untrue. Rating only the newest answer was the alternative and was worse: all
+ * answers share one server key, so the moment a new answer arrived it would have inherited
+ * the previous one's chosen thumb (`use-row-feedback.ts` has the whole decision).
+ *
  * **While a question is in flight, the box stays open and only sending is refused.** The
  * field is not disabled — disabling it would throw focus to the body and stop the bidder
  * typing the next question — but the button is, Enter is ignored, and the controller's ref
@@ -75,6 +91,7 @@ export interface AskPanelProps {
  */
 export function AskPanel({
   chat,
+  feedback,
   bidderLanguage,
   activeCitation,
   onCite,
@@ -179,6 +196,7 @@ export function AskPanel({
               <li key={exchange.id} className="min-w-0 border-t border-border-default pt-4">
                 <Exchange
                   exchange={exchange}
+                  feedback={feedback}
                   bidderLanguage={bidderLanguage}
                   activeCitation={activeCitation}
                   onCite={onCite}
@@ -198,6 +216,7 @@ export function AskPanel({
 /** One question and whatever became of it: a pending line, an answer, or the API's refusal. */
 function Exchange({
   exchange,
+  feedback,
   bidderLanguage,
   activeCitation,
   onCite,
@@ -206,6 +225,7 @@ function Exchange({
   isPhone,
 }: {
   readonly exchange: ChatExchange
+  readonly feedback: RowFeedbackController
   readonly bidderLanguage: string
   readonly activeCitation: Citation | undefined
   readonly onCite: (citation: Citation) => void
@@ -228,13 +248,23 @@ function Exchange({
         </p>
       )}
       {outcome.phase === 'answered' && (
-        <Answer
-          turn={outcome.turn}
-          bidderLanguage={bidderLanguage}
-          activeCitation={activeCitation}
-          onCite={onCite}
-          isPhone={isPhone}
-        />
+        <>
+          <Answer
+            turn={outcome.turn}
+            bidderLanguage={bidderLanguage}
+            activeCitation={activeCitation}
+            onCite={onCite}
+            isPhone={isPhone}
+          />
+          <FeedbackControls
+            target={answerTarget(exchange.id)}
+            feedback={feedback}
+            question="Was this answer right?"
+            keptNote="Kept with this bid — the record holds your thumb and comment, not which answer they were about."
+            placeholder="The deadline is 7 October, not 7 September — see page 3."
+            isPhone={isPhone}
+          />
+        </>
       )}
       {outcome.phase === 'failed' && (
         <div className="flex flex-col gap-2">

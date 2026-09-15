@@ -138,6 +138,16 @@ class RunBudget:
         return cls(seconds=float(agent.run_budget_seconds), usd=float(agent.run_budget_usd))
 
 
+OVER_BUDGET_TEMPLATE: Final = "run stopped: over the {seconds:.0f}s budget"
+"""What a timed-out bid's `failure_reason` says.
+
+Named rather than derived from the exception, because `failure_reason_of` would render a
+`TimeoutError` as "run failed: TimeoutError" -- true, and useless to a bidder deciding
+whether to start again. The number is in the sentence so the operator can see which budget
+it was measured against without opening the settings.
+"""
+
+
 def failure_reason_of(exc: BaseException) -> str:
     """The sentence stored on the bid. A `StageError` already names its stage."""
     if isinstance(exc, StageError):
@@ -265,18 +275,31 @@ class BidRunner:
         """One run, start to park (or crash). Never raises except on cancellation."""
         config = bid_run_config(bid.id, thread_id=bid.thread_id, run_name=RUN_NAME)
         started = self._clock()
+        outcome = "parked"
         try:
             payload = await self._input_for(bid, config, resume=resume)
-            await self.graph.ainvoke(payload, config)
+            # A real deadline, not a note written afterwards. `run_budget_seconds` was only
+            # ever read once the run had already stopped, so nothing bounded a run at all:
+            # at `llm_timeout_seconds` x the model's attempts per section, a pathological
+            # pack could hold a worker for the better part of an hour while the bidder
+            # watched a status that never moved. `asyncio.timeout` re-raises a cancellation
+            # that was not its own, so `shutdown()` still reads as a cancellation below.
+            async with asyncio.timeout(self._budget.seconds):
+                await self.graph.ainvoke(payload, config)
+        except TimeoutError:
+            outcome = "timed out"
+            reason = OVER_BUDGET_TEMPLATE.format(seconds=self._budget.seconds)
+            logger.warning("Bid %s: %s", bid.id, reason)
+            await self._record_failure(bid, reason)
         except asyncio.CancelledError:
             logger.info("Bid %s: run cancelled; it resumes from its checkpoint", bid.id)
             raise
         except Exception as exc:
+            outcome = "failed"
             reason = failure_reason_of(exc)
             logger.exception("Bid %s: %s", bid.id, reason)
             await self._record_failure(bid, reason)
-        else:
-            self._report_elapsed(bid, self._clock() - started)
+        self._report_elapsed(bid, self._clock() - started, outcome=outcome)
         # Outside the branch on purpose: a run that failed in `check_reqs` has already
         # bought most of what a finished one would, and that is the run whose bill an
         # operator most wants to see.
@@ -319,16 +342,23 @@ class BidRunner:
             # The last place a background task can report to is the log.
             logger.exception("Bid %s: could not record the failure '%s'", bid.id, reason)
 
-    def _report_elapsed(self, bid: BidRow, elapsed: float) -> None:
+    def _report_elapsed(self, bid: BidRow, elapsed: float, *, outcome: str) -> None:
+        """How long the run held a worker, whatever became of it.
+
+        Reported on every path, including the ones that raised. It used to be the `else`
+        branch alone, so the runs whose wall clock an operator most wants -- the ones that
+        died -- were the runs that reported none.
+        """
         if elapsed > self._budget.seconds:
             logger.warning(
-                "Bid %s: run took %.0fs, over the %.0fs budget",
+                "Bid %s: run %s after %.0fs, over the %.0fs budget",
                 bid.id,
+                outcome,
                 elapsed,
                 self._budget.seconds,
             )
             return
-        logger.info("Bid %s: run parked after %.0fs", bid.id, elapsed)
+        logger.info("Bid %s: run %s after %.0fs", bid.id, outcome, elapsed)
 
     async def _report_cost(self, bid: BidRow) -> None:
         """What the run actually bought, against `budget.usd`. Never raises (S5.2).

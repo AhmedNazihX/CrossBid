@@ -548,8 +548,11 @@ async def test_a_run_over_the_time_budget_is_a_warning(
     with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
         await runner.start(bid)
 
+    # The fake clock measures the run; the deadline uses the loop's own clock, which is why
+    # a graph that finished instantly can still report an overshoot here. The branch guards
+    # the work either side of the deadline -- reading the checkpoint, recording a failure.
     [warning] = [r for r in caplog.records if r.levelno == logging.WARNING]
-    assert warning.getMessage() == f"Bid {bid.id}: run took 1000s, over the 600s budget"
+    assert warning.getMessage() == f"Bid {bid.id}: run parked after 1000s, over the 600s budget"
 
 
 async def test_a_run_within_the_time_budget_is_reported_as_parked(
@@ -917,3 +920,50 @@ async def test_a_review_is_traced_apart_from_the_run_that_parked(
     # Assert
     assert configs[0]["run_name"] == runner_module.RUN_NAME
     assert configs[-1]["run_name"] == runner_module.REVIEW_RUN_NAME
+
+
+async def test_a_run_past_its_deadline_is_stopped_and_the_bid_says_why(
+    offline_settings: Settings, failures: FailureRecorder, caplog: pytest.LogCaptureFixture
+) -> None:
+    """`run_budget_seconds` is a limit now, not a note written afterwards.
+
+    Nothing bounded a run before this: the budget was read once the graph had already
+    stopped, so a pack that kept re-asking held a worker for as long as it liked while the
+    bidder watched a status that never moved.
+    """
+    # Arrange -- a deadline already past, so the first await inside the graph trips it.
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection()),
+        budget=RunBudget(seconds=0.0),
+    )
+    bid = bid_row()
+
+    # Act
+    with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
+        await runner.start(bid)
+
+    # Assert
+    assert [call[1] for call in failures.calls] == [bid.id]
+    assert failures.calls[0][2] == "run stopped: over the 0s budget"
+    assert any("timed out" in record.getMessage() for record in caplog.records)
+
+
+async def test_a_cancelled_run_is_not_reported_as_a_timeout(
+    offline_settings: Settings, failures: FailureRecorder
+) -> None:
+    """`shutdown()` cancels; `asyncio.timeout` re-raises a cancellation that was not its
+    own, so a restart still leaves the bid resumable rather than marking it failed."""
+    # Arrange -- a budget nothing will reach, then cancel the task under it.
+    runner = runner_for(
+        graph_over(offline_settings, MemorySaver(), RecordingProjection()),
+        budget=RunBudget(seconds=3_600.0),
+    )
+    bid = bid_row()
+
+    # Act
+    task = runner.start(bid)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    # Assert
+    assert failures.calls == []

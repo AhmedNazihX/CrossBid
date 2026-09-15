@@ -612,15 +612,20 @@ async def record_review(
 
     One transaction because the pair is the record: a `bids.decision` with no `reviews` row
     behind it is a verdict nobody can audit, and a `reviews` row the dashboard does not
-    reflect is an audit of something that never happened. psycopg commits the connection
-    when the `async with` block leaves without an exception, so the two statements either
-    both land or neither does.
+    reflect is an audit of something that never happened.
+
+    The transaction is explicit, and has to be. Every pooled connection carries
+    `autocommit=True` (`db.pool_connection_kwargs`), so leaving the `async with` block
+    commits nothing -- each statement had already committed on its own. Before this,
+    `INSERT_REVIEW` landed and a `rowcount` of zero on the update then raised, leaving an
+    orphan `reviews` row for a decision the dashboard never showed. `conn.transaction()`
+    opens a real block under autocommit and rolls it back when the body raises.
 
     `agent_verdict` is nullable in this signature and not in the column: a bid can only have
     reached a review through `score_verdict`, so `None` means a caller assembled the record
     by hand, and `'null'::jsonb` records that honestly rather than inventing a verdict.
     """
-    async with db.connection() as conn:
+    async with db.connection() as conn, conn.transaction():
         await conn.execute(
             INSERT_REVIEW,
             {
@@ -690,19 +695,25 @@ async def attach_documents(
 
     The router checked the rows a moment ago, so a shortfall here means a concurrent start
     claimed one of them. That is a `BidStateError`, not a silent partial bid.
+
+    The check runs inside the transaction, which is what makes the sentence above true.
+    Pooled connections are `autocommit=True`, so raising after the statement used to leave
+    the rows that *did* match attached to a bid the router then marked `failed` -- and
+    `ATTACH_DOCUMENTS` requires `bid_id is null`, so those documents could never be attached
+    to another bid again. A partial attach was permanent.
     """
     if not document_ids:
         raise BidStateError("a bid needs at least one document to parse")
-    async with db.connection() as conn:
+    async with db.connection() as conn, conn.transaction():
         cursor = await conn.execute(
             ATTACH_DOCUMENTS,
             {"company_id": company_id, "bid_id": bid_id, "document_ids": _uuids(document_ids)},
         )
-    if cursor.rowcount != len(document_ids):
-        raise BidStateError(
-            f"only {cursor.rowcount} of {len(document_ids)} documents could be attached to "
-            f"bid {bid_id}: one was claimed by another bid first"
-        )
+        if cursor.rowcount != len(document_ids):
+            raise BidStateError(
+                f"only {cursor.rowcount} of {len(document_ids)} documents could be attached "
+                f"to bid {bid_id}: one was claimed by another bid first"
+            )
 
 
 # ------------------------------------------------------------------------- row readers

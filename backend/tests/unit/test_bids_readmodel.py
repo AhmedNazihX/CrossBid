@@ -117,10 +117,31 @@ class FakeCursor:
         return None
 
 
+class FakeTransaction:
+    """`AsyncConnection.transaction()`, recording only how the block ended.
+
+    Every pooled connection is `autocommit=True` (`db.pool_connection_kwargs`), so a writer
+    whose two statements have to land together must open a block explicitly. Recording the
+    outcome is what lets a test prove a failed pair rolled back, which counting borrows --
+    what this module used to assert -- never could.
+    """
+
+    def __init__(self, outcomes: list[str]) -> None:
+        self._outcomes = outcomes
+
+    async def __aenter__(self) -> FakeTransaction:
+        return self
+
+    async def __aexit__(self, exc_type: type[BaseException] | None, *_exc: object) -> bool:
+        self._outcomes.append("rollback" if exc_type is not None else "commit")
+        return False
+
+
 class FakeConnection:
     def __init__(self, answers: Sequence[Scripted]) -> None:
         self._answers = deque(answers)
         self.executed: list[tuple[str, Any]] = []
+        self.transactions: list[str] = []
 
     async def execute(self, sql: str, params: dict[str, Any] | None = None) -> FakeCursor:
         self.executed.append((sql, params))
@@ -129,6 +150,9 @@ class FakeConnection:
 
     def cursor(self) -> FakeCursor:
         return FakeCursor(Scripted(), self.executed)
+
+    def transaction(self) -> FakeTransaction:
+        return FakeTransaction(self.transactions)
 
 
 class FakeDatabase:
@@ -453,8 +477,10 @@ async def test_recording_a_review_writes_the_audit_row_and_the_decision_together
         override_reason="Die Referenzen liegen vor.",
     )
 
-    # Assert -- both statements, on one borrowed connection, so they commit together
+    # Assert -- both statements inside one committed transaction. The borrow count alone
+    # proved nothing: `autocommit=True` means one connection is still two commits.
     assert db.borrowed == 1
+    assert db.conn.transactions == ["commit"]
     assert "insert into reviews" in db.statements[0]
     assert "set decision" in db.statements[1]
     assert db.params(0)["agent_verdict"].obj == agent
@@ -1222,3 +1248,60 @@ async def test_teds_deadline_never_overwrites_the_one_the_bidder_gave() -> None:
 def test_the_conditional_update_refuses_to_touch_a_bid_that_has_a_deadline() -> None:
     """The guard is in the SQL, not in a caller that might forget it."""
     assert "deadline is null" in " ".join(bids.UPDATE_BID_DEADLINE_IF_UNSET.split())
+
+
+@pytest.mark.anyio
+async def test_a_review_whose_decision_lands_on_no_bid_leaves_no_orphan_audit_row() -> None:
+    """The defect the explicit transaction closes.
+
+    `INSERT_REVIEW` runs first. Under `autocommit=True` it had already committed by the time
+    a rowcount of zero on the update raised, so a bid nobody could find still gained a
+    `reviews` row — an audit of a decision the dashboard never showed.
+    """
+    # Arrange -- the insert takes, the decision update matches nothing.
+    db = FakeDatabase(Scripted(rowcount=1), Scripted(rowcount=0))
+
+    # Act / Assert
+    with pytest.raises(BidNotFoundError):
+        await record_review(
+            db,
+            company_id=str(COMPANY_ID),
+            bid_id=str(BID_ID),
+            decision=Decision.GO,
+            agent_verdict=None,
+            final_verdict={"decision": "go"},
+            override_reason=None,
+        )
+
+    assert db.conn.transactions == ["rollback"]
+
+
+@pytest.mark.anyio
+async def test_a_partial_attach_is_rolled_back_rather_than_left_permanent() -> None:
+    """A shortfall used to strand the documents that did match.
+
+    They were committed with `bid_id` set, the router then marked the bid `failed`, and
+    `ATTACH_DOCUMENTS` only takes a document whose `bid_id is null` — so those files could
+    never start another bid. The check now runs inside the block it is deciding about.
+    """
+    # Arrange
+    ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+    db = FakeDatabase(Scripted(rowcount=1))
+
+    # Act / Assert
+    with pytest.raises(BidStateError, match="only 1 of 2"):
+        await attach_documents(
+            db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), document_ids=ids
+        )
+
+    assert db.conn.transactions == ["rollback"]
+
+
+@pytest.mark.anyio
+async def test_a_complete_attach_commits() -> None:
+    ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+    db = FakeDatabase(Scripted(rowcount=2))
+
+    await attach_documents(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID), document_ids=ids)
+
+    assert db.conn.transactions == ["commit"]

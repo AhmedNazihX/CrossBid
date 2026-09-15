@@ -15,7 +15,32 @@
  * **Validation errors come from the server and name their field.** `CompanyProfile` is the
  * request body, so a value out of bounds is FastAPI's own 422 with a `loc` path, and
  * `fieldErrorsFrom` puts each message under the input it belongs to. Re-implementing the
- * bounds here would be a second source of truth that drifts the first time one moves.
+ * bounds here would be a second source of truth that drifts the first time one moves. The
+ * one check the browser does make is the one the server *cannot*: whether a number box
+ * holds a number at all, because text that is not one has no `number` to send.
+ *
+ * **The form edits a draft, and numbers are text until submit.** `staff_fte` and a turnover
+ * amount are `number` on the wire, but a controlled input whose value is the parsed number
+ * fights the typist: `1.` parses to `1`, re-renders as `"1"`, and the decimal point is gone.
+ * So `ProfileDraft` keeps each number as the string the bidder typed, and `profileFrom`
+ * turns it into a `CompanyProfile` once, when the form is submitted. A comma is accepted as
+ * the decimal mark there — a German bidder types `12,5` — and text that is not a number is
+ * named under its own field rather than silently sent as `null` or `0`.
+ *
+ * **Three outcomes, not two.** `PUT /companies/me` writes the row first and the agent's
+ * memory second, and when the second write fails it answers 200 with `warning` set — the
+ * profile *was* saved (see the router's docstring: reporting failure for a write that landed
+ * is the worse lie). So the outcome is `saved`, `saved_with_warning` or `failed`, and only
+ * the last is headed "Not saved". The warning is the same box on the warning tint, headed
+ * for what actually happened, with the backend's own sentence saying what to do about it.
+ *
+ * **Expiry is the backend's verdict, and the response carries it.** `GET /companies/me`
+ * returns `has_expired_certificates` and a per-certificate `is_expired`, both judged on
+ * `checked_on`, and the router's own field description says "the form warns about it". So
+ * the loaded response is kept beside the editable draft — `editableProfile` strips the
+ * flags on purpose, they are not request fields — and it drives the notice above the form
+ * and the marker on each flagged row. Re-deriving the rule from `expires_on` here would be
+ * the second source of truth the paragraph above refuses.
  *
  * **Explanation language and tone live here** rather than on a settings page, because the
  * plan puts them here deliberately: brief item Easy 2 (personality and tone) must not
@@ -33,7 +58,7 @@ import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import { CertificateRows } from '@/components/company/certificate-rows'
-import { TurnoverRows } from '@/components/company/turnover-rows'
+import { TurnoverRows, type TurnoverDraft } from '@/components/company/turnover-rows'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Notice } from '@/components/ui/notice'
@@ -50,24 +75,58 @@ import {
   editableProfile,
   loadProfile,
   saveProfile,
+  type CertificateResponse,
   type CompanyProfile,
+  type CompanyProfileResponse,
   type LegalForm,
   type Tone,
 } from '@/lib/companies'
 import { NAV_ITEMS } from '@/components/layout/nav-items'
 import { NO_FIELD_ERRORS, fieldErrorsFrom, type FieldErrors } from '@/lib/field-errors'
+import { formatDate } from '@/lib/format'
 import { safeNextPath } from '@/lib/safe-next-path'
 
 type Stage = 'loading' | 'ready' | 'saving'
 
+/**
+ * What the last load or submit came to. `failed` is the only one headed "Not saved", and it
+ * carries its own title because a profile that could not be *loaded* was not "not saved".
+ */
+type Outcome =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'saved' }
+  | { readonly kind: 'saved_with_warning'; readonly warning: string }
+  | { readonly kind: 'failed'; readonly title: string; readonly message: string }
+
+const NO_OUTCOME: Outcome = { kind: 'none' }
+const NOT_SAVED = 'Not saved'
+const SEE_FIELDS_BELOW = 'Some values need changing. See the fields below.'
+const NOT_A_NUMBER = 'Enter a number, such as 12 or 12,5.'
+
+/** The same box `Notice` draws for `tone="danger"`, on the warning tint instead. */
+const WARNING_TINT = 'bg-status-warning-bg text-status-warning-text'
+
+/**
+ * The profile as the form edits it: `CompanyProfile` with every number held as the text
+ * the bidder typed (`''` for an empty box), so the input never re-renders a parsed value
+ * back over a half-typed one. `profileFrom` is the only way out of it.
+ */
+interface ProfileDraft extends Omit<
+  CompanyProfile,
+  'staff_fte' | 'staff_fte_relevant' | 'turnover'
+> {
+  readonly staff_fte: string
+  readonly staff_fte_relevant: string
+  readonly turnover: readonly TurnoverDraft[]
+}
+
 export function ProfileForm() {
   const interrupted = useInterruptedDestination()
-  const [profile, setProfile] = useState<CompanyProfile>(EMPTY_PROFILE)
-  const [exists, setExists] = useState(false)
+  const [draft, setDraft] = useState<ProfileDraft>(() => draftFrom(EMPTY_PROFILE))
+  const [loaded, setLoaded] = useState<CompanyProfileResponse | undefined>(undefined)
   const [stage, setStage] = useState<Stage>('loading')
   const [errors, setErrors] = useState<FieldErrors>(NO_FIELD_ERRORS)
-  const [failure, setFailure] = useState<string | undefined>(undefined)
-  const [saved, setSaved] = useState(false)
+  const [outcome, setOutcome] = useState<Outcome>(NO_OUTCOME)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -75,10 +134,18 @@ export function ProfileForm() {
       try {
         const { profile: found } = await loadProfile(controller.signal)
         if (controller.signal.aborted) return
-        setExists(found !== undefined)
-        if (found !== undefined) setProfile(editableProfile(found))
+        if (found !== undefined) {
+          setLoaded(found)
+          setDraft(draftFrom(editableProfile(found)))
+        }
       } catch (error) {
-        if (!controller.signal.aborted) setFailure(messageOf(error))
+        if (!controller.signal.aborted) {
+          setOutcome({
+            kind: 'failed',
+            title: 'Your company could not be loaded',
+            message: messageOf(error, 'The profile could not be loaded.'),
+          })
+        }
       } finally {
         if (!controller.signal.aborted) setStage('ready')
       }
@@ -86,35 +153,51 @@ export function ProfileForm() {
     return () => controller.abort()
   }, [])
 
-  const patch = useCallback(
-    (change: Partial<CompanyProfile>) => {
-      setProfile((current) => ({ ...current, ...change }))
-      setSaved(false)
-    },
-    [setProfile]
-  )
+  // An edit makes "Saved" untrue, so both saved outcomes clear; a failure stays until the
+  // next submit, because the bidder is fixing what it names.
+  const patch = useCallback((change: Partial<ProfileDraft>) => {
+    setDraft((current) => ({ ...current, ...change }))
+    setOutcome((current) => (current.kind === 'failed' ? current : NO_OUTCOME))
+  }, [])
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const parsed = profileFrom(draft)
+    if ('errors' in parsed) {
+      setErrors(parsed.errors)
+      setOutcome({ kind: 'failed', title: NOT_SAVED, message: SEE_FIELDS_BELOW })
+      return
+    }
     setStage('saving')
     setErrors(NO_FIELD_ERRORS)
-    setFailure(undefined)
+    setOutcome(NO_OUTCOME)
     try {
-      const result = await saveProfile(profile, { exists })
-      setProfile(editableProfile(result))
-      setExists(true)
-      setSaved(true)
-      // The agent's memory is written after the row, and a failure there is a 200 with a
-      // warning rather than a lost save — so it is shown as a warning, not as an error.
-      setFailure(result.warning ?? undefined)
+      const result = await saveProfile(parsed.profile, { exists: loaded !== undefined })
+      setLoaded(result)
+      setDraft(draftFrom(editableProfile(result)))
+      // The row is written before the agent's memory, and a failure there is a 200 with a
+      // `warning` rather than a lost save — so it is the saved outcome with a caveat, never
+      // "Not saved" (H14).
+      setOutcome(
+        result.warning === null || result.warning === undefined
+          ? { kind: 'saved' }
+          : { kind: 'saved_with_warning', warning: result.warning }
+      )
     } catch (error) {
-      setSaved(false)
       if (error instanceof ApiError && error.status === 422) {
-        const parsed = fieldErrorsFrom(error.body)
-        setErrors(parsed)
-        setFailure(parsed.formLevel ?? 'Some values need changing. See the fields below.')
+        const fieldErrors = fieldErrorsFrom(error.body)
+        setErrors(fieldErrors)
+        setOutcome({
+          kind: 'failed',
+          title: NOT_SAVED,
+          message: fieldErrors.formLevel ?? SEE_FIELDS_BELOW,
+        })
       } else {
-        setFailure(messageOf(error))
+        setOutcome({
+          kind: 'failed',
+          title: NOT_SAVED,
+          message: messageOf(error, 'The profile could not be saved.'),
+        })
       }
     } finally {
       setStage('ready')
@@ -127,10 +210,10 @@ export function ProfileForm() {
   // list rather than disappearing from it.
   const countryOptions = useMemo(() => {
     const known = BIDDER_COUNTRIES.map((entry) => ({ value: entry.code, label: entry.label }))
-    return known.some((option) => option.value === profile.country)
+    return known.some((option) => option.value === draft.country)
       ? known
-      : [...known, { value: profile.country, label: profile.country.toUpperCase() }]
-  }, [profile.country])
+      : [...known, { value: draft.country, label: draft.country.toUpperCase() }]
+  }, [draft.country])
 
   if (stage === 'loading') {
     return (
@@ -141,6 +224,15 @@ export function ProfileForm() {
   }
 
   const busy = stage === 'saving'
+  const exists = loaded !== undefined
+  const expired =
+    loaded === undefined ? [] : loaded.certificates.filter((held) => held.is_expired)
+
+  const continueLink = interrupted !== undefined && (
+    <Button asChild variant="secondary" size="sm" className="mt-3">
+      <Link href={interrupted.href}>Continue to {interrupted.label}</Link>
+    </Button>
+  )
 
   return (
     <form className="flex max-w-[52rem] flex-col gap-8" onSubmit={onSubmit} noValidate>
@@ -157,24 +249,35 @@ export function ProfileForm() {
         </Notice>
       )}
 
-      {failure !== undefined && (
-        <Notice tone="danger" title="Not saved">
-          {failure}
+      {outcome.kind === 'failed' && (
+        <Notice tone="danger" title={outcome.title}>
+          {outcome.message}
         </Notice>
       )}
 
-      {saved && failure === undefined && (
-        <Notice title="Saved">
+      {outcome.kind === 'saved_with_warning' && (
+        <Notice
+          role="status"
+          title="Saved, but not yet in the agent's memory"
+          className={WARNING_TINT}
+        >
+          <p className="m-0">{outcome.warning}</p>
+          {continueLink}
+        </Notice>
+      )}
+
+      {outcome.kind === 'saved' && (
+        <Notice role="status" title="Saved">
           <p className="m-0">
             Your profile is stored and the agent has been told. Checks from now on run against
             it.
           </p>
-          {interrupted !== undefined && (
-            <Button asChild variant="secondary" size="sm" className="mt-3">
-              <Link href={interrupted.href}>Continue to {interrupted.label}</Link>
-            </Button>
-          )}
+          {continueLink}
         </Notice>
+      )}
+
+      {loaded !== undefined && loaded.has_expired_certificates && (
+        <ExpiredCertificatesNotice expired={expired} checkedOn={loaded.checked_on} />
       )}
 
       <Section title="The company" description="As it appears on the register.">
@@ -183,7 +286,7 @@ export function ProfileForm() {
             label="Legal name"
             required
             className="sm:col-span-2"
-            value={profile.name}
+            value={draft.name}
             error={errors.byField.name}
             disabled={busy}
             onChange={(event) => patch({ name: event.target.value })}
@@ -192,7 +295,7 @@ export function ProfileForm() {
             label="Country"
             hint="Where the company is established"
             options={countryOptions}
-            value={profile.country}
+            value={draft.country}
             error={errors.byField.country}
             disabled={busy}
             onValueChange={(country) => patch({ country })}
@@ -203,7 +306,7 @@ export function ProfileForm() {
               value: form,
               label: LEGAL_FORM_LABELS[form],
             }))}
-            value={profile.legal_form}
+            value={draft.legal_form}
             error={errors.byField.legal_form}
             disabled={busy}
             onValueChange={(legal_form) => patch({ legal_form })}
@@ -211,7 +314,7 @@ export function ProfileForm() {
           <Input
             label="Registration number"
             hint="Optional — e.g. HRB 84512"
-            value={profile.registration_number ?? ''}
+            value={draft.registration_number ?? ''}
             error={errors.byField.registration_number}
             disabled={busy}
             onChange={(event) =>
@@ -221,7 +324,7 @@ export function ProfileForm() {
           <Input
             label="Register"
             hint="Optional — the court or registry the number belongs to"
-            value={profile.registration_court ?? ''}
+            value={draft.registration_court ?? ''}
             error={errors.byField.registration_court}
             disabled={busy}
             onChange={(event) => patch({ registration_court: emptyToNull(event.target.value) })}
@@ -240,7 +343,7 @@ export function ProfileForm() {
               value: entry.code,
               label: entry.label,
             }))}
-            value={profile.language}
+            value={draft.language}
             error={errors.byField.language}
             disabled={busy}
             onValueChange={(language) => patch({ language })}
@@ -248,7 +351,7 @@ export function ProfileForm() {
           <Select<Tone>
             label="Tone"
             options={TONES.map((tone) => ({ value: tone, label: TONE_LABELS[tone] }))}
-            value={profile.tone}
+            value={draft.tone}
             error={errors.byField.tone}
             disabled={busy}
             onValueChange={(tone) => patch({ tone })}
@@ -265,21 +368,19 @@ export function ProfileForm() {
             label="Total full-time equivalents"
             inputMode="decimal"
             hint="Optional"
-            value={numberValue(profile.staff_fte)}
+            value={draft.staff_fte}
             error={errors.byField.staff_fte}
             disabled={busy}
-            onChange={(event) => patch({ staff_fte: toNullableNumber(event.target.value) })}
+            onChange={(event) => patch({ staff_fte: event.target.value })}
           />
           <Input
             label="FTE in the field of the contract"
             inputMode="decimal"
             hint="Optional"
-            value={numberValue(profile.staff_fte_relevant)}
+            value={draft.staff_fte_relevant}
             error={errors.byField.staff_fte_relevant}
             disabled={busy}
-            onChange={(event) =>
-              patch({ staff_fte_relevant: toNullableNumber(event.target.value) })
-            }
+            onChange={(event) => patch({ staff_fte_relevant: event.target.value })}
           />
         </div>
       </Section>
@@ -289,7 +390,7 @@ export function ProfileForm() {
         description="One row per financial year. Most tenders ask for the last three."
       >
         <TurnoverRows
-          rows={profile.turnover}
+          rows={draft.turnover}
           errors={errors}
           disabled={busy}
           onChange={(turnover) => patch({ turnover: [...turnover] })}
@@ -301,7 +402,8 @@ export function ProfileForm() {
         description="What you hold. The documents that prove it are uploaded below."
       >
         <CertificateRows
-          rows={profile.certificates}
+          rows={draft.certificates}
+          expired={expired}
           errors={errors}
           disabled={busy}
           onChange={(certificates) => patch({ certificates: [...certificates] })}
@@ -336,6 +438,34 @@ function Section({
 }
 
 /**
+ * The warning `has_expired_certificates` asks for, said in the backend's own terms: which
+ * certificates, judged on which day, and why it matters — `is_expired` is described as
+ * "no longer evidence", and `agent/flags.py` puts a reviewer note on every matrix row that
+ * cites one (S3.4.4). What to do about it is the two things this form can do.
+ */
+function ExpiredCertificatesNotice({
+  expired,
+  checkedOn,
+}: Readonly<{ expired: readonly CertificateResponse[]; checkedOn: string }>) {
+  const names = expired.map((held) => held.name || 'An unnamed certificate')
+  const title =
+    names.length === 1 ? `${names[0]} has expired` : `${names.length} certificates have expired`
+  return (
+    <Notice role="status" title={title} className={WARNING_TINT}>
+      <p className="m-0">
+        {names.length === 1
+          ? 'It was past its expiry date on'
+          : `${names.join(', ')} were past their expiry dates on`}{' '}
+        {formatDate(checkedOn)}, so the agent no longer counts{' '}
+        {names.length === 1 ? 'it' : 'them'} as evidence: every matrix row that cites{' '}
+        {names.length === 1 ? 'it' : 'one'} carries a note for the reviewer. Record the renewed
+        expiry date below, or remove the row.
+      </p>
+    </Notice>
+  )
+}
+
+/**
  * Where `RequireCompany` was taking the bidder when it sent them here, if it did.
  *
  * Named from the nav rather than from the path, so the notice says "Dashboard" and not
@@ -351,21 +481,97 @@ function useInterruptedDestination():
   return item === undefined ? undefined : { href, label: item.label }
 }
 
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : 'The profile could not be loaded.'
+function messageOf(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback
+}
+
+/** The draft the form edits, from the profile as the API holds it. */
+function draftFrom(profile: CompanyProfile): ProfileDraft {
+  return {
+    ...profile,
+    staff_fte: numberText(profile.staff_fte),
+    staff_fte_relevant: numberText(profile.staff_fte_relevant),
+    turnover: profile.turnover.map((row) => ({
+      currency: row.currency,
+      // The generated schema leaves the field optional; the draft has one shape for "none".
+      field_of_activity: row.field_of_activity ?? null,
+      year: String(row.year),
+      // `0` is what an unfilled amount saves as (see `profileFrom`), so it comes back as
+      // the empty box it was, not as a figure the bidder never typed.
+      amount: row.amount === 0 ? '' : String(row.amount),
+    })),
+  }
 }
 
 /** The generated schema leaves optional numbers `number | null | undefined`; all three are
  * "not stated", and the input shows the same empty box for each. */
-function numberValue(value: number | null | undefined): string {
+function numberText(value: number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value)
 }
 
-function toNullableNumber(value: string): number | null {
-  const trimmed = value.trim()
+type ParsedDraft = { readonly profile: CompanyProfile } | { readonly errors: FieldErrors }
+
+/**
+ * The request body from the draft, or the fields that hold text which is not a number.
+ *
+ * Bounds stay the server's business (a negative FTE is its 422), but a non-number has no
+ * `number` to send, so it is the one thing checked here — under the field, in the same
+ * shape the server's errors arrive in. An empty optional box is `null`; an empty turnover
+ * year or amount is `0`, which the server then names as out of bounds for the year and
+ * accepts as a genuine zero for the amount, exactly as before the draft existed.
+ */
+function profileFrom(draft: ProfileDraft): ParsedDraft {
+  const staff_fte = optionalNumber(draft.staff_fte)
+  const staff_fte_relevant = optionalNumber(draft.staff_fte_relevant)
+  const turnover = draft.turnover.map((row) => ({
+    ...row,
+    year: optionalNumber(row.year),
+    amount: optionalNumber(row.amount),
+  }))
+
+  const notNumbers = [
+    ...(staff_fte === undefined ? ['staff_fte'] : []),
+    ...(staff_fte_relevant === undefined ? ['staff_fte_relevant'] : []),
+    ...turnover.flatMap((row, index) => [
+      ...(row.year === undefined ? [`turnover.${index}.year`] : []),
+      ...(row.amount === undefined ? [`turnover.${index}.amount`] : []),
+    ]),
+  ]
+  if (notNumbers.length > 0) {
+    return {
+      errors: {
+        byField: Object.fromEntries(notNumbers.map((path) => [path, NOT_A_NUMBER])),
+        formLevel: undefined,
+      },
+    }
+  }
+
+  return {
+    profile: {
+      ...draft,
+      staff_fte: staff_fte ?? null,
+      staff_fte_relevant: staff_fte_relevant ?? null,
+      turnover: turnover.map((row) => ({
+        ...row,
+        year: row.year ?? 0,
+        amount: row.amount ?? 0,
+      })),
+    },
+  }
+}
+
+/**
+ * `null` for an empty box, `undefined` for text that is not a number, the number otherwise.
+ *
+ * `Number(...)`, not `parseFloat`: `parseFloat('12abc')` is `12`, which would save a value
+ * the bidder did not type. A single comma is read as the decimal mark, so `12,5` is `12.5`;
+ * `1.500.000,50` is `undefined`, and the field says so rather than guessing.
+ */
+function optionalNumber(text: string): number | null | undefined {
+  const trimmed = text.trim()
   if (trimmed.length === 0) return null
-  const parsed = Number.parseFloat(trimmed.replace(',', '.'))
-  return Number.isNaN(parsed) ? null : parsed
+  const parsed = Number(trimmed.replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function emptyToNull(value: string): string | null {

@@ -11,22 +11,41 @@
  * `field_of_activity` is on the row for a reason worth keeping: a selection criterion is
  * routinely "turnover *in the field of the contract*", and a single company-wide figure
  * cannot answer it. The demo pack's `Eigenerklaerung` prints exactly this split.
+ *
+ * **The rows here are the text the bidder typed, not the numbers.** `TurnoverYear.amount`
+ * is a `number`, and a controlled input whose value is the *parsed* number eats the decimal
+ * point: `1.` parses to `1`, re-renders as `"1"`, and the next keystroke gives `15` — on the
+ * one field most likely to need a decimal. So this component holds strings, never parses,
+ * and `profile-form` turns a `TurnoverDraft` into a `TurnoverYear` once, on submit, where
+ * text that is not a number can be named under its own field instead of silently becoming
+ * `0`. A German bidder's `1500000,50` is accepted there; a thousands separator is not.
  */
 import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icons'
 import { Input } from '@/components/ui/input'
-import type { TurnoverYear } from '@/lib/companies'
 import type { FieldErrors } from '@/lib/field-errors'
 
+/**
+ * One turnover row as the form edits it: `year` and `amount` are the typed text, `''` for
+ * a box the bidder has not filled in. `currency` and `field_of_activity` are the saved
+ * shapes already.
+ */
+export interface TurnoverDraft {
+  readonly year: string
+  readonly amount: string
+  readonly currency: string
+  readonly field_of_activity: string | null
+}
+
 export interface TurnoverRowsProps {
-  readonly rows: readonly TurnoverYear[]
+  readonly rows: readonly TurnoverDraft[]
   readonly errors: FieldErrors
   readonly disabled: boolean
-  readonly onChange: (rows: readonly TurnoverYear[]) => void
+  readonly onChange: (rows: readonly TurnoverDraft[]) => void
 }
 
 export function TurnoverRows({ rows, errors, disabled, onChange }: TurnoverRowsProps) {
-  const update = (index: number, patch: Partial<TurnoverYear>) =>
+  const update = (index: number, patch: Partial<TurnoverDraft>) =>
     onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)))
 
   return (
@@ -39,18 +58,18 @@ export function TurnoverRows({ rows, errors, disabled, onChange }: TurnoverRowsP
           <Input
             label="Year"
             inputMode="numeric"
-            value={row.year === 0 ? '' : String(row.year)}
+            value={row.year}
             error={errors.byField[`turnover.${index}.year`]}
             disabled={disabled}
-            onChange={(event) => update(index, { year: toInteger(event.target.value) })}
+            onChange={(event) => update(index, { year: event.target.value })}
           />
           <Input
             label="Amount"
             inputMode="decimal"
-            value={row.amount === 0 ? '' : String(row.amount)}
+            value={row.amount}
             error={errors.byField[`turnover.${index}.amount`]}
             disabled={disabled}
-            onChange={(event) => update(index, { amount: toNumber(event.target.value) })}
+            onChange={(event) => update(index, { amount: event.target.value })}
           />
           <Input
             label="Field of activity"
@@ -97,21 +116,16 @@ export function TurnoverRows({ rows, errors, disabled, onChange }: TurnoverRowsP
  *
  * `EUR` because every threshold in the golden tenders is in euros and S1.3.1 converts the
  * rest; a currency nobody changes is one fewer field between the bidder and a saved profile.
+ *
+ * Only a row whose year already reads as a whole number counts towards "earliest": a
+ * half-typed year would otherwise seed the next row from garbage.
  */
-function nextRow(rows: readonly TurnoverYear[]): TurnoverYear {
-  const years = rows.map((row) => row.year).filter((year) => year > 0)
+function nextRow(rows: readonly TurnoverDraft[]): TurnoverDraft {
+  const years = rows
+    .map((row) => Number(row.year.trim()))
+    .filter((year) => Number.isInteger(year) && year > 0)
   const year = years.length === 0 ? new Date().getFullYear() - 1 : Math.min(...years) - 1
-  return { year, amount: 0, currency: 'EUR', field_of_activity: null }
-}
-
-function toInteger(value: string): number {
-  const parsed = Number.parseInt(value.replace(/\D/g, ''), 10)
-  return Number.isNaN(parsed) ? 0 : parsed
-}
-
-function toNumber(value: string): number {
-  const parsed = Number.parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.'))
-  return Number.isNaN(parsed) ? 0 : parsed
+  return { year: String(year), amount: '', currency: 'EUR', field_of_activity: null }
 }
 
 function emptyToNull(value: string): string | null {

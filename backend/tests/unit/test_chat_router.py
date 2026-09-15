@@ -37,6 +37,7 @@ from crossbid.routers.chat import (
     router,
 )
 from crossbid.settings import Settings
+from crossbid.usage import UsageNode, UsageRecorder, current_recorder
 from tests.conftest import FakeConnectionSource
 
 COMPANY_ID = str(uuid.UUID("11111111-1111-4111-8111-111111111111"))
@@ -90,6 +91,8 @@ class ScriptedAgent:
         self.scopes: list[dict[str, str]] = []
         self.questions: list[str] = []
         self.threads: list[str] = []
+        self.recorders: list[UsageRecorder | None] = []
+        """What the turn was attributed to, read from inside the call as a node would."""
 
     @asynccontextmanager
     async def open(
@@ -107,6 +110,7 @@ class ScriptedAgent:
     async def run(self, _graph: object, *, question: str, thread_id: str) -> ChatTurn:
         self.questions.append(question)
         self.threads.append(thread_id)
+        self.recorders.append(current_recorder())
         if isinstance(self._turn, Exception):
             raise self._turn
         return self._turn
@@ -412,3 +416,33 @@ def test_every_field_of_the_contract_is_described_for_the_generated_client() -> 
     """
     for name, info in ChatQuestion.model_fields.items():
         assert info.description, f"ChatQuestion.{name} has no description"
+
+
+def test_a_question_is_attributed_to_the_bid_that_asked_it(
+    api: TestClient, agent: ScriptedAgent
+) -> None:
+    """A chat turn spends money, and the route is the only place that knows whose bid it is.
+
+    Without a scope every turn reached `usage._warn_unattributed`: the spend was logged and
+    then lost, so `/dev/costs` understated any bid whose reviewer asked anything and the
+    runner compared an understated total against `run_budget_usd`.
+    """
+    # Act
+    api.post(f"/bids/{BID_ID}/chat", json=question(), headers=headers())
+
+    # Assert
+    assert len(agent.recorders) == 1
+    recorder = agent.recorders[0]
+    assert recorder is not None, "the turn ran outside any usage scope"
+    assert recorder.company_id == COMPANY_ID
+    assert recorder.bid_id == BID_ID
+    assert recorder.node is UsageNode.CHAT
+
+
+def test_the_scope_does_not_outlive_the_question(api: TestClient, agent: ScriptedAgent) -> None:
+    """A context variable left set would attribute the next thing this worker does — an
+    upload's injection review, say — to whichever bid last asked a question."""
+    api.post(f"/bids/{BID_ID}/chat", json=question(), headers=headers())
+
+    assert agent.recorders[0] is not None
+    assert current_recorder() is None

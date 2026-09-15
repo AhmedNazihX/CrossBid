@@ -90,6 +90,13 @@ class UsageNode(StrEnum):
 
     Every stage is listed, not only the three that call a model today. A node that starts
     spending later is attributed the moment it does, with nobody remembering to come back.
+
+    `CHAT` is the one member that is not a bid-graph node. "Ask the tender" runs its own
+    graph against a bid the bidder is looking at, and it spends real money on a model per
+    question — it was simply never given an attribution, so every chat turn landed in
+    `_warn_unattributed` and `/dev/costs` understated any bid whose reviewer asked anything.
+    The vocabulary is the report's, not the bid graph's; what the parity test still holds is
+    the direction that matters, that no graph node may be missing from it.
     """
 
     PARSE_DOCS = "parse_docs"
@@ -100,6 +107,7 @@ class UsageNode(StrEnum):
     AWAIT_REVIEW = "await_review"
     APPLY_REVIEW = "apply_review"
     FINALIZE = "finalize"
+    CHAT = "chat"
 
 
 OPENROUTER_COST_KEY: Final = "cost"
@@ -329,10 +337,14 @@ def _warn_unattributed(usage: CallUsage) -> None:
 
     One real caller reaches this today: S5.3's injection review runs during document
     ingestion, which has a tenant but no bid and no graph node to be attributed to. It is
-    left here rather than given a node of its own because `llm_usage.node` is the graph's
-    vocabulary and ingestion is not in it, and because ADR-0049 measured the review firing
-    on zero of 351 real chunks — a line in the log is the right weight for a call that
-    almost never happens. Anything else arriving here is missing instrumentation.
+    left here rather than given a node of its own because ingestion happens before any bid
+    exists and `llm_usage.bid_id` is what the report groups by, and because ADR-0049
+    measured the review firing on zero of 351 real chunks — a line in the log is the right
+    weight for a call that almost never happens.
+
+    Chat used to reach here too, and that was a defect rather than a decision: it has a
+    tenant *and* a bid, so it now records under `UsageNode.CHAT`. Anything else arriving
+    here is missing instrumentation.
     """
     logger.warning(
         "'%s' spent %d+%d tokens (%s USD) outside any usage scope, so it is not in "

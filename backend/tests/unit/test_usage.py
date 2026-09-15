@@ -369,4 +369,10 @@ def test_every_node_value_is_the_graph_node_name_it_stands_for() -> None:
         graph_module.APPLY_REVIEW,
         graph_module.FINALIZE,
     }
-    assert {node.value for node in UsageNode} == names
+    # A subset, not an equality: the report's vocabulary is allowed to name spend the bid
+    # graph does not make, and `CHAT` does. The direction worth holding is the other one --
+    # a node renamed in the graph and not here would split one node's costs across two rows
+    # in `/dev/costs` and nothing else would fail.
+    assert names <= {node.value for node in UsageNode}
+    assert UsageNode.CHAT.value not in names, "chat runs its own graph, not a bid node"
+    assert {node.value for node in UsageNode} - names == {UsageNode.CHAT.value}
