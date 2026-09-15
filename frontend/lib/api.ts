@@ -1128,7 +1128,7 @@ export interface components {
          *     built from untrusted input is how untrusted input escapes (ADR-0008).
          * @enum {string}
          */
-        ExtractionProblemReason: "no_verbatim_quote" | "invalid_row" | "invalid_criterion_id" | "missing_translation" | "model_error" | "section_failed" | "unwrappable_section" | "unreadable_document" | "unparseable_document" | "planted_instruction";
+        ExtractionProblemReason: "no_verbatim_quote" | "invalid_row" | "invalid_criterion_id" | "missing_translation" | "model_error" | "section_failed" | "unwrappable_section" | "unreadable_document" | "indexing_failed" | "unparseable_document" | "planted_instruction";
         /**
          * FeedbackListResponse
          * @description Every target of this bid the bidder has rated, with what they last said about it.
