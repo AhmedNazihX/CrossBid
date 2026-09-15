@@ -1475,3 +1475,77 @@ def test_an_unreadable_page_carrying_a_plant_is_not_scanned() -> None:
 
     # Assert
     assert ExtractionProblemReason.PLANTED_INSTRUCTION not in reasons_of(update)
+
+
+def test_a_re_ask_keeps_what_the_first_answer_already_got_right() -> None:
+    """The recall leak this merge closes.
+
+    A dense section answers many rows at once. One bad quote among them triggers the re-ask,
+    and the re-ask is under no obligation to repeat the rows it already got right — the
+    correction names pages, not rows. Replacing the first result outright therefore threw
+    away verified, cited rows and recorded no problem to say it had happened.
+    """
+    # Arrange -- first answer: two good rows and one paraphrase; second: only the fix.
+    paraphrase = "Der Umsatz muss hoch sein."
+    extractor = RecordingExtractor(
+        in_order(
+            answer(
+                extracted(TURNOVER, page=1),
+                extracted(paraphrase, page=1),
+                extracted(STAFF, page=2),
+            ),
+            answer(extracted(REFERENCES, page=3)),
+        )
+    )
+
+    # Act
+    update = run_extraction(extractor, [document(TURNOVER, STAFF, REFERENCES)])
+
+    # Assert
+    assert extractor.calls == 2
+    quoted = [row.source_text for row in rows_of(update)]
+    assert TURNOVER in quoted and STAFF in quoted, "the first answer's rows survive"
+    assert REFERENCES in quoted, "and so does the re-ask's"
+    assert problems_of(update) == [], "the re-ask was clean, so nothing is still outstanding"
+
+
+def test_a_failed_re_ask_loses_the_call_and_not_the_rows() -> None:
+    """The worst shape of the same defect: `_attempt` answers a raised call with a result
+    carrying no rows at all, so a transport blip after a good first answer used to empty the
+    whole section. The error is still reported — it just no longer costs the rows."""
+    # Arrange
+    paraphrase = "Der Umsatz muss hoch sein."
+    extractor = RecordingExtractor(
+        in_order(
+            answer(extracted(TURNOVER, page=1), extracted(paraphrase, page=1)),
+            RuntimeError("provider said 502"),
+        )
+    )
+
+    # Act
+    update = run_extraction(extractor, [document(TURNOVER, STAFF)])
+
+    # Assert
+    assert [row.source_text for row in rows_of(update)] == [TURNOVER]
+    assert reasons_of(update) == [ExtractionProblemReason.MODEL_ERROR]
+
+
+def test_a_row_answered_in_both_attempts_reaches_the_matrix_once() -> None:
+    """A model that repeats itself is the likely case, not the exception: the correction
+    names a page, and re-reading that page returns what was already right."""
+    # Arrange
+    paraphrase = "Der Umsatz muss hoch sein."
+    extractor = RecordingExtractor(
+        in_order(
+            answer(extracted(TURNOVER, page=1), extracted(paraphrase, page=1)),
+            answer(extracted(TURNOVER, page=1), extracted(STAFF, page=2)),
+        )
+    )
+
+    # Act
+    update = run_extraction(extractor, [document(TURNOVER, STAFF)])
+
+    # Assert
+    quoted = [row.source_text for row in rows_of(update)]
+    assert quoted.count(TURNOVER) == 1
+    assert STAFF in quoted

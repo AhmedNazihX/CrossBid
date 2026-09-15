@@ -443,7 +443,13 @@ class RequirementExtractor:
     async def _extract_section(
         self, section: DocumentSection, bid_id: str, language: str
     ) -> _SectionResult:
-        """One section's rows, re-asking at most `RE_ASKS_PER_SECTION` times."""
+        """One section's rows, re-asking at most `RE_ASKS_PER_SECTION` times.
+
+        Rows accumulate across the attempts; the problems are the last attempt's alone. That
+        asymmetry is the point: a clause the first answer quoted badly and the second quoted
+        well should not still be reported as unquoted, while a row the first answer got right
+        is a row whether or not the second one repeated it.
+        """
         try:
             prompt = self._prompt(section, language)
         except DataWrapError:
@@ -453,11 +459,19 @@ class RequirementExtractor:
             return _SectionResult(problems=(_problem(reason, section),))
 
         asks = 0
+        earlier: tuple[Requirement, ...] = ()
         while True:
             asks += 1
             attempt = await self._attempt(prompt, section, bid_id)
             if attempt.correction is None or asks > RE_ASKS_PER_SECTION:
-                return attempt.result
+                return _merged(earlier, attempt.result)
+            # Everything the first answer got right is carried into the second. Before this,
+            # a re-ask replaced its predecessor outright, so a section that answered twelve
+            # good rows and one bad quote came back with whatever the re-ask happened to
+            # return -- and when the re-ask raised, with nothing at all. Those rows were
+            # already checked against the page they cite; losing them cost recall silently,
+            # and no problem was recorded to say so.
+            earlier = (*earlier, *attempt.result.rows)
             prompt = (*prompt, ("human", attempt.correction))
 
     async def _attempt(self, prompt: Prompt, section: DocumentSection, bid_id: str) -> _Attempt:
@@ -682,6 +696,24 @@ def _is_verbatim(quote: str, page_text: str) -> bool:
     """
     needle = _normalised(quote)
     return bool(needle) and needle in _normalised(page_text)
+
+
+def _merged(earlier: tuple[Requirement, ...], final: _SectionResult) -> _SectionResult:
+    """One section's attempts folded into one result: every row, the last set of problems.
+
+    Untouched when there was only one attempt, so the common path keeps the exact shape (and
+    the exact ordering) it had before re-asking was allowed to accumulate. Re-sorted by page
+    and deduped when there were two, because `_dedupe` reads page proximity and would
+    otherwise compare a first-attempt row against a second-attempt row that arrived out of
+    order. An identical row answered twice collapses here rather than reaching the matrix
+    twice -- the ids would agree anyway, being a `uuid5` over bid, file, page and quote.
+    """
+    if not earlier:
+        return final
+    return _SectionResult(
+        rows=_dedupe(sorted((*earlier, *final.rows), key=_page_of)),
+        problems=final.problems,
+    )
 
 
 def _dedupe(rows: Iterable[Requirement]) -> tuple[Requirement, ...]:

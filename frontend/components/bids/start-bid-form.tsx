@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
@@ -15,12 +14,7 @@ import { Select } from '@/components/ui/select'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { startBid } from '@/lib/bids'
-import {
-  hasPages,
-  listDocuments,
-  TENDER_DOCUMENT_KINDS,
-  type DocumentResponse,
-} from '@/lib/documents'
+import { hasPages, TENDER_DOCUMENT_KINDS, type DocumentResponse } from '@/lib/documents'
 import { formatDate, plural } from '@/lib/format'
 import { sourceLanguageOf, type TedNotice } from '@/lib/tenders'
 import {
@@ -28,6 +22,7 @@ import {
   DOCUMENT_STATUS_LABELS,
   statusBadgeTone,
 } from '@/components/documents/document-labels'
+import type { DocumentListState } from '@/components/documents/documents-panel'
 
 type SourceLanguage = 'fr' | 'de' | 'en'
 
@@ -37,20 +32,6 @@ const SOURCE_LANGUAGES: readonly { value: SourceLanguage; label: string }[] = [
   { value: 'en', label: 'English (EN)' },
 ]
 
-type ListState =
-  | { readonly phase: 'loading' }
-  | { readonly phase: 'failed'; readonly message: string }
-  | { readonly phase: 'loaded'; readonly documents: readonly DocumentResponse[] }
-
-/**
- * The start step — the third card of `NewBid.dc.html` (story S4.5.1 brings it forward from
- * S4.3.1, whose TED search and in-flow upload land in Increment 4).
- *
- * A notice number, the tender's language, a checklist of the company's tender documents
- * (`GET /documents`, kinds `tender_document` / `tender_notice`, not yet attached to a bid),
- * and Start analysis → `POST /bids` → the workspace. Documents still processing are listed
- * but cannot be chosen, with their status; the API's `detail` is shown on any refusal.
- */
 type OffsetValue = '' | '0' | '60' | '120' | '180'
 
 /**
@@ -104,11 +85,32 @@ export interface StartBidFormProps {
    * see and we cannot.
    */
   readonly notice?: TedNotice
+  /**
+   * The company's documents as `DocumentsPanel` currently knows them — every kind, every
+   * status. This form keeps the tender kinds not yet on a bid and lets only the `ready` ones
+   * be ticked, so a file uploaded a moment ago shows here at once, disabled, and becomes
+   * tickable the poll after it is ready.
+   */
+  readonly documentList: DocumentListState
 }
 
-export function StartBidForm({ notice }: StartBidFormProps = {}) {
+/**
+ * The start step — the third card of `NewBid.dc.html` (story S4.5.1 brought it forward from
+ * S4.3.1, whose TED search and in-flow upload landed in Increment 4).
+ *
+ * A notice number, the tender's language, a checklist of the company's tender documents
+ * (kinds in `TENDER_DOCUMENT_KINDS`, not yet attached to a bid), and Start analysis →
+ * `POST /bids` → the workspace. Documents still processing are listed but cannot be chosen,
+ * with their status; the API's `detail` is shown on any refusal.
+ *
+ * The list is the flow's, not this form's. Step 2 above owns the one `GET /documents` on the
+ * page and reports every change through `DocumentsPanel`'s `onDocumentsChange`. Until
+ * 2026-09-15 this form fetched its own copy once on mount — which is before any upload, since
+ * it mounts the moment a notice is picked — so a pack dropped in step 2 never reached step
+ * 3 and the bidder read "no tender documents" directly under the table that listed them.
+ */
+export function StartBidForm({ notice, documentList }: StartBidFormProps) {
   const router = useRouter()
-  const [listState, setListState] = useState<ListState>({ phase: 'loading' })
   const [noticeNumber, setNoticeNumber] = useState(notice?.publication_number ?? '')
   const [sourceLanguage, setSourceLanguage] = useState<SourceLanguage>(
     notice === undefined ? 'fr' : sourceLanguageOf(notice)
@@ -125,26 +127,14 @@ export function StartBidForm({ notice }: StartBidFormProps = {}) {
   const [error, setError] = useState<string | undefined>(undefined)
   const [isStarting, setIsStarting] = useState(false)
 
-  useEffect(() => {
-    const controller = new AbortController()
-    listDocuments(controller.signal)
-      .then((documents) => setListState({ phase: 'loaded', documents }))
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setListState({ phase: 'failed', message: describeApiError(cause) })
-        }
-      })
-    return () => controller.abort()
-  }, [])
-
   const tenderDocuments = useMemo(
     () =>
-      listState.phase === 'loaded'
-        ? listState.documents.filter(
+      documentList.phase === 'loaded'
+        ? documentList.documents.filter(
             (document) => TENDER_DOCUMENT_KINDS.has(document.kind) && document.bid_id === null
           )
         : [],
-    [listState]
+    [documentList]
   )
   const readyCount = tenderDocuments.filter((document) => document.status === 'ready').length
   // A deadline with no offset is not "a deadline we can almost use": it is refused by the
@@ -265,7 +255,7 @@ export function StartBidForm({ notice }: StartBidFormProps = {}) {
             Procurement documents
           </legend>
           <DocumentChecklist
-            listState={listState}
+            documentList={documentList}
             documents={tenderDocuments}
             selected={selected}
             onToggle={toggle}
@@ -305,41 +295,38 @@ export function StartBidForm({ notice }: StartBidFormProps = {}) {
 }
 
 function DocumentChecklist({
-  listState,
+  documentList,
   documents,
   selected,
   onToggle,
   disabled,
 }: {
-  readonly listState: ListState
+  readonly documentList: DocumentListState
   readonly documents: readonly DocumentResponse[]
   readonly selected: ReadonlySet<string>
   readonly onToggle: (documentId: string, isChecked: boolean) => void
   readonly disabled: boolean
 }) {
-  if (listState.phase === 'loading') {
+  if (documentList.phase === 'loading') {
     return (
       <p role="status" className="m-0 [font:var(--type-body-sm)] text-text-muted">
         Loading your documents…
       </p>
     )
   }
-  if (listState.phase === 'failed') {
+  if (documentList.phase === 'failed') {
     return (
       <Notice tone="danger" title="Your documents could not be loaded">
-        {listState.message}
+        {documentList.message}
       </Notice>
     )
   }
   if (documents.length === 0) {
     return (
       <p className="m-0 text-text-secondary">
-        No tender documents are waiting for a bid. Upload the pack on the{' '}
-        <Link href="/company" className="underline">
-          Company profile
-        </Link>{' '}
-        page first — the RC, the specifications, the notice, any annexes, and the buyer&rsquo;s
-        ESPD request if there is one.
+        No tender documents are waiting for a bid. Upload the pack in step 2 above — the RC, the
+        specifications, the notice, any annexes, and the buyer&rsquo;s ESPD request if there is
+        one — and each file is listed here the moment it is accepted.
       </p>
     )
   }

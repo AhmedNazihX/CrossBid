@@ -245,16 +245,23 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
         Review verdict
       </Button>
     ) : (
-      // A link, not a button: the panel is on this page and the action is "take me to it",
+      // An anchor, not a button: the panel is on this page and the action is "take me to it",
       // so it should open in a new tab, be copyable, and move focus the way an anchor does.
-      <Link
-        href="#verdict"
-        onClick={() => setSideTab('verdict')}
-        className="inline-flex h-9 items-center gap-2 rounded-md bg-accent-default px-3.5 [font:var(--type-body-sm)] font-medium text-text-inverse no-underline transition-colors hover:bg-accent-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-default"
-      >
-        <Icon name="shield" size={16} />
-        Review verdict
-      </Link>
+      // `Button asChild` puts the primary variant's classes on the `Link`, so the enabled and
+      // disabled states above are one control in one hue, and every colour it uses is a token
+      // that exists. The hand-rolled class string this replaced named `bg-accent-default` and
+      // `hover:bg-accent-strong`, which the `@theme` block never defines — and an unknown
+      // colour under `--color-*: initial` emits nothing rather than failing, so the control
+      // shipped as white text on a transparent ground (contrast 1.02:1). The icon is inline
+      // because the `asChild` branch does not render the `icon` prop, as on `/bids`.
+      <Button asChild className="hover:no-underline">
+        <Link href="#verdict" onClick={() => setSideTab('verdict')}>
+          <span className="inline-flex size-4">
+            <Icon name="shield" size={16} />
+          </span>
+          Review verdict
+        </Link>
+      </Button>
     )
 
   const liveRegion = (

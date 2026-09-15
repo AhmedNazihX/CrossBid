@@ -18,21 +18,34 @@
  * email, or from the buyer directly — should not be made to search for a notice they can
  * already name, so the step offers a way past itself and the start form keeps its own
  * fields. That is also what keeps this screen working the day TED is down.
+ *
+ * **Steps 2 and 3 share one list.** The panel owns the only `GET /documents` on the page and
+ * reports every change up to here — an upload accepted, a row polled to ready — and the
+ * start form renders from that, so a file dropped in step 2 is in step 3's checklist before
+ * the bidder has scrolled to it. Two components each fetching on mount was how the flow
+ * shipped, and it meant the form's list was frozen from before the first upload
+ * (2026-09-15). The panel also uploads as `tender_document` here rather than its own
+ * evidence default, because a pack is tender documents and the start step keeps nothing else.
  */
 import { useEffect, useState } from 'react'
 
 import { FoundOnTed } from '@/components/bids/found-on-ted'
 import { StartBidForm } from '@/components/bids/start-bid-form'
 import { TenderSearch } from '@/components/bids/tender-search'
-import { DocumentsPanel } from '@/components/documents/documents-panel'
+import { DocumentsPanel, type DocumentListState } from '@/components/documents/documents-panel'
 import { Badge } from '@/components/ui/badge'
 import { loadProfile } from '@/lib/companies'
+import type { DocumentKind } from '@/lib/documents'
 import type { TedNotice } from '@/lib/tenders'
+
+/** What a file in a pack is, until the bidder says otherwise; see the docblock above. */
+const PACK_DEFAULT_KIND: DocumentKind = 'tender_document'
 
 export function NewBidFlow() {
   const language = useBidderLanguage()
   const [notice, setNotice] = useState<TedNotice | undefined>(undefined)
   const [searchSkipped, setSearchSkipped] = useState(false)
+  const [documentList, setDocumentList] = useState<DocumentListState>({ phase: 'loading' })
   const past = notice !== undefined || searchSkipped
 
   if (!past) {
@@ -76,12 +89,12 @@ export function NewBidFlow() {
 
       <div className="flex flex-col gap-4">
         <Step number={2} title="Upload the pack" />
-        <DocumentsPanel />
+        <DocumentsPanel defaultKind={PACK_DEFAULT_KIND} onDocumentsChange={setDocumentList} />
       </div>
 
       <div className="flex flex-col gap-4">
         <Step number={3} title="Start" />
-        <StartBidForm notice={notice} />
+        <StartBidForm notice={notice} documentList={documentList} />
       </div>
     </div>
   )

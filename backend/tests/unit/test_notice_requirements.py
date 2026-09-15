@@ -12,10 +12,14 @@ notice's own language, a deadline with an offset and no hour, three-letter langu
 
 from __future__ import annotations
 
+import logging
 from datetime import date
+
+import pytest
 
 from crossbid.agent.notice_requirements import requirements_from_notice
 from crossbid.models.requirement import (
+    MAX_QUOTE_CHARS,
     Checkability,
     RequirementCategory,
     RequirementKind,
@@ -162,3 +166,58 @@ def test_the_rows_have_distinct_ids() -> None:
     rows = rows_of(NOTICE)
 
     assert len({row.id for row in rows}) == len(rows)
+
+
+def test_a_criterion_longer_than_a_quote_may_be_is_dropped_and_not_raised(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The defect this guard exists for: TED does not cap the field, `source_text` does.
+
+    Constructing inline, one verbose buyer raised a `ValidationError` out of `parse_docs`,
+    which the stage wrapper turned into a failed bid — losing a pack the bidder had already
+    uploaded. The notice is a bonus source, so the row goes and the run stays.
+    """
+    verbose = NOTICE.model_copy(
+        update={"selection_criteria": (CRITERION, "x" * (MAX_QUOTE_CHARS + 1))}
+    )
+
+    with caplog.at_level(logging.WARNING, logger="crossbid.agent.notice_requirements"):
+        rows = rows_of(verbose)
+
+    quotes = [row.source_text for row in rows]
+    assert CRITERION in quotes
+    assert not any(quote.startswith("xxxx") for quote in quotes)
+    assert "source_text" in caplog.text
+
+
+def test_a_dropped_criterion_never_logs_the_buyers_own_text(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The text could be anything, including the planted instructions S2.3.1 looks for."""
+    secret = "ZZZ" + "y" * MAX_QUOTE_CHARS
+    verbose = NOTICE.model_copy(update={"selection_criteria": (secret,)})
+
+    with caplog.at_level(logging.WARNING, logger="crossbid.agent.notice_requirements"):
+        rows_of(verbose)
+
+    assert "ZZZ" not in caplog.text
+
+
+def test_the_ids_are_derived_and_not_minted() -> None:
+    """A re-run upserts instead of doubling.
+
+    `readmodel/requirements.py` states the contract: the id is a `uuid5` so that a crash
+    between the projection write and the checkpoint write does not leave two deadline rows.
+    Extraction and the DUME path already held it; the notice path used `uuid4` and did not.
+    """
+    first = rows_of(NOTICE)
+    second = rows_of(NOTICE)
+
+    assert [row.id for row in first] == [row.id for row in second]
+
+
+def test_a_different_bid_gets_different_ids_for_the_same_notice() -> None:
+    """The bid is in the key, so two bids on one notice do not collide on the primary key."""
+    other = requirements_from_notice(NOTICE, bid_id="22222222-2222-4222-8222-222222222222")
+
+    assert {row.id for row in rows_of(NOTICE)}.isdisjoint({row.id for row in other})

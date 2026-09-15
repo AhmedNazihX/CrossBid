@@ -9,6 +9,15 @@ import { cn } from 'cn'
  * the underline variant (2 px ink rule, muted count after the label). Controlled only. The
  * tablist is keyboard-complete: arrows move between tabs, Home/End jump, and each tab names
  * the panel it controls via `panelId`.
+ *
+ * The tablist is `shrink-0`. Its callers place it as the first child of a flex column, and
+ * the workspace's desktop column is height-capped (`max-h-[calc(100dvh-2rem)]`) so it can
+ * scroll internally while sticky. A flex child may shrink to nothing by default, and the
+ * tablist has no intrinsic minimum of its own — so at ≥1280 px it was measured at 2 px tall
+ * (its borders) with the 38 px tabs clipped behind `overflow-hidden`, and a real click on
+ * Source / Ask / Verdict was intercepted for as long as Playwright cared to wait (ADR-0060's
+ * control had never worked at the width it was designed for). Refusing to shrink costs the
+ * unconstrained columns nothing: they were never asking it to.
  */
 export interface TabItem<V extends string> {
   readonly value: V
@@ -79,6 +88,7 @@ export function Tabs<V extends string>({
       role="tablist"
       aria-label={rest['aria-label']}
       className={cn(
+        'shrink-0',
         isUnderline
           ? 'flex gap-6 border-b border-border-default'
           : 'inline-flex overflow-hidden rounded-md border border-border-default bg-surface-card',

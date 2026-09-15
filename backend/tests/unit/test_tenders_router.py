@@ -13,6 +13,7 @@ a query that was never the problem.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Iterator
 
 import pytest
@@ -48,10 +49,12 @@ class FakeTed:
 
     def __init__(self, error: Exception | None = None) -> None:
         self.calls: list[tuple[TedSearchQuery, str | None]] = []
+        self.threads: list[str] = []
         self._error = error
 
     def search(self, query: TedSearchQuery, *, language: str | None = None) -> TedSearchPage:
         self.calls.append((query, language))
+        self.threads.append(threading.current_thread().name)
         if self._error is not None:
             raise self._error
         return TedSearchPage(
@@ -170,3 +173,17 @@ def test_the_default_dependency_builds_a_real_client() -> None:
     from crossbid.reference.ted_client import TedSearchClient
 
     assert isinstance(get_ted_client(), TedSearchClient)
+
+
+def test_the_search_runs_off_the_event_loop(client: TestClient, ted: FakeTed) -> None:
+    """`TedSearchClient` is synchronous and TED is slow; the handler is not allowed to be.
+
+    Awaiting it inline parked the loop for up to the client's whole budget — twenty seconds
+    times two attempts — and every other request in the process waited: document polls, a
+    running bid's callbacks, a chat turn. The thread name is the evidence, because a handler
+    that regressed to a direct call would run here on the loop's own thread.
+    """
+    response = client.get("/tenders/search", headers=AS_COMPANY)
+
+    assert response.status_code == 200
+    assert ted.threads and all(name != threading.main_thread().name for name in ted.threads)

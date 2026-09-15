@@ -18,6 +18,10 @@ company profile's `language` is passed down and a German bidder reads a French t
 title in German for nothing. It is the cheapest instance of the cross-border wedge in the
 whole product.
 
+**The call runs in a thread, not on the event loop.** The TED client is synchronous, and a
+slow answer from TED is the normal case rather than the exception, so awaiting it inline
+would make one bidder's search everybody else's latency.
+
 **`TedUnavailableError` becomes 503 and never an empty page.** "Nothing matched your search"
 and "TED did not answer" are different facts, and a bidder who is told the first when the
 second happened will widen a query that was never the problem.
@@ -25,6 +29,7 @@ second happened will widen a query that was never the problem.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Annotated, Final
 
@@ -92,7 +97,12 @@ async def search_tenders(
         page=page,
     )
     try:
-        return client.search(query, language=language)
+        # `TedSearchClient` is synchronous (one `httpx.Client`), and this handler is not:
+        # calling it inline would park the event loop for up to `REQUEST_TIMEOUT_S` x the
+        # client's attempts, stalling every other request in the process -- document polls,
+        # a bid run's own callbacks, a chat turn. `routers/documents.py` already hands the
+        # synchronous Storage client to a thread for the same reason.
+        return await asyncio.to_thread(client.search, query, language=language)
     except TedUnavailableError as error:
         logger.warning("TED search failed for company %s: %s", company.company_id, error)
         raise HTTPException(

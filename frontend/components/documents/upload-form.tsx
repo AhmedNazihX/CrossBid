@@ -15,11 +15,22 @@ import {
 } from '@/lib/documents'
 import { DOCUMENT_KIND_LABELS } from './document-labels'
 
-const DEFAULT_KIND: DocumentKind = 'company_evidence'
+/**
+ * What the type select shows when the caller does not say. `/company` is where the
+ * certificates live, so evidence is the right first guess there; a page that is about a
+ * tender pack has to say so through `defaultKind`, because the start step never sees
+ * evidence and a pack uploaded under this fallback would vanish from it (2026-09-15).
+ */
+const FALLBACK_KIND: DocumentKind = 'company_evidence'
 
 export interface UploadFormProps {
   /** Resolves when the API accepted the file; rejects with the error to show. */
   readonly onUpload: (file: File, kind: DocumentKind) => Promise<void>
+  /**
+   * The type the select starts on and returns to after each upload. A pack is twenty files
+   * of the same kind, so the value the form snaps back to is the one the bidder types least.
+   */
+  readonly defaultKind?: DocumentKind
 }
 
 /**
@@ -27,10 +38,10 @@ export interface UploadFormProps {
  * (`components/forms/*.jsx`, ADR-0014). The browser's own file input and a native `<select>`
  * sit inside the styled boxes, so keyboard and screen-reader behaviour stay complete.
  */
-export function UploadForm({ onUpload }: UploadFormProps) {
+export function UploadForm({ onUpload, defaultKind = FALLBACK_KIND }: UploadFormProps) {
   const fileId = useId()
   const kindId = useId()
-  const [kind, setKind] = useState<DocumentKind>(DEFAULT_KIND)
+  const [kind, setKind] = useState<DocumentKind>(defaultKind)
   const [error, setError] = useState<string | undefined>(undefined)
   const [isUploading, setIsUploading] = useState(false)
   // The ESPD request is XML and every other kind is a PDF, so the picker's filter, its hint
@@ -54,7 +65,7 @@ export function UploadForm({ onUpload }: UploadFormProps) {
     try {
       await onUpload(chosenFile, kind)
       form.reset()
-      setKind(DEFAULT_KIND)
+      setKind(defaultKind)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The upload failed. Try again.')
     } finally {
