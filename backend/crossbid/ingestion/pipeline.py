@@ -67,7 +67,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
-from crossbid.guards.injection import InjectionFinding, scan
 from crossbid.ingestion.chunker import Chunk, Chunker
 from crossbid.ingestion.embeddings import (
     ChunkStoreError,
@@ -78,11 +77,11 @@ from crossbid.ingestion.embeddings import (
     EmbeddingsError,
 )
 from crossbid.ingestion.espd import EspdParseError, parse_espd_request
+from crossbid.ingestion.guarding import partition_by_guard, review_flagged
 from crossbid.ingestion.injection_review import (
     InjectionConfirmer,
     ModelInjectionConfirmer,
     confirm_every_finding,
-    released,
 )
 from crossbid.ingestion.parser import ParsedDocument, Parser, ParserError
 from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
@@ -231,59 +230,6 @@ class Upload:
 
 
 # -------------------------------------------------------------------------------- pipeline
-
-
-def _partition_by_guard(
-    chunks: Sequence[Chunk],
-) -> tuple[list[Chunk], list[tuple[int, InjectionFinding]]]:
-    """The chunks that may be stored, and the numbered ones the guard refused.
-
-    Numbered by position in the document's own chunk sequence, one-based, because that is
-    what `documents.flagged_chunks` means and what a reviewer counts when they go looking.
-    """
-    kept: list[Chunk] = []
-    flagged: list[tuple[int, InjectionFinding]] = []
-    for number, chunk in enumerate(chunks, start=1):
-        finding = scan(chunk.text)
-        if finding is None:
-            kept.append(chunk)
-        else:
-            flagged.append((number, finding))
-    return kept, flagged
-
-
-async def _review_flagged(
-    chunks: Sequence[Chunk],
-    suspected: Sequence[tuple[int, InjectionFinding]],
-    confirm: InjectionConfirmer,
-    document_id: uuid.UUID,
-) -> tuple[list[Chunk], list[tuple[int, InjectionFinding]]]:
-    """S5.3 — a second opinion on each flagged chunk, and the partition that survives it.
-
-    `kept` is rebuilt from the whole chunk list rather than by moving released chunks back
-    into the first partition's list, so the corpus keeps document order however many are
-    released. Order is not cosmetic here: a chunk carries the pages it came from, and a
-    reviewer reading two retrieved chunks expects the earlier page first.
-
-    Reviews run one after another, not under `gather`. The expected number on an honest
-    upload is zero (ADR-0049 measured 351 real chunks flagging none), so there is no latency
-    to win, and a poisoned document is exactly where a burst of concurrent calls to the
-    cheap model would be the wrong reflex.
-    """
-    confirmed: list[tuple[int, InjectionFinding]] = []
-    for number, finding in suspected:
-        if await confirm(chunks[number - 1].text, finding.signals):
-            confirmed.append((number, finding))
-            continue
-        logger.info(
-            "document %s chunk %d released by review: %s",
-            document_id,
-            number,
-            released(finding),
-        )
-    withheld = {number for number, _ in confirmed}
-    kept = [chunk for number, chunk in enumerate(chunks, start=1) if number not in withheld]
-    return kept, confirmed
 
 
 class DocumentPipeline:
@@ -441,8 +387,8 @@ class DocumentPipeline:
         make a tender unanalysable by hiding four lines in it.
         """
         chunks = await asyncio.to_thread(self._chunker.chunk, parsed)
-        _, suspected = _partition_by_guard(chunks)
-        kept, flagged = await _review_flagged(chunks, suspected, self._confirm, record.id)
+        _, suspected = partition_by_guard(chunks)
+        kept, flagged = await review_flagged(chunks, suspected, self._confirm, record.id)
         for number, finding in flagged:
             logger.warning(
                 "document %s chunk %d withheld: %s — %r",

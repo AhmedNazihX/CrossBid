@@ -154,6 +154,18 @@ class ExtractionProblemReason(StrEnum):
     """No page of the document had a text layer, so it was never sent to the model. OCR is
     out of scope, so this is a terminal state a human has to see."""
 
+    INDEXING_FAILED = "indexing_failed"
+    """The document parsed but its passages were not written to `tender_chunks`, so
+    `tender_rag_search` cannot retrieve from it (S2.2.1's corpus, filled by `parse_docs`).
+
+    The document is still extracted — every requirement in it still reaches the matrix,
+    because extraction reads pages and not the vector store. What is lost is the *checking*
+    side: a question about this document, and a check that would have quoted it, find
+    nothing. Reported rather than fatal because indexing spends money and touches the
+    network, and a bid already paid for must not be lost to one embedding call; reported at
+    all because the alternative is a thin answer with no visible cause, which is precisely
+    how an empty `tender_chunks` went unnoticed for three increments."""
+
     UNPARSEABLE_DOCUMENT = "unparseable_document"
     """The file could not be opened as a PDF at all (S3.1.1, `parse_docs`). Distinct from
     `UNREADABLE_DOCUMENT`: there the pages exist and are blank, here there are no pages. The

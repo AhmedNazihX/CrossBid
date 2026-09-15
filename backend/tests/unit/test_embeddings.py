@@ -33,6 +33,7 @@ from crossbid.ingestion.embeddings import (
     COMPANY_INSERT_SQL,
     COMPANY_SEARCH_SQL,
     DEFAULT_SEARCH_LIMIT,
+    DELETE_TENDER_CHUNKS_SQL,
     MAX_ATTEMPTS,
     OPENROUTER_EMBEDDINGS_PATH,
     SEARCH_STATEMENTS,
@@ -628,6 +629,7 @@ def test_search_signatures_make_an_unscoped_call_impossible() -> None:
         ChunkVectorStore.search_tender_chunks: {"company_id", "bid_id"},
         ChunkVectorStore.insert_company_chunks: {"company_id"},
         ChunkVectorStore.insert_tender_chunks: {"company_id", "bid_id"},
+        ChunkVectorStore.replace_tender_chunks: {"company_id", "bid_id"},
     }
 
     # Assert
@@ -851,6 +853,64 @@ async def test_inserting_tender_chunks_binds_the_bid_as_well() -> None:
     assert statement.sql == TENDER_INSERT_SQL
     assert statement.params[0]["bid_id"] == BID_ID
     assert statement.params[0]["company_id"] == COMPANY_ID
+
+
+@pytest.mark.anyio
+async def test_replacing_tender_chunks_deletes_this_document_before_it_inserts() -> None:
+    """`parse_docs` re-runs from the start when a process dies mid-run, so an insert with no
+    delete in front of it would double the corpus and return every passage twice."""
+    # Arrange
+    embedded = (EmbeddedChunk(chunk=chunk(), embedding=(0.5,)),)
+    vector_store, source = store()
+
+    # Act
+    written = await vector_store.replace_tender_chunks(
+        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=embedded
+    )
+
+    # Assert -- delete first, insert second, same connection
+    assert [entry.sql for entry in source.log] == [
+        DELETE_TENDER_CHUNKS_SQL,
+        TENDER_INSERT_SQL,
+    ]
+    assert written == 1
+
+
+@pytest.mark.anyio
+async def test_the_delete_is_scoped_to_one_document_of_one_bid_of_one_company() -> None:
+    """Re-indexing one file of a twenty-eight-file pack must not empty its siblings."""
+    # Arrange
+    vector_store, source = store()
+
+    # Act
+    await vector_store.replace_tender_chunks(
+        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=()
+    )
+
+    # Assert
+    deletion = source.log[0]
+    assert deletion.sql == DELETE_TENDER_CHUNKS_SQL
+    assert deletion.params == {
+        "company_id": COMPANY_ID,
+        "bid_id": BID_ID,
+        "document_id": DOCUMENT_ID,
+    }
+
+
+@pytest.mark.anyio
+async def test_replacing_with_nothing_still_deletes() -> None:
+    """A re-index that now withholds every chunk must not leave the old ones retrievable."""
+    # Arrange
+    vector_store, source = store()
+
+    # Act
+    written = await vector_store.replace_tender_chunks(
+        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=()
+    )
+
+    # Assert
+    assert written == 0
+    assert [entry.sql for entry in source.log] == [DELETE_TENDER_CHUNKS_SQL]
 
 
 @pytest.mark.anyio

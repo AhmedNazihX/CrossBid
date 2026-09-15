@@ -719,8 +719,11 @@ async def test_an_ordinary_upload_asks_the_model_nothing() -> None:
 @pytest.mark.anyio
 async def test_a_release_says_so_in_the_log(caplog: pytest.LogCaptureFixture) -> None:
     """A chunk the scanner refused and the model let through is worth one line: it is the
-    evidence that the heuristic needs tuning, and the only place that pair is visible."""
-    with caplog.at_level(logging.INFO, logger="crossbid.ingestion.pipeline"):
+    evidence that the heuristic needs tuning, and the only place that pair is visible.
+
+    Logged by `ingestion/guarding.py`, which is where the review lives now that the tender
+    corpus needs the same treatment as the company one."""
+    with caplog.at_level(logging.INFO, logger="crossbid.ingestion.guarding"):
         await guarded([PLANTED], confirm=release_everything)
 
     messages = [record.getMessage() for record in caplog.records]

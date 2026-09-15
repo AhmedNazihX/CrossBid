@@ -436,6 +436,20 @@ values
 """
 
 
+DELETE_TENDER_CHUNKS_SQL: Final[LiteralString] = """
+delete from tender_chunks
+where company_id = %(company_id)s and bid_id = %(bid_id)s and document_id = %(document_id)s
+"""
+"""What makes indexing a tender document safe to run twice.
+
+`parse_docs` is a graph node, and a process that dies before it finishes runs it again from
+the start on resume (`resume_unfinished_runs`) -- so an insert with no delete in front of it
+would give the second attempt a doubled corpus, where every retrieval returns each passage
+twice and a reviewer reads the same clause as two pieces of evidence. Scoped by all three
+ids, so re-indexing one document of a pack never touches its siblings.
+"""
+
+
 def _vector_param(embedding: Sequence[float]) -> Vector:
     """The bound parameter for a `vector` column or a `<=>` comparison.
 
@@ -531,6 +545,34 @@ class ChunkVectorStore:
             for embedded in chunks
         ]
         return await self._insert(TENDER_INSERT_SQL, rows)
+
+    async def replace_tender_chunks(
+        self,
+        *,
+        company_id: uuid.UUID,
+        bid_id: uuid.UUID,
+        document_id: uuid.UUID,
+        chunks: Sequence[EmbeddedChunk],
+    ) -> int:
+        """Delete this document's chunks for this bid, then write these. Returns how many.
+
+        One connection and one transaction, so a crash between the two cannot leave the bid
+        with a document that has no passages at all -- which would read downstream as "this
+        tender says nothing about that", the most expensive wrong answer this system can
+        give. See `DELETE_TENDER_CHUNKS_SQL` for why the delete is there in the first place.
+        """
+        scope = {"company_id": company_id, "bid_id": bid_id, "document_id": document_id}
+        rows = [
+            self._row(embedded, company_id=company_id, document_id=document_id)
+            | {"bid_id": bid_id}
+            for embedded in chunks
+        ]
+        async with self._source.connection() as connection, connection.cursor() as cursor:
+            await cursor.execute(DELETE_TENDER_CHUNKS_SQL, scope)
+            if not rows:
+                return 0
+            await cursor.executemany(TENDER_INSERT_SQL, rows)
+            return len(rows)
 
     @staticmethod
     def _row(

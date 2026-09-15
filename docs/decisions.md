@@ -4242,3 +4242,72 @@ is incomplete. The route's own field description says it covers chat completions
 
 S5.3's injection review is left unattributed deliberately: it has a tenant but no bid and no
 graph node, so it exercises `_warn_unattributed` on a real case rather than a hypothetical.
+
+---
+
+## ADR-0057 — The tender corpus nothing was writing
+
+**Date:** 2026-09-15 · **Stories:** defect found during S5.2 · **Status:** accepted
+
+`tender_chunks` shipped in `0001_init.sql`. `insert_tender_chunks` shipped with S2.2.1.
+`tender_rag_search` shipped with S2.4.2 and was registered as a tool, bound into `check_reqs`,
+covered by tests, and — for three increments — **searching a permanently empty table**.
+`grep -rn insert_tender_chunks crossbid/` matched only its own definition.
+
+### Why nothing caught it
+
+Every layer was correct in isolation. The tool built, scoped and ran its query; its tests
+passed against rows they inserted themselves; its answer was well-formed. "No matching
+passages" is also the *honest* answer when a tender genuinely does not discuss something, so
+the failure was indistinguishable from success at every point a human looked. It surfaced only
+when S5.2's agent went looking for embedding spend to attribute and found there wasn't any.
+
+This is the retro's own lesson a third time: **done at the layer it was tested, absent at the
+layer a person touches.** The two before it were an answer key nobody verified and a DUME
+nobody could upload. What is new here is that the missing piece had a *docstring describing
+it*: `pipeline.py` said "the graph reads the file back from Storage and owns its vectors under
+the bid", and that sentence described work that was never written. Prose is not a caller.
+
+### Where it goes, and why not at upload
+
+`pipeline.py`'s split was right all along and is unchanged: a tender document is uploaded
+*before* its bid exists — the flow uploads the pack, then presses Start — and
+`tender_chunks.bid_id` is `NOT NULL`, so at upload there is nowhere to put the vectors. The
+bid exists by the time `parse_docs` runs and that node already holds every document parsed. So
+`ingestion/tender_index.py` is called from `parse_docs`, exactly where the pipeline said it
+would be.
+
+### Three things the fix had to get right
+
+**Idempotence.** `resume_unfinished_runs` re-runs a node whose process died mid-run, so an
+insert with no delete in front of it gives the second attempt a doubled corpus — every
+retrieval returning each passage twice, and a reviewer reading one clause as two pieces of
+evidence. `replace_tender_chunks` deletes this document's rows for this bid and inserts, in
+one transaction and on one connection, so a crash between the two cannot leave a bid holding a
+document with no passages at all. That state would read downstream as "the tender does not
+mention it", which is the most expensive wrong answer this system can give.
+
+**The guard applies, because this is a corpus.** ADR-0049 draws its line by *path*, not by
+document kind, and a flagged chunk retrieved into a check prompt is the attack working. So
+tender chunks are scanned and withheld exactly as company chunks are, S5.3's second opinion
+included — while the *pages* of that same PDF still reach `extract_reqs` in full, reported
+rather than dropped. One document, two paths, two answers. `ingestion/guarding.py` now holds
+that rule once for both corpora instead of once for the only corpus that existed.
+
+**A failed index does not fail the bid.** Indexing spends money and touches the network, so it
+fails for reasons the bidder did not cause, and losing a paid run to one of them is the wrong
+trade — S3.1.1 made the same call for a file that will not open. The document is still
+extracted; every requirement in it still reaches the matrix, because extraction reads pages
+and not vectors. What is lost is retrievability, and `INDEXING_FAILED` names the document so a
+thin answer about it has a visible cause. Silence is what let the original gap live.
+
+### What now guards against the recurrence
+
+`test_the_production_node_is_built_with_a_real_indexer` asserts the factory passes one. The
+seam is optional so existing tests keep measuring parsing alone, and an optional seam
+defaulting to `None` is precisely how this class of bug returns: working in every test,
+indexing nothing in production. That one assertion is the difference.
+
+`insert_tender_chunks` is now unused in production — `replace_tender_chunks` replaced it at the
+only call site there has ever been. It is left in place rather than removed, but it is a
+candidate for deletion and is noted here so the next reader knows it is not a second writer.

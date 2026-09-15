@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime, time
 from typing import Final, Optional
@@ -57,7 +58,13 @@ from crossbid.agent.state import (
     ParseUpdate,
     TenderDocument,
 )
+from crossbid.ingestion.chunker import Chunker
+from crossbid.ingestion.embeddings import ChunkVectorStore, EmbeddingsClient
 from crossbid.ingestion.espd import EspdParseError, parse_espd_request
+from crossbid.ingestion.injection_review import (
+    ModelInjectionConfirmer,
+    confirm_every_finding,
+)
 from crossbid.ingestion.parser import Parser, ParserError
 from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
 from crossbid.ingestion.storage import (
@@ -65,6 +72,7 @@ from crossbid.ingestion.storage import (
     StorageError,
     company_document_store,
 )
+from crossbid.ingestion.tender_index import ChunkingTenderIndexer, TenderIndexer
 from crossbid.models.requirement import Requirement
 from crossbid.models.ted import TedNotice
 from crossbid.models.tender import DocumentKind
@@ -121,12 +129,14 @@ class DocumentParser:
         parser: Parser | None = None,
         fetch_notice: NoticeFetcher | None = None,
         record_deadline: DeadlineRecorder | None = None,
+        index: TenderIndexer | None = None,
     ) -> None:
         self._load_documents = load_documents
         self._fetch = fetch
         self._parser: Parser = PyMuPDFParser() if parser is None else parser
         self._fetch_notice = fetch_notice
         self._record_deadline = record_deadline
+        self._index = index
 
     @property
     def parser(self) -> Parser:
@@ -161,6 +171,7 @@ class DocumentParser:
                 problems.append(ExtractionProblem(reason=reason, document_name=row.name))
                 continue
             documents.append(parsed)
+            problems.extend(await self._index_one(company_id, bid_id, row, parsed))
             if parsed.parsed.unread_pages:
                 logger.warning(
                     "Bid %s: %s has %d page(s) with no text layer: %s",
@@ -176,6 +187,47 @@ class DocumentParser:
             # would still be a write, one superstep before extraction adds its own rows.
             update["requirements"] = requirements
         return update
+
+    async def _index_one(
+        self,
+        company_id: str,
+        bid_id: str,
+        row: BidDocumentRow,
+        parsed: TenderDocument,
+    ) -> tuple[ExtractionProblem, ...]:
+        """Write the document's passages into `tender_chunks`, under this bid.
+
+        Without this the bid has no tender corpus at all and `tender_rag_search` answers
+        "nothing found" to every question — inside `check_reqs`, and inside the chat where
+        the tender half of "ask the tender" rests on it entirely. That was the state of the
+        system until this method existed; see `ingestion/tender_index.py`.
+
+        A failure is reported and the run continues. Indexing spends money on embeddings and
+        touches the network, so it is the kind of step that fails for reasons the bidder did
+        not cause, and losing a paid run to one of them would be the wrong trade — S3.1.1
+        already made that call for a file that will not open. What a reviewer must not get
+        is silence: `INDEXING_FAILED` names the document whose passages are missing, so a
+        thin answer about *that* document has a visible cause.
+        """
+        if self._index is None:
+            return ()
+        try:
+            await self._index(
+                company_id=uuid.UUID(company_id),
+                bid_id=uuid.UUID(bid_id),
+                parsed=parsed.parsed,
+            )
+        except Exception:
+            logger.exception(
+                "Bid %s: %s could not be indexed; it will not be retrievable", bid_id, row.name
+            )
+            return (
+                ExtractionProblem(
+                    reason=ExtractionProblemReason.INDEXING_FAILED,
+                    document_name=row.name,
+                ),
+            )
+        return ()
 
     async def _read_notice(
         self, state: BidState, company_id: str, bid_id: str
@@ -322,11 +374,28 @@ def build_parse_docs(
             "written to the bid" if written else "not used; the bidder had given one",
         )
 
+    ingestion = settings.runtime.ingestion
     return DocumentParser(
         load_documents=load,
         fetch=storage_fetcher(bucket),
         fetch_notice=fetch_notice,
         record_deadline=record_deadline,
+        # The same chunk sizes the upload pipeline uses, from the same settings block: a
+        # tender corpus chunked by different numbers from the company corpus would make two
+        # retrievals over one bid incomparable, which is the reason `build_pipeline` reads
+        # them from here too.
+        index=ChunkingTenderIndexer(
+            chunker=Chunker(
+                chunk_tokens=ingestion.chunk_tokens, overlap_tokens=ingestion.chunk_overlap
+            ),
+            embedder=EmbeddingsClient(settings),
+            writer=ChunkVectorStore(db),
+            confirm=(
+                ModelInjectionConfirmer(settings)
+                if settings.runtime.confirm_flagged_chunks
+                else confirm_every_finding
+            ),
+        ),
     )
 
 

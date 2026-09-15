@@ -754,3 +754,106 @@ async def test_the_deadline_write_says_when_the_bidders_own_was_kept(
         await node._record_deadline(COMPANY_ID, BID_ID, NOTICE)
 
     assert any("the bidder had given one" in r.getMessage() for r in caplog.records)
+
+
+# ------------------------------------------------- the tender corpus this node has to fill
+
+
+class RecordingIndexer:
+    """Stands in for `ChunkingTenderIndexer`, or fails on demand."""
+
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+        self._fail = fail
+
+    async def __call__(
+        self, *, company_id: uuid.UUID, bid_id: uuid.UUID, parsed: ParsedDocument
+    ) -> int:
+        self.calls.append((str(company_id), str(bid_id), parsed.document_id))
+        if self._fail:
+            raise RuntimeError("the embeddings call failed")
+        return len(parsed.pages)
+
+
+async def test_every_parsed_document_is_indexed_under_the_bid() -> None:
+    """The bug: nothing ever wrote `tender_chunks`, so `tender_rag_search` searched an empty
+    table and answered "nothing found" to every question it was ever asked — inside
+    `check_reqs`, and inside the chat whose tender half rests on it entirely."""
+    # Arrange
+    first, second = row("a.pdf"), row("b.pdf")
+    parser = ScriptedParser(
+        {first.id: parsed(first.id, "eins"), second.id: parsed(second.id, "zwei")}
+    )
+    collaborators = Collaborators([first, second])
+    index = RecordingIndexer()
+    node = DocumentParser(
+        load_documents=collaborators.load,
+        fetch=collaborators.fetch,
+        parser=parser,
+        index=index,
+    )
+
+    # Act
+    update = await node(state())
+
+    # Assert
+    assert index.calls == [(COMPANY_ID, BID_ID, first.id), (COMPANY_ID, BID_ID, second.id)]
+    assert update["extraction_problems"] == []
+
+
+async def test_a_document_that_cannot_be_indexed_is_reported_and_the_run_goes_on(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Indexing spends money and touches the network, so it fails for reasons the bidder did
+    not cause; losing a paid run to one of them is the wrong trade. Silence is the wrong
+    trade too — that is exactly how an empty corpus went unnoticed for three increments."""
+    # Arrange
+    only = row("a.pdf")
+    parser = ScriptedParser({only.id: parsed(only.id, "eins")})
+    collaborators = Collaborators([only])
+    node = DocumentParser(
+        load_documents=collaborators.load,
+        fetch=collaborators.fetch,
+        parser=parser,
+        index=RecordingIndexer(fail=True),
+    )
+
+    # Act
+    with caplog.at_level(logging.ERROR, logger="crossbid.agent.nodes.parse_docs"):
+        update = await node(state())
+
+    # Assert -- the document is still extracted; only its retrievability is lost
+    assert [document.name for document in update["documents"]] == [only.name]
+    reasons = [problem.reason for problem in update["extraction_problems"]]
+    assert reasons == [ExtractionProblemReason.INDEXING_FAILED]
+    assert update["extraction_problems"][0].document_name == only.name
+
+
+async def test_without_an_indexer_the_node_still_parses() -> None:
+    """The seam is optional so every existing test of this node keeps measuring parsing."""
+    # Arrange
+    only = row("a.pdf")
+    parser = ScriptedParser({only.id: parsed(only.id, "eins")})
+    collaborators = Collaborators([only])
+    node = DocumentParser(
+        load_documents=collaborators.load, fetch=collaborators.fetch, parser=parser
+    )
+
+    # Act
+    update = await node(state())
+
+    # Assert
+    assert [document.name for document in update["documents"]] == [only.name]
+
+
+def test_the_production_node_is_built_with_a_real_indexer(offline_settings: Settings) -> None:
+    """A seam defaulting to `None` is how this gap would come back: the node would work in
+    every test and index nothing in production."""
+    # Arrange
+    store = CompanyDocumentStore(FakeStore(), ttl_seconds=600)  # type: ignore[arg-type]
+
+    # Act
+    node = build_parse_docs(offline_settings, object(), store=store)  # type: ignore[arg-type]
+
+    # Assert
+    assert node._index is not None
