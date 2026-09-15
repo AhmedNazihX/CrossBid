@@ -85,7 +85,12 @@ function GapLine({ gap, label }: { readonly gap: Gap; readonly label: string | u
           {label}
         </Tag>
       )}
-      <span className="min-w-[14rem] flex-1 [overflow-wrap:anywhere]">{gap.summary}</span>
+      {/* 12 rem, not 14: the panel now stacks in a 385 px tab and a 343 px phone panel
+          (ADR-0060), whose list lines are ~290 px inside the card. At 14 rem the sentence
+          could not fit beside a 68 px `REQ-` tag and dropped under it on every line;
+          at 12 rem it sits beside the tag as the artboard draws it, and the shortfall
+          wraps below. */}
+      <span className="min-w-[12rem] flex-1 [overflow-wrap:anywhere]">{gap.summary}</span>
       {shortfall !== undefined && (
         <span className="[font:var(--type-body-sm)] font-medium text-text-secondary">
           {shortfall}

@@ -8,13 +8,28 @@ scope. This file only covers what changed, what it cost, and what is genuinely o
 
 ## Where the project stands
 
-**Increment 4 is complete: 17 of 17 stories, on `origin/main` at `f99d97b` (2026-09-15).**
-**4 871 tests, 100 % coverage, `make lint` clean.** ADR-0032 to ADR-0059 record everything it
-decided. **Check migrations first.** A probe on 2026-09-15 found 0007 applied: True, 0008 applied: False. Run `make migrate` before any live work.
+**Increment 4 is complete: 17 of 17 stories. Increment 5 is next and unstarted.**
+**4 897 tests, 100 % coverage, `make lint` clean** across both halves. The decision log runs
+to ADR-0061 with no gaps — ADR-0042 was backfilled on 2026-09-16, having been cited from
+`require-company.tsx` since the day it was skipped. **Check migrations first.** A probe on
+2026-09-15 found 0007 applied: True, 0008 applied: False. Run `make migrate` before any live
+work.
+
+**A 16-part audit ran on 2026-09-15 and its findings are being worked through.** Read
+ADR-0061 before anything else: it records five guarantees the code described in prose and did
+not provide, all now delivered. What the audit *confirmed* matters as much as what it found —
+the test and lint numbers reproduce exactly, every ADR code claim it spot-checked was true,
+and the frontend is genuinely built. Two commits have landed against it, `163ccd5` and
+`6d91e28`, closing the four blockers and eleven further findings. The two largest remaining
+items are not cheap and are not decisions: **no SQL is executed against Postgres in the suite
+or in CI**, and **the frontend has no tests at all**. Three of the four blockers lived in the
+frontend, which is the argument for the second one.
 
 What a bidder can now do, end to end: sign in with a password, a magic link, register, or reset
 a password (S4.1.1, ADR-0038, ADR-0053); describe their company (S4.2.1); search TED and start a
-bid from a notice, with the notice's own deadline and buyer written to the bid (S1.2.1, S3.2.2,
+bid from a notice, with the notice's buyer and its deadline's time zone written to the bid —
+the bidder still types the date and the hour, because TED publishes no hour and, until
+2026-09-16, no date reached the form either (S1.2.1, S3.2.2,
 S4.3.1); upload a pack whose text is scanned for planted instructions before anything is
 embedded, with a cheap-model second opinion on every flag (S2.3.1, S5.3, ADR-0049, ADR-0054);
 ask the tender questions and get answers whose citations open the page they came from (S3.5.1,

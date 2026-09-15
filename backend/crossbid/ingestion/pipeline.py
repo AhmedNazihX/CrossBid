@@ -67,6 +67,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
+from crossbid.guards.injection import scan
 from crossbid.ingestion.chunker import Chunk, Chunker
 from crossbid.ingestion.embeddings import (
     ChunkStoreError,
@@ -76,7 +77,7 @@ from crossbid.ingestion.embeddings import (
     EmbeddingsClient,
     EmbeddingsError,
 )
-from crossbid.ingestion.espd import EspdParseError, parse_espd_request
+from crossbid.ingestion.espd import EspdParseError, EspdRequest, parse_espd_request
 from crossbid.ingestion.guarding import partition_by_guard, review_flagged
 from crossbid.ingestion.injection_review import (
     InjectionConfirmer,
@@ -87,7 +88,7 @@ from crossbid.ingestion.parser import ParsedDocument, Parser, ParserError
 from crossbid.ingestion.pymupdf_parser import PyMuPDFParser
 from crossbid.ingestion.storage import DEFAULT_CONTENT_TYPE, StorageError, object_key
 from crossbid.models import DocumentKind
-from crossbid.readmodel.documents import DocumentRecord
+from crossbid.readmodel.documents import INTERRUPTED_REASON, DocumentRecord
 from crossbid.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -117,7 +118,6 @@ NO_ESPD_CRITERIA_REASON: Final = (
 )
 SAVE_FAILED_REASON: Final = "The document text could not be saved. Try again later."
 UNEXPECTED_FAILURE_REASON: Final = "Processing failed unexpectedly. Try again later."
-
 FAILURE_REASONS: Final[tuple[str, ...]] = (
     STORE_FAILED_REASON,
     UNREADABLE_REASON,
@@ -127,6 +127,7 @@ FAILURE_REASONS: Final[tuple[str, ...]] = (
     EMBED_FAILED_REASON,
     SAVE_FAILED_REASON,
     UNEXPECTED_FAILURE_REASON,
+    INTERRUPTED_REASON,
 )
 """Every sentence `process` can write to `failure_reason`. Closed on purpose: a test asserts
 the row never carries anything outside this list, which is how "no stack trace, no key, no
@@ -358,8 +359,49 @@ class DocumentPipeline:
         record = await self._records.mark_parsed(
             company_id=record.company_id, document_id=record.id, pages=0, unread_pages=()
         )
+        record = await self._flag_espd_criteria(record, request)
         return await self._records.mark_ready(
             company_id=record.company_id, document_id=record.id
+        )
+
+    async def _flag_espd_criteria(
+        self, record: DocumentRecord, request: EspdRequest
+    ) -> DocumentRecord:
+        """Scan the buyer's own words in a DUME, and report what looks like an instruction.
+
+        Reported, not withheld, which is the asymmetry ADR-0049 draws. A DUME has no
+        retrieval path at all -- it is never chunked and never embedded -- and its criteria
+        become requirements *by rule*, the way a tender page's clauses become requirements by
+        extraction. Withholding one would silently drop a real obligation from the matrix,
+        which is the failure the withhold/report split exists to avoid. So the criterion is
+        kept and the reviewer is told.
+
+        This branch returned before the scanner entirely until 2026-09-16, so `flagged_chunks`
+        was always empty for a DUME while its text was read verbatim into a check prompt. The
+        wrapper meant the attack was mitigated; nothing meant the reviewer heard about it.
+
+        The numbers recorded are criterion positions, one-based. `documents.flagged_chunks`
+        is "the numbered parts of this document that the guard had something to say about",
+        and a DUME's numbered parts are its criteria.
+        """
+        flagged: list[int] = []
+        for position, criterion in enumerate(request.criteria, start=1):
+            finding = scan(f"{criterion.name}\n{criterion.description}")
+            if finding is None:
+                continue
+            flagged.append(position)
+            logger.warning(
+                "document %s criterion %d (%s) flagged: %s — %r",
+                record.id,
+                position,
+                criterion.id,
+                ", ".join(signal.value for signal in finding.signals),
+                finding.excerpt,
+            )
+        if not flagged:
+            return record
+        return await self._records.set_flagged_chunks(
+            company_id=record.company_id, document_id=record.id, flagged_chunks=flagged
         )
 
     async def _scan_and_embed(

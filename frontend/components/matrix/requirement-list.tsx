@@ -65,6 +65,18 @@ export interface RequirementListProps {
  * controls (S4.5.2). What the run could not do is a notice above the table rather than a word
  * in the footer: unread pages and dropped rows are the reviewer's problem to act on, and a
  * footer is where a count goes to be skipped.
+ *
+ * **Deviation from `Main.dc.html`, recorded per ADR-0014: a collapsed row wraps its
+ * requirement instead of clipping it to one line.** The artboard draws the requirement cell
+ * `white-space: nowrap; text-overflow: ellipsis` over a `minmax(0, 1fr)` column — in a
+ * table that had the page to itself. Since ADR-0060 put a 400 px column beside it, the table
+ * measures 649 px at 1440×900, the four fixed columns (92 + 88 + 152 + 152) take 484 px, and
+ * the requirement column has 165 px: an 88-character German sentence clipped to "Die
+ * Angebote mü…", so a reviewer had to expand every one of 144 rows to read the thing the
+ * product extracted. Nothing can be reclaimed from the fixed columns — measured content is
+ * 133 px in Source and 128 px in Evidence — so the honest fix is height: the sentence
+ * wraps, the row grows, and the chevron stays on the first line. The header over that
+ * column wraps too (`Th wrap`): at 194 px it was drawn across "Source".
  */
 export function RequirementList({
   requirements,
@@ -137,9 +149,9 @@ export function RequirementList({
             <tr>
               <Th className="w-[92px]">ID</Th>
               <Th className="w-[88px]">Category</Th>
-              <Th className="min-w-[180px]">
-                Requirement (explained in {formatLanguage(bidderLanguage)})
-              </Th>
+              {/* No width: under `table-fixed` the column without one takes what the fixed
+                  columns leave, which is what the artboard's `minmax(0, 1fr)` meant. */}
+              <Th wrap>Requirement (explained in {formatLanguage(bidderLanguage)})</Th>
               <Th className={documents.length > 1 ? 'w-[152px]' : 'w-[88px]'}>Source</Th>
               <Th className="w-[152px]">Evidence</Th>
             </tr>
@@ -237,14 +249,11 @@ function RequirementRow({
             onClick={onToggle}
             aria-expanded={isExpanded}
             aria-controls={detailId}
-            className={cn(
-              'flex w-full items-start gap-2 rounded-sm text-left text-base leading-[1.4] text-text-primary hover:underline',
-              !isExpanded && 'items-center'
-            )}
+            className="flex w-full items-start gap-2 rounded-sm text-left text-base leading-[1.4] text-text-primary hover:underline"
           >
             <span
               lang={language === 'source' ? requirement.source_lang : bidderLanguage}
-              className={cn('min-w-0 flex-1', !isExpanded && 'truncate')}
+              className="min-w-0 flex-1 [overflow-wrap:anywhere]"
             >
               {explained}
             </span>

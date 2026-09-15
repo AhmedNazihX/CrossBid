@@ -1,5 +1,6 @@
 'use client'
 
+import { useSession } from '@/components/auth/session-provider'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { useDeveloperAccess } from '@/lib/use-developer-access'
 import { NavItemLink } from './nav-item'
@@ -16,9 +17,15 @@ interface NavGroupsProps {
  * An entry marked `access: 'developer'` (Agent runs, the developer console of S4.6.2) is
  * listed only once the API has said this account may open it; until then, and for everyone
  * it refuses, the group renders without it.
+ *
+ * The question is not asked until the session is known. The sidebar now mounts while
+ * `SessionProvider` is still reading `localStorage` (2026-09-15 audit, M7), and a probe sent
+ * before the bearer token exists is a 401 that `useDeveloperAccess` would cache as "not a
+ * developer" for the rest of the tab. On the dev bridge there is no token to wait for.
  */
 export function NavGroups({ onNavigate }: NavGroupsProps) {
-  const access = useDeveloperAccess()
+  const { status } = useSession()
+  const access = useDeveloperAccess(status === 'signedIn' || status === 'disabled')
   return (
     <nav aria-label="Main" className="flex flex-col">
       {NAV_GROUPS.map((group, index) => (

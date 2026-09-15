@@ -13,15 +13,17 @@ scoring produces, per tender:
   labeller never wrote down; a person decides which, and that is the S6.4 judgement.
 - `leaks`: matched pairs whose `stage` disagrees. In practice this can only mean the
   extractor emitted a `contract_performance` duty, because `extract_reqs` filters to
-  `MATRIX_STAGE` before anything leaves the node — which is exactly why 13 of the DE file's
-  143 scored rows are deliberately `contract_performance` (ADR-0015): they let the filter be
-  scored in both directions instead of only one.
+  `MATRIX_STAGE` before anything leaves the node — which is exactly why the DE file carries
+  36 `contract_performance` labels beside its 177 scored rows, deliberately (ADR-0015): they
+  let the filter be scored in both directions instead of only one.
 - `disagreements`: matched pairs whose `kind` or `ecertis_criterion_id` differ.
 
 **The denominator is one function with a name, not an inline filter**, because getting it
-wrong is silent: dropping the stage filter puts 11 rows the extractor is forbidden to
-produce into the DE denominator, recall falls from 105 to 116 rows' worth, and nothing about
-the output looks wrong.
+wrong is silent: dropping the stage filter would put 34 rows the extractor is forbidden to
+produce into the DE denominator, moving the number by a fifth, and nothing about the output
+would look wrong. The counts here are as of the 2026-09-13 answer key and are pinned by
+`DE_MANDATORY_LABELS` / `DE_DENOMINATOR` in `tests/unit/test_recall_script.py`; read those
+rather than trusting this paragraph.
 """
 
 from __future__ import annotations
@@ -111,10 +113,10 @@ def scored_labels(golden: GoldenFile) -> tuple[GoldenRequirement, ...]:
     German pack yields 579 "mandatory" requirements, because the AGB, EVB-IT, VOL/B and the
     data-processing agreement are all genuinely phrased as obligations). A
     `contract_performance` label is therefore something the extractor *must not* produce, so
-    counting one against recall would penalise it for working correctly — and 13 of the DE
-    file's 143 scored rows are `contract_performance` on purpose (ADR-0015), 11 of them
-    mandatory. Forget the filter and those 11 join the denominator as permanent misses: the
-    number moves and nothing about the output looks wrong.
+    counting one against recall would penalise it for working correctly — and the DE file
+    carries 36 `contract_performance` labels on purpose (ADR-0015), 34 of them mandatory,
+    beside its 177 scored rows. Forget the filter and those 34 join the denominator as
+    permanent misses: the number moves and nothing about the output looks wrong.
 
     `conditional_not_scored` is excluded by reading `golden.requirements` rather than
     `golden.entries`: those bind a Bietergemeinschaft, an Eignungsleihe or a subcontractor,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { cn } from 'cn'
 
 import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { LAST_BID_STORAGE_KEY } from '@/components/layout/nav-items'
@@ -25,7 +26,13 @@ import { Tabs } from '@/components/ui/tabs'
 import { VerdictChip } from '@/components/ui/verdict-chip'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
-import { getBid, isAwaitingReview, isBidSettled, type BidResponse } from '@/lib/bids'
+import {
+  getBid,
+  isAwaitingReview,
+  isBidSettled,
+  type BidResponse,
+  type Verdict,
+} from '@/lib/bids'
 import { listDocuments } from '@/lib/documents'
 import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
 import { SHELL_MEDIA_QUERY, useMediaQuery } from '@/lib/use-media-query'
@@ -56,9 +63,18 @@ type LoadState =
  * at y=13 876 — the product's one output, fifteen screens down. Now the decision is a line
  * under the header, the header's "Review verdict" opens the Verdict tab, and a citation in
  * an answer or a row switches the column to Source and lands on the page, exactly as the
- * phone's tab does. On the phone nothing changed: Matrix / Source / Verdict / Ask, a tap
- * away. Chat state lives in `useBidChat` here rather than in the panel, so a breakpoint
- * change or a tab switch does not lose the exchanges made so far.
+ * phone's tab does. On the phone the tabs are as they were: Matrix / Source / Verdict / Ask,
+ * a tap away. Chat state lives in `useBidChat` here rather than in the panel, so a
+ * breakpoint change or a tab switch does not lose the exchanges made so far.
+ *
+ * **Both layouts carry the same `DecisionLine` under the header.** ADR-0060's point was
+ * that the decision is above the fold; the first build gave that line to the desktop only,
+ * and a live audit of the phone DOM at 390×844 found no element anywhere that named the
+ * decision — a bidder on a phone saw the notice number, the title, a document count and
+ * four tabs, and had to find the Verdict tab to learn what CrossBid concluded. This is a
+ * recorded deviation from `WorkspacePhone.dc.html` (ADR-0014), whose header stops at the
+ * buyer line: the artboard predates ADR-0060, and the reason that moved the decision up on
+ * the desktop is stronger on a screen a fifth the size.
  */
 export function BidWorkspace({ bidId }: { readonly bidId: string }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
@@ -304,6 +320,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
             {plural(bid.documents.length, 'document')} · {plural(totalPages, 'page')}
             {isRunning && status.hint !== undefined ? ` · ${status.hint}` : ''}
           </p>
+          {bid.verdict !== null && <DecisionLine bid={bid} verdict={bid.verdict} />}
           {bid.status === 'failed' && bid.failure_reason !== null && (
             <Notice tone="danger" title="The run stopped">
               {bid.failure_reason}
@@ -438,24 +455,7 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
         </p>
       )}
       {bid.verdict !== null && (
-        // The decision, where the eye lands first. The full panel — gaps, rationale, the
-        // reviewer's own decision — is one click away in the right column; this line exists
-        // because the measured page put that panel at y=13 876 and nothing above the fold
-        // said what CrossBid had concluded (ADR-0060).
-        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-[14px] border border-border-default bg-surface-card px-4 py-3 shadow-xs">
-          <VerdictChip
-            verdict={bid.verdict.decision}
-            size="lg"
-            confirmed={bid.decision !== null}
-          />
-          <p className="m-0 [font:var(--type-body-sm)] text-text-secondary">
-            <b className="font-semibold text-text-primary">
-              {bid.verdict.mandatory_supported} of {bid.verdict.mandatory_total}
-            </b>{' '}
-            mandatory requirements supported · {plural(bid.verdict.gaps.length, 'gap')}
-            {bid.decision !== null && ' · reviewed'}
-          </p>
-        </div>
+        <DecisionLine bid={bid} verdict={bid.verdict} className="mb-5" />
       )}
       <div className="mb-7 grid gap-4 md:grid-cols-3">
         <MetricCard
@@ -539,6 +539,51 @@ function LiveWorkspace({ initial }: { readonly initial: BidResponse }) {
         </div>
       </div>
     </>
+  )
+}
+
+/**
+ * The decision, where the eye lands first — on both layouts. The full panel (gaps,
+ * rationale, the reviewer's own decision) is one click or one tap away in the Verdict tab;
+ * this line exists because the measured desktop page put that panel at y=13 876, and the
+ * phone had nothing at all, above the fold that said what CrossBid had concluded (ADR-0060).
+ *
+ * The chip is qualified until a person has spoken: "· advisory" while `bid.decision` is
+ * null, "· confirmed" after the review. Without the first word an unreviewed "No-go" read
+ * as final at a glance, and the caveat that it was not lived in the Verdict tab — the very
+ * tab a bidder who trusted the chip would not open.
+ */
+function DecisionLine({
+  bid,
+  verdict,
+  className,
+}: {
+  readonly bid: BidResponse
+  readonly verdict: Verdict
+  readonly className?: string
+}) {
+  const isReviewed = bid.decision !== null
+  return (
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-3 rounded-[14px] border border-border-default bg-surface-card px-4 py-3 shadow-xs',
+        className
+      )}
+    >
+      <VerdictChip
+        verdict={verdict.decision}
+        size="lg"
+        confirmed={isReviewed}
+        advisory={!isReviewed}
+      />
+      <p className="m-0 [font:var(--type-body-sm)] text-text-secondary">
+        <b className="font-semibold text-text-primary">
+          {verdict.mandatory_supported} of {verdict.mandatory_total}
+        </b>{' '}
+        mandatory requirements supported · {plural(verdict.gaps.length, 'gap')}
+        {isReviewed && ' · reviewed'}
+      </p>
+    </div>
   )
 }
 

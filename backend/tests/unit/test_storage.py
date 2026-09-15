@@ -45,10 +45,12 @@ OTHER_COMPANY = "22222222-2222-2222-2222-222222222222"
 DOCUMENT = "33333333-3333-3333-3333-333333333333"
 
 FIXED_NOW = datetime(2026, 9, 10, 12, 0, tzinfo=UTC)
-SIGNED = "https://project.supabase.co/storage/v1/object/sign/company-documents/x?token=T"
+SIGNED = "https://project.supabase.co/storage/v1/object/sign/company-docs/x?token=T"
 
 FAKE_SERVICE_KEY = "sb_secret_LEAKED-SERVICE-ROLE-KEY"
 FAKE_SUPABASE_URL = "https://abcdefghijklmnopqrst.supabase.co"
+FAKE_BUCKET = "company-docs"
+"""The Frankfurt project's real bucket name, and the plan's acceptance criterion."""
 
 SUPABASE_ENV_VARS = (
     "SUPABASE_URL",
@@ -111,6 +113,10 @@ def settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
     monkeypatch.setenv("APP_ENCRYPTION_KEY", "fake-encryption-key")
     monkeypatch.setenv("SUPABASE_URL", FAKE_SUPABASE_URL)
     monkeypatch.setenv("SUPABASE_SERVICE_KEY", FAKE_SERVICE_KEY)
+    # Stated, because there is no default any more: a `.env` without this line used to point
+    # the app at a bucket that does not exist, and Storage's own 404 is deliberately
+    # swallowed, so every upload failed with a sentence that named nothing.
+    monkeypatch.setenv("SUPABASE_STORAGE_BUCKET", FAKE_BUCKET)
     return load_settings(env_file=None)
 
 

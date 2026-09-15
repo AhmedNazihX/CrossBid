@@ -15,8 +15,27 @@ verdict before it is final.
 
 ## Status
 
-Increment 1 of 7, in progress. The extraction feasibility spike (Increment 0) is complete:
-requirement recall of 1.00 on a real 191-page German federal tender. See
+**Increments 0 to 4 are complete: 17 of 17 stories in the last one.** Increment 5, the
+submission evidence, is next. Eight migrations, sixty architectural decision records, 4 897
+backend tests at 100 % line and branch coverage, and a clean `make lint` across both halves.
+
+A bidder can sign in, describe their company, search TED and start a bid from a notice,
+upload a pack that is scanned for planted instructions before anything is embedded, read
+every extracted requirement with its citation and its translation, see each one checked
+against their own documents, ask the tender questions and get cited answers, then review the
+matrix row by row and confirm or override the verdict. An operator can see cost per bid and
+per node and switch models, prompts and tools without a redeploy.
+
+**One measured criterion is not met, deliberately in the open.** Requirement recall on the
+German golden tender is **0.72** on the committed run and **about 0.74 ± 0.02** across four,
+against a threshold of 0.90 set before anything had been measured.
+`uv run scripts/recall.py tests/fixtures/extractions/de.live.json` reproduces it and exits
+non-zero, and a test pins that red result so it cannot drift green unnoticed. Whether to
+amend the threshold or spend more on extraction is an open decision, recorded rather than
+hidden.
+
+The **1.00** figure this section used to quote is the Increment 0 feasibility spike measured
+against 21 hand-written requirements, not the verified 177-label answer key. See
 [`docs/decisions.md`](docs/decisions.md) ADR-0003 for that result and its caveats, and
 [`docs/project-plan.md`](docs/project-plan.md) for scope and build order.
 
@@ -59,7 +78,7 @@ Run `make help` for the full list.
 | `make dev-api` / `make dev-web` | Run one app on the host with reload |
 | `make test` | Tests, excluding those marked `live` |
 | `make test-live` | Only the tests that hit real services or an LLM (costs money) |
-| `make lint` | ruff, pyright, eslint, `tsc --noEmit`, and the dependency-manifest check |
+| `make lint` | ruff, `ruff format --check`, pyright, eslint, prettier, `tsc --noEmit`, and the dependency-manifest check |
 | `make deps` | Regenerate `dependencies.txt` from both lock files |
 | `make migrate` | Apply `backend/migrations/*.sql` to `DATABASE_URL`; idempotent, refuses edited applied files |
 | `make seed-dev` | Create the one dev `companies` row (idempotent, refused when `ENV=production`) and print the `NEXT_PUBLIC_DEV_COMPANY_ID` line to paste |
@@ -74,7 +93,8 @@ backend/     FastAPI · Python 3.12 · uv · LangGraph      — own pyproject, D
 frontend/    Next.js 15 · TypeScript · Tailwind          — own package.json, Dockerfile
 infra/       Docker Compose, .env.example
 scripts/     gen_dependencies.py
-docs/        project plan, roadmap, ADRs, architecture
+docs/        project plan, roadmap, ADRs, design canvas, demo runbook
+             (architecture.md, the user guide and the critique land with Increment 5)
 ```
 
 The two apps are separate processes on separate origins and share nothing but the OpenAPI

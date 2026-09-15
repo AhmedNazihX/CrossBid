@@ -9,6 +9,10 @@ import { cn } from 'cn'
  * sideways on a narrow screen so the page never does; it is positioned so that visually
  * hidden (`sr-only`, absolute) text inside a cell is clipped by it rather than widening the
  * page.
+ *
+ * Headers do not wrap unless a column asks (`Th wrap`): most are one word over a column
+ * sized for its cells, and a header that wrapped would be the tallest thing in the row for
+ * nothing. See `ThProps.wrap` for the one case that needs the opt-out.
  */
 export interface DataTableProps extends React.ComponentProps<'table'> {
   readonly caption?: React.ReactNode
@@ -47,12 +51,28 @@ export function DataTable({
   )
 }
 
-export function Th({ className, children, ...rest }: React.ComponentProps<'th'>) {
+export interface ThProps extends React.ComponentProps<'th'> {
+  /**
+   * Lets the header text wrap onto a second line. The default is `nowrap`, and the one
+   * header that needs the exception is the one longer than its column can ever be:
+   * "Requirement (explained in DE)" sits over the column that takes whatever width the
+   * fixed ones leave, and measured live at 1440 px that was 194 px of text in a 165 px cell,
+   * drawn straight across "Source". A `className` cannot express this — `cn` does not merge
+   * conflicting utilities, so `whitespace-normal` next to `whitespace-nowrap` is settled by
+   * stylesheet order — hence a prop that leaves `nowrap` off rather than a class that fights
+   * it. The 44 px height is a minimum in a table cell, so a wrapped header grows and the
+   * single-line ones beside it stretch to match.
+   */
+  readonly wrap?: boolean
+}
+
+export function Th({ wrap = false, className, children, ...rest }: ThProps) {
   return (
     <th
       scope="col"
       className={cn(
-        'h-11 border-b border-border-default bg-surface-sunken px-5 text-left text-[13px] font-medium leading-none text-text-secondary whitespace-nowrap',
+        'h-11 border-b border-border-default bg-surface-sunken px-5 text-left text-[13px] font-medium text-text-secondary',
+        wrap ? 'py-2.5 leading-[1.3]' : 'leading-none whitespace-nowrap',
         className
       )}
       {...rest}

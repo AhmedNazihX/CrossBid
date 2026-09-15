@@ -100,13 +100,26 @@ REVIEW_FAILED_DETAIL: Final = (
 # ------------------------------------------------------------------------ request models
 
 
+NOTICE_NUMBER_PATTERN: Final = r"^\d{1,9}-\d{4}$"
+"""A TED publication number: digits, a hyphen, a year. `618320-2026`.
+
+Constrained here because the value is interpolated into TED's expert query by
+`ted_client.search_by_publication_number`, which is the one call that bypasses `_values` --
+the single place a list becomes a clause. Unvalidated, a crafted number could close the
+predicate and open another, and the notice whose deadline `parse_docs` then writes onto the
+bid would not be the notice the bidder chose. The client re-checks it as well; a public
+method may not depend on its callers having been careful.
+"""
+
+
 class StartBidRequest(BaseModel):
     """What it takes to start a bid: the notice, the tender's language, and the pack."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     notice_number: str = Field(
-        min_length=1, description="TED publication number the bid is opened against"
+        pattern=NOTICE_NUMBER_PATTERN,
+        description="TED publication number the bid is opened against, as `123456-2026`",
     )
     document_ids: list[uuid.UUID] = Field(
         min_length=1, description="Ready tender documents to parse; at least one"

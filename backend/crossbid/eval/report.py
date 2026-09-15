@@ -1,6 +1,6 @@
 """The text `scripts/recall.py` prints: a number, and four lists a person adjudicates.
 
-This is the deliverable half of S3.2.3's amendment. Nobody is going to re-read 257 labels to
+This is the deliverable half of S3.2.3's amendment. Nobody is going to re-read 449 labels to
 verify S6.4, so the report's job is to put in front of a reviewer exactly the rows where a
 judgement is owed, with enough context — the document, the page, the quote — to decide
 without opening the PDF, and in the order that matters: what recall is, then what was missed,

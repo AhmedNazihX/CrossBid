@@ -26,12 +26,18 @@
  * Dashboard bounced off stale state, forever, until a full page reload. `found` is what
  * stops the extra request once there is an answer that cannot change back.
  *
+ * **The wait is drawn inside the content frame.** This guard sits under `RequireSession`,
+ * inside the shell's white frame (2026-09-15 audit, M7), so while the profile is in flight
+ * the sidebar and header stay put and only the frame shows `LoadingState` — the same line
+ * `RequireSession` shows, from the same component, so the two waits cannot drift apart.
+ *
  * `/company` itself is exempt, for the obvious reason.
  */
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/components/auth/session-provider'
+import { LoadingState } from '@/components/common/loading-state'
 import { loadProfile } from '@/lib/companies'
 
 const ONBOARDING_PATH = '/company'
@@ -83,13 +89,7 @@ export function RequireCompany({ children }: Readonly<{ children: React.ReactNod
   }, [check, pathname, router])
 
   if (check === 'checking' && status === 'signedIn' && pathname !== ONBOARDING_PATH) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center px-4">
-        <p className="m-0 [font:var(--type-body)] text-text-muted" role="status">
-          Loading…
-        </p>
-      </div>
-    )
+    return <LoadingState message="Loading…" />
   }
 
   return <>{children}</>

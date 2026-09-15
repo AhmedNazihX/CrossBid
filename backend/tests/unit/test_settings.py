@@ -395,7 +395,10 @@ def test_the_storage_wiring_defaults(valid_env: None) -> None:
     # Assert
     assert env.supabase_url is None
     assert env.supabase_service_role_key is None
-    assert env.supabase_storage_bucket == "company-documents"
+    # Empty, deliberately: a bucket name guessed by a default is a bucket that does not
+    # exist, and `storage_bucket()` refuses and names the variable rather than letting every
+    # upload fail with a sentence about nothing.
+    assert env.supabase_storage_bucket == ""
     assert env.signed_url_ttl_seconds == MAX_SIGNED_URL_TTL_SECONDS
 
 

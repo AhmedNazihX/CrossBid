@@ -37,6 +37,17 @@ import { NOT_AWAITING_REVIEW } from './verdict-decisions'
  *
  * The advisory verdict lives on the left with the gaps behind it, so the decision on the
  * right is never made against a bare chip.
+ *
+ * **The two columns are decided by the panel's own width, not the viewport's.** The artboard
+ * draws `minmax(0, 1.4fr) minmax(0, 1fr)` on a full-width screen, and the first build wrote
+ * that as `xl:grid-cols-…`. Then ADR-0060 moved the panel into the workspace's 400 px side
+ * column, where `xl:` is *on* at a 1440 px viewport: measured live, two columns of 213 px and
+ * 152 px inside a 385 px tab, "Pflichtanforderungen" broken mid-word, one word per line in
+ * the decision card, and 450 px of content in a 385 px box, so the sticky column grew a
+ * horizontal scrollbar. So the wrapper is a `@container` and the grid goes two-up at
+ * `@3xl` (768 px of *panel*), which Tailwind 4 resolves natively. It stacks in the tab and
+ * on the phone, and still splits as the artboard draws it wherever the panel is genuinely
+ * wide — below `xl` the workspace renders it first and full-width, for one.
  */
 export interface VerdictPanelProps {
   /** The bid as the workspace last polled it. `bid.verdict` is the agent's advisory verdict. */
@@ -91,46 +102,43 @@ export function VerdictPanel({
   const verdict = current.verdict ?? undefined
 
   return (
-    <div
-      className={cn(
-        'grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]',
-        className
-      )}
-    >
-      {/* Rendered from the first paint, empty, so that a screen reader is listening before
+    <div className={cn('@container', className)}>
+      <div className="grid items-start gap-5 @3xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        {/* Rendered from the first paint, empty, so that a screen reader is listening before
           the decision leaves the screen — a live region added with its text is not read. */}
-      <p role="status" aria-live="polite" className="sr-only">
-        {announce(state.phase)}
-      </p>
-      <div className="flex min-w-0 flex-col gap-5">
-        <RecommendationCard bid={current} verdict={verdict} />
-        {verdict !== undefined && <VerdictGaps gaps={verdict.gaps} labels={labels} />}
-      </div>
-      <div className="flex min-w-0 flex-col gap-5">
-        {state.phase === 'reviewed' && (
-          <RecordedCard
-            bid={state.bid}
-            decision={submittedDecision}
-            onBackToMatrix={onBackToMatrix}
-          />
-        )}
-        {state.phase === 'conflict' && (
-          <ConflictCard bid={state.bid} onBackToMatrix={onBackToMatrix} />
-        )}
-        {(state.phase === 'editing' || state.phase === 'submitting') &&
-          (isAwaitingReview(bid) ? (
-            <VerdictDecisionForm
-              agentDecision={verdict?.decision}
-              isLocked={isLocked}
-              isSubmitting={state.phase === 'submitting'}
-              submitError={state.phase === 'editing' ? state.error : undefined}
-              blockedRowCount={blockedRowCount}
-              onSubmit={handleSubmit}
+        <p role="status" aria-live="polite" className="sr-only">
+          {announce(state.phase)}
+        </p>
+        <div className="flex min-w-0 flex-col gap-5">
+          <RecommendationCard bid={current} verdict={verdict} />
+          {verdict !== undefined && <VerdictGaps gaps={verdict.gaps} labels={labels} />}
+        </div>
+        <div className="flex min-w-0 flex-col gap-5">
+          {state.phase === 'reviewed' && (
+            <RecordedCard
+              bid={state.bid}
+              decision={submittedDecision}
               onBackToMatrix={onBackToMatrix}
             />
-          ) : (
-            <NotParkedCard bid={bid} onBackToMatrix={onBackToMatrix} />
-          ))}
+          )}
+          {state.phase === 'conflict' && (
+            <ConflictCard bid={state.bid} onBackToMatrix={onBackToMatrix} />
+          )}
+          {(state.phase === 'editing' || state.phase === 'submitting') &&
+            (isAwaitingReview(bid) ? (
+              <VerdictDecisionForm
+                agentDecision={verdict?.decision}
+                isLocked={isLocked}
+                isSubmitting={state.phase === 'submitting'}
+                submitError={state.phase === 'editing' ? state.error : undefined}
+                blockedRowCount={blockedRowCount}
+                onSubmit={handleSubmit}
+                onBackToMatrix={onBackToMatrix}
+              />
+            ) : (
+              <NotParkedCard bid={bid} onBackToMatrix={onBackToMatrix} />
+            ))}
+        </div>
       </div>
     </div>
   )
@@ -150,7 +158,12 @@ function announce(phase: ReviewState['phase']): string {
   return ''
 }
 
-/** The agent's advisory verdict: the chip, the count behind it, and its reasoning. */
+/**
+ * The agent's advisory verdict: the chip, the count behind it, and its reasoning. The chip
+ * says so — `advisory` — because after a review this card stays on screen beside the
+ * recorded decision, and two bare chips that may disagree would leave the reader to guess
+ * which one a person actually chose.
+ */
 function RecommendationCard({
   bid,
   verdict,
@@ -173,7 +186,7 @@ function RecommendationCard({
       ) : (
         <>
           <div className="mb-3.5 flex flex-wrap items-center gap-3.5">
-            <VerdictChip verdict={verdict.decision} size="lg" />
+            <VerdictChip verdict={verdict.decision} size="lg" advisory />
             <span className="[font:var(--type-body)] text-text-secondary">
               {countSentence(verdict)}
             </span>

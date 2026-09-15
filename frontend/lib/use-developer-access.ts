@@ -17,6 +17,14 @@
  *
  * `unknown` hides rather than shows. An entry that appears a moment after the shell renders
  * is a small thing; one that a non-developer sees vanish is a promise withdrawn.
+ *
+ * **`shouldAsk` holds the question until there is a session to ask with.** Since the shell
+ * paints before the session settles (2026-09-15 audit, M7), the sidebar's first render
+ * happens while `SessionProvider` is still reading `localStorage` and before it has set the
+ * bearer token. A probe sent then is a 401 — and a 401 is cached as `denied` for the rest of
+ * the tab, which is right for a signed-in non-developer and wrong here: it would hide the
+ * console from a developer until a hard reload. The caller says when the session is known
+ * (`NavGroups` passes its status); until then the hook asks nothing and reports `unknown`.
  */
 import { useEffect, useState } from 'react'
 
@@ -50,10 +58,15 @@ export function probeDeveloperAccess(): Promise<DeveloperAccess> {
   return inFlight
 }
 
-export function useDeveloperAccess(): DeveloperAccess {
+/**
+ * @param shouldAsk `false` defers the probe — see the docblock above. Defaults to asking at
+ * once, which is right for a caller that only mounts once a session exists.
+ */
+export function useDeveloperAccess(shouldAsk = true): DeveloperAccess {
   const [access, setAccess] = useState<DeveloperAccess>(settled ?? 'unknown')
 
   useEffect(() => {
+    if (!shouldAsk) return
     let isCurrent = true
     void probeDeveloperAccess().then((answer) => {
       if (isCurrent) {
@@ -63,7 +76,7 @@ export function useDeveloperAccess(): DeveloperAccess {
     return () => {
       isCurrent = false
     }
-  }, [])
+  }, [shouldAsk])
 
   return access
 }

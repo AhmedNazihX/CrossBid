@@ -1278,3 +1278,34 @@ def test_the_list_carries_what_the_dashboard_renders(
     assert row["deadline_utc_offset_minutes"] == 120
     assert row["open_items"] == 7
     assert row["decision"] == "no_go"
+
+
+@pytest.mark.parametrize(
+    "number",
+    ["614251-2026 OR publication-number IN (1-2026)", "not-a-number", "", "614251"],
+    ids=["injected-or", "words", "empty", "no-year"],
+)
+def test_a_notice_number_that_is_not_one_is_refused_before_anything_is_started(
+    client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner, number: str
+) -> None:
+    """The value is interpolated into TED's expert query, so its shape is the API's business.
+
+    Refused here as well as in the client: a 422 naming the field is a better answer than a
+    503 saying TED could not be reached, and nothing should be created on the way to finding
+    out. The client re-checks because a public method may not trust its callers.
+    """
+    # Arrange
+    document = read_model.add_document(*document_row())
+
+    # Act
+    response = client.post(
+        "/bids", json=start_body(document.id, notice_number=number), headers=headers()
+    )
+
+    # Assert
+    assert response.status_code == 422
+    assert any(error["loc"][-1] == "notice_number" for error in response.json()["detail"]), (
+        response.text
+    )
+    assert read_model.bids == {}
+    assert runner.started == []

@@ -26,8 +26,11 @@ from pydantic import ValidationError
 
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import (
+    DEFAULT_STALE_AFTER_SECONDS,
     DOCUMENT_COLUMNS,
+    FAIL_INTERRUPTED_DOCUMENTS_SQL,
     INSERT_DOCUMENT_SQL,
+    INTERRUPTED_REASON,
     LIST_DOCUMENTS_SQL,
     MARK_FAILED_SQL,
     MARK_PARSED_SQL,
@@ -40,6 +43,7 @@ from crossbid.readmodel.documents import (
     DocumentsReadModel,
     DocumentStatus,
     ReadModelError,
+    fail_interrupted_documents,
 )
 from tests.conftest import FakeConnectionSource
 
@@ -493,3 +497,53 @@ def test_the_migration_adds_the_three_columns_and_the_reason_invariant() -> None
         assert re.search(rf"add column if not exists {column}\b", sql), column
     assert "documents_failed_needs_reason_check" in sql
     assert "(status = 'failed') = (failure_reason is not null)" in sql
+
+
+@pytest.mark.anyio
+async def test_the_sweep_marks_interrupted_documents_failed_and_says_how_many() -> None:
+    """A restart leaves an upload where nothing will ever pick it up again.
+
+    A bid run is checkpointed and `resume_unfinished_runs` re-invokes it; a document's
+    progress is not checkpointed and nothing re-parses a half-parsed file. Before this, the
+    row sat in `uploaded` or `parsed` for ever while the browser polled it every two seconds
+    for a state that could not arrive.
+    """
+    # Arrange -- two rows matched.
+    source = FakeConnectionSource(({}, {}))
+
+    # Act
+    swept = await fail_interrupted_documents(source)
+
+    # Assert
+    assert swept == 2
+    assert source.only.sql == FAIL_INTERRUPTED_DOCUMENTS_SQL
+    assert source.only.params["reason"] == INTERRUPTED_REASON
+    assert source.only.params["stale_seconds"] == DEFAULT_STALE_AFTER_SECONDS
+
+
+@pytest.mark.anyio
+async def test_the_sweep_only_touches_rows_that_have_stopped_moving() -> None:
+    """`embedded` is excluded although it is not terminal either: it means the chunks are
+    written and only `mark_ready` is outstanding, so a row sitting there is a bug rather than
+    an interruption and must not be quietly buried. The age test is what keeps the sweep off
+    a document a live worker is still processing."""
+    statement = FAIL_INTERRUPTED_DOCUMENTS_SQL
+
+    assert "status in ('uploaded', 'parsed')" in statement
+    assert "embedded" not in statement
+    assert "updated_at < now() - make_interval(secs => %(stale_seconds)s)" in statement
+
+
+def test_the_sweep_is_the_one_statement_that_is_not_tenant_scoped() -> None:
+    """Named for it, the way `bids.SELECT_UNFINISHED_BIDS` is. It answers a question about
+    the process rather than about a tenant, and no request can reach it."""
+    assert TENANT_PARAMETER not in FAIL_INTERRUPTED_DOCUMENTS_SQL
+    assert "company_id" not in FAIL_INTERRUPTED_DOCUMENTS_SQL
+    assert FAIL_INTERRUPTED_DOCUMENTS_SQL not in SCOPED_STATEMENTS
+
+
+def test_the_interrupted_reason_is_in_the_closed_failure_vocabulary() -> None:
+    """So the existing "a bidder never sees a stack trace, a key or a URL" test covers it."""
+    from crossbid.ingestion.pipeline import FAILURE_REASONS
+
+    assert INTERRUPTED_REASON in FAILURE_REASONS

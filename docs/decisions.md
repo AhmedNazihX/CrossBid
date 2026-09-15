@@ -3403,6 +3403,49 @@ save.
 
 ---
 
+## ADR-0042 — The company gate is a question asked on every navigation, not once per session
+
+**Date:** 2026-09-14 · **Written up:** 2026-09-16 · **Stories:** follow-up to S4.2.1 / ADR-0041 · **Status:** accepted
+
+**Backfilled.** The decision was made and shipped in `f7e51e4`; the record was never written,
+and `frontend/components/auth/require-company.tsx:23` has cited this number ever since. A
+2026-09-15 audit found the citation pointing at nothing — the only violation in the repo of
+the standing rule that every architectural choice gets an entry here. This entry closes it,
+from the commit and the code rather than from memory.
+
+### The symptom
+
+Clicking **Dashboard** after creating a company bounced straight back to the company page,
+forever, until a hard reload. The **Continue to Tenders** button ADR-0041 had added an hour
+earlier was bounced by the same thing, so it can never have worked once.
+
+### The cause, which is a shape rather than a typo
+
+`RequireCompany`'s check ran in an effect that depended on the session alone, and
+`app/(app)/layout.tsx` stays mounted while a bidder moves between routes inside it. So the
+gate ran exactly once per session: a bidder who arrived with no company kept `needsCompany`
+after creating one, and every subsequent navigation fired the redirect on an answer that was
+already stale.
+
+### The decision
+
+The gate re-runs on each path change until it finds a company, and never again after that.
+That costs one extra request only in the pre-onboarding state, which is the state it exists
+for. It returns to `checking` first, so the redirect cannot fire on the previous answer while
+the new one is in flight.
+
+### Why it was missed, which is the part worth keeping
+
+The earlier verification visited `/company?next=/bids` directly, under the dev bridge — where
+this gate is skipped entirely. The test bypassed the component under test. A check that is
+disabled in the mode you verify in is not a check you have verified.
+
+The same stale-state shape appeared again in `components/layout/nav-item.tsx`, whose
+last-opened-bid href is read in an effect keyed on a module constant and therefore never
+re-read inside a session. Found by the 2026-09-15 audit; see ADR-0061.
+
+---
+
 ## ADR-0043 — TED search, and two things the unit tests were happy to get wrong
 
 **Date:** 2026-09-14 · **Stories:** S1.2.1 (unblocks S1.2.2, S3.2.2, S4.3.1) · **Status:** accepted
@@ -4589,3 +4632,130 @@ The matrix is still 144 rows in one list with "All" selected by default; the sti
 makes that survivable rather than right. Virtualising or paging the list is the next
 improvement if the page is still judged too long. No artboard was redrawn; if the tabbed column
 is to become the canonical desktop design, `Main.dc.html` should be updated to show it.
+
+---
+
+## ADR-0061 — Five guarantees the code described and did not provide
+
+**Date:** 2026-09-16 · **Stories:** cross-cutting, from the 2026-09-15 audit · **Status:** accepted
+
+Sixteen read-only auditors read the repository in full, ran the tooling and drove the running
+app. The headline result is worth recording before the findings, because it is the part that
+was doubted: **the numbers are real.** 4 871 tests, 100 % line *and* branch coverage and a
+clean `make lint` all reproduced exactly. Every ADR code claim spot-checked — 0009, 0017,
+0025, 0036, 0046, 0050, 0055, 0057, 0059 — was true against quoted source. The generated
+client is byte-identical to a fresh generation. The recall failure is reported honestly
+everywhere, with its variance, and pinned red by a test.
+
+What was not real was a set of guarantees written in prose above code that did not deliver
+them. Each is now delivered. They are one entry because they are one kind of defect.
+
+### 1. A transaction has to be opened, because every connection is autocommit
+
+`db.pool_connection_kwargs` sets `autocommit=True`, so leaving an `async with db.connection()`
+block commits nothing — each statement had already committed alone. Two writers said
+otherwise. `record_review` inserted the audit row and then set `bids.decision`; a zero
+rowcount on the update raised *after* the insert had landed, leaving a `reviews` row for a
+decision the dashboard never showed. `attach_documents` was worse: it committed whichever ids
+matched, then raised on the shortfall, and because `ATTACH_DOCUMENTS` only takes a document
+whose `bid_id is null`, those files could never start another bid. **A partial attach was
+permanent.**
+
+Both pairs now open `conn.transaction()` explicitly, which psycopg honours under autocommit.
+The rule for every future writer: *if two statements have to land together, say so in code.*
+The test fake grew a `transaction()` that records how the block ended, because the assertion
+it replaced — that one connection had been borrowed — could never have caught either bug.
+
+### 2. A budget that is read after the fact is not a budget
+
+`run_budget_seconds` was read once the graph had already stopped, and only on the success
+path, so nothing bounded a run at all and the runs whose wall clock an operator most wants —
+the ones that died — reported none. At `llm_timeout_seconds` × the model's attempts per
+section, a pathological pack could hold a worker for the better part of an hour while the
+bidder watched a status that never moved.
+
+The invocation runs under `asyncio.timeout(budget.seconds)`. A bid past its deadline is marked
+`failed` with a sentence naming the budget rather than an exception class name. Elapsed is
+reported whatever the outcome. `asyncio.timeout` re-raises a cancellation that was not its
+own, so `shutdown()` still leaves a bid resumable rather than failed; both paths are pinned.
+
+### 3. Spend with a bid attached belongs in the report
+
+Every `POST /bids/{id}/chat` turn ran outside any usage scope, so the callback logged the
+spend as unattributed and dropped it. `/dev/costs` understated any bid whose reviewer asked a
+question, and `runner._report_cost` compared that understated total against `run_budget_usd`.
+`usage.py` named the injection review as the only caller reaching that path, which had stopped
+being true the day S3.5.1 landed.
+
+`UsageNode` gains `CHAT` — the one member that is not a bid-graph node, because chat runs its
+own graph against a bid — and the route opens a recorder. The parity test that asserted the
+enum equals the graph's node names is now a subset assertion in the direction that protects
+something: a node renamed in the graph and not here would split one node's costs across two
+rows in the report and nothing would fail.
+
+### 4. A citation must be followable, and this rule has two producers
+
+ADR-0055 settled that a chat citation is built from the retrieval ledger and that a reference
+naming nothing is dropped. `get_matrix` was the producer nobody applied it to: it put the
+**requirement's** id into `Citation.document_id`, a field a `Requirement` does not have. The
+workspace then invented a document from that id, matched it ahead of the real filename, and
+asked `GET /documents/{id}/url` for something that could only 404 — a duplicate tab with the
+right name and "the document could not be opened" behind it.
+
+A requirement carries the *name* of the file it was quoted from and no id, so the tool now
+resolves the name against the bid's documents and drops the citation when the name is not
+among them. Three scoped reads instead of two; the docstring that argued for two has been
+corrected rather than left to look prescient.
+
+### 5. A bonus source may not cost the run
+
+TED does not cap `selection-criterion-description-lot`; `Requirement.source_text` caps a quote
+at `MAX_QUOTE_CHARS`. Constructing inline, one verbose buyer raised a `ValidationError` out of
+`parse_docs`, which the stage wrapper turned into a failed bid — a pack the bidder had already
+uploaded, lost to somebody else's prose. The notice path now drops the row and logs the
+failing field names, never the buyer's text, exactly as `espd_requirements` already did one
+criterion at a time. Losing a row costs a row; raising costs the run, and the notice usually
+states no criteria at all.
+
+Two smaller repairs travelled with these, for the same reason — the code said something it did
+not do:
+
+* **Notice requirement ids were `uuid4`.** `readmodel/requirements.py` states that a
+  requirement's id is derived so a replayed superstep upserts instead of doubling, and names
+  that as the property the restart criterion depends on. Extraction and the DUME path both
+  held it; the notice path was the exception, so a crash between the projection write and the
+  checkpoint write doubled the deadline row. It now derives a `uuid5` in the same namespace.
+* **The extraction re-ask replaced its predecessor.** The correction names pages, not rows, so
+  a re-ask is under no obligation to repeat what it already got right — and when it raised,
+  `_attempt` answers with no rows at all. Verified, cited rows were dropped with no problem
+  recorded to say so. Rows now accumulate across attempts; the problems stay the last
+  attempt's, so a clause quoted badly and then well is not still reported as unquoted. Whether
+  this moves the recall figure is unmeasured and should not be assumed: a single live run
+  costs about $1.74 and the noise floor is larger than one change.
+
+### Two guards the audit asked for and this entry did not build
+
+* `GET /tenders/search` awaited a synchronous client inline, parking the event loop for up to
+  the client's whole budget. It runs in a thread now, as the Storage client already did.
+* `StartBidRequest.notice_number` had no shape, and it is interpolated into TED's expert query
+  by the one call that bypasses `_values` — the module's stated promise that there is nowhere
+  for an `OR` to get in. It is now constrained at the request model *and* re-checked in the
+  client, because a public method may not assume its callers were careful.
+
+### The standing rule this produces
+
+The audit's brief was one sentence: *treat prose about a caller as a claim to grep, not as
+evidence.* It found five more instances of exactly what HANDOVER.md had already warned about
+after finding three. The pattern is not carelessness; it is that a docstring describing an
+intended property is written at the moment the property is most obviously true and is never
+re-read against the code afterwards. Where a property matters, the cheapest defence is a test
+that asserts the property rather than the shape — `db.conn.transactions == ["rollback"]`
+rather than a borrow count, a thread name rather than a mocked call.
+
+### Left open
+
+The two largest findings are not fixed and are not cheap: **no SQL is executed against
+Postgres in the suite or in CI**, so a malformed statement constant or a column renamed in a
+migration would pass with 100 % coverage; and **the frontend has no tests at all** across
+eighteen thousand lines, which is where three of the four blockers lived. Both are recorded on
+the audit board rather than here. Neither is a decision; they are work.

@@ -15,6 +15,12 @@ statement assembled at run time cannot be passed; an f-string would turn a liter
 plain `str` and forfeit exactly that guarantee. `SCOPED_STATEMENTS` lists the seven so one test
 asserts the scope on all of them, and another asserts their column lists are identical.
 
+**One statement is deliberately not scoped, and is named for it.**
+`FAIL_INTERRUPTED_DOCUMENTS_SQL` runs once at startup over every company's rows, the
+way `bids.SELECT_UNFINISHED_BIDS` does. It answers a question about the process rather
+than about a tenant, it is never reachable from a request, and it returns a count rather
+than a row.
+
 Two things a reader might otherwise take for oversights:
 
 * **A read for another company's id returns `None`, never an error.** The router turns that
@@ -34,6 +40,7 @@ guard only scans its own file).
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
@@ -46,6 +53,8 @@ from psycopg.rows import DictRow
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from crossbid.models import DocumentKind
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentStatus(StrEnum):
@@ -183,6 +192,24 @@ set status = 'failed', failure_reason = %(reason)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
 returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
+"""
+
+FAIL_INTERRUPTED_DOCUMENTS_SQL: Final[LiteralString] = """
+update documents
+set status = 'failed', failure_reason = %(reason)s, updated_at = now()
+where status in ('uploaded', 'parsed')
+  and updated_at < now() - make_interval(secs => %(stale_seconds)s)
+"""
+"""Every company's documents that a restart left mid-pipeline, marked terminal.
+
+Unscoped on purpose -- see the module docstring. `embedded` is excluded although it is also
+not terminal: it means the chunks are written and only `mark_ready` is outstanding, which is
+one statement, so a row sitting there is a bug rather than an interruption and should not be
+quietly buried. The age test is what keeps the sweep off a document that is being processed
+right now by a worker that is still alive.
+
+`make_interval` rather than an interpolated interval literal: the constant has to stay a
+`LiteralString` for psycopg and for pyright, and an f-string would forfeit exactly that.
 """
 
 SELECT_DOCUMENT_SQL: Final[LiteralString] = """
@@ -346,6 +373,58 @@ class DocumentsReadModel:
         async with self._source.connection() as connection:
             cursor = await connection.execute(sql, params)
             return await cursor.fetchone()
+
+
+INTERRUPTED_REASON: Final = (
+    "Processing was interrupted when the server restarted. Please upload the file again."
+)
+"""What the startup sweep writes to `failure_reason`, and the one reason not written by
+`ingestion/pipeline.py`.
+
+It lives here because this module writes it, and `pipeline` imports it into its closed
+`FAILURE_REASONS` list -- the other way round would be a cycle, since `pipeline` already
+imports `DocumentRecord` from here. Being in that list is what makes the existing test
+"a bidder never sees a stack trace, a key or a URL" cover this sentence too.
+"""
+
+DEFAULT_STALE_AFTER_SECONDS: Final = 900.0
+"""How long a document may sit in a non-terminal status before the sweep calls it lost.
+
+Fifteen minutes: comfortably longer than the slowest real upload measured (the DE pack's
+largest file), and short enough that a bidder who restarts the API and reloads is told
+something rather than left polling. Only ever compared against `updated_at`, so a row that is
+genuinely moving keeps resetting the clock.
+"""
+
+
+async def fail_interrupted_documents(
+    db: ConnectionSource,
+    *,
+    stale_after_seconds: float = DEFAULT_STALE_AFTER_SECONDS,
+) -> int:
+    """Mark every document a restart left mid-pipeline as failed. Returns how many.
+
+    Called once at startup, beside `resume_unfinished_runs`, and the asymmetry with it is the
+    point: a bid run *can* be resumed, because its progress is checkpointed. A document's
+    progress is not. Nothing re-parses a half-parsed upload, so before this the row sat in
+    `uploaded` or `parsed` for ever while `GET /documents/{id}` was polled every two seconds
+    for a state that could never arrive.
+
+    Failing it is the honest answer rather than the tidy one: the bytes are in Storage but the
+    text is not in the corpus, so the agent cannot use the file and the bidder needs to know
+    that rather than to wait. `INTERRUPTED_REASON` tells them what to do about it.
+    """
+    async with db.connection() as connection:
+        cursor = await connection.execute(
+            FAIL_INTERRUPTED_DOCUMENTS_SQL,
+            {"reason": INTERRUPTED_REASON, "stale_seconds": stale_after_seconds},
+        )
+        swept = cursor.rowcount
+    if swept > 0:
+        logger.warning(
+            "marked %d document(s) failed: a restart interrupted them mid-pipeline", swept
+        )
+    return swept
 
 
 def _require(

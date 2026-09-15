@@ -42,7 +42,9 @@ search and invite an operator to turn off the only way the agent can see its own
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping, Sequence
+from types import MappingProxyType
 from typing import Final
 
 from langchain_core.tools import BaseTool, StructuredTool
@@ -52,10 +54,13 @@ from crossbid.guards.wrap import DataBlock, wrap_as_data
 from crossbid.models.matrix import MAX_QUOTE_CHARS, MatrixRow, ReviewerStatus, RowStatus
 from crossbid.models.requirement import Requirement
 from crossbid.models.review import Citation
+from crossbid.readmodel.bids import bid_documents
 from crossbid.readmodel.matrix import fetch_matrix_rows
 from crossbid.readmodel.requirements import fetch_requirements
 from crossbid.tools.manifest import ToolContext, ToolManifest
 from crossbid.tools.rag import RagToolError, require_connection_source, scope_uuid
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_ROWS: Final = 10
 """How many rows one call returns when the model does not ask. The DE pack's matrix is 258
@@ -236,6 +241,7 @@ def digest_of(
     *,
     status: RowStatus | None,
     limit: int,
+    document_ids: Mapping[str, str] = MappingProxyType({}),
 ) -> MatrixDigest:
     """Join the matrix to its requirements and take the first `limit` of the filtered rows.
 
@@ -243,6 +249,13 @@ def digest_of(
     missing are dropped rather than shown without a clause: the two projections are written
     by the same graph and a row without its requirement is a bug in the writer, not a row a
     bidder should be told about in prose that could not name what it is about.
+
+    `document_ids` maps a document's name to its id. A `Requirement` carries the name it was
+    extracted from and no id -- the column does not exist -- so without this map a citation
+    from here has nothing real to put in `Citation.document_id`, and it used to put the
+    *requirement's* id there. The workspace then invented a document from that id and asked
+    for a signed URL that could only 404. Empty by default so the pure tests stay pure; a
+    name with no entry yields no citation at all rather than a broken one.
     """
     by_id: Mapping[str, Requirement] = {item.id: item for item in requirements}
     counts = {value.value: 0 for value in RowStatus}
@@ -256,7 +269,7 @@ def digest_of(
             continue
         if len(lines) >= limit:
             continue
-        citations.append(_citation_of(requirement))
+        citations.append(_citation_of(requirement, document_ids))
         lines.append(
             MatrixLine(
                 status=row.status,
@@ -277,12 +290,26 @@ def digest_of(
     )
 
 
-def _citation_of(requirement: Requirement) -> Citation | None:
-    """The requirement's clause as a citation, or `None` when it has no page (decision 2)."""
+def _citation_of(requirement: Requirement, document_ids: Mapping[str, str]) -> Citation | None:
+    """The requirement's clause as a citation, or `None` when it cannot be opened.
+
+    Two ways to have nothing to cite. A requirement with no page is a notice or DUME row,
+    which has no document to open (decision 2). A requirement whose document the bid no
+    longer holds is the same answer for a different reason: a citation the reader cannot
+    follow is worse than none, and ADR-0055 already settled that a reference naming nothing
+    is dropped rather than rendered.
+    """
     if requirement.page is None:
         return None
+    document_id = document_ids.get(requirement.document_name)
+    if document_id is None:
+        logger.info(
+            "Matrix citation dropped: no document named %r on this bid",
+            requirement.document_name,
+        )
+        return None
     return Citation(
-        document_id=requirement.id,
+        document_id=document_id,
         document_name=requirement.document_name,
         page=requirement.page,
         quote=requirement.source_text[:MAX_QUOTE_CHARS],
@@ -312,16 +339,28 @@ def build_tool(context: ToolContext) -> BaseTool:
     async def run(
         status: RowStatus | None = None, limit: int = DEFAULT_ROWS
     ) -> tuple[str, MatrixDigest]:
-        """Two scoped reads and a join in memory.
+        """Three scoped reads and a join in memory.
 
-        Two statements rather than a third join written for this tool: both already exist,
-        both already carry the tenant predicate in their text (ADR-0011), and a new query
-        would be a fourth place that has to remember it. A chat turn makes at most a handful
-        of these calls, so the round trip is not the cost worth optimising.
+        Existing statements rather than one join written for this tool: each already carries
+        the tenant predicate in its text (ADR-0011), and a new query would be another place
+        that has to remember it. A chat turn makes at most a handful of these calls, so the
+        round trip is not the cost worth optimising.
+
+        The third read is the bid's documents, and it is what makes a citation from here
+        followable: a requirement knows the *name* of the file it was quoted from and not its
+        id, so the name has to be resolved against the bid before a `Citation` can point at
+        anything the workspace can open.
         """
         rows = await fetch_matrix_rows(db, company_id=company_id, bid_id=bid_id)
         requirements = await fetch_requirements(db, company_id=company_id, bid_id=bid_id)
-        digest = digest_of(rows, requirements, status=status, limit=limit)
+        documents = await bid_documents(db, company_id=company_id, bid_id=bid_id)
+        digest = digest_of(
+            rows,
+            requirements,
+            status=status,
+            limit=limit,
+            document_ids={document.name: document.id for document in documents},
+        )
         return digest.render(), digest
 
     return StructuredTool.from_function(

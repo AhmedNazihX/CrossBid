@@ -11,7 +11,9 @@ Search API v3*; what follows is what they mean for the code.
   `QUERY_UNSUPPORTED_FIELD_VALUE`. The model's pattern refuses it here instead.
 * **`IN (...)` takes values separated by spaces and never `OR`** — that is the story's own
   criterion, and `_values` is the single place a list becomes a clause, so there is nowhere
-  else for an `OR` to get in.
+  else for an `OR` to get in. The one value that does not pass through it -- the publication
+  number `search_by_publication_number` interpolates -- is shape-checked by `_checked_number`
+  instead, because a promise with one exception in it is not a promise.
 * **Sorting lives inside the query string**, appended as `SORT BY publication-date DESC`. A
   JSON `"sort"` field is rejected outright (`Unrecognized field "sort"`), and `ASC` is 400 —
   so newest-first is not a preference here, it is the only order TED will serve.
@@ -59,6 +61,9 @@ MAX_ATTEMPTS: Final = 2
 """One retry, as the story asks: TED is occasionally slow, never usefully hammered."""
 
 SORT_CLAUSE: Final = "SORT BY publication-date DESC"
+
+_PUBLICATION_NUMBER: Final = re.compile(r"\d{1,9}-\d{4}")
+"""A TED publication number: digits, a hyphen, a year. `618320-2026`."""
 
 _DATE_WITH_OFFSET: Final = re.compile(
     r"^(?P<date>\d{4}-\d{2}-\d{2})(?P<offset>Z|[+-]\d{2}:\d{2})?$"
@@ -212,7 +217,7 @@ class TedSearchClient:
                 contract_notices_only=False, limit=1, keyword=None, cpv=(), countries=()
             ),
             language=language,
-            query_override=f"publication-number IN ({publication_number})",
+            query_override=f"publication-number IN ({_checked_number(publication_number)})",
         )
         return page.notices[0] if page.notices else None
 
@@ -262,6 +267,27 @@ def build_query(query: TedSearchQuery) -> str:
     # The sort is appended with a space, never joined with `AND`: `... AND SORT BY ...` is
     # `QUERY_SYNTAX_ERROR ... mismatched input 'SORT'`. It is not a clause, it is a suffix.
     return f"{' AND '.join(clauses)} {SORT_CLAUSE}".strip() if clauses else SORT_CLAUSE
+
+
+def _checked_number(publication_number: str) -> str:
+    """The number, or a refusal. The one guard on the one call that builds its own clause.
+
+    `search_by_publication_number` is the only caller that passes `query_override`, so it is
+    the only place a value skips `_values` -- this module's promise that there is nowhere
+    else for an `OR` to get in. The value reaching it began life in a request body, and a
+    public method may not assume its caller was careful: unvalidated, a crafted number could
+    close the predicate and open another, and the notice whose deadline `parse_docs` then
+    writes onto the bid would not be the notice the bidder chose.
+
+    `TedUnavailableError` rather than a new type: every caller already handles it, and to a
+    caller "TED will not answer this" and "this was never a question TED could answer" lead
+    to the same place. The message says which it was.
+    """
+    if _PUBLICATION_NUMBER.fullmatch(publication_number) is None:
+        raise TedUnavailableError(
+            f"{publication_number!r} is not a TED publication number; no query was sent"
+        )
+    return publication_number
 
 
 def _values(values: Iterable[str]) -> str:

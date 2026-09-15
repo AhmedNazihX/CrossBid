@@ -585,3 +585,32 @@ def test_a_criteria_mapping_with_nothing_usable_in_it_reports_none() -> None:
     assert (
         client_for(answering(body)).search(TedSearchQuery()).notices[0].selection_criteria == ()
     )
+
+
+@pytest.mark.parametrize(
+    "number",
+    [
+        "629621-2026 OR publication-number IN (000001-2026)",
+        "629621-2026) OR classification-cpv IN (72000000",
+        "not-a-number",
+        "",
+        "629621",
+    ],
+    ids=["injected-or", "closed-predicate", "words", "empty", "no-year"],
+)
+def test_a_value_that_is_not_a_publication_number_never_reaches_ted(number: str) -> None:
+    """The one call that builds its own clause is the one place a value skips `_values`.
+
+    The module's promise is that there is nowhere for an `OR` to get in. `query_override`
+    was that nowhere, and the value reaching it starts life in a request body: unchecked, a
+    crafted number could close the predicate and open another, so the notice whose deadline
+    `parse_docs` then writes onto the bid would not be the notice the bidder chose.
+    """
+
+    # Arrange -- a handler that fails the test if it is ever called.
+    def refuse(request: httpx.Request) -> httpx.Response:
+        raise AssertionError(f"a query was sent: {request.content!r}")
+
+    # Act / Assert
+    with pytest.raises(TedUnavailableError, match="publication number"):
+        client_for(refuse).search_by_publication_number(number)

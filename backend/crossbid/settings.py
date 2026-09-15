@@ -343,8 +343,16 @@ class EnvSettings(BaseSettings):
     only -- the browser gets the anon key, which the backend never reads. Named for what
     the key *is*; the alias is the variable name `infra/.env.example` and Compose already
     pass, and `populate_by_name` accepts `SUPABASE_SERVICE_ROLE_KEY` as well."""
-    supabase_storage_bucket: str = "company-documents"
-    """Private bucket holding every uploaded PDF under its `company_id` prefix (S2.2.2)."""
+    supabase_storage_bucket: str = ""
+    """Private bucket holding every uploaded PDF under its `company_id` prefix (S2.2.2).
+
+    No default, deliberately. It used to be `"company-documents"`, and the Frankfurt project's
+    bucket is `company-docs` (which is also what the plan states as the acceptance criterion),
+    so a `.env` missing this line silently pointed the app at a bucket that does not exist.
+    `storage.py` suppresses Storage's own message on purpose -- nothing about the bucket
+    leaves the server -- so the only symptom was "The file could not be stored" on every
+    upload, and it cost a debugging session. Empty makes `storage_bucket()` refuse at the
+    first upload and name the variable instead."""
     signed_url_ttl_seconds: int = MAX_SIGNED_URL_TTL_SECONDS
     """How long a document's signed URL stays valid. The default is the cap."""
     langsmith_api_key: SecretStr | None = None

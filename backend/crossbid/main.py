@@ -46,6 +46,7 @@ from crossbid.agent.runner import BidRunner, SettingsProvider, resume_unfinished
 from crossbid.db import Database
 from crossbid.llm import verify_configured_models
 from crossbid.readmodel.app_settings import fetch_app_settings_row
+from crossbid.readmodel.documents import fail_interrupted_documents
 from crossbid.settings import (
     AppSettingsRow,
     Settings,
@@ -115,6 +116,22 @@ async def start_runner(
     return await resume_unfinished_runs(db, current_settings)
 
 
+async def sweep_interrupted_documents(db: Database | None) -> int:
+    """Mark documents a previous process left mid-pipeline as failed, or do nothing.
+
+    Failure here is logged and swallowed. A sweep that cannot run leaves rows exactly as
+    they were, which is the state the API has always started in; refusing to boot over it
+    would trade a stale row for an outage.
+    """
+    if db is None:
+        return 0
+    try:
+        return await fail_interrupted_documents(db)
+    except Exception:
+        logger.exception("could not sweep documents left unfinished by a restart")
+        return 0
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the API. `settings` is injectable so tests never read a developer's `.env`."""
 
@@ -132,6 +149,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.base_settings = resolved
         app.state.settings = await apply_stored_settings(db, resolved)
         app.state.db = db
+        # Before the runner, and deliberately not part of it: a bid run is checkpointed and
+        # can be resumed, an upload is not. A document this process's predecessor left in
+        # `uploaded` or `parsed` will never move again, and the browser polls it every two
+        # seconds regardless, so it is marked failed with a sentence saying to upload it
+        # again. Never raises the boot: a sweep is a courtesy, not a precondition.
+        await sweep_interrupted_documents(db)
         runner = await start_runner(db, settings_provider(app))
         app.state.bid_runner = runner
         try:

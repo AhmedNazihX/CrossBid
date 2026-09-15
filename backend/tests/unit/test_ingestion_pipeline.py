@@ -52,11 +52,13 @@ from crossbid.ingestion.storage import (
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentRecord, DocumentStatus, ReadModelError
 from tests.conftest import (
+    CRITERION_IDS,
     DIMENSIONS,
     LEAK_MARKERS,
     LEAKY_MESSAGE,
     ORIGINAL_FILENAME,
     PDF_BYTES,
+    REAL_CRITERION_ID,
     FakeChunkWriter,
     FakeEmbedder,
     FakeParser,
@@ -741,3 +743,70 @@ async def test_the_withheld_chunk_is_logged_with_its_signals(
 
     messages = [record.getMessage() for record in caplog.records]
     assert any("withheld" in message and "overrides" in message for message in messages)
+
+
+@pytest.mark.anyio
+async def test_a_dume_criterion_that_reads_like_an_instruction_is_flagged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The branch that returned before the scanner entirely until 2026-09-16.
+
+    A DUME is never chunked and never embedded, so `_scan_and_embed` never saw one, and
+    `flagged_chunks` was always empty for this kind — while `espd_requirements` read the
+    buyer's words verbatim into a requirement and `check_loop` pasted them into a prompt.
+    The wrapper meant the attack was mitigated; nothing meant the reviewer heard about it.
+    """
+    # Arrange -- criterion two carries the plant; one and three are ordinary.
+    hostile = espd_request_xml(
+        (
+            REAL_CRITERION_ID,
+            "CRITERION.SELECTION.ECONOMIC_FINANCIAL_STANDING",
+            "Umsatz",
+            ORDINARY,
+        ),
+        (CRITERION_IDS[1], "CRITERION.EXCLUSION.CONVICTIONS", "Hinweis", PLANTED),
+        (CRITERION_IDS[2], "CRITERION.SELECTION.TECHNICAL_ABILITY", "Referenzen", ORDINARY),
+    )
+
+    # Act
+    h = harness()
+    with caplog.at_level(logging.WARNING, logger="crossbid.ingestion.pipeline"):
+        final = await run(h, kind=DocumentKind.TENDER_ESPD_REQUEST, up=espd_upload(hostile))
+
+    # Assert -- reported, and the document is still usable.
+    assert final.status is DocumentStatus.READY
+    assert final.flagged_chunks == (2,)
+    assert "criterion 2" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_a_flagged_dume_criterion_is_reported_and_never_withheld() -> None:
+    """The asymmetry ADR-0049 draws, applied to the kind it had never been applied to.
+
+    A DUME has no retrieval path to withhold from, and its criteria become requirements by
+    rule rather than by extraction — so dropping one would silently remove a real obligation
+    from the matrix, which is the failure the withhold/report split exists to prevent.
+    """
+    # Arrange
+    hostile = espd_request_xml(
+        (REAL_CRITERION_ID, "CRITERION.EXCLUSION.CONVICTIONS", "Hinweis", PLANTED),
+    )
+
+    # Act
+    h = harness()
+    final = await run(h, kind=DocumentKind.TENDER_ESPD_REQUEST, up=espd_upload(hostile))
+
+    # Assert -- flagged, ready, and nothing was embedded either way.
+    assert final.flagged_chunks == (1,)
+    assert final.status is DocumentStatus.READY
+    assert h.writer.inserts == []
+
+
+@pytest.mark.anyio
+async def test_an_ordinary_dume_flags_nothing() -> None:
+    """The negative control: the committed FR fixture must stay silent."""
+    h = harness()
+
+    final = await run(h, kind=DocumentKind.TENDER_ESPD_REQUEST, up=espd_upload())
+
+    assert final.flagged_chunks == ()

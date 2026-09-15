@@ -4,6 +4,14 @@ import { cn } from 'cn'
  * VerdictChip — `components/app/VerdictChip.jsx`: the four verdict words of the fixed
  * vocabulary (ADR-0013) on their verdict tokens, 8 px dot, 8 px radius, semibold. The
  * `Decision` enum values of the API map onto it one to one.
+ *
+ * One quiet qualifier may follow the word, in the same slot either way: "· confirmed" once
+ * a person has reviewed the bid, "· advisory" while the verdict is still the agent's alone.
+ * The second exists because the first was not enough: a bare "No-go" at 16 px reads as a
+ * settled fact, and the product's central promise is that no verdict is settled until a
+ * person confirms it — the caveat lived one tab away, in a notice under the recommendation.
+ * The qualifier is regular weight at 80 % so the verdict word stays the thing the eye reads
+ * first; it is not a warning, it is the truth about who has spoken so far.
  */
 export type VerdictValue = 'go' | 'no_go' | 'conditional' | 'insufficient_evidence'
 
@@ -35,17 +43,32 @@ const SIZE_CLASSES = {
 export interface VerdictChipProps {
   readonly verdict: VerdictValue
   readonly size?: keyof typeof SIZE_CLASSES
+  /** A person has confirmed or overridden the verdict: appends "· confirmed". */
   readonly confirmed?: boolean
+  /**
+   * The verdict is the agent's and nobody has reviewed it yet: appends "· advisory".
+   * `confirmed` wins if both are passed — a reviewed verdict is no longer advice.
+   */
+  readonly advisory?: boolean
   readonly className?: string
+}
+
+function qualifierOf(confirmed: boolean, advisory: boolean): string | undefined {
+  if (confirmed) {
+    return 'confirmed'
+  }
+  return advisory ? 'advisory' : undefined
 }
 
 export function VerdictChip({
   verdict,
   size = 'md',
   confirmed = false,
+  advisory = false,
   className,
 }: VerdictChipProps) {
   const entry = VERDICTS[verdict]
+  const qualifier = qualifierOf(confirmed, advisory)
   return (
     <span
       className={cn(
@@ -57,7 +80,7 @@ export function VerdictChip({
     >
       <span aria-hidden="true" className={cn('size-2 rounded-full', entry.dot)} />
       {entry.label}
-      {confirmed && <span className="font-normal opacity-80">· confirmed</span>}
+      {qualifier !== undefined && <span className="font-normal opacity-80">· {qualifier}</span>}
     </span>
   )
 }

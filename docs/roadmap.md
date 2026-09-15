@@ -8,7 +8,7 @@ Visual companion to `project-plan.md`. Diagrams are Mermaid fences, so they rend
 flowchart LR
   root["/"]
   root --> BE["backend/  ·  FastAPI · Python 3.12 · uv"]
-  root --> FE["frontend/  ·  Next.js 15 · TypeScript · Tailwind · shadcn"]
+  root --> FE["frontend/  ·  Next.js 15 · TypeScript · Tailwind · the CrossBid design system (ADR-0014; shadcn tooling removed, no components.json)"]
   root --> INFRA["infra/  ·  docker-compose.yml · .env.example"]
   root --> DOCS["docs/  ·  project-plan · roadmap · architecture · decisions · user-guide · critique"]
   root --> TOP["135.md · project.md · CLAUDE.md · README.md"]
@@ -17,20 +17,21 @@ flowchart LR
     BE --> BEcfg["pyproject.toml · Dockerfile · settings.default.yaml"]
     BE --> PKG["crossbid/  (the package)"]
     BE --> MIG["migrations/  plain SQL"]
-    BE --> SCR["scripts/  migrate · build_ecertis_cache · seed_demo_company · run_eval"]
-    BE --> EVAL["evaluations/  golden yaml · deepeval suite · REPORT.md"]
+    BE --> SCR["scripts/  migrate · build_ecertis_cache · seed_demo_company · recall · spike_extract — run_eval is S7.1 and not built"]
+    BE --> EVAL["evaluations/  deepeval suite · REPORT.md — planned for S7.1, not built; the golden yaml lives in tests/fixtures/tenders/"]
     BE --> TST["tests/  unit · integration (live) · fixtures"]
     TST --> FIX["fixtures/  tenders de fr en · company pack · adversarial PDFs"]
 
-    PKG --> CORE["main.py · llm.py · settings.py · auth.py · crypto.py · db.py"]
+    PKG --> CORE["main.py · llm.py · settings.py · auth.py · db.py — crypto.py is S5.4 (stretch), not built"]
     PKG --> MODELS["models/  requirement · matrix · verdict · company · tender · review · provider"]
     PKG --> AGENT["agent/"]
     AGENT --> AG1["state.py · graph.py · chat_graph.py"]
     AGENT --> AG2["nodes/  parse_docs · extract_reqs · check_reqs · score_verdict · apply_review · finalize"]
-    AGENT --> AG3["tools/  registry · company_rag · tender_rag · search_ted · ecertis_evidence · currency"]
     AGENT --> AG4["prompts/  extract · check · explain · chat · guard"]
-    PKG --> ING["ingestion/  parser · pymupdf · docling · chunker · embeddings · storage · ted_client"]
-    PKG --> REF["reference/  ecertis_client · frankfurter · data/ecertis/*.json"]
+    PKG --> TOOLS["tools/  registry · company_rag · tender_rag · search_ted · ecertis_evidence · currency · get_matrix"]
+    PKG --> EVL["eval/  extraction · matching · recall · report   (S3.2.3)"]
+    PKG --> ING["ingestion/  parser · pymupdf · chunker · embeddings · storage · espd — docling is S2.1.2 (stretch), not built"]
+    PKG --> REF["reference/  ecertis_client · frankfurter · ted_client · data/ecertis/*.json"]
     PKG --> MEM["memory/  Store namespaces"]
     PKG --> GRD["guards/  injection · wrap"]
     PKG --> RM["readmodel/  bids · requirements · matrix_rows · reviews · llm_usage"]
@@ -42,9 +43,9 @@ flowchart LR
     FE --> APP["app/"]
     APP --> A1["(auth)/login"]
     APP --> A2["(app)/  dashboard · company · settings · bids/new · bids/[id] · bids/[id]/chat"]
-    APP --> A3["dev/  settings · tool toggles · costs"]
-    FE --> CMP["components/  matrix · pdf · verdict · ui"]
-    FE --> LIB["lib/  api.ts (generated) · supabase.ts · usePolling"]
+    APP --> A3["(app)/runs/  developer console: settings · tool toggles · costs — planned as a top-level dev/, shipped here (ADR-0059)"]
+    FE --> CMP["components/  bids · matrix · pdf · dev · documents · layout · landing · ui"]
+    FE --> LIB["lib/  api.ts (generated) · supabase.ts · use-polling.ts"]
   end
 ```
 
@@ -57,7 +58,7 @@ flowchart TD
   R["routers/"] --> A["agent/  (graph, nodes, chat)"]
   R --> I["ingestion/"]
   R --> RM["readmodel/"]
-  A --> T["agent/tools/"]
+  A --> T["tools/"]
   A --> REF["reference/"]
   A --> MEM["memory/"]
   A --> G["guards/"]
@@ -88,7 +89,7 @@ sequenceDiagram
   participant RT as routers/bids.py
   participant GR as agent/graph.py
   participant ING as ingestion/
-  participant TL as agent/tools/
+  participant TL as tools/
   participant RM as readmodel/
 
   B->>SB: magic-link login → JWT
@@ -213,7 +214,7 @@ flowchart LR
 
 ## 5. Roadmap by increment (single track)
 
-Dates are placeholders from a nominal start on 2026-09-14; only the order matters. One row per feature-sized chunk, sequential, because one person does the work. The *content* section shows wait-fillers that run inside gaps of the same blocks, not in extra time. The milestone after Increment 5 is the submission line; Increments 6 and 7 are stretch.
+Dates are placeholders from a nominal start on 2026-09-14; only the order matters. The bars are the forecast, not a record: Increments 0–4 are complete and Increment 5 is next, and the story board in §6 carries the actual status story by story. One row per feature-sized chunk, sequential, because one person does the work. The *content* section shows wait-fillers that run inside gaps of the same blocks, not in extra time. The milestone after Increment 5 is the submission line; Increments 6 and 7 are stretch.
 
 ```mermaid
 gantt
@@ -253,14 +254,14 @@ gantt
   F3.4 verdict · interrupt · review  :crit, i3a, after i2d, 2d
   S3.4.4 failure handling · S2.4.3 seed :i3b, after i3a, 1d
   S4.5.2/3 row editor · confirm      :crit, i3c, after i3b, 2d
-  S7.3 architecture.md               :i3d, after i3c, 1d
+  S4.4.1 dashboard (moved from Inc 4) :i3d, after i3c, 1d
   M3 review round-trip               :milestone, m3, after i3d, 0d
 
   section Inc 4 · graded coverage
   S0.3.1 auth · S4.1.1 login         :i4a, after i3d, 1d
   S4.2.1 company form                :i4b, after i4a, 1d
   F1.2 TED · S3.2.2 · S4.3.1 new bid :i4c, after i4b, 2d
-  S4.4.1 dashboard · S1.3.1 currency :i4d, after i4c, 1d
+  S1.3.1 currency · S2.3.3 limits    :i4d, after i4c, 1d
   F2.3 guards · S5.3 classifier      :i4e, after i4d, 1d
   F3.5 chat · S4.6.1                 :i4f, after i4e, 1d
   S5.1 · S5.2 · S4.6.2 dev panel     :i4g, after i4f, 2d
@@ -269,7 +270,8 @@ gantt
 
   section Inc 5 · submission-ready
   S7.1 DeepEval report               :crit, i5a, after i4h, 2d
-  S7.7 Playwright smoke              :i5c, after i5a, 1d
+  S7.3 architecture.md (from Inc 3)  :i5b, after i5a, 1d
+  S7.7 Playwright smoke              :i5c, after i5b, 1d
   S7.4 user guide                    :crit, i5d, after i5c, 1d
   S7.5/7.6 critique · README         :i5e, after i5d, 1d
   M5 SUBMISSION LINE                 :milestone, m5, after i5e, 0d
@@ -291,81 +293,83 @@ gantt
 
 Sorted by increment (the plan's *Delivery order*); lane is a grouping tag only. `needs` lists hard prerequisites. Priority Could rows are never started before the submission line (end of Increment 5).
 
-| Inc | Lane | Story | Size | Priority | needs |
-|---|---|---|---|---|---|
-| 0 | gate | SP.1 spike: extract + check on DE fixture, recall figure, go/pivot ADR | M | Must | S6.1 (DE) |
-| 0 | D | S6.1 DE + FR fixture tenders, SOURCES.md | M | Must | — |
-| 1 | gate | S0.1.4 GitHub Actions: lint, types, pytest ≥80% cov, deps-check, api.ts drift | M | Must | S0.1.3 |
-| 1 | gate | S0.1.1 layout, uv, create-next-app, shadcn | S | Must | — |
-| 1 | gate | S0.1.2 docker-compose, env, task runner | M | Must | — |
-| 1 | gate | S0.1.3 ruff, pyright, pytest, eslint, pre-commit, `make deps` / `deps-check` guard | M | Must | — |
-| 1 | gate | S0.2.1 Supabase EU project, bucket, migrations runner | M | Must | — |
-| 1 | gate | S0.2.2 db.py pool, checkpointer + store factories | M | Must | S0.2.1 |
-| 1 | gate | S0.2.3 read-model tables incl. provider_keys, llm_usage | M | Must | S0.2.1 |
-| 1 | gate | S0.3.2 settings.default.yaml, llm.py factory (OpenRouter) | S | Must | — |
-| 1 | gate | S0.3.3 LangSmith wiring | S | Must | — |
-| 1 | gate | S0.4.1 Pydantic contracts and enums | M | Must | — |
-| 1 | gate | S0.4.2 router stubs, openapi-typescript → api.ts | S | Must | S0.4.1 |
-| 1 | A | S1.1.1 build_ecertis_cache.py | M | Must | S0.1 |
-| 1 | A | S1.1.3 criterion enum from cache | S | Must | S1.1.1 |
-| 1 | B | S2.1.1 Parser protocol, pymupdf parser | M | Must | S0.1 |
-| 1 | B | S2.1.3 chunker 800/100 | S | Must | S2.1.1 |
-| 1 | B | S2.2.1 embeddings via OpenRouter, pgvector helpers | M | Must | S0.2.2 |
-| 1 | B | S2.2.2 Storage upload, signed URLs | M | Must | S0.2.1 |
-| 1 | B | S2.2.3 POST /documents pipeline | M | Must | S2.2.1, S2.2.2 |
-| 1 | B | S2.3.2 data-block wrapper | S | Must | — |
-| 1 | B | S3.1.1 BidState, graph skeleton, POST/GET bids | M | Must | S0.2.2 |
-| 1 | B | S3.2.1 extract_reqs sections + dedupe | L | Must | S1.1.3, S2.3.2 (recall via S3.2.3) |
-| 1 | C | S4.0.1 design canvas via `/design`; user confirms before workspace components are coded | M | Must | S0.4.1 |
-| 1 | C | S4.1.2 layout, nav, theme | S | Must | S0.4.2 (hand-written types ok) |
-| 1 | C | S4.2.2 document upload with status | M | Must | S4.1.2, S2.2.3 |
-| 1 | C | S4.5.1 workspace two-pane, react-pdf, polling (matrix-row criterion finishes in Inc 2) | L | Must | S3.1.1, S4.0.1 |
-| 1 | D | S6.2 EN golden tender | M | Must | — |
-| 2 | B | S3.2.3 recall script against golden labels (reused by S7.1) | S | Must | S3.2.1, S6.4 |
-| 2 | A | S1.1.2 ecertis_evidence_lookup tool | M | Must | S1.1.1 |
-| 2 | A | S1.4.1 tool registry with manifests | M | Must | S1.1.2, S2.4.2 (S1.2.2, S1.3.1 join in Inc 4) |
-| 2 | B | S2.4.1 company profile endpoints, Store namespace | M | Must | S0.2.3 (dev auth until S0.3.1) |
-| 2 | B | S2.4.2 company_rag_search, tender_rag_search tools | M | Must | S2.2.1 |
-| 2 | B | S3.3.1 check_reqs Send fan-out | L | Must | S1.4.1, S2.4.2 |
-| 2 | B | S3.3.2 fake-model tests per status branch | M | Must | S3.3.1 |
-| 2 | D | S6.3 demo GmbH document pack | L | Must | — |
-| 2 | D | S6.4 golden set labels (LLM-assisted, verified) | L | Must | S6.1, S6.2 |
-| 3 | B | S2.4.3 seed_demo_company.py | M | Must | S6.3 |
-| 3 | B | S3.4.1 score_verdict rules + explanation | M | Must | S3.3.1 |
-| 3 | B | S3.4.2 interrupt, apply_review, POST review | M | Must | S3.4.1 |
-| 3 | B | S3.4.3 read-model writers | M | Must | S3.4.2 |
-| 3 | B | S3.4.4 failure handling | M | Must | S3.4.2 |
-| 3 | C | S4.5.2 matrix rows editor, evidence, eCertis card | L | Must | S3.4.3, S4.0.1 |
-| 3 | C | S4.5.3 verdict panel, confirm/override | M | Must | S3.4.2, S4.0.1 |
-| 3 | D | S6.5 adversarial injection PDFs | S | Must | — |
-| 3 | E | S7.3 architecture.md | M | Must | S3.4 |
-| 4 | gate | S0.3.1 Supabase Auth, JWT deps, is_developer | M | Must | S0.2.1 |
-| 4 | A | S1.2.1 ted_client (expert query, no OR in IN) | M | Must | — |
-| 4 | A | S1.2.2 search_ted tool, GET /tenders/search | S | Must | S1.2.1 |
-| 4 | A | S1.3.1 Frankfurter client, currency_convert | S | Must | — |
-| 4 | A | S5.1 vendor slug switching inside OpenRouter | M | Must | S1.4.1 |
-| 4 | A | S5.2 LangSmith metadata, GET /dev/costs | M | Must | S0.3.2 |
-| 4 | A | S5.3 luna injection classifier on flagged chunks | S | Must | S2.3.1 |
-| 4 | B | S2.3.1 injection heuristics | M | Must | S6.5 |
-| 4 | B | S2.3.3 slowapi limits | S | Must | — |
-| 4 | B | S3.2.2 fold TED notice fields into requirements | S | Must | S1.2.1 |
-| 4 | B | S3.5.1 chat_graph, POST chat | M | Must | S2.4.2, S3.4.3 |
-| 4 | C | S4.1.1 Supabase client, login, API client | M | Must | S0.4.2 |
-| 4 | C | S4.2.1 company profile form | M | Must | S4.1.1 |
-| 4 | C | S4.3.1 TED search → pick → upload → start | M | Must | S4.1.1 |
-| 4 | C | S4.4.1 dashboard | M | Must | S4.1.1, S4.0.1 |
-| 4 | C | S4.6.1 chat page | M | Must | S3.5.1 |
-| 4 | C | S4.6.2 /dev panel | M | Must | S5.2 |
-| 4 | C | S4.6.3 feedback thumbs | S | Must | — |
-| 5 | E | S7.1 DeepEval suite + REPORT.md | M | Must | E3, S6.4 |
-| 5 | E | S7.7 Playwright smoke test | M | Must | E4 Must stories |
-| 5 | E | S7.4 user guide, three worked examples | M | Must | E4 Must stories |
-| 5 | E | S7.5 critique.md | S | Must | — |
-| 5 | E | S7.6 README, trim project.md, CLAUDE.md commands | S | Must | — |
-| 6 | A | S5.4 BYOK backend: crypto, provider_keys, verify-on-save | M | Could | S0.2.3, S0.3.1 |
-| 6 | A | S5.5 BYOK factory: resolve(company, role) with fallback | M | Could | S5.4 |
-| 6 | A | S5.6 cost accounting for direct providers, llm_usage | S | Could | S5.5 |
-| 6 | B | S2.1.2 Docling parser (switchable) | M | Could | S2.1.1 |
-| 6 | C | S4.6.4 Settings → AI provider (BYOK) page | M | Could | S5.4 |
-| 7 | E | S8.1 deploy (optional) | M | Optional | all |
-| all | E | S7.2 ADRs, one per decision as it lands | S each | Must | — |
+Status, as of 2026-09-15: **done** — built, tested and committed; **built · fails recall** — the code is there and a measured criterion is not met; **not started**; **continuous** — runs for the life of the project. Increments 0–4 are complete (Increment 4 closed with 17 of 17 stories, each with a commit) and Increment 5 is next. The one story that is built and still open is S3.2.1: recall on the DE golden key is **0.72** on the committed run, **~0.74 ± 0.02** across four, against a 0.9 threshold — which is what holds Milestone 1.
+
+| Inc | Lane | Story | Size | Priority | Status | needs |
+|---|---|---|---|---|---|---|
+| 0 | gate | SP.1 spike: extract + check on DE fixture, recall figure, go/pivot ADR | M | Must | done | S6.1 (DE) |
+| 0 | D | S6.1 DE + FR fixture tenders, SOURCES.md | M | Must | done | — |
+| 1 | gate | S0.1.4 GitHub Actions: lint, types, pytest ≥80% cov, deps-check, api.ts drift | M | Must | done | S0.1.3 |
+| 1 | gate | S0.1.1 layout, uv, create-next-app, shadcn | S | Must | done | — |
+| 1 | gate | S0.1.2 docker-compose, env, task runner | M | Must | done | — |
+| 1 | gate | S0.1.3 ruff, pyright, pytest, eslint, pre-commit, `make deps` / `deps-check` guard | M | Must | done | — |
+| 1 | gate | S0.2.1 Supabase EU project, bucket, migrations runner | M | Must | done | — |
+| 1 | gate | S0.2.2 db.py pool, checkpointer + store factories | M | Must | done | S0.2.1 |
+| 1 | gate | S0.2.3 read-model tables incl. provider_keys, llm_usage | M | Must | done | S0.2.1 |
+| 1 | gate | S0.3.2 settings.default.yaml, llm.py factory (OpenRouter) | S | Must | done | — |
+| 1 | gate | S0.3.3 LangSmith wiring | S | Must | done | — |
+| 1 | gate | S0.4.1 Pydantic contracts and enums | M | Must | done | — |
+| 1 | gate | S0.4.2 router stubs, openapi-typescript → api.ts | S | Must | done | S0.4.1 |
+| 1 | A | S1.1.1 build_ecertis_cache.py | M | Must | done | S0.1 |
+| 1 | A | S1.1.3 criterion enum from cache | S | Must | done | S1.1.1 |
+| 1 | B | S2.1.1 Parser protocol, pymupdf parser | M | Must | done | S0.1 |
+| 1 | B | S2.1.3 chunker 800/100 | S | Must | done | S2.1.1 |
+| 1 | B | S2.2.1 embeddings via OpenRouter, pgvector helpers | M | Must | done | S0.2.2 |
+| 1 | B | S2.2.2 Storage upload, signed URLs | M | Must | done | S0.2.1 |
+| 1 | B | S2.2.3 POST /documents pipeline | M | Must | done | S2.2.1, S2.2.2 |
+| 1 | B | S2.3.2 data-block wrapper | S | Must | done | — |
+| 1 | B | S3.1.1 BidState, graph skeleton, POST/GET bids | M | Must | done | S0.2.2 |
+| 1 | B | S3.2.1 extract_reqs sections + dedupe | L | Must | built · **fails recall** | S1.1.3, S2.3.2 (recall via S3.2.3) |
+| 1 | C | S4.0.1 design canvas via `/design`; user confirms before workspace components are coded | M | Must | done | S0.4.1 |
+| 1 | C | S4.1.2 layout, nav, theme | S | Must | done | S0.4.2 (hand-written types ok) |
+| 1 | C | S4.2.2 document upload with status | M | Must | done | S4.1.2, S2.2.3 |
+| 1 | C | S4.5.1 workspace two-pane, react-pdf, polling (matrix-row criterion finishes in Inc 2) | L | Must | done | S3.1.1, S4.0.1 |
+| 1 | D | S6.2 EN golden tender | M | Must | done | — |
+| 2 | B | S3.2.3 recall script against golden labels (reused by S7.1) | S | Must | done | S3.2.1, S6.4 |
+| 2 | A | S1.1.2 ecertis_evidence_lookup tool | M | Must | done | S1.1.1 |
+| 2 | A | S1.4.1 tool registry with manifests | M | Must | done | S1.1.2, S2.4.2 (S1.2.2, S1.3.1 join in Inc 4) |
+| 2 | B | S2.4.1 company profile endpoints, Store namespace | M | Must | done | S0.2.3 (dev auth until S0.3.1) |
+| 2 | B | S2.4.2 company_rag_search, tender_rag_search tools | M | Must | done | S2.2.1 |
+| 2 | B | S3.3.1 check_reqs Send fan-out | L | Must | done | S1.4.1, S2.4.2 |
+| 2 | B | S3.3.2 fake-model tests per status branch | M | Must | done | S3.3.1 |
+| 2 | D | S6.3 demo GmbH document pack | L | Must | done | — |
+| 2 | D | S6.4 golden set labels (LLM-assisted, verified) | L | Must | done | S6.1, S6.2 |
+| 3 | B | S2.4.3 seed_demo_company.py | M | Must | done | S6.3 |
+| 3 | B | S3.4.1 score_verdict rules + explanation | M | Must | done | S3.3.1 |
+| 3 | B | S3.4.2 interrupt, apply_review, POST review | M | Must | done | S3.4.1 |
+| 3 | B | S3.4.3 read-model writers | M | Must | done | S3.4.2 |
+| 3 | B | S3.4.4 failure handling | M | Must | done | S3.4.2 |
+| 3 | C | S4.5.2 matrix rows editor, evidence, eCertis card | L | Must | done | S3.4.3, S4.0.1 |
+| 3 | C | S4.5.3 verdict panel, confirm/override | M | Must | done | S3.4.2, S4.0.1 |
+| 3 | C | S4.4.1 dashboard *(moved from Increment 4, ADR-0030)* | M | Must | done | S4.1.1, S4.0.1 |
+| 3 | D | S6.5 adversarial injection PDFs | S | Must | done | — |
+| 4 | gate | S0.3.1 Supabase Auth, JWT deps, is_developer | M | Must | done | S0.2.1 |
+| 4 | A | S1.2.1 ted_client (expert query, no OR in IN) | M | Must | done | — |
+| 4 | A | S1.2.2 search_ted tool, GET /tenders/search | S | Must | done | S1.2.1 |
+| 4 | A | S1.3.1 Frankfurter client, currency_convert | S | Must | done | — |
+| 4 | A | S5.1 vendor slug switching inside OpenRouter | M | Must | done | S1.4.1 |
+| 4 | A | S5.2 LangSmith metadata, GET /dev/costs | M | Must | done | S0.3.2 |
+| 4 | A | S5.3 luna injection classifier on flagged chunks | S | Must | done | S2.3.1 |
+| 4 | B | S2.3.1 injection heuristics | M | Must | done | S6.5 |
+| 4 | B | S2.3.3 slowapi limits | S | Must | done | — |
+| 4 | B | S3.2.2 fold TED notice fields into requirements | S | Must | done | S1.2.1 |
+| 4 | B | S3.5.1 chat_graph, POST chat | M | Must | done | S2.4.2, S3.4.3 |
+| 4 | C | S4.1.1 Supabase client, login, API client | M | Must | done | S0.4.2 |
+| 4 | C | S4.2.1 company profile form | M | Must | done | S4.1.1 |
+| 4 | C | S4.3.1 TED search → pick → upload → start | M | Must | done | S4.1.1 |
+| 4 | C | S4.6.1 chat page | M | Must | done | S3.5.1 |
+| 4 | C | S4.6.2 developer console (shipped at `(app)/runs/`, not `/dev`) | M | Must | done | S5.2 |
+| 4 | C | S4.6.3 feedback thumbs | S | Must | done | — |
+| 5 | E | S7.1 DeepEval suite + REPORT.md | M | Must | not started | E3, S6.4 |
+| 5 | E | S7.3 architecture.md *(planned as an Increment 3 wait-filler; never picked up)* | M | Must | not started | S3.4 |
+| 5 | E | S7.7 Playwright smoke test | M | Must | not started | E4 Must stories |
+| 5 | E | S7.4 user guide, three worked examples | M | Must | not started | E4 Must stories |
+| 5 | E | S7.5 critique.md | S | Must | not started | — |
+| 5 | E | S7.6 README, trim project.md, CLAUDE.md commands | S | Must | not started | — |
+| 6 | A | S5.4 BYOK backend: crypto, provider_keys, verify-on-save | M | Could | not started | S0.2.3, S0.3.1 |
+| 6 | A | S5.5 BYOK factory: resolve(company, role) with fallback | M | Could | not started | S5.4 |
+| 6 | A | S5.6 cost accounting for direct providers, llm_usage | S | Could | not started | S5.5 |
+| 6 | B | S2.1.2 Docling parser (switchable) | M | Could | not started | S2.1.1 |
+| 6 | C | S4.6.4 Settings → AI provider (BYOK) page | M | Could | not started | S5.4 |
+| 7 | E | S8.1 deploy (optional) | M | Optional | not started | all |
+| all | E | S7.2 ADRs, one per decision as it lands | S each | Must | continuous | — |

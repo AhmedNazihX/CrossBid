@@ -6,6 +6,7 @@ lifespan calls, so a fake `Database` proves the hook without a pool ever being b
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pytest
@@ -23,8 +24,10 @@ from crossbid.main import (
     open_database,
     replace_app_settings,
     settings_provider,
+    sweep_interrupted_documents,
 )
 from crossbid.readmodel.app_settings import SELECT_APP_SETTINGS
+from crossbid.readmodel.documents import FAIL_INTERRUPTED_DOCUMENTS_SQL
 from crossbid.settings import AppSettingsRowError, Settings
 from tests.conftest import FakeConnectionSource
 
@@ -212,7 +215,14 @@ def test_the_lifespan_opens_sets_up_and_closes_the_database(
     assert seen == [GOOD_DSN]
     assert response.json() == {"max_size": 10}
     assert fake.events == ["setup", "resume", "runner.shutdown", "close"]
-    assert fake.source.only.sql == SELECT_APP_SETTINGS, "the row is read once, at startup"
+    # Two statements, in this order: the settings row, then the sweep for documents a
+    # previous process left mid-pipeline. The sweep runs before the runner because a bid can
+    # be resumed from its checkpoint and an upload cannot — nothing re-parses a half-parsed
+    # file, so the row would be polled for ever.
+    assert [statement.sql for statement in fake.source.log] == [
+        SELECT_APP_SETTINGS,
+        FAIL_INTERRUPTED_DOCUMENTS_SQL,
+    ]
 
 
 # --------------------------------------------------- the app_settings row (S4.6.2)
@@ -435,3 +445,31 @@ def test_the_web_origin_comes_from_settings(offline_settings: Settings) -> None:
             },
         )
     assert response.headers["access-control-allow-origin"] == "https://app.crossbid.example"
+
+
+@pytest.mark.anyio
+async def test_a_sweep_that_cannot_run_is_logged_and_does_not_stop_the_boot(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A courtesy, not a precondition.
+
+    Failing to mark yesterday's interrupted uploads leaves them exactly as they already
+    were — the state every previous version of the API started in. Refusing to boot over it
+    would trade a stale row for an outage.
+    """
+
+    class Unreachable:
+        def connection(self) -> Any:
+            raise OSError("database unreachable")
+
+    with caplog.at_level(logging.ERROR, logger="crossbid.main"):
+        swept = await sweep_interrupted_documents(Unreachable())  # type: ignore[arg-type]
+
+    assert swept == 0
+    assert "unfinished by a restart" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_no_pool_means_no_sweep_rather_than_a_crash() -> None:
+    """`AUTH_MODE=dev` with no `DATABASE_URL` is a supported way to run the offline suite."""
+    assert await sweep_interrupted_documents(None) == 0

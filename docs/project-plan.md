@@ -51,7 +51,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 │   │   ├── llm.py                    chat-model factory: resolve(company, role) → company's active provider (own OpenAI / Anthropic / OpenRouter key) or app OpenRouter default
 │   │   ├── settings.py               pydantic-settings (env) + yaml defaults + app_settings row → one Settings object
 │   │   ├── auth.py                   Supabase JWT verification; deps current_user, current_company, is_developer
-│   │   ├── crypto.py                 Fernet encrypt/decrypt for stored provider keys (APP_ENCRYPTION_KEY)
+│   │   ├── crypto.py                 Fernet encrypt/decrypt for stored provider keys (APP_ENCRYPTION_KEY) — S5.4, Could; not built
 │   │   ├── db.py                     psycopg pool (autocommit, dict_row); PostgresSaver / PostgresStore factories
 │   │   ├── models/                   Pydantic v2 schemas and enums — shared by routers, graph nodes, structured outputs
 │   │   │   ├── requirement.py        Requirement, RequirementCategory, RequirementKind
@@ -71,22 +71,23 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 │   │   ├── ingestion/                documents in → chunks + embeddings out
 │   │   │   ├── parser.py             Parser protocol, ParsedDocument(pages, unread_pages)
 │   │   │   ├── pymupdf_parser.py     default
-│   │   │   ├── docling_parser.py     switchable, do_ocr=False
+│   │   │   ├── docling_parser.py     switchable, do_ocr=False — S2.1.2, Could; not built
 │   │   │   ├── chunker.py            800/100 page-tagged chunks
 │   │   │   ├── embeddings.py         OpenRouter embeddings client (text-embedding-3-small default, ADR-0004) + pgvector insert/search scoped by company/bid
 │   │   │   ├── storage.py            Supabase Storage upload + signed URLs
-│   │   │   └── ted_client.py         TED v3 expert-query builder, search, notice PDF download
+│   │   │   └── ted_client.py         TED v3 expert-query builder, search, notice PDF download — built in `reference/` instead (S1.2.1): it is a read-only external source, not an ingestion step
 │   │   ├── reference/                read-only external reference data
 │   │   │   ├── ecertis_client.py     REST client (build time) + cache loader (run time)
 │   │   │   ├── frankfurter.py        ECB rates
+│   │   │   ├── ted_client.py         TED v3 search and notice download (S1.2.1) — planned above under ingestion/, built here
 │   │   │   └── data/ecertis/         criteria.json, evidence_de.json, evidence_fr.json (generated, committed)
 │   │   ├── memory/                   LangGraph Store namespaces: profile/{company_id}, corrections/{company_id}
 │   │   ├── guards/                   injection.py (heuristics + luna), wrap.py (data-block delimiting)
 │   │   ├── readmodel/                SQL + writers for bids, requirements, matrix_rows, reviews (dashboard reads these, never checkpoints)
 │   │   └── routers/                  thin HTTP layer: companies, documents, tenders, bids, review, chat, provider_keys, dev_settings, feedback
 │   ├── migrations/                   plain SQL, numbered; applied by `uv run scripts/migrate.py`
-│   ├── scripts/                      migrate.py, build_ecertis_cache.py, seed_demo_company.py, run_eval.py
-│   ├── evaluations/                  golden/{de,fr,en}.yaml, deepeval suite, REPORT.md
+│   ├── scripts/                      migrate.py, build_ecertis_cache.py, seed_demo_company.py, recall.py (S3.2.3), spike_extract.py (SP.1, still committed); run_eval.py belongs to S7.1 and is not built
+│   ├── evaluations/                  deepeval suite, REPORT.md — planned for S7.1; not built. The golden keys were never put here: they live at tests/fixtures/tenders/{de,fr,en}/golden.yaml beside the packs they label, and stay there
 │   └── tests/
 │       ├── unit/                     fakes for LLM (GenericFakeChatModel), TED, eCertis, Frankfurter
 │       ├── integration/              marked `live`; full graph on the DE fixture up to the interrupt
@@ -105,7 +106,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 │   │   │   ├── settings/             AI provider: active provider radio, add/replace/remove OpenAI · Anthropic · OpenRouter key, test button, language, tone
 │   │   │   ├── bids/new/             TED search → pick notice → upload → start
 │   │   │   └── bids/[id]/            workspace (pdf left, matrix right), chat/
-│   │   └── dev/                      settings, tool toggles, costs — gated by is_developer
+│   │   └── dev/                      settings, tool toggles, costs — gated by is_developer. Not built here: the developer console shipped inside the authenticated shell at (app)/runs/, the route the sidebar already pointed at (S4.6.2, ADR-0059)
 │   ├── components/                   matrix/, pdf/, verdict/, landing/, ui/ (design-system primitives; shadcn removed 2026-09-11)
 │   └── lib/                          api.ts (generated by openapi-typescript), supabase.ts, polling hook
 ├── infra/
@@ -207,7 +208,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
   - Given the DE fixture and 20 hand-picked mandatory requirements, when the script runs with PyMuPDF, 5–8 page sections, structured output, and in-memory embeddings, then it prints found / missed per requirement and a recall figure.
   - Given recall ≥ 0.7 after at most two prompt iterations, then Increment 1 starts as planned and the figure is recorded in an ADR.
   - Given recall < 0.7 after two iterations, then section size, chunking, and model slug are revisited and an ADR records the change before Increment 1 starts.
-  - Given the script, then it lives in `backend/scripts/spike_extract.py`, is excluded from coverage, and is deleted when S3.2.1 lands.
+  - Given the script, then it lives in `backend/scripts/spike_extract.py`, is excluded from coverage, and is deleted when S3.2.1 lands. *(Outstanding, 2026-09-15: S3.2.1 landed in Increment 1 and the script is still committed, so this criterion is unmet. Whether to delete it is an open decision, not an oversight to fix silently.)*
   - Notes: no tests, no checkpointer, no Storage. Deliberately disposable; its only output is the number and the decision.
 
 ---
@@ -400,7 +401,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
   - Given a golden YAML and an extraction result, when the script runs, then it prints recall on mandatory requirements per tender and exits non-zero below the threshold in settings.
   - Given S7.1, then the DeepEval suite reuses this matcher instead of reimplementing it.
   - **Given S6.4's labels are LLM drafts, then this script also carries their human verification** *(user decision, 2026-09-12: "fold it")*. `test_golden_labels.py` already proves every label's quote is verbatim on its cited page, so the machine-checkable half is done; what a person must still judge is whether a row is really a requirement, whether its `kind`/`stage` are right, and **what is missing** — the one failure a verbatim check cannot see. The script therefore reports, per tender: extracted rows with no golden match (candidate missing labels), golden rows the extractor never found (the recall misses), and disagreements on `kind`/`stage`/`criterion`. The reviewer adjudicates that list rather than reading 257 labels, and flipping a file's header to `labelled_by: llm_assisted_human_verified` with a `verified_by`/`verified_on` is what closes S6.4 — and with it S3.2.1 and Milestone 1.
-  - Notes: this is why S3.2.3 must filter the DE file on `stage: bid_eligibility` before scoring (13 of 143 scored rows are `contract_performance` on purpose, ADR-0015).
+  - Notes: this is why S3.2.3 must filter the DE file on `stage: bid_eligibility` before scoring. The DE key scores **177** rows (mandatory and `bid_eligibility`) and carries a further **36 `contract_performance` labels on purpose, 34 of them mandatory** (ADR-0015) — written so the filter can be scored in both directions, and wrong in the denominator.
 
 **F3.3 Per-requirement checking** — the agentic core.
 
@@ -618,7 +619,7 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 **Closed 2026-09-14, and the third criterion is why S4.4.1 moved here.** "Dashboard shows the final verdict from the read model" named a surface whose story sat in Increment 4, which would have made the two increments circular. The user's call was to pull **S4.4.1** into Increment 3 and build it rather than reword the criterion. That exposed a real gap: nothing had ever written `bids.deadline` or `bids.buyer` — extraction sets no deadline and TED search is S1.2.1 — so the countdown column had no data source at all. Migration **0007** adds `deadline_utc_offset_minutes`, because a `timestamptz` keeps the instant and loses the wall clock the buyer wrote, and "a countdown **in the buyer's time zone**" needs the latter; an offset and never an IANA zone, since neither a notice nor TED publishes one. `POST /bids` and the start form now take the buyer and a deadline, and **refuse a timestamp with no offset rather than assuming UTC**. `BidSummary` gained `open_items`, counted from the matrix rather than from the verdict's gaps so that an unscored bid still reports its work.
 
 Verified in a browser against Frankfurt on the completed FR bid: the row reads **9 Oct · 25 days / 16:00 (UTC+02:00)**, *Ministère de l'éducation nationale*, **Conditional · confirmed**, **142 open items**. The buyer's-clock rendering was checked the only way that discriminates — the offset was flipped to zero and the same instant printed **14:00 (UTC)** on a machine sitting at UTC+02:00, while the countdown stayed at 25 days. Two tiles from the artboard were deliberately **not** built: *Requirements checked / last 7 days* needs history the API has no shape for, and *Go rate* over a handful of decided bids reads as a trend it cannot support. |
-| 4 | Every graded requirement covered | Magic-link sign-in, company form, TED search to start (which fills the dashboard's deadline and buyer, built in Increment 3), "ask the tender" with citations, injection guard and rate limits, cost per node, slug switching, feedback thumbs, dev panel (S0.3.1, F1.2, F1.3, F2.3, F3.5, F4.1–F4.4, S4.6.1–S4.6.3, S5.1–S5.3) | pending | — |
+| 4 | Every graded requirement covered | Magic-link sign-in, company form, TED search to start (which fills the dashboard's deadline and buyer, built in Increment 3), "ask the tender" with citations, injection guard and rate limits, cost per node, slug switching, feedback thumbs, dev panel (S0.3.1, F1.2, F1.3, F2.3, F3.5, F4.1–F4.4, S4.6.1–S4.6.3, S5.1–S5.3) | **complete** | Done 2026-09-14/15 — **17 of 17 stories, each with a commit**: **S0.3.1** magic-link tokens verified (ADR-0033); **S4.1.1** sign-in in the browser, with one named switch keeping browser and API in step (ADR-0034, ADR-0035), a nonce-based CSP (ADR-0036), registration and a reset path that leaks nothing (ADR-0039, ADR-0040, ADR-0053), and a password beside the link because the built-in mailer allows 2 messages/hour (ADR-0038 — which is also what closed R7); **S4.2.1** the company form and the 404 a new account used to hit (ADR-0037, ADR-0041); **S1.2.1** `ted_client` (ADR-0043); **S1.2.2** `search_ted` registered and inside the ReAct loop (ADR-0045); **S4.3.1** search → pick → upload → start (ADR-0044); **S3.2.2** the buyer's own notice facts become requirements, migration **0008** applied to Frankfurt (ADR-0046); **S2.3.3** per-company rate limits on the two routes that spend money (ADR-0047); **S1.3.1** currency conversion at the ECB rate (ADR-0048); **S2.3.1** injection heuristics (ADR-0049) and **S5.3** the luna classifier that may only ever say "let it through" (ADR-0054); **S5.1** a role switched only to a slug someone probed (ADR-0050); **S4.6.3** thumbs that are stored and nothing more (ADR-0051); **S3.5.1** ask the tender, its citation built from what was retrieved (ADR-0055), and **S4.6.1** the same on screen (ADR-0058); **S5.2** cost captured where it cannot be forgotten and never computed (ADR-0056); **S4.6.2** the developer console — which shipped at `(app)/runs/`, the route the sidebar already promised it, not at a second top-level `dev/` (ADR-0059). S1.4.1's registry was re-split along the way so no node gets the whole toolbox (ADR-0052). A full audit on 2026-09-15 closed four blockers and eleven further findings (`163ccd5`, `6d91e28`). Increment 5 is next and has not started. |
 | 5 | **Submission-ready.** Evidence for the grader | `evaluations/REPORT.md` on three tenders, ADR per decision, architecture doc, user guide with three walkthroughs, Playwright smoke test green, critique applied, README and `project.md` trimmed (E7; S7.1 reuses the S3.2.3 matcher from Increment 2) | pending | — |
 | 6 | Stretch: provider choice and second parser | Bid runs on a user's own key with the provider labelled in `/dev/costs`, falls back with a warning when the key is removed; Docling switchable (S5.4–S5.6, S4.6.4, S2.1.2) | pending | — |
 | 7 | Live EU instance (optional) | Vercel + Railway/Fly EU + Supabase EU pass the smoke test (E8) | pending | — |
@@ -636,7 +637,7 @@ Lanes A–E survive only as tags on stories in the roadmap's story board; they d
 | 0 | Core bet tested | S6.1 (DE pack only), SP.1 | — |
 | 1 | Upload a tender, see its requirement list in the browser | S0.1.1, S0.1.2, S0.1.3, S0.1.4, S0.2.1, S0.2.2, S0.2.3, S0.3.2, S0.3.3, S0.4.1, S0.4.2, S2.1.1, S2.1.3, S2.2.1, S2.2.2, S2.2.3, S2.3.2, S3.1.1, S1.1.1, S1.1.3, S3.2.1, S4.0.1 (design canvas, user confirms), S4.1.2, S4.2.2, S4.5.1 (all but the matrix-row criterion) | S6.1 (FR pack), S6.2, S7.2 |
 | 2 | Matrix in the browser | S1.1.2, S1.4.1 (with the tools that exist), S2.4.1, S2.4.2, S3.3.1, S3.3.2, S4.5.1 (matrix-row criterion) | S6.3, S6.4, then S3.2.3, S7.2 |
-| 3 | Review round-trip | S3.4.1, S3.4.2, S3.4.3, S3.4.4, S2.4.3, S4.5.2, S4.5.3, S4.4.1 | S6.5, S7.3, S7.2 |
+| 3 | Review round-trip | S3.4.1, S3.4.2, S3.4.3, S3.4.4, S2.4.3, S4.5.2, S4.5.3, S4.4.1 | S6.5, S7.3, S7.2 | *(S7.3 was never picked up here; it belongs to Increment 5)* |
 | 4 | Every graded requirement covered | S0.3.1, S4.1.1, S4.2.1, S1.2.1, S1.2.2, S3.2.2, S4.3.1, S1.3.1, S2.3.1, S5.3, S2.3.3, S3.5.1, S4.6.1, S5.1, S5.2, S4.6.2, S4.6.3 | S7.2 | *(S4.4.1 moved to Increment 3 — 17 stories, not 18)* |
 | 5 | **Submission-ready** | S7.1, S7.7, S7.4, S7.5, S7.6 | S7.2 |
 | 6 | Stretch | S5.4, S5.5, S5.6, S4.6.4, S2.1.2 | S7.2 |
@@ -663,11 +664,11 @@ Lanes A–E survive only as tags on stories in the roadmap's story board; they d
 
 | # | Risk | Likelihood / impact | Mitigation | Owner |
 |---|---|---|---|---|
-| R1 | Extraction recall on real DE/FR tenders stays below 0.9 | Medium / High | SP.1 first; section size, model, and dedupe tuned before Increment 1; threshold in settings; measured figure reported honestly in `REPORT.md` | SP.1, S3.2.3 |
+| R1 | Extraction recall on real DE/FR tenders stays below 0.9 | ~~Medium~~ Realised / High | **Realised 2026-09-13, and closed as a risk and reopened as a measurement.** Every mitigation listed here was applied — SP.1 first, section size and dedupe tuned before Increment 1, threshold in settings — and the number is still under the gate: **0.72** on the committed run, **~0.74 ± 0.02** across four, measured by S3.2.3 against the human-verified DE key. It is no longer a thing that might happen, so there is nothing left to mitigate; it holds Milestone 1 open, and what to do about a threshold set before anything had been measured is an open decision. The figure is reported as measured, in this file and in `REPORT.md` when S7.1 lands. | SP.1, S3.2.3 |
 | R2 | Fixture tender documents not downloadable anonymously (national platforms require registration) | Medium / High | **Closed 2026-09-10 for DE, see ADR-0001.** The original fallback ("notices whose documents are attached on TED itself") does not exist: 0 of 100 sampled German CPV-72 `cn-standard` notices hosted documents on `ted.europa.eu`. The DE pack was instead fetched once by hand from e-Vergabe, which is anonymous under §41 Abs. 1 VgV — a cookie round-trip, no account. FR follows the same route. Remaining fallback if a platform does demand registration: commit that country's notice PDF alone, whose eForms BT-750 fields carry the selection criteria as prose. | S6.1 |
 | R3 | pgvector indexes (HNSW, IVFFlat) cap at 2000 dimensions; the default embedding has 3072 | ~~High~~ / Low | **Closed 2026-09-10 (ADR-0004).** The default embedding is now `openai/text-embedding-3-small` at **1536 dims**, under the cap, so HNSW/IVFFlat are usable and the dimension problem does not arise. Switched before anything was embedded, so it cost nothing. If 3-large (3072) is ever chosen back on S7.1 evidence, the escape route is a `halfvec` index — not `baai/bge-m3`, which 404s on this account. | S2.2.1 |
 | R4 | Supabase free-tier project pauses after a week idle and the demo fails on review day | Medium / Medium | Wake it the day before review; Compose stack as fallback demo; noted in the user guide | S7.4, S8.1 |
-| R5 | Effort is 87–205 h against an 18 h brief and velocity is unknown | High / Medium | Increments 0–5 are the submission line; re-forecast after Increment 1 | this table |
+| R5 | Effort is 87–205 h against an 18 h brief and velocity is unknown | ~~High~~ / Medium | **Closed as a risk and reopened as a measurement, 2026-09-14** (the re-forecast above). Velocity is measured rather than unknown, and Increments 0–4 are complete. The mitigation held: Increments 0–5 remain the submission line. Agent-assisted calendar time is not comparable to solo developer-hours, so the 87–205 h range is neither confirmed nor refuted — it is simply no longer the working forecast. | this table |
 | R6 | Prompt-tuning loops blow the estimate on S3.2.1 and S3.3.1 | High / Medium | Time-box each tuning round to 1 h; fake-model tests protect the row shape; accept the measured recall | S3.3.2 |
 | R7 | Magic-link email in development and in Playwright | Medium / Medium | **Realised 2026-09-14 and mitigated (ADR-0038).** The built-in mailer allows **2 messages/hour**, and Supabase has **no email `test_otp`** — that setting is SMS-only, so this row's original mitigation did not exist. Password sign-in, with the account created in the dashboard, needs no email at all; custom SMTP raises the limit for the demo. Dev auth mode remains the offline route. | S0.3.1, S4.1.1, S7.7 |
 | R8 | TED API rate limits or schema drift | Low / Medium | Recorded responses in tests; one retry then a typed error | S1.2.1 |
@@ -708,9 +709,9 @@ The brief awards maximum points for at least 2 medium and 1 hard optional task. 
 - Increment 0: `backend/scripts/spike_extract.py` output and the go/pivot decision are in `docs/decisions.md`.
 - `uv run pytest` green with fakes (`GenericFakeChatModel`, fake TED/eCertis/Frankfurter clients); `uv run pytest -m live` runs the full graph on the DE fixture and stops at the interrupt.
 - Manual e2e: seed demo company → search TED for a FR CPV 72 notice → upload fixture pack → wait for matrix → confirm review → dashboard shows final verdict; "ask the tender" answers with page citations in German.
-- `uv run scripts/run_eval.py` produces `evaluations/REPORT.md` with recall, faithfulness, translation adequacy for the 3 golden tenders.
-- Playwright smoke test for login → bid → confirm.
+- `uv run scripts/run_eval.py` (S7.1) will produce `evaluations/REPORT.md` with recall, faithfulness, translation adequacy for the 3 golden tenders. Neither the script nor the folder exists yet; scoring today is `scripts/recall.py` below.
+- Playwright smoke test for login → bid → confirm (S7.7). Not built yet — there is no Playwright project in `frontend/`.
 - Cost per DE fixture bid visible in `/dev/costs` (OpenRouter-reported) and under $2.50; the run reaches `awaiting_review` within 10 minutes (S3.1.1).
-- `uv run scripts/recall.py` (S3.2.3) reports mandatory-requirement recall ≥ 0.9 on the DE golden tender.
+- `uv run scripts/recall.py` (S3.2.3) reports mandatory-requirement recall on the DE golden tender. Measured against the human-verified key: **0.72** on the committed run, **~0.74 ± 0.02** across four runs, against the 0.9 target in `settings.default.yaml`. The script therefore exits non-zero — deliberately, and visibly.
 - CI (S0.1.4) is green on `main` with backend coverage ≥ 80%.
 - BYOK: store an invalid OpenAI key → verification fails, nothing saved; store a valid key → hint shown, run a bid → LangSmith trace shows the OpenAI model and `/dev/costs` labels the row `openai`; delete the key → next bid falls back to the app OpenRouter route with a visible warning.
