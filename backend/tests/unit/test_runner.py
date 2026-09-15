@@ -596,12 +596,62 @@ def test_run_budget_reads_the_settings_keys_once_they_exist() -> None:
 def test_build_runner_builds_the_real_graph_lazily(offline_settings: Settings) -> None:
     """Construction touches nothing; the first `.graph` runs `build_graph`, which without
     Storage configured refuses -- proof that it is the real factory and that it is lazy."""
-    runner = build_runner(FakeDatabase(), offline_settings)  # type: ignore[arg-type]
+    runner = build_runner(FakeDatabase(), lambda: offline_settings)  # type: ignore[arg-type]
 
     assert runner.running == frozenset()
     assert runner.budget == RunBudget()
     with pytest.raises(StorageError, match="SUPABASE_URL"):
         runner.graph  # noqa: B018 -- the access is the act
+
+
+# ------------------------------------------------- S4.6.2: the graph follows the settings
+
+
+def settings_at(settings: Settings, temperature: float) -> Settings:
+    runtime = settings.runtime.model_copy(update={"temperature": temperature})
+    return Settings(env=settings.env, runtime=runtime)
+
+
+def test_the_factory_reads_the_settings_in_force_on_every_build(
+    offline_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The failure this closes: a factory that captured `Settings` at boot would run every
+    later bid on them while the panel reported the change as applied. The provider is
+    called per build, so a build after `invalidate_graph()` sees what the panel stored."""
+    # Arrange
+    built_with: list[float] = []
+    monkeypatch.setattr(
+        runner_module,
+        "build_graph",
+        lambda settings, db: built_with.append(settings.runtime.temperature) or object(),
+    )
+    current = {"settings": settings_at(offline_settings, 0.0)}
+    runner = build_runner(FakeDatabase(), lambda: current["settings"])  # type: ignore[arg-type]
+
+    # Act
+    first = runner.graph
+    current["settings"] = settings_at(offline_settings, 0.7)
+    still_cached = runner.graph
+    runner.invalidate_graph()
+    rebuilt = runner.graph
+
+    # Assert
+    assert still_cached is first, "no rebuild until told: an in-flight run keeps its graph"
+    assert rebuilt is not first
+    assert built_with == [0.0, 0.7]
+
+
+def test_invalidating_before_any_build_is_harmless() -> None:
+    """A settings write on a process whose runner has not built yet must not build one."""
+
+    def factory() -> Any:
+        raise AssertionError("invalidation must not build the graph")
+
+    runner = BidRunner(factory, FakeDatabase())
+
+    runner.invalidate_graph()
+
+    assert runner.running == frozenset()
 
 
 async def test_resume_unfinished_runs_schedules_every_unfinished_bid(
@@ -623,7 +673,7 @@ async def test_resume_unfinished_runs_schedules_every_unfinished_bid(
     with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
         returned = await resume_unfinished_runs(
             FakeDatabase(),  # type: ignore[arg-type]
-            offline_settings,
+            lambda: offline_settings,
             runner=runner,
         )
 
@@ -654,7 +704,7 @@ async def test_resume_unfinished_runs_with_nothing_to_do_does_not_build_the_grap
     with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
         returned = await resume_unfinished_runs(
             FakeDatabase(),  # type: ignore[arg-type]
-            offline_settings,
+            lambda: offline_settings,
             runner=runner,
         )
 
@@ -670,7 +720,7 @@ async def test_resume_unfinished_runs_builds_a_runner_when_none_is_given(
 
     monkeypatch.setattr(runner_module, "unfinished_bids", unfinished_bids)
 
-    returned = await resume_unfinished_runs(FakeDatabase(), offline_settings)  # type: ignore[arg-type]
+    returned = await resume_unfinished_runs(FakeDatabase(), lambda: offline_settings)  # type: ignore[arg-type]
 
     assert isinstance(returned, BidRunner)
 
@@ -693,7 +743,7 @@ async def test_resume_unfinished_runs_stops_startup_when_the_graph_cannot_be_bui
     with pytest.raises(StorageError):
         await resume_unfinished_runs(
             FakeDatabase(),  # type: ignore[arg-type]
-            offline_settings,
+            lambda: offline_settings,
             runner=runner,
         )
 

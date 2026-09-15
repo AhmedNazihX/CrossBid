@@ -725,11 +725,16 @@ def test_list_bids_without_the_dev_header_is_401(
 def test_get_bid_runner_builds_one_runner_and_keeps_it_on_app_state(
     offline_settings: Settings,
 ) -> None:
-    """Startup (`resume_unfinished_runs`) and requests must share one task registry."""
-    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
+    """Startup (`resume_unfinished_runs`) and requests must share one task registry.
 
-    first = get_bid_runner(request, FakeDatabase(), offline_settings)  # type: ignore[arg-type]
-    second = get_bid_runner(request, FakeDatabase(), offline_settings)  # type: ignore[arg-type]
+    The runner is built over `settings_provider(request.app)`, which reads `app.state.settings`
+    -- the seam S4.6.2's write route replaces -- so the fake state carries them."""
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(settings=offline_settings))
+    )
+
+    first = get_bid_runner(request, FakeDatabase())  # type: ignore[arg-type]
+    second = get_bid_runner(request, FakeDatabase())  # type: ignore[arg-type]
 
     assert first is second
     assert getattr(request.app.state, RUNNER_STATE_KEY) is first
@@ -738,10 +743,10 @@ def test_get_bid_runner_builds_one_runner_and_keeps_it_on_app_state(
 def test_get_bid_runner_returns_the_runner_the_lifespan_stored(
     offline_settings: Settings, runner: FakeRunner
 ) -> None:
-    state = SimpleNamespace(**{RUNNER_STATE_KEY: runner})
+    state = SimpleNamespace(**{RUNNER_STATE_KEY: runner, "settings": offline_settings})
     request = SimpleNamespace(app=SimpleNamespace(state=state))
 
-    found = get_bid_runner(request, FakeDatabase(), offline_settings)  # type: ignore[arg-type]
+    found = get_bid_runner(request, FakeDatabase())  # type: ignore[arg-type]
 
     assert found is runner
 

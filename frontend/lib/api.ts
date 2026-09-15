@@ -246,7 +246,14 @@ export interface paths {
          * @description What the agent may reach and how it is configured. Outside production only.
          */
         get: operations["read_dev_settings_dev_settings_get"];
-        put?: never;
+        /**
+         * Replace the developer settings
+         * @description Store the `app_settings` row and apply it to this process. Outside production only.
+         *
+         *     Validate, store, swap -- see the module docstring for why the order is the design.
+         *     Answers the settings now in force, which is what the panel renders next.
+         */
+        put: operations["write_dev_settings_dev_settings_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -387,6 +394,38 @@ export interface components {
             run_budget_usd: number;
             /** Llm Timeout Seconds */
             llm_timeout_seconds: number;
+        };
+        /**
+         * AppSettingsRow
+         * @description The single `app_settings` row (`id=1`) of the read model (S0.2.3).
+         *
+         *     Every column is optional and a NULL one means "keep the YAML default", so the
+         *     developer panel can change one value without restating the rest. `models` mirrors the
+         *     `jsonb` column and may be partial: `{"judge": "..."}` replaces only the judge slug --
+         *     S5.1's per-role switch, and the merged result is validated against `available_models`
+         *     like any other configuration, so a role cannot be switched to a slug nobody probed.
+         *
+         *     There is no `available_models` column, deliberately: the verified list is the outcome
+         *     of live calls (ADR-0005), so widening it is a code change with a probe behind it and
+         *     not a value somebody types into a browser.
+         *
+         *     Defined here rather than in `models/` because it is a settings concern that nothing
+         *     above the settings layer ever sees; `models/` holds the domain objects the API and the
+         *     frontend share.
+         */
+        AppSettingsRow: {
+            /** Models */
+            models?: {
+                [key: string]: string;
+            } | null;
+            /** Temperature */
+            temperature?: number | null;
+            /** Max Tokens */
+            max_tokens?: number | null;
+            /** System Prompt */
+            system_prompt?: string | null;
+            /** Enabled Tools */
+            enabled_tools?: string[] | null;
         };
         /**
          * BidDocumentResponse
@@ -897,9 +936,16 @@ export interface components {
             max_tokens: number;
             /**
              * System Prompt Set
-             * @description Whether a system prompt is configured. The text itself is never returned: it is the prompt-injection defence's standing instructions.
+             * @description Whether a system prompt is configured; `system_prompt is not null`
              */
             system_prompt_set: boolean;
+            /**
+             * System Prompt
+             * @description The agent's standing instructions in force -- the prompt-injection defence's text (S2.3.2). Readable because this router is behind the developer check and the panel edits it; see the module docstring for the reasoning.
+             */
+            system_prompt: string | null;
+            /** @description The settings.default.yaml values behind each editable field */
+            defaults: components["schemas"]["EditableDefaults"];
             /** @description Concurrency limits, the per-requirement tool budget and the run budgets */
             agent: components["schemas"]["AgentSettings"];
             /**
@@ -1077,6 +1123,26 @@ export interface components {
             issuers: string[];
             /** Description */
             description?: string | null;
+        };
+        /**
+         * EditableDefaults
+         * @description Layer 1 for the five columns the row may override: what a NULL column falls back to.
+         *
+         *     Sent beside the effective values so the panel can mark a field as overridden, show what
+         *     "reset" would restore, and null a column whose value equals its default on save. Without
+         *     it the panel would have to store every field as an override, and a later change to
+         *     `settings.default.yaml` would never reach a deployment that had once saved the panel.
+         */
+        EditableDefaults: {
+            models: components["schemas"]["ModelSlugs"];
+            /** Temperature */
+            temperature: number;
+            /** Max Tokens */
+            max_tokens: number;
+            /** System Prompt */
+            system_prompt: string | null;
+            /** Enabled Tools */
+            enabled_tools: string[];
         };
         /**
          * Evidence
@@ -1892,6 +1958,15 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description This company has used its hour's allowance for this action. `Retry-After` carries whole seconds until the oldest call leaves the window; `detail` says the same in a sentence. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait (RFC 9110 §10.2.3). */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     get_document_documents__document_id__get: {
@@ -2006,6 +2081,15 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description This company has used its hour's allowance for this action. `Retry-After` carries whole seconds until the oldest call leaves the window; `detail` says the same in a sentence. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait (RFC 9110 §10.2.3). */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2177,6 +2261,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DevSettingsResponse"];
+                };
+            };
+        };
+    };
+    write_dev_settings_dev_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppSettingsRow"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2354,6 +2471,15 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description This company has used its hour's allowance for this action. `Retry-After` carries whole seconds until the oldest call leaves the window; `detail` says the same in a sentence. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait (RFC 9110 §10.2.3). */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

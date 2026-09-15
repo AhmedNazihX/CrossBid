@@ -1,4 +1,5 @@
 import type { IconName } from '@/components/ui/icons'
+import type { DeveloperAccess } from '@/lib/use-developer-access'
 
 /**
  * The shell's navigation — `ui_kits/app/Shell.jsx`'s sidebar, as data (story S4.1.2, rebuilt
@@ -25,6 +26,12 @@ export interface NavItem {
   readonly isActive?: (pathname: string) => boolean
   /** Resolve the href in the browser: `lastBid` links Compliance to the bid last opened. */
   readonly resolveHref?: 'lastBid'
+  /**
+   * `developer` shows the entry only once `GET /dev/settings` has answered 200 for this
+   * account (S4.6.2). The API is the gate — 403 off the developer list, 404 in production —
+   * and the browser merely repeats its answer; see `lib/use-developer-access.ts`.
+   */
+  readonly access?: 'developer'
 }
 
 /** The workspace a bid was last opened in, so Compliance can lead back to it. */
@@ -66,7 +73,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'workflow',
     tone: 'solid',
   },
-  { key: 'runs', href: '/runs', label: 'Agent runs', icon: 'spark', group: 'platform' },
+  {
+    key: 'runs',
+    href: '/runs',
+    label: 'Agent runs',
+    icon: 'spark',
+    group: 'platform',
+    access: 'developer',
+  },
   {
     key: 'company',
     href: '/company',
@@ -94,6 +108,11 @@ export const MAIN_CONTENT_ID = 'main-content'
  */
 export function isSectionActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+/** Whether `item` is shown to an account whose developer access is `access`. */
+export function isNavItemVisible(item: NavItem, access: DeveloperAccess): boolean {
+  return item.access !== 'developer' || access === 'granted'
 }
 
 export function isNavItemActive(item: NavItem, pathname: string): boolean {

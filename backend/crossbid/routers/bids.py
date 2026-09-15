@@ -40,7 +40,7 @@ from crossbid.agent.state import ExtractionProblem
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
 from crossbid.ingestion.storage import StorageError
-from crossbid.main import get_app_settings, get_database
+from crossbid.main import get_database, settings_provider
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.review import ReviewSubmission, RowEdit
@@ -65,7 +65,6 @@ from crossbid.readmodel.bids import (
 from crossbid.readmodel.documents import DocumentStatus
 from crossbid.readmodel.matrix import fetch_matrix_rows
 from crossbid.readmodel.requirements import fetch_requirements
-from crossbid.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -273,15 +272,16 @@ class BidListResponse(BaseModel):
 # ------------------------------------------------------------------------- dependencies
 
 
-def get_bid_runner(
-    request: Request,
-    db: Database = Depends(get_database),
-    settings: Settings = Depends(get_app_settings),
-) -> BidRunner:
-    """The process-wide runner: one task registry for startup resumes and requests alike."""
+def get_bid_runner(request: Request, db: Database = Depends(get_database)) -> BidRunner:
+    """The process-wide runner: one task registry for startup resumes and requests alike.
+
+    Built over `settings_provider(request.app)` rather than the `settings` resolved for this
+    request: the runner outlives the request, and a graph factory holding this request's
+    copy would run every later bid on it however often the panel changed the row (S4.6.2).
+    """
     runner: BidRunner | None = getattr(request.app.state, RUNNER_STATE_KEY, None)
     if runner is None:
-        runner = build_runner(db, settings)
+        runner = build_runner(db, settings_provider(request.app))
         setattr(request.app.state, RUNNER_STATE_KEY, runner)
     return runner
 

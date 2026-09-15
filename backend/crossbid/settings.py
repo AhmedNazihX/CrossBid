@@ -19,7 +19,8 @@ environment variable, so "which wins" never has to be guessed. Secrets live only
 environment; behaviour lives only in the YAML and the row.
 
 Layers 1 and 2 are implemented here. Layer 3 is `apply_app_settings_row`, which is pure
-and tested; the query that reads the row waits for the database (`fetch_app_settings_row`).
+and tested; the statements that read and write the row are `readmodel/app_settings.py`, and
+`main.py`'s startup applies the stored row over the YAML before the first request (S4.6.2).
 
 Two more guards live here because they are pure validation and need no database, even
 though the stories that own them come later:
@@ -45,7 +46,7 @@ from collections.abc import Callable, Mapping, MutableMapping
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, NamedTuple
 from urllib.parse import parse_qsl, urlsplit
 
 import yaml
@@ -554,8 +555,9 @@ def get_settings() -> Settings:
     """The process-wide settings, for `Depends(get_settings)` and for the graph.
 
     Cached: FastAPI resolves the dependency on every request, and the YAML is read once.
-    `get_settings.cache_clear()` exists for tests and for the developer panel, which
-    changes the `app_settings` row and then needs the next read to see it (S4.6.2).
+    `get_settings.cache_clear()` exists for tests. The developer panel (S4.6.2) does not
+    go through it: a request reads `main.get_app_settings`, which answers the merged
+    settings held on `app.state`, and that is what the panel's write route replaces.
     """
     return load_settings()
 
@@ -587,13 +589,77 @@ class AppSettingsRow(_Frozen):
     system_prompt: str | None = None
     enabled_tools: tuple[str, ...] | None = None
 
+    @field_validator("system_prompt", mode="after")
+    @classmethod
+    def _reject_blank_prompt(cls, value: str | None) -> str | None:
+        """A prompt of whitespace is not "no override", it is an override to nothing.
+
+        `RuntimeSettings.system_prompt` treats `None` and a string differently -- `None`
+        sends no system message, a string is sent as one -- so a blank string stored here
+        would silently replace the injection defence's standing text (S2.3.2) with an
+        empty system message, and the YAML's prompt would never be seen again. The panel
+        turns an emptied box into NULL; this refuses the same row arriving any other way.
+        """
+        if value is not None and not value.strip():
+            raise ValueError(
+                "must not be blank: send null to fall back to the settings.default.yaml "
+                "prompt, or a prompt with words in it"
+            )
+        return value
+
+
+class RowFieldError(NamedTuple):
+    """One thing wrong with a row, as the panel places it: the field, then the sentence."""
+
+    field: str
+    message: str
+
+
+class AppSettingsRowError(SettingsError):
+    """The `app_settings` row would not validate over the YAML defaults.
+
+    A `SettingsError` still -- at startup it stops the boot like any other configuration
+    fault -- but one that also carries *which fields* are wrong, because the same
+    validation runs on `PUT /dev/settings` and a 422 that names no field leaves a panel
+    with nowhere to put the message (`frontend/lib/field-errors.ts`).
+    """
+
+    def __init__(self, message: str, *, errors: tuple[RowFieldError, ...]) -> None:
+        super().__init__(message)
+        self.errors = errors
+
+
+ROW_MODEL_VALIDATOR_FIELD: Final = "models"
+"""Where a whole-model failure of `RuntimeSettings` is filed. Its one model-level validator
+is `_every_chat_slug_is_verified`, whose location is empty because what is wrong is the
+combination of `models` and `available_models` -- and of the two, `models` is the one a row
+can change."""
+
+
+def _row_field_errors(exc: ValidationError) -> tuple[RowFieldError, ...]:
+    """Each error against the top-level runtime field it belongs to.
+
+    `loc` is `("temperature",)` for a scalar and `("models", "judge")` for a slug of the
+    wrong type; the first element is the field the panel edits, and the sentence keeps the
+    whole path. An empty location is the model-level validator, filed under `models`.
+    """
+    return tuple(
+        RowFieldError(
+            field=str(error["loc"][0]) if error["loc"] else ROW_MODEL_VALIDATOR_FIELD,
+            message=_describe(error, str),
+        )
+        for error in exc.errors()
+    )
+
 
 def apply_app_settings_row(settings: Settings, row: AppSettingsRow | None) -> Settings:
     """Return a **new** `Settings` with the row's non-NULL columns over the YAML defaults.
 
     Nothing is mutated: `settings` is still valid and unchanged afterwards. The merged
     values are re-validated, because a database row is external input like any other --
-    a `temperature` of 7 in the table must be refused, not sent to OpenRouter.
+    a `temperature` of 7 in the table must be refused, not sent to OpenRouter. The same
+    call is what `PUT /dev/settings` runs *before* it stores anything, so a row that would
+    fail here at the next startup is never written (S4.6.2).
     """
     if row is None:
         return settings
@@ -608,25 +674,11 @@ def apply_app_settings_row(settings: Settings, row: AppSettingsRow | None) -> Se
     try:
         runtime = RuntimeSettings.model_validate(merged)
     except ValidationError as exc:
-        raise SettingsError(
-            f"The app_settings row (id=1) is invalid: {_format_errors(exc, str)}"
+        raise AppSettingsRowError(
+            f"The app_settings row (id=1) is invalid: {_format_errors(exc, str)}",
+            errors=_row_field_errors(exc),
         ) from exc
     return Settings(env=settings.env, runtime=runtime)
-
-
-def fetch_app_settings_row() -> AppSettingsRow | None:
-    """Read the `app_settings` row, or `None` when the table holds no row yet.
-
-    **Not implemented, deliberately.** There is no database: S0.2.1 (the Supabase project)
-    is blocked, S0.2.3 writes the migration that creates this table, and S0.2.2 opens the
-    psycopg pool this query would borrow a connection from. Faking the read would hide
-    that. The `SELECT` goes here, and the wiring goes in `main.py`'s startup hook:
-
-        settings = apply_app_settings_row(load_settings(), fetch_app_settings_row())
-    """
-    raise NotImplementedError(
-        "The app_settings override needs the database: table in S0.2.3, pool in S0.2.2."
-    )
 
 
 # ------------------------------------------------------------- tracing (S0.3.3)

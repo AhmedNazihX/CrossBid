@@ -35,6 +35,18 @@ start; a process *with* unfinished bids and no Storage should not, and does not 
 runs before the first resume and its `StorageError` stops startup (ADR-0010: the API starts
 without a database, but not with a broken one).
 
+**4. The graph is built from the settings in force, not the settings at boot.** S4.6.2
+lets a developer change the model per role, the temperature, the prompt and the tool set
+while the API runs, and a factory that had captured `Settings` at startup would keep
+building the old graph — with a panel saying the change had taken effect. So
+`build_runner` takes a `SettingsProvider`, a callable answering the current `Settings`,
+and the compiled graph is cached only until `invalidate_graph()` is called, which the
+settings route does after every successful write. The next run builds afresh; a run
+already in flight keeps the graph object it started on, because a bid is one
+configuration from `parse_docs` to `await_review` and half-switching it mid-run would
+make its cost report and its trace describe two different agents. `RunBudget` is still
+read once, and that is not an oversight: none of its inputs is a column of the row.
+
 The story's two limits — ten minutes to `awaiting_review`, $2.50 of OpenRouter cost —
 are `RunBudget`. The runner measures wall clock around the invocation and reads the cost
 back out of `llm_usage` once the run stops, warning past either budget; the `live` test
@@ -42,10 +54,10 @@ asserts both against the DE pack. The cost is read rather than measured because 
 runner is the wrong place to see it: the money is spent inside the nodes, and S5.2 records
 each call where it happens (`crossbid/usage.py`). Reading the table is also what makes the
 figure survive a restart — a run resumed from its checkpoint reports what the whole bid
-cost, not what this process happened to watch. The values are meant to live in
-`settings.default.yaml` under `agent.run_budget_seconds` and `agent.run_budget_usd`, and
-`RunBudget.from_settings` reads them from there once they exist, falling back to the
-constants here until then.
+cost, not what this process happened to watch. The values live in `settings.default.yaml`
+under `agent.run_budget_seconds` and `agent.run_budget_usd`, and `RunBudget.from_settings`
+reads them from there; the constants below are the fallback for a settings object that
+carries neither, which today means a test's.
 """
 
 from __future__ import annotations
@@ -107,6 +119,9 @@ class BidGraph(Protocol):
 
 
 GraphFactory = Callable[[], BidGraph]
+SettingsProvider = Callable[[], Settings]
+"""Answers the `Settings` in force *now*. `main.settings_provider` reads them off
+`app.state`, which is the one place the developer panel's write route replaces them."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,6 +172,16 @@ class BidRunner:
         if self._graph is None:
             self._graph = self._graph_factory()
         return self._graph
+
+    def invalidate_graph(self) -> None:
+        """Drop the cached graph so the next run is built from the current settings.
+
+        Called by `PUT /dev/settings` after the row is stored (point 4). Runs in flight
+        are untouched: each holds the graph object it started on. Nothing is rebuilt here
+        — the factory may raise `StorageError`, and a settings write is not the place to
+        surface a Storage misconfiguration; the next `start` is, exactly as at boot.
+        """
+        self._graph = None
 
     @property
     def budget(self) -> RunBudget:
@@ -349,15 +374,22 @@ class BidRunner:
         )
 
 
-def build_runner(db: Database, settings: Settings) -> BidRunner:
-    """The production runner: the real graph, built lazily, over the process pool."""
+def build_runner(db: Database, current_settings: SettingsProvider) -> BidRunner:
+    """The production runner: the real graph, built lazily from the settings in force.
+
+    `current_settings` is called on every build, not once here, so a graph rebuilt after
+    `invalidate_graph()` sees what the developer panel stored (point 4). The budget is
+    read once because nothing in `AppSettingsRow` can change it.
+    """
     return BidRunner(
-        lambda: build_graph(settings, db), db, budget=RunBudget.from_settings(settings)
+        lambda: build_graph(current_settings(), db),
+        db,
+        budget=RunBudget.from_settings(current_settings()),
     )
 
 
 async def resume_unfinished_runs(
-    db: Database, settings: Settings, *, runner: BidRunner | None = None
+    db: Database, current_settings: SettingsProvider, *, runner: BidRunner | None = None
 ) -> BidRunner:
     """Startup hook: re-invoke the graph on every bid the read model says is still running.
 
@@ -366,7 +398,7 @@ async def resume_unfinished_runs(
     so a process without Storage still starts; with something to resume it is built first,
     and a configuration gap stops startup rather than failing the bids.
     """
-    active = runner if runner is not None else build_runner(db, settings)
+    active = runner if runner is not None else build_runner(db, current_settings)
     rows = await unfinished_bids(db)
     if not rows:
         logger.info("no unfinished bid runs to resume")

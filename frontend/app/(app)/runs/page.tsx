@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-import { EmptyState } from '@/components/common/empty-state'
+import { DevConsole } from '@/components/dev/dev-console'
 import { PageHeader } from '@/components/layout/page-header'
 
 export const metadata: Metadata = {
@@ -8,22 +8,29 @@ export const metadata: Metadata = {
 }
 
 /**
- * Placeholder behind the sidebar's Agent runs entry. Per-run stages, cost and duration
- * belong to the developer console (S4.6.2); until then a bid's stage is on its workspace.
+ * The developer console (story S4.6.2), behind the sidebar's Agent runs entry.
+ *
+ * **Why here and not under Settings.** `/settings` is the bidder's — explanation language
+ * and tone live on the company form, and the provider page (bring your own key, S4.6.4) is
+ * what that route is reserved for. This screen is the *operator's*: which model answers
+ * each role, the temperature, the prompt, the tools, and what each run cost. The
+ * placeholder that stood here since S4.1.2 already said per-run cost belongs to the
+ * developer console, and the entry already sat in the PLATFORM group beside Company
+ * profile and Settings, so the console takes the route it was promised rather than adding
+ * a second one. The entry is hidden for anyone the API refuses
+ * (`lib/use-developer-access.ts`), so a bidder never sees a door that will not open.
+ *
+ * No artboard draws this screen (ADR-0034); `components/dev/dev-console.tsx` says which
+ * primitives it is built from.
  */
 export default function RunsPage() {
   return (
     <>
       <PageHeader
         title="Agent runs"
-        description="Each run of the agent: its stages, what it cost, and how long it took."
+        description="Tune the agent without touching code — the model behind each role, temperature, max tokens, the system prompt and the tools — and see what every run cost, per node and per bid."
       />
-      <EmptyState
-        title="Runs are not listed here yet"
-        description="The run log — stage timings, model calls and their cost — is the developer console's job and arrives with S4.6.2. Today each bid's workspace shows its own stage while the agent works."
-        steps={['Open a bid from Tenders to follow its run.']}
-        secondaryAction={{ href: '/bids', label: 'Open tenders' }}
-      />
+      <DevConsole />
     </>
   )
 }

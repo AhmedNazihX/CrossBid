@@ -4407,3 +4407,86 @@ German paragraph while chrome stays English. One known gap is inherited, not int
 phone a citation tap hides the tab that held focus, dropping focus to `body` — matrix citations
 have done the same since S4.5.1, and the fix belongs to the tab switch.
 
+---
+
+## ADR-0059 — The developer console, and the settings row that finally exists
+
+**Date:** 2026-09-15 · **Stories:** S4.6.2 · **Status:** accepted
+
+Pick a model per role, tune temperature and max tokens, edit the system prompt, toggle tools,
+see cost per bid and per node. `/runs` in the sidebar, hidden until `GET /dev/settings` answers
+200 — the server is the gate, the UI only asks it.
+
+### The stub nobody replaced
+
+`settings.py::fetch_app_settings_row` raised `NotImplementedError` from S0.3.2 until this
+story. Its docstring named the two prerequisites — the table, the pool — and both landed in
+Increment 1; `main.py` and `rate_limit.py` each deferred the wiring here by story number. So
+`settings.default.yaml`'s first line, "overridden by the `app_settings` row in Postgres", had
+been describing a row that was never read. This is the third docstring this increment found
+describing work nobody did (ADR-0050's unwired verifier, ADR-0057's unwritten corpus). The
+stub is now **removed** rather than left beside the real implementation; `readmodel/app_settings.py`
+holds the SELECT and an upsert on `id = 1` with `returning`, so what is re-applied is what was
+*stored*, never the request body.
+
+It is the one read model with **no tenant scope**, and it says so: the table has no
+`company_id`, the check-constrained `id = 1` stands in for one, and the `SCOPED_STATEMENTS`
+predicate test does not apply. Stating that beats leaving a reader to wonder whether a scope
+was forgotten.
+
+### A panel that says "applied" must mean it
+
+The hazard: routes read `app.state.settings` per request, but the bid runner's graph factory
+closed over the settings captured at startup. A write would reach every route and **silently
+not reach the next bid** — the panel claiming an effect the graph did not deliver, on the one
+thing it exists to do. Two honest options: fix the factory, or make the panel say "after a
+restart". The first is ~40 lines and is what shipped: the runner takes a `SettingsProvider`
+reading the live settings, the write route swaps them and calls `invalidate_graph()`, and the
+**next run** is built from the stored row. Runs in flight keep the graph object they started on
+— a bid is one configuration from `parse_docs` to `await_review`, and half-switching it would
+make its cost report and its trace describe two different agents. The success notice states
+exactly that.
+
+Startup applies the stored row **before** the runner exists, so the panel's own edits survive a
+restart; a stored row that fails validation stops the boot, exactly as a bad YAML would.
+
+### What the write route refuses, in order
+
+`PUT /dev/settings` replaces the row whole — five nullable columns, `null` meaning "back to the
+YAML". Then: `models.embed` → 422 at the route (a browser picker is not a decision to re-embed
+the corpus, ADR-0050); the merged `RuntimeSettings` validated via `apply_app_settings_row` → 422
+naming the field, **nothing written** — ADR-0050's verified-slug rule fires here, so a role
+cannot be pointed at a slug nobody probed; then store, re-apply the returned row, swap,
+invalidate. Unknown keys — `confirm_flagged_chunks`, `available_models` — are 422 by
+`extra="forbid"`, which is how ADR-0054's "not browser-editable" is enforced rather than
+remembered. A blank `system_prompt` is refused separately: an empty string would replace the
+injection defence's standing text with an empty system message, and `null` is how "use the
+default" is said.
+
+### `system_prompt` is returned to a developer — a reversal, argued
+
+S1.4.1 omitted it because the route had "no authentication behind it". The router is now
+behind `refuse_in_production` and `require_developer`, and the story is to *edit* the prompt:
+a write-only box over a value shown as "(set)" is how a deployment ends up with text nobody
+can reconstruct. The residual is stated, not hidden — under `AUTH_MODE=dev` every caller is a
+developer, so a dev-mode API shows the prompt to anyone on the port; that mode is refused in
+production, opens the same door the environment gate already opens, and runs only where the
+YAML is readable anyway. `confirm_flagged_chunks` stays out, and its paragraph in `dev.py` now
+stands on its own reason (ADR-0054) rather than borrowing the prompt's.
+
+`GET /dev/settings` also gained `defaults` — the YAML values — so the panel can mark an override
+and null a field back without a second source of truth in the browser.
+
+### The number that is allowed to be a lower bound
+
+`unpriced_calls` (ADR-0056) is the caption on the total's metric card — red, and the label
+becomes "(at least)" when non-zero — and a column in both tables. A cost report that hid it
+would be wrong in the direction that looks fine.
+
+### Left as gaps, named
+
+No per-bid filter in the cost UI (`?bid_id=` unused; the by-bid table links to each workspace).
+No optimistic-concurrency guard on the row: two developers saving at once is last-write-wins,
+and `updated_at` could serve as an ETag later. No artboard — built from `Card`, `Select`,
+`Input`, `Checkbox`, `Notice`, `MetricCard`, `DataTable`, `Tag`, `Badge`, `Button` and declared
+so (ADR-0034). The frontend still has no test runner; nothing panel-side is unit-tested.

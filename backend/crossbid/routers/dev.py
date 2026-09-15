@@ -1,8 +1,10 @@
-"""The developer routes: what the agent is configured to do, and what it has spent.
+"""The developer routes: what the agent is configured to do, what it has spent, and the one
+route that changes it.
 
-`GET /dev/settings` is S1.4.1 and `GET /dev/costs` is S5.2. They share the router because
-they share both gates and the panel that reads them (S4.6.2); they differ in one way that
-is worth stating before the rest, because it is the exception to the rule below.
+`GET /dev/settings` is S1.4.1, `GET /dev/costs` is S5.2 and `PUT /dev/settings` is S4.6.2.
+They share the router because they share both gates and the panel that reads them; they
+differ in one way that is worth stating before the rest, because it is the exception to
+the rule below.
 
 **`/dev/costs` is tenant-scoped and `/dev/settings` is not.** Settings are a property of the
 process — the same answer for everyone who may see it — so the route takes no tenant and
@@ -60,20 +62,32 @@ to either is behaviour by construction, and cannot be a secret arriving by accid
 `ENV`, `AUTH_MODE` and `WEB_ORIGIN` are non-secret but still deployment facts an operator
 cannot change from a panel, so they stay out too.
 
-*`confirm_flagged_chunks`.* S5.3's second opinion, and it stays out for the same reason
-`system_prompt` does: it is a defence, and its *state* is worth as much to an attacker as
-its wording. A route with no authentication in front of it announcing that the model review
-is switched off tells anyone who can put a PDF into the pipeline that the only thing between
-them and the corpus is a list of regular expressions. Its value is in the YAML for whoever
-deploys it, and in the log line a release writes.
+*`confirm_flagged_chunks`.* S5.3's second opinion. It is a defence, and its *state* is
+worth as much to an attacker as its wording: a route announcing that the model review is
+switched off tells anyone who can put a PDF into the pipeline that the only thing between
+them and the corpus is a list of regular expressions. Unlike `system_prompt` (below) there
+is nothing on the other side of the ledger — the panel does not edit it (ADR-0054), so
+seeing it changes nothing — and its value is in the YAML for whoever deploys it, and in the
+log line a release writes.
 
-*`system_prompt`.* It is the injection defence's standing text (S2.3.2, ADR-0009): the
-rules that tell the model a data block is data. Printing it on a route with no
-authentication behind it hands anyone who can get a PDF into the pipeline the exact wording
-to write around, and the column is overridable per deployment, so the text may carry
-deployment detail the YAML does not. `system_prompt_set` is reported instead — an operator
-needs to know an override is in effect; nobody needs to read it over HTTP. S4.6.2 edits it
-behind a real role check.
+**`system_prompt` is in the response since S4.6.2, and that reverses S1.4.1's call, so the
+reasoning is spelled out.** The prompt is the injection defence's standing text (S2.3.2,
+ADR-0009): the rules that tell the model a data block is data. S1.4.1 withheld it because
+the route then had *no authentication behind it* — `auth.py` was the `X-Dev-Company`
+bridge, a header anyone can type — and printing the wording on an open route hands anyone
+who can get a PDF into the pipeline the exact text to write around. Two things have
+changed. The router now sits behind `require_developer` (S0.3.1), so under
+`AUTH_MODE=supabase` the text goes only to a verified account on `DEVELOPER_EMAILS`. And
+the story is to *edit* the prompt from this panel, which a developer cannot do to text
+they cannot see: the alternative — a write-only box that replaces a prompt shown as
+"(set)" — is how a deployment ends up with a prompt nobody can reconstruct. The reasons
+S1.4.1 gave still hold for the *unauthenticated* case, and the residual is stated plainly:
+under `AUTH_MODE=dev` every caller is a developer, so on a dev-mode API the prompt is
+readable by anyone who can reach the port. That mode is refused in production
+(`settings._refuse_dev_auth_in_production`), is the same door the environment gate already
+opens on every `/dev/*` route, and is run only on a developer's machine or in CI —
+both of which can read `settings.default.yaml` directly. `system_prompt_set` stays for
+the generated client that already reads it.
 
 *`evaluation`.* S3.2.3's `recall_threshold` is a gate on how good extraction has to be
 before a story counts as delivered, not a knob a panel turns: moving it from a browser
@@ -93,19 +107,59 @@ tenant data, and `X-Dev-Company` is self-asserted and so authorises nothing.
 
 The route stays in the OpenAPI schema in production — the generated `frontend/lib/api.ts`
 must not depend on which environment the API was booted in — and answers 404 there.
+
+---
+
+S4.6.2 — `PUT /dev/settings`: the `app_settings` row, replaced whole.
+
+The body is `AppSettingsRow` itself — the five editable columns, each nullable — and the
+route **replaces** the stored row rather than patching it. A NULL column means "back to
+the YAML default", and that has to be expressible: a merge that skipped absent fields
+could switch a role away from its default and never back. So the panel sends the whole
+row every time, nulling what equals the default (`readmodel/app_settings.py`).
+
+**Validate, then store, then swap — in that order, and each step is the reason for the
+next.** The row is merged over the *pristine* settings (`get_base_settings`, the YAML and
+environment before any row) with `apply_app_settings_row`, which is the same call the
+startup makes; a row that fails it answers **422 naming the field** and nothing is written,
+so the database can never hold a row the next boot would refuse (ADR-0050: a chat role may
+only be switched to a slug in `available_models`, and that validator fires on this merge).
+Only then is the row stored, and what `returning` hands back is re-applied — never the
+request body — so the process runs on what the database actually holds. Last,
+`app.state.settings` is replaced and the runner is told to drop its compiled graph, so the
+next request *and the next bid run* see the change. A panel that reported success before
+the runner knew would be the failure this ordering exists to prevent: a switch that
+applies to `/dev/settings` and not to the agent.
+
+**`embed` is refused here, not in `AppSettingsRow`.** The row model accepts it — a
+hand-edited row switching the embedding slug is an operator's decision to re-embed the
+corpus, and `settings.py` deliberately leaves it validatable — but a picker in a browser
+is not that decision. `switchable_roles` already tells the panel not to offer it; the route
+refuses it anyway, because a contract the client is merely trusted to honour is not one.
+
+The route needs the database (**503** without one) and is otherwise gated exactly as the
+reads are: 404 in production, 403 off the developer list.
 """
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Final
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from crossbid.agent.runner import BidRunner
 from crossbid.auth import CompanyContext, current_company, require_developer
 from crossbid.db import Database
-from crossbid.main import get_app_settings, get_database
+from crossbid.main import (
+    get_app_settings,
+    get_base_settings,
+    get_database,
+    replace_app_settings,
+)
+from crossbid.readmodel.app_settings import store_app_settings_row
 from crossbid.readmodel.usage import (
     DEFAULT_BID_LIMIT,
     MAX_BID_LIMIT,
@@ -116,15 +170,21 @@ from crossbid.readmodel.usage import (
     fetch_usage_by_node,
     totals_of,
 )
+from crossbid.routers.bids import RUNNER_STATE_KEY
 from crossbid.settings import (
     CHAT_MODEL_ROLES,
     AgentSettings,
+    AppSettingsRow,
+    AppSettingsRowError,
     Environment,
     ModelRole,
     ModelSlugs,
     Settings,
+    apply_app_settings_row,
 )
 from crossbid.tools.registry import enabled_tool_names, manifests, unbuilt_tool_names
+
+logger = logging.getLogger(__name__)
 
 DEV_SETTINGS_PATH: Final = "/dev/settings"
 DEV_COSTS_PATH: Final = "/dev/costs"
@@ -132,6 +192,11 @@ DEV_COSTS_PATH: Final = "/dev/costs"
 
 NOT_FOUND_DETAIL: Final = "Not Found"
 """Starlette's own 404 body, copied so the refusal reads exactly like an unknown path."""
+
+EMBED_NOT_SWITCHABLE_DETAIL: Final = (
+    "The embed role cannot be switched from the panel: its 1536 dimensions are pinned to the "
+    "stored vectors, and a different model means re-embedding every document (ADR-0050)."
+)
 
 
 def refuse_in_production(settings: Settings = Depends(get_app_settings)) -> None:
@@ -165,6 +230,24 @@ class ToolDescriptor(BaseModel):
     )
 
 
+class EditableDefaults(BaseModel):
+    """Layer 1 for the five columns the row may override: what a NULL column falls back to.
+
+    Sent beside the effective values so the panel can mark a field as overridden, show what
+    "reset" would restore, and null a column whose value equals its default on save. Without
+    it the panel would have to store every field as an override, and a later change to
+    `settings.default.yaml` would never reach a deployment that had once saved the panel.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    models: ModelSlugs
+    temperature: float
+    max_tokens: int
+    system_prompt: str | None
+    enabled_tools: tuple[str, ...]
+
+
 class DevSettingsResponse(BaseModel):
     """The developer panel's read model. Runtime settings only — never the environment."""
 
@@ -183,10 +266,17 @@ class DevSettingsResponse(BaseModel):
     temperature: float
     max_tokens: int
     system_prompt_set: bool = Field(
+        description="Whether a system prompt is configured; `system_prompt is not null`"
+    )
+    system_prompt: str | None = Field(
         description=(
-            "Whether a system prompt is configured. The text itself is never returned: it "
-            "is the prompt-injection defence's standing instructions."
+            "The agent's standing instructions in force -- the prompt-injection defence's "
+            "text (S2.3.2). Readable because this router is behind the developer check and "
+            "the panel edits it; see the module docstring for the reasoning."
         )
+    )
+    defaults: EditableDefaults = Field(
+        description="The settings.default.yaml values behind each editable field"
     )
     agent: AgentSettings = Field(
         description="Concurrency limits, the per-requirement tool budget and the run budgets"
@@ -216,11 +306,19 @@ def _describe_tools(settings: Settings) -> tuple[ToolDescriptor, ...]:
     )
 
 
-@router.get("/settings", response_model=DevSettingsResponse, summary="Developer settings")
-async def read_dev_settings(
-    settings: Settings = Depends(get_app_settings),
-) -> DevSettingsResponse:
-    """What the agent may reach and how it is configured. Outside production only."""
+def _editable_defaults(base: Settings) -> EditableDefaults:
+    runtime = base.runtime
+    return EditableDefaults(
+        models=runtime.models,
+        temperature=runtime.temperature,
+        max_tokens=runtime.max_tokens,
+        system_prompt=runtime.system_prompt,
+        enabled_tools=runtime.enabled_tools,
+    )
+
+
+def _settings_response(settings: Settings, base: Settings) -> DevSettingsResponse:
+    """The one place the response is assembled, so the read and the write answer alike."""
     runtime = settings.runtime
     return DevSettingsResponse(
         models=runtime.models,
@@ -229,10 +327,85 @@ async def read_dev_settings(
         temperature=runtime.temperature,
         max_tokens=runtime.max_tokens,
         system_prompt_set=runtime.system_prompt is not None,
+        system_prompt=runtime.system_prompt,
+        defaults=_editable_defaults(base),
         agent=runtime.agent,
         tools=_describe_tools(settings),
         unbuilt_tools=unbuilt_tool_names(settings),
     )
+
+
+@router.get("/settings", response_model=DevSettingsResponse, summary="Developer settings")
+async def read_dev_settings(
+    settings: Settings = Depends(get_app_settings),
+    base: Settings = Depends(get_base_settings),
+) -> DevSettingsResponse:
+    """What the agent may reach and how it is configured. Outside production only."""
+    return _settings_response(settings, base)
+
+
+def _row_refused(exc: AppSettingsRowError) -> HTTPException:
+    """422 in FastAPI's own validation shape, one entry per field, so the panel files each
+    message under its input (`frontend/lib/field-errors.ts`) rather than at the form level."""
+    return HTTPException(
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail=[
+            {"loc": ["body", error.field], "msg": error.message, "type": "value_error"}
+            for error in exc.errors
+        ],
+    )
+
+
+def _bid_runner(request: Request) -> BidRunner | None:
+    """The runner if one exists. Not `get_bid_runner`: that builds one on demand, and a
+    settings write is not a reason to build a graph runner in a process that has none."""
+    runner: BidRunner | None = getattr(request.app.state, RUNNER_STATE_KEY, None)
+    return runner
+
+
+@router.put(
+    "/settings",
+    response_model=DevSettingsResponse,
+    summary="Replace the developer settings",
+)
+async def write_dev_settings(
+    row: AppSettingsRow,
+    request: Request,
+    base: Settings = Depends(get_base_settings),
+    db: Database = Depends(get_database),
+) -> DevSettingsResponse:
+    """Store the `app_settings` row and apply it to this process. Outside production only.
+
+    Validate, store, swap -- see the module docstring for why the order is the design.
+    Answers the settings now in force, which is what the panel renders next.
+    """
+    if row.models is not None and ModelRole.EMBED in row.models:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=[
+                {
+                    "loc": ["body", "models", ModelRole.EMBED.value],
+                    "msg": EMBED_NOT_SWITCHABLE_DETAIL,
+                    "type": "value_error",
+                }
+            ],
+        )
+    try:
+        apply_app_settings_row(base, row)
+    except AppSettingsRowError as exc:
+        raise _row_refused(exc) from exc
+
+    stored = await store_app_settings_row(db, row)
+    applied = apply_app_settings_row(base, stored)
+    replace_app_settings(request.app, applied)
+    runner = _bid_runner(request)
+    if runner is not None:
+        runner.invalidate_graph()
+    logger.info(
+        "app_settings row replaced from the developer panel; overriding: %s",
+        ", ".join(sorted(stored.model_dump(exclude_none=True))) or "nothing",
+    )
+    return _settings_response(applied, base)
 
 
 # ------------------------------------------------------------------------------- costs

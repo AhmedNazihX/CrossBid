@@ -26,8 +26,10 @@ from crossbid import settings as settings_module
 from crossbid.settings import (
     CHAT_MODEL_ROLES,
     MAX_SIGNED_URL_TTL_SECONDS,
+    ROW_MODEL_VALIDATOR_FIELD,
     TRACING_FLAG_ENV_VARS,
     AppSettingsRow,
+    AppSettingsRowError,
     AuthMode,
     Environment,
     EnvSettings,
@@ -38,7 +40,6 @@ from crossbid.settings import (
     bid_run_config,
     check_database_dsn,
     configure_tracing,
-    fetch_app_settings_row,
     get_settings,
     load_settings,
 )
@@ -777,16 +778,67 @@ def test_a_row_holding_a_bad_value_is_refused(valid_env: None) -> None:
         apply_app_settings_row(settings, row)
 
 
+def test_a_refused_row_names_the_field_at_fault(valid_env: None) -> None:
+    """S4.6.2: the same refusal answers `PUT /dev/settings`, and a 422 that names no field
+    leaves the panel nowhere to put the message. One entry per wrong field, keyed by the
+    top-level runtime field the panel edits."""
+    # Arrange
+    settings = load()
+    row = AppSettingsRow(temperature=7.0, max_tokens=-1)
+
+    # Act
+    with pytest.raises(AppSettingsRowError) as caught:
+        apply_app_settings_row(settings, row)
+
+    # Assert
+    assert [error.field for error in caught.value.errors] == ["temperature", "max_tokens"]
+    assert all("app_settings" not in error.message for error in caught.value.errors), (
+        "each entry is a sentence about its field, not the whole startup message"
+    )
+    assert isinstance(caught.value, SettingsError), "at startup it is still a settings fault"
+
+
+def test_a_whole_model_refusal_is_filed_under_models(valid_env: None) -> None:
+    """The verified-slug validator has no location of its own -- what is wrong is the
+    combination -- and of the two things it combines, `models` is the one a row changes."""
+    # Arrange
+    settings = load()
+    row = AppSettingsRow(models={ModelRole.JUDGE: "anthropic/claude-sonnet-5"})
+
+    # Act
+    with pytest.raises(AppSettingsRowError) as caught:
+        apply_app_settings_row(settings, row)
+
+    # Assert
+    [error] = caught.value.errors
+    assert error.field == ROW_MODEL_VALIDATOR_FIELD == "models"
+    assert "judge" in error.message
+
+
 def test_a_row_naming_an_unknown_role_is_refused() -> None:
     # Act / Assert
     with pytest.raises(ValidationError):
         AppSettingsRow.model_validate({"models": {"summarise": "openai/gpt-5.6-luna"}})
 
 
-def test_fetching_the_row_is_the_seam_that_waits_for_the_database() -> None:
-    # Act / Assert -- S0.2.1 is blocked on a Supabase project; nothing is faked here
-    with pytest.raises(NotImplementedError, match=r"S0\.2\.3"):
-        fetch_app_settings_row()
+@pytest.mark.parametrize("blank", ["", "   ", "\n\t"])
+def test_a_blank_system_prompt_is_refused_by_the_row(blank: str) -> None:
+    """A blank string would replace the injection defence's standing text with an empty
+    system message and never fall back to the YAML; null is how "use the default" is said."""
+    # Act / Assert
+    with pytest.raises(ValidationError, match="send null"):
+        AppSettingsRow(system_prompt=blank)
+
+
+def test_a_null_system_prompt_means_the_default(valid_env: None) -> None:
+    # Arrange
+    settings = load()
+
+    # Act
+    applied = apply_app_settings_row(settings, AppSettingsRow(system_prompt=None))
+
+    # Assert
+    assert applied.runtime.system_prompt == settings.runtime.system_prompt
 
 
 # ------------------------------------- S5.1: a role only switches to a verified slug
