@@ -32,6 +32,15 @@ export interface NavItem {
    * and the browser merely repeats its answer; see `lib/use-developer-access.ts`.
    */
   readonly access?: 'developer'
+  /**
+   * The route exists but shows an `EmptyState` saying it is not built yet. Hidden from the
+   * shell until it has something to show: a sidebar that leads to two dead ends teaches a
+   * first-time bidder that entries cannot be trusted, and they stop clicking the ones that
+   * work. The pages stay reachable by URL, so a bookmark or a link in the docs still lands.
+   * Remove the flag when the story that fills the page lands (Certificates: F1.1/F3.3 table;
+   * Settings: S4.6.4, Could-priority).
+   */
+  readonly placeholder?: true
 }
 
 /** The workspace a bid was last opened in, so Compliance can lead back to it. */
@@ -64,6 +73,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: 'Certificates',
     icon: 'layers',
     group: 'workflow',
+    placeholder: true,
   },
   {
     key: 'verdicts',
@@ -89,7 +99,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'platform',
     trailing: true,
   },
-  { key: 'settings', href: '/settings', label: 'Settings', icon: 'sliders', group: 'platform' },
+  {
+    key: 'settings',
+    href: '/settings',
+    label: 'Settings',
+    icon: 'sliders',
+    group: 'platform',
+    placeholder: true,
+  },
 ] as const
 
 export const NAV_GROUPS: readonly { readonly id: NavGroup; readonly label: string }[] = [
@@ -110,8 +127,15 @@ export function isSectionActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-/** Whether `item` is shown to an account whose developer access is `access`. */
+/**
+ * Whether `item` is shown to an account whose developer access is `access`.
+ *
+ * Two reasons to hide: the entry is developer-only and this account is not, or the page
+ * behind it is still a placeholder (see `NavItem.placeholder`). Both are decided here so the
+ * desktop sidebar and the phone drawer cannot disagree.
+ */
 export function isNavItemVisible(item: NavItem, access: DeveloperAccess): boolean {
+  if (item.placeholder === true) return false
   return item.access !== 'developer' || access === 'granted'
 }
 
