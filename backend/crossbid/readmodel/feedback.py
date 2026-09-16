@@ -38,7 +38,7 @@ from typing import Any, Final, LiteralString
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from crossbid.readmodel.bids import ConnectionSource
+from crossbid.db import ConnectionSource
 
 
 class Rating(IntEnum):

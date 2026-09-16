@@ -59,6 +59,7 @@ from crossbid.agent.state import (
     TenderDocument,
     bidder_language_of,
 )
+from crossbid.db import ConnectionSource
 from crossbid.ingestion.chunker import Chunker
 from crossbid.ingestion.embeddings import ChunkVectorStore, EmbeddingsClient
 from crossbid.ingestion.espd import EspdParseError, parse_espd_request
@@ -79,7 +80,6 @@ from crossbid.models.ted import TedNotice
 from crossbid.models.tender import DocumentKind
 from crossbid.readmodel.bids import (
     BidDocumentRow,
-    ConnectionSource,
     bid_documents,
     set_bid_deadline_if_unset,
 )

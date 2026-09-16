@@ -26,7 +26,7 @@ role, which has `BYPASSRLS = true`, so row-level security policies would be sile
 Application-level filtering is the *only* line of defence and one missing `WHERE` clause is
 a cross-tenant leak (ADR-0009).
 
-The store depends on the `ConnectionSource` protocol rather than on `crossbid.db`, so it
+The store depends on the `ConnectionSource` protocol rather than on a `Database`, so it
 can be exercised with a recording connection and never has to reach a real Postgres to be
 tested.
 """
@@ -38,17 +38,15 @@ import json
 import math
 import uuid
 from collections.abc import Mapping, Sequence
-from contextlib import AbstractAsyncContextManager
 from itertools import batched
 from types import MappingProxyType, TracebackType
 from typing import Any, Final, LiteralString, Protocol
 
 import httpx
 from pgvector import Vector
-from psycopg import AsyncConnection
-from psycopg.rows import DictRow
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from crossbid.db import ConnectionSource
 from crossbid.http_retry import is_retryable
 from crossbid.ingestion.chunker import Chunk
 from crossbid.llm import OPENROUTER_BASE_URL
@@ -346,19 +344,6 @@ async def embed_chunks(
 
 
 # ------------------------------------------------------------------- the vector store
-
-
-class ConnectionSource(Protocol):
-    """Something that lends a pooled connection. `crossbid.db.Database` satisfies it.
-
-    Part of the contract is not in the signature and belongs written down: the connection
-    must already know the `vector` type, which `crossbid.db`'s pool does by calling
-    `pgvector.psycopg.register_vector_async` once per connection in its configure hook.
-    Registration reads `pg_type`, so it needs a live connection and cannot be done here
-    per query without four catalogue round trips on every search.
-    """
-
-    def connection(self) -> AbstractAsyncContextManager[AsyncConnection[DictRow]]: ...
 
 
 class ChunkMatch(BaseModel):

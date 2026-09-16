@@ -67,7 +67,7 @@ from crossbid.models.matrix import MAX_QUOTE_CHARS, Evidence
 from crossbid.tools.manifest import ToolContext, ToolManifest
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle only matters to the type checker
-    from crossbid.readmodel.bids import ConnectionSource
+    from crossbid.db import ConnectionSource
 
 MAX_RESULTS: Final = 10
 """The most passages one call may return. The budget is what sets it: F3.3 allows four tool

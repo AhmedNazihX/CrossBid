@@ -77,7 +77,7 @@ from typing import Any, Final
 from fastapi import Depends, HTTPException, Request, status
 
 from crossbid.auth import CompanyContext, current_company
-from crossbid.main import get_app_settings
+from crossbid.deps import get_app_settings
 from crossbid.settings import LimitsSettings, Settings
 
 RATE_LIMITED_RESPONSES: Final[dict[int | str, dict[str, Any]]] = {

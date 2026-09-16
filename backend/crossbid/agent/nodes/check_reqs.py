@@ -74,12 +74,12 @@ from crossbid.agent.state import (
     CheckUpdate,
     bidder_language_of,
 )
+from crossbid.db import ConnectionSource
 from crossbid.ingestion.embeddings import EmbeddingsClient
 from crossbid.llm import chat_model, resilient
 from crossbid.memory.profile import RememberedProfile
 from crossbid.models.company import CompanyProfile
 from crossbid.models.requirement import Requirement
-from crossbid.readmodel.bids import ConnectionSource
 from crossbid.readmodel.companies import CompaniesReadModel, CompanyReadModelError
 from crossbid.settings import ModelRole, Settings
 

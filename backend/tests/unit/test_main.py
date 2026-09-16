@@ -16,14 +16,12 @@ from pydantic import SecretStr
 
 from crossbid import main as main_module
 from crossbid.db import Database, DatabaseError
+from crossbid.deps import get_database, replace_app_settings, settings_provider
 from crossbid.llm import LlmError
 from crossbid.main import (
     NO_DATABASE_MESSAGE,
     create_app,
-    get_database,
     open_database,
-    replace_app_settings,
-    settings_provider,
     sweep_interrupted_documents,
 )
 from crossbid.readmodel.app_settings import SELECT_APP_SETTINGS

@@ -42,7 +42,8 @@ from fastapi.testclient import TestClient
 from psycopg.types.json import Jsonb
 
 from crossbid.auth import DEV_COMPANY_HEADER, require_developer
-from crossbid.main import create_app, get_database
+from crossbid.deps import get_database
+from crossbid.main import create_app
 from crossbid.readmodel.app_settings import UPSERT_APP_SETTINGS
 from crossbid.readmodel.usage import (
     MAX_BID_LIMIT,

@@ -27,8 +27,8 @@ from typing import Any, Final, LiteralString
 
 from psycopg.types.json import Jsonb
 
+from crossbid.db import ConnectionSource
 from crossbid.models.matrix import MatrixRow
-from crossbid.readmodel.bids import ConnectionSource
 
 UPSERT_MATRIX_ROW: Final[LiteralString] = """
 insert into matrix_rows (

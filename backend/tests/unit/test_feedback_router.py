@@ -24,7 +24,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from crossbid.auth import DEV_COMPANY_HEADER
-from crossbid.main import get_database
+from crossbid.deps import get_database
 from crossbid.models.review import MAX_COMMENT_CHARS
 from crossbid.readmodel.feedback import FeedbackRecord, Rating
 from crossbid.routers import feedback as feedback_router

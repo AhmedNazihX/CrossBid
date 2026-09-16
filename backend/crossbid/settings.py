@@ -747,6 +747,16 @@ def configure_tracing(
     return is_tracing
 
 
+SettingsProvider = Callable[[], Settings]
+"""Answers the `Settings` in force *now*, rather than the ones a caller captured.
+
+`deps.settings_provider` reads them off `app.state`, which is the one place the developer
+panel's write route replaces them, and `agent.runner` takes one so a graph is never built
+from a copy the process booted with. Declared here rather than in the runner because `deps`
+needs the name too and may not import the agent — the plan's dependency rule, and audit
+M20's second cluster."""
+
+
 def bid_run_config(
     bid_id: str | uuid.UUID,
     *,

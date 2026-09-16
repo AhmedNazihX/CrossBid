@@ -53,7 +53,7 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 
-from crossbid.main import get_app_settings, get_database
+from crossbid.deps import get_app_settings, get_database
 from crossbid.readmodel.companies import CompaniesReadModel
 from crossbid.settings import AuthMode, Settings
 

@@ -105,10 +105,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.agent.nodes.check_loop import ModelRunnable, ToolTurn, tool_turn
 from crossbid.agent.prompts import render
+from crossbid.db import ConnectionSource
 from crossbid.ingestion.embeddings import EmbeddingsClient
 from crossbid.llm import chat_model, resilient
 from crossbid.models.review import ChatRole, ChatTurn, Citation
-from crossbid.readmodel.bids import ConnectionSource
 from crossbid.settings import ModelRole, Settings
 from crossbid.tools.get_matrix import MatrixDigest
 from crossbid.tools.rag import RagHit, RagSearchResult

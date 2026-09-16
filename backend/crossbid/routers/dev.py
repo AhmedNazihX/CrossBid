@@ -153,7 +153,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from crossbid.agent.runner import BidRunner
 from crossbid.auth import CompanyContext, current_company, require_developer
 from crossbid.db import Database
-from crossbid.main import (
+from crossbid.deps import (
     get_app_settings,
     get_base_settings,
     get_database,

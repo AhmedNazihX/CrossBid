@@ -43,11 +43,11 @@ from crossbid.agent.flags import flag_rows
 from crossbid.agent.nodes.check_reqs import CompanyLookup
 from crossbid.agent.scoring import score
 from crossbid.agent.state import BidState, ScoreUpdate, bidder_language_of
+from crossbid.db import ConnectionSource
 from crossbid.memory.profile import RememberedProfile
 from crossbid.models.company import CompanyProfile, Tone
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.verdict import Verdict
-from crossbid.readmodel.bids import ConnectionSource
 from crossbid.readmodel.companies import CompaniesReadModel, CompanyReadModelError
 
 logger = logging.getLogger(__name__)

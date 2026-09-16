@@ -38,12 +38,15 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Final
 
-from fastapi import APIRouter, FastAPI, HTTPException, Request, status
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from crossbid.agent.runner import BidRunner, SettingsProvider, resume_unfinished_runs
 from crossbid.db import Database
+from crossbid.deps import (
+    settings_provider,
+)
 from crossbid.llm import verify_configured_models
 from crossbid.readmodel.app_settings import fetch_app_settings_row
 from crossbid.readmodel.documents import fail_interrupted_documents
@@ -229,75 +232,10 @@ def _routers() -> list[APIRouter]:
     ]
 
 
-def get_app_settings(request: Request) -> Settings:
-    """FastAPI dependency: the `Settings` in force -- the YAML with the row applied.
-
-    Routers take this rather than `get_settings()` so that a test's injected settings reach
-    every dependency, and so the `app_settings` row override (S4.6.2) has one place to land:
-    `PUT /dev/settings` replaces `app.state.settings`, and the next request sees it.
-    """
-    settings: Settings = request.app.state.settings
-    return settings
-
-
-def get_database(request: Request) -> Database:
-    """FastAPI dependency: the process pool, for routers that need a connection.
-
-    Answers 503 rather than crashing when the API was started without `DATABASE_URL`, so
-    the failure names the variable instead of surfacing as an `AttributeError`.
-    """
-    db: Database | None = request.app.state.db
-    if db is None:
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="The API was started without DATABASE_URL; this route needs a database.",
-        )
-    return db
-
-
-def get_base_settings(request: Request) -> Settings:
-    """FastAPI dependency: the `Settings` *before* the row -- YAML and environment only.
-
-    What `PUT /dev/settings` validates a new row against. The row it receives is the whole
-    row, replacing whatever was stored, so the base it merges over must be the one the
-    startup merged over; merging over `get_app_settings` would keep every old override
-    alive under the new row, and "back to the default" would be unreachable.
-    """
-    settings: Settings = request.app.state.base_settings
-    return settings
-
-
-def settings_provider(app: FastAPI) -> SettingsProvider:
-    """A callable answering the settings in force at the moment it is called.
-
-    Handed to the runner instead of a `Settings` value (`agent/runner.py`, point 4): a
-    graph built from a captured copy would run new bids on the configuration the process
-    booted with, however many times the panel had changed it since.
-    """
-
-    def current() -> Settings:
-        settings: Settings = app.state.settings
-        return settings
-
-    return current
-
-
-def replace_app_settings(app: FastAPI, settings: Settings) -> None:
-    """Swap the settings requests and new runs see, **in this process**.
-
-    The one writer of `app.state.settings` after startup, so that "who changes the
-    configuration at run time" has one answer.
-
-    *This process* is the whole of the scope and it is deliberate (M25, ADR-0059). The row is
-    stored in Postgres and read at startup, so a second API process picks the change up when
-    it next starts — not when the panel is saved. Crossbid deploys as one container and this
-    is the same bound `rate_limit.py` accepts for the same reason; the two API processes
-    `db.py` sizes the pool for are a *local* Compose-plus-host pair, not a scaled deployment.
-    Making a save reach every process needs a re-read on some clock, and putting a database
-    round trip on the request path to serve a configuration one developer changes by hand
-    would be a real cost for an imaginary deployment.
-    """
-    app.state.settings = settings
+# The five request-scoped providers live in `crossbid/deps.py` so that `auth`, `rate_limit`
+# and the routers do not have to import this module, which imports them (M20). Re-exported
+# here because they were `crossbid.main`'s for four increments: every override in the suite
+# keys on the function object, and this keeps it the same object.
 
 
 app = create_app()

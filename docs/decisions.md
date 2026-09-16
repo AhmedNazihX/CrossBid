@@ -5896,3 +5896,57 @@ describe. The handover carries the four steps, starting with the measurement nob
 record the distances the retrieval eval already retrieves, and read where relevant and
 irrelevant separate. If they do not separate, that is the answer too, and it belongs in a
 record rather than in a constant.
+
+## ADR-0084 — Two moves took ten of the twelve layering violations; the other two are a plan question
+
+**Date:** 2026-09-16 · **Stories:** S0.1.2, S1.4.1 · **Status:** accepted
+
+The plan's rule is that dependencies point one way: `routers/eval → agent/ingestion/readmodel
+→ tools/reference/memory/guards → models/db/settings`, and nothing below imports from above
+(`docs/project-plan.md`, Repository layout). Audit finding M20 counted twelve imports going the
+wrong way, in two clusters.
+
+### The app module, imported by eight things it imports back
+
+`auth.py`, `rate_limit.py` and six routers took `get_database`, `get_app_settings`,
+`get_base_settings`, `settings_provider` and `replace_app_settings` from `crossbid.main` — the
+module that builds the application and imports every one of them. Only a deferred import
+inside `create_app` stopped the cycle exploding at import time, which is a fact about import
+order rather than a design.
+
+The five providers moved to **`crossbid/deps.py`**. Nothing there knows how the app is built:
+each reads one attribute of `request.app.state`, which is a contract the app fills at startup,
+and that is the whole of the coupling. `SettingsProvider` moved further down still, from
+`agent/runner.py` to `settings.py`, because `deps` needs the name and may not import the
+agent.
+
+**`main.py` does not re-export them.** The first attempt did, to keep
+`app.dependency_overrides[crossbid.main.get_database]` working in the suite — and that would
+have left the old upward-looking path in place for anyone who kept using it. The eleven test
+modules now import from `crossbid.deps`, which is the same function object, so every override
+still keys correctly.
+
+### One protocol that existed twice
+
+`ConnectionSource` was declared in `readmodel/bids.py` and again in `ingestion/embeddings.py`,
+the first saying it *"mirrors"* the second *"rather than importing it: the two modules should
+not have to move together"*. They never moved apart in four increments, and the cost of the
+mirror was that `tools/` had to reach up into `readmodel/` for a type.
+
+It now lives once, in **`db.py`**, below everything that needs it, carrying both modules'
+reasoning: a read model needs no `vector` registration and a vector query does, which is why
+one protocol serves both and why the registration requirement is written down rather than
+implied by a signature.
+
+### What is left, and why it is not a code fix
+
+Five imports remain: `tools/rag.py`, `company_rag_search.py` and `tender_rag_search.py` import
+the vector store from `ingestion/`, and `get_matrix.py` imports three functions from
+`readmodel/`. **These are the tools' actual job.** A retrieval tool that may not reach the
+vector store is not a tool, and `get_matrix` exists to hand the chat agent the matrix.
+
+So the remaining violation is in the *declared order*, not in the code: `tools/` sits below
+`ingestion/readmodel` in the plan while three of the six tools are wrappers around exactly
+those. Moving `tools/` up beside `agent/` would describe what is built. That is a plan edit
+rather than a refactor, it is the user's call, and it is recorded here rather than done
+quietly.

@@ -70,6 +70,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
+from crossbid.deps import get_app_settings, get_database
 from crossbid.ingestion.espd import EspdParseError, parse_espd_request
 from crossbid.ingestion.pipeline import DocumentPipeline, Upload, build_pipeline
 from crossbid.ingestion.safe_xml import MAX_XML_BYTES
@@ -81,7 +82,6 @@ from crossbid.ingestion.storage import (
     StorageError,
     company_document_store,
 )
-from crossbid.main import get_app_settings, get_database
 from crossbid.models import DocumentKind
 from crossbid.rate_limit import RATE_LIMITED_RESPONSES, document_upload_limit
 from crossbid.readmodel.documents import DocumentRecord, DocumentsReadModel, DocumentStatus

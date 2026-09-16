@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import MemorySaver
 
 from crossbid.auth import DEV_COMPANY_HEADER
-from crossbid.main import get_app_settings, get_database
+from crossbid.deps import get_app_settings, get_database
 from crossbid.models.review import MAX_COMMENT_CHARS, ChatRole, ChatTurn, Citation
 from crossbid.readmodel.bids import BidRow
 from crossbid.routers import chat as chat_router_module

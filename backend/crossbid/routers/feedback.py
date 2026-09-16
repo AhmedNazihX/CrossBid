@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
-from crossbid.main import get_database
+from crossbid.deps import get_database
 from crossbid.models.review import MAX_COMMENT_CHARS
 from crossbid.readmodel.feedback import (
     FeedbackRecord,

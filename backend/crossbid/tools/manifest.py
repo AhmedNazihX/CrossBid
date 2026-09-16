@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING, Annotated
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle only matters to the type checker
+    from crossbid.db import ConnectionSource
     from crossbid.ingestion.embeddings import EmbeddingsClient
-    from crossbid.readmodel.bids import ConnectionSource
     from crossbid.settings import Settings
 
 ToolName = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]

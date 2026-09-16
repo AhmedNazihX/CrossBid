@@ -26,6 +26,7 @@ from pydantic import SecretStr
 from starlette.datastructures import Headers, UploadFile
 
 from crossbid.auth import DEV_COMPANY_HEADER
+from crossbid.deps import get_database
 from crossbid.ingestion.parser import ParserError
 from crossbid.ingestion.pipeline import UNREADABLE_REASON, DocumentPipeline
 from crossbid.ingestion.safe_xml import MAX_XML_BYTES
@@ -38,7 +39,7 @@ from crossbid.ingestion.storage import (
     StorageError,
     object_key,
 )
-from crossbid.main import create_app, get_database
+from crossbid.main import create_app
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentsReadModel, DocumentStatus, ReadModelError
 from crossbid.routers.documents import (

@@ -82,7 +82,7 @@ from crossbid.agent.state import (
     LifecycleUpdate,
     ReviewUpdate,
 )
-from crossbid.db import Database
+from crossbid.db import ConnectionSource, Database
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.review import ReviewSubmission
@@ -90,7 +90,6 @@ from crossbid.models.tender import BidStatus
 from crossbid.models.verdict import Decision, Verdict
 from crossbid.readmodel.bids import (
     BidRow,
-    ConnectionSource,
     record_review,
     set_bid_problems,
     set_bid_status,

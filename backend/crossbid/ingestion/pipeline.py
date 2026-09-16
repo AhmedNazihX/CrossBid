@@ -67,12 +67,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
+from crossbid.db import ConnectionSource
 from crossbid.guards.injection import scan
 from crossbid.ingestion.chunker import Chunk, Chunker
 from crossbid.ingestion.embeddings import (
     ChunkStoreError,
     ChunkVectorStore,
-    ConnectionSource,
     EmbeddedChunk,
     Embedder,
     EmbeddingsClient,

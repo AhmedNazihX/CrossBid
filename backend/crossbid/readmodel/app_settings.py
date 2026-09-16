@@ -43,7 +43,7 @@ from typing import Any, Final, LiteralString
 
 from psycopg.types.json import Jsonb
 
-from crossbid.readmodel.bids import ConnectionSource
+from crossbid.db import ConnectionSource
 from crossbid.settings import AppSettingsRow
 
 # ------------------------------------------------------------------------- statements

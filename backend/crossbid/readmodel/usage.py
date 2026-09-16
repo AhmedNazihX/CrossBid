@@ -48,8 +48,8 @@ from typing import Any, Final, LiteralString
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from crossbid.db import ConnectionSource
 from crossbid.models.provider import Provider
-from crossbid.readmodel.bids import ConnectionSource
 from crossbid.usage import UsageEvent, UsageNode
 
 logger = logging.getLogger(__name__)

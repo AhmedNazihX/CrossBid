@@ -50,9 +50,9 @@ from pydantic import ValidationError
 
 from crossbid.agent.nodes.score_verdict import VerdictScorer, build_score_verdict
 from crossbid.agent.state import AppliedReviewUpdate, BidState, FinalizeUpdate
+from crossbid.db import ConnectionSource
 from crossbid.models.matrix import MatrixRow, ReviewerStatus
 from crossbid.models.review import ReviewSubmission, RowEdit
-from crossbid.readmodel.bids import ConnectionSource
 
 logger = logging.getLogger(__name__)
 

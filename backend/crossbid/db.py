@@ -41,7 +41,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import Any, Final, Self
+from typing import Any, Final, Protocol, Self
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.store.postgres.aio import AsyncPostgresStore
@@ -78,6 +78,29 @@ script must stay importable without the package."""
 Pool = AsyncConnectionPool[AsyncConnection[DictRow]]
 PoolFactory = Callable[..., Pool]
 Configure = Callable[[AsyncConnection[DictRow]], Awaitable[None]]
+
+
+class ConnectionSource(Protocol):
+    """Something that lends a pooled connection. `Database` below satisfies it.
+
+    **The seam every read model, the vector store and the agent's nodes are written
+    against**, so that none of them holds a `Database` and a test can lend a fake instead.
+
+    It lived twice — once in `readmodel/bids.py` and once in `ingestion/embeddings.py`, the
+    first saying it "mirrors" the second "rather than importing it: the two modules should not
+    have to move together". They never did move apart, and the cost of the mirror was that
+    `tools/` had to reach up into `readmodel/` for a type, which the plan's dependency rule
+    forbids (audit M20). Declared here, it is below everything that needs it.
+
+    **Part of the contract is not in the signature and belongs written down**: for a vector
+    query the connection must already know the `vector` type, which this module's pool does by
+    calling `pgvector.psycopg.register_vector_async` once per connection in its configure
+    hook. Registration reads `pg_type`, so it needs a live connection and cannot be done per
+    query without four catalogue round trips on every search. A read model needs no such
+    registration, which is why one protocol serves both.
+    """
+
+    def connection(self) -> AbstractAsyncContextManager[AsyncConnection[DictRow]]: ...
 
 
 class DatabaseError(RuntimeError):
@@ -214,9 +237,10 @@ class Database:
     def connection(self) -> AbstractAsyncContextManager[AsyncConnection[DictRow]]:
         """Borrow a connection for a read-model or vector query; returned on exit.
 
-        This is the signature `ingestion.embeddings.ConnectionSource` and the read-model
-        writers depend on, so it is a method returning a context manager rather than an
-        `async with db.pool.connection()` reaching into the pool.
+        This is `ConnectionSource`'s one method — the signature every read model, the
+        vector store and the agent's nodes are written against — so it is a method returning
+        a context manager rather than an `async with db.pool.connection()` reaching into the
+        pool.
         """
         return self._borrow()
 

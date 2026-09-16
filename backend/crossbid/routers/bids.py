@@ -39,8 +39,8 @@ from crossbid.agent.runner import BidRunner, RunnerError, build_runner
 from crossbid.agent.state import ExtractionProblem
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
+from crossbid.deps import get_database, settings_provider
 from crossbid.ingestion.storage import StorageError
-from crossbid.main import get_database, settings_provider
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
 from crossbid.models.review import ReviewSubmission, RowEdit

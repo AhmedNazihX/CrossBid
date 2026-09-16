@@ -18,8 +18,8 @@ from typing import Any, Final, LiteralString
 
 from psycopg.types.json import Jsonb
 
+from crossbid.db import ConnectionSource
 from crossbid.models.requirement import Requirement, Threshold
-from crossbid.readmodel.bids import ConnectionSource
 
 UPSERT_REQUIREMENT: Final[LiteralString] = """
 insert into requirements (

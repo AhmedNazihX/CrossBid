@@ -17,7 +17,8 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from crossbid.auth import DEV_COMPANY_HEADER, CompanyContext, current_company
-from crossbid.main import create_app, get_app_settings
+from crossbid.deps import get_app_settings
+from crossbid.main import create_app
 from crossbid.settings import AuthMode, Settings, SettingsError, load_settings
 
 COMPANY_ID = str(uuid.uuid4())

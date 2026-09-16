@@ -24,8 +24,8 @@ from pydantic import BaseModel
 from crossbid.agent.runner import RunnerError
 from crossbid.agent.state import ExtractionProblem, ExtractionProblemReason
 from crossbid.auth import DEV_COMPANY_HEADER
+from crossbid.deps import get_database
 from crossbid.ingestion.storage import StorageError
-from crossbid.main import get_database
 from crossbid.models.matrix import MatrixRow, RowStatus
 from crossbid.models.requirement import (
     Checkability,

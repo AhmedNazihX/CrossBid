@@ -45,7 +45,7 @@ from crossbid.agent.chat_graph import (
 )
 from crossbid.auth import CompanyContext, current_company
 from crossbid.db import Database
-from crossbid.main import get_app_settings, get_database
+from crossbid.deps import get_app_settings, get_database
 from crossbid.models.review import MAX_COMMENT_CHARS, ChatTurn
 from crossbid.rate_limit import RATE_LIMITED_RESPONSES, chat_question_limit
 from crossbid.readmodel.bids import fetch_bid

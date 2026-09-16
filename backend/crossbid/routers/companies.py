@@ -52,7 +52,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.auth import AuthenticatedUser, CompanyContext, current_company, current_user
 from crossbid.db import Database
-from crossbid.main import get_database
+from crossbid.deps import get_database
 from crossbid.memory.profile import PROFILE_STORE_KEY, profile_namespace
 from crossbid.models import CertificateHeld, CompanyProfile, LegalForm, Tone, TurnoverYear
 from crossbid.readmodel.companies import CompaniesReadModel

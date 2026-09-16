@@ -25,15 +25,13 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Mapping, Sequence
-from contextlib import AbstractAsyncContextManager
 from datetime import datetime
-from typing import Any, Final, LiteralString, Protocol
+from typing import Any, Final, LiteralString
 
-from psycopg import AsyncConnection
-from psycopg.rows import DictRow
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field
 
+from crossbid.db import ConnectionSource
 from crossbid.models.tender import BidStatus, BidSummary, DocumentKind
 from crossbid.models.verdict import Decision
 from crossbid.readmodel.documents import DocumentStatus
@@ -82,16 +80,6 @@ class BidNotFoundError(BidReadModelError):
 
 class BidStateError(BidReadModelError):
     """The row exists but the operation does not fit its state; the message names why."""
-
-
-class ConnectionSource(Protocol):
-    """Something that lends a pooled connection. `crossbid.db.Database` satisfies it.
-
-    Mirrors `ingestion.embeddings.ConnectionSource` rather than importing it: the read model
-    needs no `vector` registration, and the two modules should not have to move together.
-    """
-
-    def connection(self) -> AbstractAsyncContextManager[AsyncConnection[DictRow]]: ...
 
 
 # ------------------------------------------------------------------------------- rows

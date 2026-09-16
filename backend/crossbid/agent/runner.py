@@ -81,17 +81,16 @@ from crossbid.agent.graph import (
     initial_state,
 )
 from crossbid.agent.state import BidState
-from crossbid.db import Database
+from crossbid.db import ConnectionSource, Database
 from crossbid.models.review import ReviewSubmission
 from crossbid.readmodel.bids import (
     BidRow,
-    ConnectionSource,
     mark_bid_failed,
     release_bid_to_review,
     unfinished_bids,
 )
 from crossbid.readmodel.usage import fetch_usage_by_node, totals_of
-from crossbid.settings import Settings, bid_run_config
+from crossbid.settings import Settings, SettingsProvider, bid_run_config
 
 logger = logging.getLogger(__name__)
 
@@ -131,9 +130,6 @@ class BidGraph(Protocol):
 
 
 GraphFactory = Callable[[], BidGraph]
-SettingsProvider = Callable[[], Settings]
-"""Answers the `Settings` in force *now*. `main.settings_provider` reads them off
-`app.state`, which is the one place the developer panel's write route replaces them."""
 
 
 @dataclass(frozen=True, slots=True)
