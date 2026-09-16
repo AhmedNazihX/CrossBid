@@ -101,7 +101,7 @@ def test_yaml_defaults_load(valid_env: None) -> None:
     assert settings.runtime.models.extract == "openai/gpt-5.6-terra"
     assert settings.runtime.models.cheap == "openai/gpt-5.6-luna"
     assert settings.runtime.models.embed == "openai/text-embedding-3-small"
-    assert settings.runtime.models.judge == "anthropic/claude-haiku-4.5"
+    assert settings.runtime.models.judge == "google/gemini-2.5-flash-lite"
     assert settings.runtime.temperature == 0.0
     # 4096 until 2026-09-13, when it was measured losing whole sections: a dense extraction
     # section returns one structured object holding every requirement it found, and exceeding
@@ -976,7 +976,7 @@ def test_switching_the_embedding_slug_is_not_measured_against_the_chat_list(
         (ModelRole.EXTRACT, "openai/gpt-5.6-terra"),
         (ModelRole.CHEAP, "openai/gpt-5.6-luna"),
         (ModelRole.EMBED, "openai/text-embedding-3-small"),
-        (ModelRole.JUDGE, "anthropic/claude-haiku-4.5"),
+        (ModelRole.JUDGE, "google/gemini-2.5-flash-lite"),
     ],
 )
 def test_every_role_resolves_to_its_configured_slug(

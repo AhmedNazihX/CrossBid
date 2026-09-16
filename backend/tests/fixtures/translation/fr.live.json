@@ -1,0 +1,310 @@
+{
+  "fixture_dir": "tests/fixtures/tenders/fr",
+  "judge": "google/gemini-2.5-flash-lite",
+  "translated_rows": 114,
+  "sampled": 30,
+  "threshold": 0.8,
+  "mean": 0.83,
+  "cases": [
+    {
+      "requirement_id": "9a1509a6-3972-5496-ba61-b097b862ddfe",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 17,
+      "source_lang": "fr",
+      "source_text": "L'accusé de réception de la déclaration de détachement effectuée sur le télé-service « SIPSI » du ministère chargé du travail, conformément aux articles R.1263-5 et R.1263-7 du code du travail ;",
+      "translation": "Ist der Zuschlagsempfänger außerhalb Frankreichs ansässig und setzt er entsandte Arbeitnehmer ein, muss er die Empfangsbestätigung der über den Dienst „SIPSI“ abgegebenen Entsendemeldung vorlegen.",
+      "score": 0.3,
+      "reason": "The output correctly identifies the duty (submit the acknowledgement of receipt) and its modality (must/muss). However, it introduces a condition ('Ist der Zuschlagsempfänger außerhalb Frankreichs ansässig und setzt er entsandte Arbeitnehmer ein') not present in the source clause, which is a significant deviation from step 3. It also omits the specific articles (R.1263-5 and R.1263-7) mentioned in the source, failing to fully capture all details as per step 1."
+    },
+    {
+      "requirement_id": "37e326ab-407b-58eb-ba86-299b50d550e1",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 2,
+      "source_lang": "fr",
+      "source_text": "Les candidats doivent retirer le dossier de consultation par voie électronique à l'adresse suivante : https://www.marchespublics. gouv.fr.",
+      "translation": "Die Bewerber müssen die Vergabeunterlagen elektronisch unter https://www.marchespublics. gouv.fr abrufen.",
+      "score": 1.0,
+      "reason": "The source clause states a mandatory duty ('doivent retirer' - must retrieve) for bidders to obtain consultation documents electronically at a specific URL. The rendering accurately reflects this mandatory duty ('müssen abrufen' - must retrieve) and preserves the same action and the electronic method, along with the identical URL. All elements of the duty and its parameters are correctly transferred."
+    },
+    {
+      "requirement_id": "05bf31e9-f68b-54d7-a103-f2577071b6e5",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 11,
+      "source_lang": "fr",
+      "source_text": "Le pouvoir habilitant le signataire à engager le sous-traitant ;",
+      "translation": "Für jeden Unterauftragnehmer muss eine Vollmacht eingereicht werden, die den Unterzeichner zur Verpflichtung des Unterauftragnehmers berechtigt.",
+      "score": 0.3,
+      "reason": "The output correctly identifies the duty (submit a power of attorney) and its modality ('must'). However, it incorrectly adds a scope ('Für jeden Unterauftragnehmer' - for each subcontractor) which is not present in the source clause. The source clause does not specify a quantity or scope related to subcontractors."
+    },
+    {
+      "requirement_id": "9c870d5a-4c3e-5ce3-8d4d-b60b0403ed75",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 3,
+      "source_lang": "fr",
+      "source_text": "Soumission par voie électronique: Requise",
+      "translation": "Die elektronische Angebotsabgabe ist verpflichtend.",
+      "score": 1.0,
+      "reason": "The source clause states 'Soumission par voie électronique: Requise' which translates to 'Electronic submission: Required'. The rendering 'Die elektronische Angebotsabgabe ist verpflichtend' accurately conveys the mandatory duty of electronic submission. The modality (required/mandatory) is preserved, and no numbers, currencies, dates, or periods were present in the source to be checked. The rendering correctly identifies the duty and its mandatory nature."
+    },
+    {
+      "requirement_id": "a5a28bc6-e365-53b4-bcc4-768070d956d5",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 19,
+      "source_lang": "fr",
+      "source_text": "Le signataire doit avoir le pouvoir d'engager la société.",
+      "translation": "Der Unterzeichner muss befugt sein, das Unternehmen rechtsverbindlich zu vertreten.",
+      "score": 1.0,
+      "reason": "The source clause states a mandatory duty ('doit avoir le pouvoir' - must have the power) for the signatory to be able to bind the company. The rendering accurately reflects this mandatory duty ('muss befugt sein' - must be authorized) and the core obligation ('das Unternehmen rechtsverbindlich zu vertreten' - to represent the company with legal effect). No numbers, currencies, dates, or periods are present in the source or rendering, so step 5 is not applicable. All other steps are satisfied."
+    },
+    {
+      "requirement_id": "af45c819-a35d-5e35-a67d-2ac54ed329c7",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 2,
+      "source_lang": "fr",
+      "source_text": "Les candidats doivent remettre leur offre exclusivement de manière dématérialisée sur le site https://www.marches- publics. gouv.fr.",
+      "translation": "Die Bewerber müssen ihr Angebot ausschließlich elektronisch über https://www.marches-publics.gouv.fr einreichen.",
+      "score": 1.0,
+      "reason": "The source clause states a mandatory duty ('doivent remettre' - must submit) for bidders to submit their offer exclusively in a dematerialized manner on a specific website. The rendering accurately reflects this mandatory duty ('müssen einreichen' - must submit) and the exclusive electronic method via the same website. All elements of the duty, modality, and associated information (website) are preserved without invention or omission."
+    },
+    {
+      "requirement_id": "12ae9502-29c2-5133-a193-d8489ea00c5d",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 10,
+      "source_lang": "fr",
+      "source_text": "Les certifications obtenues ou démarche qualité interne ;",
+      "translation": "Die Bewerberdarstellung muss die erworbenen Zertifizierungen oder das interne Qualitätsmanagement enthalten.",
+      "score": 0.5,
+      "reason": "The output correctly identifies the duty (must contain certifications or internal quality management) and preserves the modality ('muss' corresponds to 'must'). However, it fails to capture any numbers, currencies, dates, or periods, as none were present in the source. The core duty is rendered, but the absence of any numerical or temporal details means it doesn't fully align with step 1 and step 5."
+    },
+    {
+      "requirement_id": "cbcb8f26-0bb2-5285-9f3b-41afd5318734",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 3,
+      "source_lang": "fr",
+      "source_text": "Variantes: Non autorisée",
+      "translation": "Variantenangebote sind nicht zulässig.",
+      "score": 1.0,
+      "reason": "The source clause states 'Variantes: Non autorisée' which translates to 'Variations: Not permitted'. The output 'Variantenangebote sind nicht zulässig.' accurately conveys this same duty, modality (mandatory prohibition), and scope without any additions or omissions. All evaluation steps are met."
+    },
+    {
+      "requirement_id": "8f61a931-1b3b-53f3-a408-a426b5d576fc",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 11,
+      "source_lang": "fr",
+      "source_text": "En cas de sous-traitance déclarée, le candidat doit fournir à l’appui de son offre, la liste nominative des sous-traitants auxquels il envisage de confier l’exécution de certaines prestations.",
+      "translation": "Wenn Unteraufträge erklärt werden, muss der Bewerber seinem Angebot eine Namensliste der Unterauftragnehmer beifügen, denen er bestimmte Leistungen übertragen will.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (provide a list of subcontractors), the modality (must/muss), and all associated details (list of subcontractors for specific services). The translation is faithful to the source clause without adding or omitting any obligations or numerical/temporal information."
+    },
+    {
+      "requirement_id": "78935ab9-860e-5902-8713-c57392245e59",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 3,
+      "source_lang": "fr",
+      "source_text": "Durée de validité des offres: 4 Mois",
+      "translation": "Das Angebot muss vier Monate gültig bleiben.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (offer validity), modality (must/muss), and period (4 Months/vier Monate). No duties were invented or dropped, and the scope and numbers are preserved."
+    },
+    {
+      "requirement_id": "d91b1ad0-9019-58c7-834d-accbcf18016d",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 12,
+      "source_lang": "fr",
+      "source_text": "Un « mémoire technique » daté comportant les rubriques suivantes :",
+      "translation": "Ein datiertes technisches Konzept mit den nachfolgend genannten Abschnitten muss eingereicht werden.",
+      "score": 0.8,
+      "reason": "The rendering correctly identifies the duty (submit a dated technical concept) and its modality (must). It accurately translates the core requirement without adding or omitting duties. However, it does not explicitly mention the specific sections required, which were part of the source clause's detail."
+    },
+    {
+      "requirement_id": "dfcf8141-544b-566b-866e-f73ec7fd2567",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 3,
+      "source_lang": "fr",
+      "source_text": "Langues dans lesquelles les offres ou demandes de participation/candidatures peuvent être présentées: français",
+      "translation": "Angebote oder Teilnahmeanträge/Bewerbungen müssen in französischer Sprache eingereicht werden.",
+      "score": 1.0,
+      "reason": "The output correctly identifies the duty (submitting offers/applications), the modality (must), and the language (French). It accurately translates the source clause without adding or omitting any duties or changing the modality. All numerical and temporal information is preserved as there was none in the source."
+    },
+    {
+      "requirement_id": "38327bc7-e001-5d01-a7a6-bc12066260c8",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 9,
+      "source_lang": "fr",
+      "source_text": "Le candidat non établi en France produit les attestations et certificats équivalents dans son pays d’origine ou, à défaut, une déclaration sur l'honneur ou sous serment, selon le pays considéré.",
+      "translation": "Ein nicht in Frankreich ansässiger Bewerber muss gleichwertige Bescheinigungen und Zertifikate seines Herkunftslands oder, falls diese fehlen, je nach Land eine ehrenwörtliche oder eidesstattliche Erklärung vorlegen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (produce equivalent attestations and certificates or a declaration), the modality (must/muss), and the conditions (non-established in France, or lack of certificates). No numbers, currencies, dates, or periods were present in the source to check. The scope is identical to the source."
+    },
+    {
+      "requirement_id": "08cdb13f-7b2b-5a73-b493-3665ed996f7f",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 3,
+      "source_lang": "fr",
+      "source_text": "Date limite de réception des offres: 09/10/2026 16:00:00 (UTC+02:00) Heure de l'Europe orientale, heure d'été de l'Europe centrale",
+      "translation": "Angebote müssen spätestens am 09.10.2026 um 16:00:00 Uhr (UTC+02:00, osteuropäische Zeit / mitteleuropäische Sommerzeit) eingehen.",
+      "score": 1.0,
+      "reason": "The rendering accurately preserves the duty (offers must be received), the modality (must), and all numerical and temporal details (date, time, and timezone). The German translation is a faithful representation of the French source clause."
+    },
+    {
+      "requirement_id": "bd12cb38-e3fd-5b4c-9d57-1d5c5c16c8b1",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 19,
+      "source_lang": "fr",
+      "source_text": "Les formats de signature sont XAdES, CAdES ou PAdES tels que mentionnés aux articles 1 et 2 de la décision d'exécution (UE) n° 2015/1506 de la Commission du 8 septembre 2015.",
+      "translation": "Als Signaturformate sind XAdES, CAdES oder PAdES gemäß den Artikeln 1 und 2 des Durchführungsbeschlusses (EU) Nr. 2015/1506 der Kommission vom 8. September 2015 zu verwenden.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (use of signature formats), the modality (must/shall - 'zu verwenden' implies obligation), and the specific references (articles 1 and 2, decision number, and date). No duties were invented or dropped, and all numerical and date information is preserved."
+    },
+    {
+      "requirement_id": "d21b8bcd-390b-5b35-814d-92055e2af86b",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 2,
+      "source_lang": "fr",
+      "source_text": "Tout candidat n'obtenant pas au moins la note de 5/10, équivalant au niveau de capacité attendue, sera écarté de la procédure.",
+      "translation": "Jeder Bewerber, der nicht mindestens 5 von 10 Punkten und damit das erwartete Leistungsfähigkeitsniveau erreicht, wird vom Verfahren ausgeschlossen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (exclusion from the procedure), the modality (mandatory, implied by 'sera écarté'), and the numerical threshold (at least 5/10). The German translation correctly conveys the meaning and all numerical details from the French source clause."
+    },
+    {
+      "requirement_id": "e9b07d17-aecc-528c-894d-943150017a7a",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 11,
+      "source_lang": "fr",
+      "source_text": "La copie du (ou des) jugement(s), en cas de redressement judiciaire ou d’une procédure étrangère équivalente.",
+      "translation": "Bei gerichtlicher Sanierung oder einem gleichwertigen ausländischen Verfahren muss für jeden Unterauftragnehmer eine Kopie des Urteils bzw. der Urteile eingereicht werden.",
+      "score": 0.0,
+      "reason": "The output incorrectly introduces a duty regarding subcontractors ('für jeden Unterauftragnehmer') which is not present in the source clause. The source clause only requires a copy of the judgment(s) in case of judicial recovery or equivalent foreign proceedings, without any mention of subcontractors. This constitutes inventing a duty not supported by the source."
+    },
+    {
+      "requirement_id": "6b4e62e3-25ea-59ae-8ae6-27c67062f5d8",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 3,
+      "source_lang": "fr",
+      "source_text": "Catalogue électronique: Non autorisée",
+      "translation": "Ein elektronischer Katalog ist nicht zulässig.",
+      "score": 1.0,
+      "reason": "The source clause states 'Catalogue électronique: Non autorisée' (Electronic catalogue: Not permitted). The output 'Ein elektronischer Katalog ist nicht zulässig' (An electronic catalogue is not permitted) accurately conveys the same prohibition without adding or omitting any duties, modalities, or numerical/temporal information. The modality is preserved as a prohibition."
+    },
+    {
+      "requirement_id": "d677a186-b10a-5a57-8826-774aa5da3b33",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 18,
+      "source_lang": "fr",
+      "source_text": "Le cas échéant, la déclaration de sous-traitance* complétée, datée et signée ;",
+      "translation": "Gegebenenfalls muss die Erklärung zur Untervergabe ausgefüllt, datiert und unterzeichnet vorgelegt werden.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (submit the subcontracting declaration), its modality ('must' is correctly translated), and all attached conditions (completed, dated, and signed). No duties are invented or dropped, and no numbers, currencies, dates, or periods are present in the source to be checked. The scope is preserved."
+    },
+    {
+      "requirement_id": "116a89fc-4bce-5f68-a261-80fcd4de7a0f",
+      "document_name": "618320-2026.notice.fr.pdf",
+      "page": 2,
+      "source_lang": "fr",
+      "source_text": "Le mandataire sera désigné à la remise de l'offre.",
+      "translation": "Bei einer Bietergemeinschaft muss bei Einreichung des Angebots ein bevollmächtigter Vertreter benannt werden.",
+      "score": 0.1,
+      "reason": "The output incorrectly states that a representative must be named upon submission of the offer, whereas the source clause states that the mandatary will be designated upon submission of the offer. The modality is preserved, but the core duty and its timing are misrepresented. The output also introduces a condition ('Bei einer Bietergemeinschaft') not present in the source."
+    },
+    {
+      "requirement_id": "8cadf800-6c15-59bb-84c8-741f70ca1cc6",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 12,
+      "source_lang": "fr",
+      "source_text": "la description de la démarche d’exécution des missions, de la méthodologie et de l’organisation générale du projet, le projet de plan d’assurance qualité V0 (PAQ adapté à la consultation) mis en œuvre par le candidat et nécessaire à la bonne exécution du marché.",
+      "translation": "Das technische Konzept muss die Vorgehensweise zur Aufgabenerfüllung, Methodik und allgemeine Projektorganisation sowie den vom Bewerber eingesetzten Qualitätsplanentwurf V0 (an das Verfahren angepasster PAQ) beschreiben.",
+      "score": 0.8,
+      "reason": "The rendering correctly identifies the duty (describe the technical concept) and its modality (must). It also accurately captures the elements to be described: approach to task execution, methodology, general project organization, and the quality plan draft V0. The translation of 'adapted to the consultation' to 'adapted to the procedure' is a minor scope adjustment but does not invent or drop a duty. No numbers, currencies, dates, or periods were present in the source to be checked."
+    },
+    {
+      "requirement_id": "b190d2a9-122f-5f13-827c-59aea20143fa",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 14,
+      "source_lang": "fr",
+      "source_text": "les soumissionnaires remettent leur proposition exclusivement par voie électronique sur le site : \n\n**<u>www.marches-publics.gouv.fr</u>**",
+      "translation": "Der Bieter muss sein Angebot ausschließlich elektronisch über www.marches-publics.gouv.fr einreichen.",
+      "score": 1.0,
+      "reason": "The source clause states that bidders must submit their proposal exclusively electronically via a specific website. The rendering accurately captures this duty, its modality ('must'), and the website URL. No duties are invented or dropped, and all numerical/date information (in this case, none) is preserved."
+    },
+    {
+      "requirement_id": "252d8d23-c4c4-5a4a-9914-04a735033ce7",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 10,
+      "source_lang": "fr",
+      "source_text": "Le formulaire DUME complété.",
+      "translation": "Bei Bewerbung über DUME ist das DUME-Formular ausgefüllt einzureichen.",
+      "score": 0.8,
+      "reason": "The rendering correctly identifies the duty (submit the DUME form) and its modality (must/is required). It also accurately reflects the object of the duty (the DUME form). The translation is accurate and preserves the meaning of the source clause without adding or omitting any duties or modalities. No numbers, currencies, dates, or periods were present in the source to check."
+    },
+    {
+      "requirement_id": "0084dae5-b36c-5d81-85b6-de8ac47f0918",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 3,
+      "source_lang": "fr",
+      "source_text": "Les offres sont valables pendant une durée de quatre (4) mois à compter de la date limite de remise des plis.",
+      "translation": "Die Angebote müssen ab Ablauf der Angebotsfrist vier (4) Monate lang gültig bleiben.",
+      "score": 1.0,
+      "reason": "The source clause states that offers are valid for a period of four (4) months from the submission deadline. The rendering accurately conveys this duty, specifying that offers must remain valid for four (4) months from the expiry of the submission deadline. The modality ('doivent'/'must') and the period ('quatre (4) mois'/'four (4) months') are preserved."
+    },
+    {
+      "requirement_id": "4df2ac59-c9cc-5e1b-89b4-70af8489d74d",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 9,
+      "source_lang": "fr",
+      "source_text": "Lettre de candidature_(formulaire DC1 complété)_",
+      "translation": "Bei der Standardbewerbung muss ein ausgefülltes Bewerbungsschreiben im Formular DC1 eingereicht werden.",
+      "score": 0.8,
+      "reason": "The rendering correctly identifies the duty (submit a completed application letter in form DC1) and preserves the modality ('must' / 'muss'). It accurately reflects the source clause without adding or omitting duties. The specific document (form DC1) is also correctly included."
+    },
+    {
+      "requirement_id": "b63ae3ce-ee91-5f3b-8938-ac2316d3233a",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 8,
+      "source_lang": "fr",
+      "source_text": "Les candidatures doivent être recevables conformément aux articles L.2141-1 à L.2141-11 du Code de la commande publique.",
+      "translation": "Die Teilnahmeanträge müssen gemäß den Artikeln L.2141-1 bis L.2141-11 des französischen Vergabegesetzbuchs zulässig sein.",
+      "score": 1.0,
+      "reason": "The source clause states a mandatory duty ('doivent être recevables') related to specific articles (L.2141-1 à L.2141-11) of a code. The rendering accurately preserves the mandatory modality ('müssen zulässig sein') and correctly identifies the same articles and the relevant code ('französischen Vergabegesetzbuchs'). All elements of the duty, modality, and numerical/legal references are present and unchanged."
+    },
+    {
+      "requirement_id": "5b6add2a-02bc-52fd-9882-1737b680e741",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 18,
+      "source_lang": "fr",
+      "source_text": "Les pièces pour lesquelles la signature est exigée doivent être datées et signées d’une personne ayant le pouvoir d’engager la société. A défaut devra être jointe à l’offre une délégation de pouvoir établie par la personne juridiquement habilitée à engager la société.",
+      "translation": "Unterzeichnungspflichtige Unterlagen müssen datiert und von einer Person unterschrieben werden, die das Unternehmen rechtsverbindlich vertreten darf. Andernfalls muss dem Angebot eine Vollmacht der hierzu rechtlich befugten Person beigefügt werden.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (documents requiring signature must be dated and signed by an authorized person, or a power of attorney must be attached), the modality (must/müssen), and all associated details. No duties were invented or dropped, and the scope and modality remain unchanged."
+    },
+    {
+      "requirement_id": "39fb315a-6aa3-560a-9d23-579a1d0ff3ca",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 19,
+      "source_lang": "fr",
+      "source_text": "<u>2ème cas : certificat délivré par une autorité de certification, française ou étrangère, qui répond aux exigences équivalentes du règlement européen eIDAS et notamment celles de son annexe I.</u> \n\nLe signataire remet gratuitement lors du dépôt de document signé le mode d’emploi et tous les éléments nécessaires permettant de procéder à la vérification de la validité de la signature électronique prévue à l’article 6 de l’arrêté du 22 mars 2019 relatif à la signature électronique dans la commande publique.",
+      "translation": "Wird ein Zertifikat einer französischen oder ausländischen Zertifizierungsstelle verwendet, das gleichwertige Anforderungen der eIDAS-Verordnung, insbesondere ihres Anhangs I, erfüllt, muss der Unterzeichner bei Einreichung des signierten Dokuments kostenlos die Anleitung und alle für die Prüfung der elektronischen Signatur erforderlichen Unterlagen nach Artikel 6 des Erlasses vom 22. März 2019 vorlegen.",
+      "score": 0.8,
+      "reason": "The rendering correctly identifies the duty (submit instructions and necessary elements for verification), the modality (must/muss), and the associated date (22 March 2019). It accurately reflects the condition regarding the certificate meeting eIDAS requirements. The scope is maintained, and no new duties are invented or dropped. The translation is accurate and preserves the meaning of the original clause."
+    },
+    {
+      "requirement_id": "5c36a7bc-5a0f-5836-9c06-5ab45495b154",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 10,
+      "source_lang": "fr",
+      "source_text": "Une « déclaration du candidat individuel ou du membre du groupement ». Il convient d’utiliser le formulaire DC2*. Ce formulaire [complétant le formulaire DC1], doit être dûment renseigné.",
+      "translation": "Bei der Standardbewerbung ist für den Einzelbewerber oder jedes Mitglied der Bietergemeinschaft eine Bewerbererklärung im Formular DC2 einzureichen; das Formular muss ordnungsgemäß ausgefüllt sein.",
+      "score": 0.7,
+      "reason": "The rendering correctly identifies the duty (submit a declaration using form DC2) and its modality (must/should). It also correctly states that the form must be duly completed. The original text uses 'Il convient d’utiliser' which implies a strong recommendation or requirement, and the rendering's 'ist einzureichen' (must be submitted) accurately reflects this. The reference to form DC1 in the original is omitted, which is a minor omission but does not fundamentally alter the core duty."
+    },
+    {
+      "requirement_id": "b7e83625-0982-5a1a-a161-c88db00bc995",
+      "document_name": "26023_AOO_Conseil_Architecure_SI_RC_v1.pdf",
+      "page": 18,
+      "source_lang": "fr",
+      "source_text": "Ces documents doivent être remis par voie électronique, sur la plate-forme des achats de l’Etat (PLACE), à l’adresse suivante « www.marches-publics.gouv.fr ».",
+      "translation": "Diese Unterlagen müssen elektronisch über die staatliche Beschaffungsplattform PLACE unter www.marches-publics.gouv.fr eingereicht werden.",
+      "score": 1.0,
+      "reason": "The source clause states a mandatory duty ('doivent être remis' - must be submitted) for the bidder to submit documents electronically via the PLACE platform at the specified URL. The output accurately reflects this mandatory duty ('müssen eingereicht werden' - must be submitted) and includes all the same details: electronic submission, the PLACE platform, and the exact URL. No duties are invented or dropped, and the modality is preserved."
+    }
+  ]
+}

@@ -1,0 +1,310 @@
+{
+  "fixture_dir": "tests/fixtures/tenders/en",
+  "judge": "google/gemini-2.5-flash-lite",
+  "translated_rows": 201,
+  "sampled": 30,
+  "threshold": 0.8,
+  "mean": 0.9666666666666667,
+  "cases": [
+    {
+      "requirement_id": "e3604b7a-33bb-5b75-8c31-b0f639b59deb",
+      "document_name": "606362-2026.notice.en.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "Languages in which tenders or requests to participate may be submitted: Bulgarian, Czech, Danish, German, Greek, English, Spanish, Estonian, Finnish, French, Irish, Croatian, Hungarian, Italian, Lithuanian, Latvian, Maltese, Dutch, Polish, Portuguese, Romanian, Slovak , Slovenian, Swedish",
+      "translation": "Das Angebot bzw. der Teilnahmeantrag darf in Bulgarisch, Tschechisch, Dänisch, Deutsch, Griechisch, Englisch, Spanisch, Estnisch, Finnisch, Französisch, Irisch, Kroatisch, Ungarisch, Italienisch, Litauisch, Lettisch, Maltesisch, Niederländisch, Polnisch, Portugiesisch, Rumänisch, Slowakisch, Slowenisch oder Schwedisch eingereicht werden.",
+      "score": 1.0,
+      "reason": "The source clause lists the languages in which tenders or requests to participate may be submitted. The output correctly translates this list into German, preserving the modality ('may be submitted' translated to 'darf eingereicht werden') and all the specified languages. No duties are invented or dropped, and no numbers, currencies, or periods are present to be checked."
+    },
+    {
+      "requirement_id": "dc826c99-d883-516f-9a91-9f2acef4b833",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 1,
+      "source_lang": "en",
+      "source_text": "The map should enable users to identify and explore relevant information by country through user-friendly interface.",
+      "translation": "Die Karte sollte es Nutzern ermöglichen, relevante Informationen nach Land über eine benutzerfreundliche Oberfläche zu erkennen und zu erkunden.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the source clause's duty, modality ('should' translated to 'sollte'), and the absence of specific numbers, currencies, dates, or periods. The rendering preserves the original meaning and intent without adding or omitting any duties or modifying the modality."
+    },
+    {
+      "requirement_id": "89441351-c766-5b17-8cd4-bd9f49bb231e",
+      "document_name": "Draft_Framework_Service_Contract_V1.pdf",
+      "page": 5,
+      "source_lang": "en",
+      "source_text": "By submitting a tender, the contractor waives its own terms and conditions.",
+      "translation": "Mit der Einreichung eines Angebots verzichtet der Auftragnehmer auf seine eigenen Geschäftsbedingungen.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the source clause. The duty (waiving terms and conditions) and the condition (by submitting a tender) are preserved. The modality is implicitly mandatory in both the source and the translation. No numbers, currencies, dates, or periods were present in the source to be checked."
+    },
+    {
+      "requirement_id": "7f6f345a-85d7-565c-b3b0-35168e8139a5",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "The validity period of the tender, during which tenderers may not modify the terms of their tenders in any respect, is indicated under Section 5.1.12 of the contract notice.",
+      "translation": "Während der in Abschnitt 5.1.12 der Auftragsbekanntmachung genannten Bindefrist dürfen Bieter die Bedingungen ihres Angebots in keiner Hinsicht ändern.",
+      "score": 1.0,
+      "reason": "The source clause states that tenderers 'may not modify the terms of their tenders' during the validity period. The output correctly renders this as 'Bieter ... dürfen ... die Bedingungen ihres Angebots in keiner Hinsicht ändern' (bidders may not change the terms of their tender in any respect). The modality 'may not' is preserved. The reference to 'Section 5.1.12 of the contract notice' is also accurately translated as 'in Abschnitt 5.1.12 der Auftragsbekanntmachung'."
+    },
+    {
+      "requirement_id": "31bfeda9-632a-5e85-9d98-ba21ebff511a",
+      "document_name": "Tender_Specifications_V1.pdf",
+      "page": 21,
+      "source_lang": "en",
+      "source_text": "The tenderer shall demonstrate that, during the three years<br>preceding the deadline for submission of tenders, it completed<br>(or has ongoing) at least**two projects**involving publicly<br>accessible Drupal-based platforms, with each project having a<br>minimum contract value of EUR 100 000, and being comparable<br>in scope and complexity to theEASA websiteor an equivalent<br>project.",
+      "translation": "Der Bieter muss nachweisen, dass er in den drei Jahren vor Ablauf der Angebotsfrist mindestens zwei Projekte mit öffentlich zugänglichen Drupal-basierten Plattformen abgeschlossen hat oder noch durchführt. Jedes Projekt muss einen Mindestauftragswert von 100.000 EUR haben und hinsichtlich Umfang und Komplexität mit der EASA-Website oder einem gleichwertigen Projekt vergleichbar sein.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (demonstrate completion of projects), the modality (shall/muss), and all numerical and currency details (three years, two projects, EUR 100,000). It correctly translates the conditions for each project (publicly accessible Drupal-based platforms, comparable scope and complexity) without adding or omitting information."
+    },
+    {
+      "requirement_id": "5c4701ac-1b81-5ea4-ae57-7e372ddb1312",
+      "document_name": "606362-2026.notice.en.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "Electronic catalogue: Not allowed",
+      "translation": "Ein elektronischer Katalog darf nicht eingereicht werden.",
+      "score": 1.0,
+      "reason": "The source clause states 'Electronic catalogue: Not allowed'. The rendering 'Ein elektronischer Katalog darf nicht eingereicht werden' accurately conveys the same prohibition. The modality 'Not allowed' (impermissible) is correctly translated to 'darf nicht eingereicht werden' (may not be submitted), preserving the mandatory nature of the restriction. No numbers, currencies, dates, or periods are present in the source, so there are no discrepancies."
+    },
+    {
+      "requirement_id": "1835fc9b-aef3-5d8c-914e-8ae02d10f22b",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "Easy reset and refinement of search criteria.",
+      "translation": "Suchkriterien müssen einfach zurückgesetzt und verfeinert werden können.",
+      "score": 1.0,
+      "reason": "The source clause 'Easy reset and refinement of search criteria' is accurately translated into German as 'Suchkriterien müssen einfach zurückgesetzt und verfeinert werden können.' The core duty (reset and refinement of search criteria) and its modality (implied 'must' or 'shall' due to the nature of the statement) are preserved. No numbers, currencies, dates, or periods were present in the source to be checked. The rendering correctly captures the essence of the original statement without adding or omitting any duties."
+    },
+    {
+      "requirement_id": "07b64985-606f-504e-9f0e-f90057ca8fb3",
+      "document_name": "Draft_Framework_Service_Contract_V1.pdf",
+      "page": 16,
+      "source_lang": "en",
+      "source_text": "In the event of a joint tender submitted by a group of economic operators and where the group does not have legal personality or legal capacity, one member of the group is appointed as leader of the group.",
+      "translation": "Bei einem gemeinsamen Angebot einer Gruppe von Wirtschaftsteilnehmern, die keine eigene Rechtspersönlichkeit oder Rechtsfähigkeit besitzt, muss ein Mitglied der Gruppe zum Gruppenleiter bestellt werden.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the duty (appoint a group leader), modality (must/muss), and conditions (joint tender, no legal personality/capacity) stated in the source clause. No duties were invented or dropped, and all numerical/temporal elements (none present in this clause) were preserved."
+    },
+    {
+      "requirement_id": "02bfabf6-c702-5b26-843b-c680a0a2c21f",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "The tenderer may not refer to earlier submitted tenders to complement, clarify or correct its latest tender.",
+      "translation": "Der Bieter darf zur Ergänzung, Klarstellung oder Berichtigung seines neuesten Angebots nicht auf früher eingereichte Angebote verweisen.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the source clause's duty, which is a prohibition ('may not refer'). The modality ('may not') is correctly preserved. No numbers, currencies, dates, or periods were present in the source, so there are no discrepancies. The rendering explicitly states what the bidder must NOT do, aligning with step 2."
+    },
+    {
+      "requirement_id": "d78bb924-e29e-5c5e-90e3-7ea26351faf8",
+      "document_name": "Tender_Specifications_V1.pdf",
+      "page": 31,
+      "source_lang": "en",
+      "source_text": "not subject to restrictive measures",
+      "translation": "Der Bieter darf keinen restriktiven Maßnahmen unterliegen.",
+      "score": 0.0,
+      "reason": "The source clause 'not subject to restrictive measures' implies a condition or state that the bidder must meet. The output 'Der Bieter darf keinen restriktiven Maßnahmen unterliegen' translates to 'The bidder may not be subject to restrictive measures'. The modality has been changed from an implied 'must not' to 'may not', which is a significant error according to step 4. Additionally, the output introduces a modality ('darf' - may) that is not present in the source, and the source does not explicitly state a duty for the bidder to perform, but rather a condition they must satisfy. The output incorrectly frames this as a duty the bidder 'may not' perform."
+    },
+    {
+      "requirement_id": "ebda7cad-6791-5c0d-b0e7-1ebcb038875c",
+      "document_name": "606362-2026.notice.en.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "Duration during which the tender must remain valid: 9 Months",
+      "translation": "Das Angebot muss 9 Monate lang gültig bleiben.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (offer must remain valid), the modality (must), and the period (9 Months). The German translation correctly conveys the same information as the source clause."
+    },
+    {
+      "requirement_id": "b3be2fac-e869-50f6-91fe-793e4a9f2904",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "The dashboard shall integrate with EASA's existing registration, notification, and personalisation services.",
+      "translation": "Das Dashboard muss in die bestehenden Registrierungs-, Benachrichtigungs- und Personalisierungsdienste der EASA integriert werden.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the source clause's duty (integration with EASA services), modality ('shall' translated to 'muss'), and all associated elements. No duties were invented or dropped, and no numbers, currencies, dates, or periods were present to be altered. The translation maintains the mandatory nature of the requirement."
+    },
+    {
+      "requirement_id": "e3811111-87c9-50e6-861e-e33abfda4a45",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "It is the economic operator’s responsibility to check for updates and modifications during the submission period<sup>10</sup> .",
+      "translation": "Der Wirtschaftsteilnehmer ist dafür verantwortlich, während der Einreichungsfrist auf Aktualisierungen und Änderungen zu prüfen.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the duty placed on the economic operator (bidder) to check for updates and modifications during the submission period. The modality ('ist dafür verantwortlich' - is responsible for) is correctly preserved, and the period ('Einreichungsfrist' - submission period) is also maintained. No duties are invented or dropped, and no numbers or currencies are present to be checked."
+    },
+    {
+      "requirement_id": "0033bc75-853a-55a2-bd3e-451233412ac9",
+      "document_name": "Tender_Specifications_V1.pdf",
+      "page": 30,
+      "source_lang": "en",
+      "source_text": "Prices must be quoted in EURO and include all expenses necessary to perform the contract, such as equipment required to perform the work.",
+      "translation": "Preise müssen in EURO angegeben werden und alle zur Vertragsausführung erforderlichen Ausgaben enthalten, etwa die für die Arbeiten benötigte Ausrüstung.",
+      "score": 1.0,
+      "reason": "The rendering accurately preserves the duty (prices must be quoted in EURO and include all expenses), the modality ('müssen'/'must'), and the currency ('EURO'). All elements from the source clause are present and correctly translated."
+    },
+    {
+      "requirement_id": "c6478d07-04a2-5c68-a765-a67e19de642e",
+      "document_name": "606362-2026.notice.en.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "Deadline for receipt of tenders: 12/10/2026 10:00:59 (UTC+02:00) Eastern European Time, Central European Summer Time",
+      "translation": "Das Angebot muss bis zum 12.10.2026 um 10:00:59 Uhr (UTC+02:00, osteuropäische Zeit / mitteleuropäische Sommerzeit) eingegangen sein.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (receipt of tenders), the modality (must), and all associated numerical and temporal details (date, time, timezone). The German translation correctly conveys the original meaning without introducing new duties or omitting existing ones, adhering to all evaluation steps."
+    },
+    {
+      "requirement_id": "1b7e3f2c-c1e1-555b-a7fc-02e10880718f",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 1,
+      "source_lang": "en",
+      "source_text": "The proposed mock-ups shall demonstrate, at a minimum, the following core functionalities:",
+      "translation": "Die vorgeschlagenen Mock-ups müssen mindestens die nachfolgenden Kernfunktionalitäten zeigen.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the source clause. It correctly identifies the duty (demonstrate core functionalities), the modality ('shall' translated to 'müssen'), and the numerical threshold ('at a minimum' translated to 'mindestens'). No duties are invented or dropped, and the numerical threshold is preserved."
+    },
+    {
+      "requirement_id": "a11de1db-c96f-5204-b82a-69f0677fa28c",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "Submission of a tender implies acceptance of all the terms and conditions set out in the procurement documents and, where appropriate, waiver of the tenderer's own general or specific terms and conditions.",
+      "translation": "Mit der Angebotsabgabe akzeptiert der Bieter sämtliche in den Vergabeunterlagen festgelegten Bedingungen und verzichtet gegebenenfalls auf seine eigenen allgemeinen oder besonderen Geschäftsbedingungen.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the original English clause. It correctly identifies the duty (acceptance of terms and conditions, waiver of own terms), the modality (implied acceptance/waiver, which is mandatory in effect), and all associated elements (procurement documents, tenderer's own general or specific terms and conditions). No duties are invented or dropped, and the scope remains the same. The modality is preserved, and no numbers, currencies, dates, or periods were present in the source to be altered."
+    },
+    {
+      "requirement_id": "56750f81-fd09-53db-82ae-156f6a9f6852",
+      "document_name": "Tender_Specifications_V1.pdf",
+      "page": 12,
+      "source_lang": "en",
+      "source_text": "However, cross subcontracting among tenderers is forbidden",
+      "translation": "Gegenseitige Unterauftragsvergabe zwischen Bietern ist verboten.",
+      "score": 1.0,
+      "reason": "The German translation accurately conveys the duty (cross subcontracting is forbidden), its modality (implied 'must not' or 'shall not'), and all associated numerical/temporal information (none present). The rendering directly mirrors the source clause's prohibition without adding or omitting any duties or changing the modality."
+    },
+    {
+      "requirement_id": "67464f62-4ecd-5a14-b0c5-760ea044b697",
+      "document_name": "606362-2026.notice.en.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "Electronic submission: Required",
+      "translation": "Das Angebot muss elektronisch eingereicht werden.",
+      "score": 1.0,
+      "reason": "The source clause states 'Electronic submission: Required'. The rendering 'Das Angebot muss elektronisch eingereicht werden' accurately reflects this mandatory duty (modality 'muss' corresponds to 'Required') without adding or omitting any information. No numbers, currencies, dates, or periods were present in the source to check."
+    },
+    {
+      "requirement_id": "eb339a76-4066-59ed-896b-93a74406adf4",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 1,
+      "source_lang": "en",
+      "source_text": "The proposed solution should demonstrate how different categories of country-related information can be represented and accessed through the map, while ensuring that the visualisation remains clear and usable across desktop and mobile screen sizes.",
+      "translation": "Die vorgeschlagene Lösung sollte zeigen, wie verschiedene Kategorien länderbezogener Informationen über die Karte dargestellt und abgerufen werden können, wobei die Visualisierung auf Desktop- und mobilen Bildschirmgrößen klar und nutzbar bleiben soll.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the original English clause. The duty (demonstrate/zeigen), modality (should/sollte), and scope (categories of country-related information, map representation, clarity and usability across desktop and mobile screen sizes) are all preserved. No numbers, currencies, dates, or periods were present in the source to be checked."
+    },
+    {
+      "requirement_id": "f9ee36da-6006-5663-9366-d420371a1bb9",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "Tenderers must ensure that their submitted tenders contain all the information and documents required by the contracting authority at the time of submission as set out in the procurement documents.",
+      "translation": "Bieter müssen sicherstellen, dass ihre eingereichten Angebote zum Zeitpunkt der Einreichung alle in den Vergabeunterlagen verlangten Informationen und Unterlagen enthalten.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the duty placed on the bidder ('must ensure'), the action required ('contain all the information and documents required'), and the timing ('at the time of submission'). The modality 'must' is correctly translated as 'müssen', and no numbers, currencies, dates, or periods were present in the source to be checked. The rendering preserves the original meaning and scope without adding or omitting any duties."
+    },
+    {
+      "requirement_id": "69ea3f06-23e3-50de-b227-0f36d7cda5ea",
+      "document_name": "Tender_Specifications_V1.pdf",
+      "page": 30,
+      "source_lang": "en",
+      "source_text": "While filling in Annex 6 – Model financial offer the tenderer shall take into consideration all requirements defined in the Tender Specifications.",
+      "translation": "Beim Ausfüllen von Anhang 6 – Musterfinanzangebot muss der Bieter alle in den Ausschreibungsunterlagen festgelegten Anforderungen berücksichtigen.",
+      "score": 1.0,
+      "reason": "The rendering accurately reflects the duty (consider requirements), modality (shall/muss), and the specific document (Annex 6 – Model financial offer/Anhang 6 – Musterfinanzangebot) mentioned in the source clause. No duties were invented or dropped, and all numerical/temporal elements (none present) were implicitly preserved."
+    },
+    {
+      "requirement_id": "f780e661-9b60-562d-b4ad-c7cb5b4f1b75",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "The target audience to be considered for these mock-ups includes both aviation professionals and general public.",
+      "translation": "Bei den Mock-ups müssen sowohl Luftfahrtfachleute als auch die allgemeine Öffentlichkeit als Zielgruppen berücksichtigt werden.",
+      "score": 1.0,
+      "reason": "The output accurately translates the source clause, preserving the meaning and intent. It correctly identifies the target audience ('aviation professionals and general public') and the action required ('to be considered for these mock-ups'). No numbers, currencies, dates, or periods were present in the source to check. The modality is implicitly maintained as a requirement."
+    },
+    {
+      "requirement_id": "9ddfeaad-386e-542a-a932-90436290fa38",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 3,
+      "source_lang": "en",
+      "source_text": "The representatives will be required to present the submission receipt generated by eSubmission and to sign an attendance sheet.",
+      "translation": "Die Vertreter müssen die von eSubmission erzeugte Einreichungsbestätigung vorlegen und eine Anwesenheitsliste unterschreiben.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the duty (present submission receipt and sign attendance sheet), the modality (must/müssen), and all associated details from the source clause. No duties were invented or dropped, and no numbers, currencies, dates, or periods were altered."
+    },
+    {
+      "requirement_id": "e75c2113-56b7-58c3-bfb6-fd8092561474",
+      "document_name": "Tender_Specifications_V1.pdf",
+      "page": 18,
+      "source_lang": "en",
+      "source_text": "The documents mentioned in the Declaration on Honour as supporting evidence on non-exclusion must be provided with the tender<sup>14</sup> .",
+      "translation": "Die in der Ehrenerklärung genannten Unterlagen als Belege für die Nichtausschließung müssen mit dem Angebot vorgelegt werden.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the duty (providing supporting documents), the modality (must/müssen), and the attached period (with the tender/mit dem Angebot). No duties were invented or dropped, and all numerical/temporal constraints were preserved."
+    },
+    {
+      "requirement_id": "5e252ad1-9f71-5169-8269-011fe27b9f50",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 1,
+      "source_lang": "en",
+      "source_text": "A geographical representation of the country-related information shall be provided.",
+      "translation": "Es muss eine geografische Darstellung der länderbezogenen Informationen bereitgestellt werden.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty ('shall be provided'), the modality ('must'), and the subject matter ('geographical representation of the country-related information'). No numbers, currencies, dates, or periods were present in the source to check. The translation is a direct and faithful representation of the original clause."
+    },
+    {
+      "requirement_id": "405aef90-548c-59d3-b05e-5b265e6488bb",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 1,
+      "source_lang": "en",
+      "source_text": "Economic operators already registered in the Participant Register shall reuse their existing PICs when preparing tenders in eSubmission.",
+      "translation": "Wirtschaftsteilnehmer, die bereits im Participant Register registriert sind, müssen bei der Angebotserstellung in eSubmission ihre vorhandene PIC erneut verwenden.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the duty (reuse existing PICs), modality (shall/müssen), and context (when preparing tenders in eSubmission) from the source clause. No duties were invented or dropped, and all numerical/temporal elements (none present) were implicitly preserved. The translation correctly conveys the mandatory nature of the action."
+    },
+    {
+      "requirement_id": "ca975611-7a62-5bd5-8b98-591019562f48",
+      "document_name": "Tender_Specifications_V1.pdf",
+      "page": 12,
+      "source_lang": "en",
+      "source_text": "Tenders must be drawn and submitted in complete independence and autonomously from the other tenders.",
+      "translation": "Angebote müssen vollständig unabhängig und autonom von den anderen Angeboten erstellt und eingereicht werden.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the duty (draw and submit tenders), the modality (must), and the conditions (complete independence and autonomy from other tenders). No duties were invented or dropped, and all numerical/temporal elements (none present in this case) were preserved. The translation correctly conveys the mandatory nature of the requirement."
+    },
+    {
+      "requirement_id": "ae02c497-275a-5a06-a9ed-63ed06807daa",
+      "document_name": "Annex_9_Simulation_exercise_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "Search and filtering functionality shall be easy to use and operate consistently across the map and table views, allowing users to efficiently locate relevant information.",
+      "translation": "Die Such- und Filterfunktion muss einfach zu benutzen sein und in Karten- und Tabellenansicht einheitlich funktionieren, damit Nutzer relevante Informationen effizient finden können.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the original English clause. The duty ('easy to use and operate consistently', 'allowing users to efficiently locate relevant information') is preserved. The modality ('shall' translated to 'muss') is correctly maintained. No numbers, currencies, dates, or periods were present in the source, so there are no discrepancies. The translation conveys the same meaning and obligation."
+    },
+    {
+      "requirement_id": "543d4004-ade8-5643-a36e-760344ef793c",
+      "document_name": "Invitation_to_tender_V1.pdf",
+      "page": 2,
+      "source_lang": "en",
+      "source_text": "All costs incurred for the preparation and submission of tenders as well as for attending the opening session are to be borne by the tenderers and will not be reimbursed.",
+      "translation": "Alle Kosten für die Vorbereitung und Einreichung von Angeboten sowie für die Teilnahme an der Öffnungssitzung sind von den Bietern zu tragen und werden nicht erstattet.",
+      "score": 1.0,
+      "reason": "The German translation accurately reflects the original English clause. It correctly identifies the duty (tenderers bear costs and will not be reimbursed), the modality (implied 'must' or 'shall' through 'sind zu tragen' and 'werden nicht erstattet'), and all associated elements (costs for preparation, submission, and attendance). No duties are invented or dropped, and the scope and modality are preserved."
+    }
+  ]
+}

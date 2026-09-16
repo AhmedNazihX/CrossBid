@@ -8,7 +8,15 @@ models:
   extract: openai/gpt-5.6-terra        # extraction and translation
   cheap: openai/gpt-5.6-luna           # classification, chat, injection guard
   embed: openai/text-embedding-3-small # 1536 dims, fits pgvector's index cap (ADR-0004)
-  judge: anthropic/claude-haiku-4.5    # eval judge; different vendor from the models under test
+  # Eval judge (S7.1). A different vendor from every model under test, which is the story's
+  # rule: extraction, checking and chat all run on OpenAI slugs, so the judge may not.
+  # Changed from anthropic/claude-haiku-4.5 on 2026-09-16: the retrieval suite asks the judge
+  # four metrics over ninety questions and each metric decomposes into several calls, so the
+  # judge is the most-called model in the project by a wide margin. flash-lite is $0.10/$0.40
+  # against haiku's $1/$5 and answers faster, and it was measured discriminating correctly on
+  # both reference-scored metrics (1.00 on the right passage, 0.00 on a wrong one) before the
+  # switch. haiku stays in available_models as the more capable fallback.
+  judge: google/gemini-2.5-flash-lite
   # Where any role goes after a timed-out call and one retry (S3.4.4). Deliberately a
   # different vendor from `extract` and `cheap`: the failure a fallback exists to survive is
   # the primary route being slow or down, and a second OpenAI slug would be down with it.

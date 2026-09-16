@@ -131,7 +131,7 @@ def test_the_startup_probe_is_attributed_to_nobody_and_traced_as_nothing(
     [
         (ModelRole.EXTRACT, "openai/gpt-5.6-terra"),
         (ModelRole.CHEAP, "openai/gpt-5.6-luna"),
-        (ModelRole.JUDGE, "anthropic/claude-haiku-4.5"),
+        (ModelRole.JUDGE, "google/gemini-2.5-flash-lite"),
     ],
 )
 def test_every_chat_role_resolves_to_its_configured_slug(

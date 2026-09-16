@@ -1,0 +1,310 @@
+{
+  "fixture_dir": "tests/fixtures/tenders/de",
+  "judge": "google/gemini-2.5-flash-lite",
+  "translated_rows": 311,
+  "sampled": 30,
+  "threshold": 0.8,
+  "mean": 0.9033333333333334,
+  "cases": [
+    {
+      "requirement_id": "0634e635-5e6f-5108-8ce5-299db882e2fe",
+      "document_name": "614251-2026.notice.de.pdf",
+      "page": 6,
+      "source_lang": "de",
+      "source_text": "Angabe der zuständigen Kontaktstelle bei der Auftraggeberin der Referenz mit Anschrift und Kontaktdaten.",
+      "translation": "Zu jeder Referenz müssen Sie die zuständige Kontaktstelle bei der Auftraggeberin der Referenz einschließlich Anschrift und Kontaktdaten angeben.",
+      "score": 1.0,
+      "reason": "The output accurately reflects the duty from the source clause, which is to provide contact details for the reference client. The modality 'müssen' (must) is correctly preserved. No numbers, currencies, dates, or periods were present in the source to be checked. The rendering is a direct and accurate translation of the source's requirement."
+    },
+    {
+      "requirement_id": "4548f912-4699-5dac-b725-3f4038d9d1be",
+      "document_name": "Allgemeine_Bewerbungsbedingungen_elektronisch.pdf",
+      "page": 4,
+      "source_lang": "de",
+      "source_text": "Ihr Teilnahmeantrag/Angebot ist elektronisch über die e-Vergabe-Plattform des Bundes <u>www.evergabe-online.de</u> (AnA-Web) mittels der dort bereitgestellten Softwarekomponente eVergabeApp zu übermitteln.",
+      "translation": "Der Teilnahmeantrag bzw. das Angebot muss elektronisch über www.evergabe-online.de (AnA-Web) mit der dort bereitgestellten Softwarekomponente eVergabeApp übermittelt werden.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (submit the application/offer electronically), the modality (must/muss), and the specific platform (www.evergabe-online.de (AnA-Web)) and software component (eVergabeApp). No duties were invented or dropped, and all numerical/date/currency information (none present in this clause) was implicitly preserved by the accurate translation of the core requirement."
+    },
+    {
+      "requirement_id": "2898ea34-01a2-57a8-8e45-8a19063b8e55",
+      "document_name": "Anlage_Unternehmensdaten_VV2.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "Bitte tragen Sie die für Sie zutreffenden Daten (Angaben zur juristischen Person bzw. Personenvereinigung oder Angabe zur natürlichen Person) in die folgenden Felder ein:",
+      "translation": "Tragen Sie die für Sie zutreffenden Angaben zur juristischen Person bzw. Personenvereinigung oder zur natürlichen Person in die vorgesehenen Felder ein.",
+      "score": 0.8,
+      "reason": "The rendering accurately captures the duty to enter applicable data into fields. The modality 'Bitte tragen Sie ein' (Please enter) is correctly translated to 'Tragen Sie ein' (Enter), preserving the mandatory nature of the action. No numbers, currencies, dates, or periods were present in the source to be checked. The rendering is a faithful representation of the source clause's core instruction."
+    },
+    {
+      "requirement_id": "950161ad-01ad-59c3-87d6-b6bed51a7568",
+      "document_name": "Aufforderungsschreiben_VV2_V1.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "Ihr Angebot muss bis zum Ablauf der im Angebotsformular genannten Frist eingehen",
+      "translation": "Ihr Angebot muss bis zum Ablauf der im Angebotsformular genannten Frist eingegangen sein.",
+      "score": 1.0,
+      "reason": "The source clause states a mandatory duty ('muss') for the bidder to submit their offer by the deadline specified in the offer form. The actual output accurately reflects this duty, its modality ('muss'), and the associated timeframe ('bis zum Ablauf der im Angebotsformular genannten Frist'). No duties were invented or dropped, and all numerical/temporal information is preserved."
+    },
+    {
+      "requirement_id": "b48a20fc-4ba5-52c9-8e65-634c792e0f43",
+      "document_name": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf",
+      "page": 4,
+      "source_lang": "de",
+      "source_text": "Im Falle des Einsatzes anderer Unternehmen im Rahmen einer Eignungsleihe zusätzlich vom eignungsverleihenden Unternehmen: Verpflichtungserklärung Eignungsleihe Unteraufträge",
+      "translation": "Wenn Sie sich im Rahmen einer Eignungsleihe auf andere Unternehmen stützen, muss das eignungsverleihende Unternehmen zusätzlich die Verpflichtungserklärung Eignungsleihe Unteraufträge einreichen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty from the source clause, which is for the 'eignungsverleihendes Unternehmen' (company providing suitability) to submit the 'Verpflichtungserklärung Eignungsleihe Unteraufträge' (declaration of commitment for subcontracting suitability). The modality 'muss' (must) is correctly preserved. No numbers, currencies, dates, or periods were present in the source to check. The rendering correctly makes the subject explicit and maintains the original meaning and obligation."
+    },
+    {
+      "requirement_id": "372f999c-cb45-55e1-813b-90cc17f3b893",
+      "document_name": "EVB_IT_Dienstleistung_AGB.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "und gleichzeitig den Tatsachen entsprechend gewährleistet, dass dieses Produkt keine Kommunikationsfunktionen zu Dritten und keine andere, den Interessen des Auftraggebers zuwiderlaufende, Funktionalität aufweist.",
+      "translation": "Der Auftragnehmer muss im Angebot zugleich wahrheitsgemäß gewährleisten, dass das Produkt keine Kommunikationsfunktionen zu Dritten und keine sonstige dem Auftraggeberinteresse widersprechende Funktion hat.",
+      "score": 0.9,
+      "reason": "The rendering accurately captures the duty of the bidder to ensure the product has no communication functions to third parties and no other functionality contrary to the client's interests. The modality 'must' is correctly preserved. No numbers, currencies, dates, or periods were present in the source to be checked. The scope of the duty is maintained."
+    },
+    {
+      "requirement_id": "72d54f74-53a4-53f3-9d4f-e1e1332fa4ff",
+      "document_name": "Eigenerklaerung_Ausschlussgruende_VV2.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "Sofern bei Ihnen einer oder mehrere Ausschlussgründe vorliegen, erläutern Sie bitte die näheren Umstände und legen Sie dar, ob und gegebenenfalls welche Selbstreinigungsmaßnahmen i. S. d. § 125 Abs. 1 GWB Sie durchgeführt haben. Bitte erklären Sie sich hierzu auf einer gesonderten Anlage, die Sie dieser Erklärung beifügen.",
+      "translation": "Liegen Ausschlussgründe vor, muss der Bieter die Umstände erläutern und gegebenenfalls durchgeführte Selbstreinigungsmaßnahmen nach § 125 Abs. 1 GWB darlegen. Dies ist in einer gesonderten Anlage zur Erklärung beizufügen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty of the bidder to explain circumstances and present self-cleaning measures if exclusion grounds exist, preserving the mandatory modality ('muss'). It correctly identifies the reference to § 125 Abs. 1 GWB and the requirement for a separate attachment. No duties are invented or dropped, and all numerical/legal references are maintained."
+    },
+    {
+      "requirement_id": "0a6156a2-c2b9-57a3-8012-25cdfb68e202",
+      "document_name": "Eigenerklaerung_Sanktionen_Russland_VV2.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "(2) Ich/Wir erkläre/n, dass am Auftrag keine unter Ziffer (1) fallenden Unternehmen als Unterauftragnehmer, Lieferanten oder Unternehmen, deren Kapazitäten im Sinne der Richtlinie über die öffentliche Auftragsvergabe in Anspruch genommen werden, (Eignungsleihe) beteiligt sind, soweit mehr als 10% des Auftragswertes auf das jeweilige Unternehmen entfallen.",
+      "translation": "Der Bieter muss erklären, dass keine unter Ziffer (1) fallenden Unternehmen als Unterauftragnehmer, Lieferanten oder Eignungsleiher beteiligt sind, wenn auf das jeweilige Unternehmen mehr als 10 % des Auftragswertes entfallen.",
+      "score": 1.0,
+      "reason": "The rendering correctly identifies the duty (declare), the modality (must), and the numerical threshold (10% of the contract value). It accurately reflects the conditions under which the declaration is required, specifically concerning subcontractors, suppliers, or capacity providers where more than 10% of the contract value is involved. No duties are invented or dropped, and the modality and numerical threshold are preserved."
+    },
+    {
+      "requirement_id": "c291827d-f194-58f8-9aac-dabc9e38ed07",
+      "document_name": "Eigenerklaerung_Verpflichtungsgesetz_VV2.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "(vom Bieter bzw. jedem Mitglied einer Bietergemeinschaft auszufüllen und unterzeichnet mit dem Angebot einzureichen)",
+      "translation": "Der Bieter beziehungsweise jedes Mitglied einer Bietergemeinschaft muss diese Eigenerklärung ausfüllen, unterzeichnen und zusammen mit dem Angebot einreichen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (fill out, sign, and submit the declaration), the modality (must/muss), and all attached elements (bidder or any member of a bidding consortium, with the offer). No duties were invented or dropped, and all numerical/temporal aspects are preserved."
+    },
+    {
+      "requirement_id": "f68f89c8-d93d-507c-96af-fdf06cefef11",
+      "document_name": "Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf",
+      "page": 8,
+      "source_lang": "de",
+      "source_text": "Mit Einreichung der Unterlagen erklärt der Auftragnehmer, dass sich diese auch tatsächlich auf die vertragsgegenständliche Leistung beziehen.",
+      "translation": "Mit Einreichung der Unterlagen wird erklärt, dass sie sich tatsächlich auf die vertragsgegenständliche Leistung beziehen.",
+      "score": 0.7,
+      "reason": "The rendering correctly identifies the duty (declaring that documents relate to the contractually objectified performance) and preserves the modality ('erklärt' / 'wird erklärt' implies a mandatory action). However, it changes the subject from 'Auftragnehmer' (contractor) to an impersonal passive voice, which slightly alters the direct duty placed on the bidder as per step 2. No numbers, currencies, dates, or periods were present to check."
+    },
+    {
+      "requirement_id": "06a9fcc6-ed76-517e-82b2-a9db3f342282",
+      "document_name": "Information_in_English.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "Hence, in order to be able to submit a valid tender, you must submit documents, records and declarations, as well as to conduct your correspondence with the Procurement Office in German.",
+      "translation": "Um ein gültiges Angebot abgeben zu können, müssen Sie Unterlagen, Nachweise und Erklärungen auf Deutsch einreichen sowie Ihre Korrespondenz mit der Beschaffungsstelle auf Deutsch führen.",
+      "score": 1.0,
+      "reason": "The output accurately reflects the duty to submit documents, records, and declarations, and to conduct correspondence in German. The modality 'must' is preserved. No numbers, currencies, dates, or periods were present in the source to be checked. The scope of the duty is maintained."
+    },
+    {
+      "requirement_id": "ea09f168-2f83-509f-b6fc-86d18a0c80c8",
+      "document_name": "Kriterienkatalog_Eignung_VV2_V1.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "Beschreibung der ausgeführten Leistungen nach Art und Umfang, einschließlich",
+      "translation": "Für die Referenzen ist eine Beschreibung der ausgeführten Leistungen nach Art und Umfang anzugeben, einschließlich der nachfolgend genannten Angaben.",
+      "score": 0.7,
+      "reason": "The rendering correctly identifies the duty to describe the nature and scope of services performed. It also correctly preserves the modality (implied 'must' from the context of a description requirement). However, it adds a condition ('Für die Referenzen') and an additional requirement ('einschließlich der nachfolgend genannten Angaben') that are not present in the source clause, which slightly alters the scope."
+    },
+    {
+      "requirement_id": "0ccad418-07a7-5c32-9e96-bc0ab81a2246",
+      "document_name": "Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf",
+      "page": 6,
+      "source_lang": "de",
+      "source_text": "mindestens drei verschiedene Referenzen für IPv6-Migrationseinzelprojekten im Unterstützungsbereich von Netzwerkthemen, die insgesamt folgende Inhalte abdecken: mindestens DNS, Upper Layer Protokolle, IPv6-Netzwerktechnologien; Planung von IPv6Migrationen von Netzkomponenten und von Anschlüssen an Service Provider Netze; verschiedene IPv6-Routingprotokolle für LAN und Wide-Verkehrsnetze) und Migration von Netzkomponenten oder gleichwertige Erfahrungen,",
+      "translation": "Eine Person der Erfahrungsstufe Senior muss mindestens drei verschiedene Referenzen für IPv6-Migrationseinzelprojekte im Unterstützungsbereich Netzwerkthemen vorweisen. Diese müssen insgesamt mindestens DNS, Upper-Layer-Protokolle, IPv6-Netzwerktechnologien, die Planung von IPv6-Migrationen von Netzkomponenten und Anschlüssen an Service-Provider-Netze, verschiedene IPv6-Routingprotokolle für LAN und Wide-Verkehrsnetze sowie die Migration von Netzkomponenten abdecken oder gleichwertige Erfahrungen belegen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (providing references for IPv6 migration projects), the modality ('muss'/'must'), and the specific numerical requirement ('mindestens drei'/'at least three'). It also correctly lists all the required content areas for the references, mirroring the source clause precisely without adding or omitting any duties or numerical details."
+    },
+    {
+      "requirement_id": "fa28a79b-312e-5c2e-808b-d70435e11381",
+      "document_name": "Leistungsbeschreibung_VV2_V1.pdf",
+      "page": 13,
+      "source_lang": "de",
+      "source_text": "Nachweis der praktischen Erfahrungen in IPv4/IPv6-Sicherheit, in IPv4/IPv6-relevanten Sicherheitsthemen und IPv6-spezifischen Bedrohungsszenarien anhand von Referenzen,",
+      "translation": "Praktische Erfahrungen in IPv4/IPv6-Sicherheit, IPv4/IPv6-relevanten Sicherheitsthemen und IPv6-spezifischen Bedrohungsszenarien müssen anhand von Referenzen nachgewiesen werden.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (Nachweis der praktischen Erfahrungen) and its modality (must/müssen). All elements from the source clause, including the specific areas of experience (IPv4/IPv6-Sicherheit, IPv4/IPv6-relevanten Sicherheitsthemen, IPv6-spezifischen Bedrohungsszenarien) and the method of proof (anhand von Referenzen), are present in the output. No duties are invented or dropped, and no numbers, currencies, dates, or periods are present to be checked."
+    },
+    {
+      "requirement_id": "20f888bb-cbc8-58b1-b0d7-98499b8b2832",
+      "document_name": "Rahmenvereinbarung_VV2_V1.pdf",
+      "page": 12,
+      "source_lang": "de",
+      "source_text": "Insbesondere bestanden zum Zeitpunkt der Abgabe des Angebotes keine Verpflichtungen, Dritten solche Informationen zu offenbaren oder in anderer Weise zugänglich zu machen.",
+      "translation": "Zum Zeitpunkt der Angebotsabgabe dürfen keine Verpflichtungen bestehen, vertrauliche Informationen Dritten offenzulegen oder ihnen auf andere Weise zugänglich zu machen.",
+      "score": 0.3,
+      "reason": "The output incorrectly changes the modality from 'keine Verpflichtungen' (no obligations, implying a mandatory state of affairs) to 'dürfen keine Verpflichtungen bestehen' (may not have obligations). The source clause states a factual condition at the time of submission, not a permission. No numbers, currencies, dates, or periods were present in the source to check."
+    },
+    {
+      "requirement_id": "ed69b0f5-1870-500a-8eca-edc2bbbdf5df",
+      "document_name": "Rechtsbehelfsbelehrung.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "Um Betriebs- und Geschäftsgeheimnisse zu wahren, teilen Sie uns konkret mit Bezug auf die entsprechenden Dokumente des Angebotes mit, welche Informationen als Betriebs- und Geschäftsgeheimnisse zu behandeln sind.",
+      "translation": "Um Betriebs- und Geschäftsgeheimnisse zu schützen, müssen Sie konkret unter Bezug auf die betreffenden Angebotsdokumente mitteilen, welche Informationen als Betriebs- und Geschäftsgeheimnisse behandelt werden sollen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty to specify which information is considered trade and business secrets, referencing the relevant offer documents. The modality 'müssen' (must) is correctly preserved. No numbers, currencies, dates, or periods were present in the source to be checked."
+    },
+    {
+      "requirement_id": "5765a491-44c1-5556-a1b5-09cb05d872eb",
+      "document_name": "Unterauftraege_VV2.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "(ist bereits bei Angebotsabgabe auszufüllen)",
+      "translation": "Der Bewerber/Bieter muss den Teil des Auftrags, der an einen Unterauftragnehmer vergeben werden soll, bereits bei Angebotsabgabe ausfüllen.",
+      "score": 0.2,
+      "reason": "The output incorrectly adds a duty ('muss den Teil des Auftrags, der an einen Unterauftragnehmer vergeben werden soll, bereits bei Angebotsabgabe ausfüllen') that is not present in the source clause ('ist bereits bei Angebotsabgabe auszufüllen'). The source only states that something is to be filled out upon submission, not what that something is or that it relates to subcontractors. The modality is preserved, but the core duty is invented."
+    },
+    {
+      "requirement_id": "6cb6f738-7e2a-5189-b144-c7b57d4633d6",
+      "document_name": "Verpflichtung_VS-NfD_und_VS-NfD-Merkblatt_im_Anhang_VV2.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "Als verantwortliche Personen für die Einhaltung und Durchführung der erforderlichen Maßnahmen zum Schutz der Verschlusssachen (VS) des Geheimhaltungsgrades VS-NUR FÜR DEN DIENSTGEBRAUCH (VS-NfD) nach dem VS-NfD-Merkblatt (s. Anlage 4 zum Geheimschutzhandbuch des BMWK) werden benannt:",
+      "translation": "Für die Einhaltung und Durchführung der erforderlichen Schutzmaßnahmen für VS-NfD müssen verantwortliche Personen benannt werden.",
+      "score": 0.7,
+      "reason": "The rendering correctly identifies the duty (naming responsible persons) and its modality ('müssen' - must). It also preserves the core meaning of the source clause. However, it omits the specific details regarding the classification level 'VS-NUR FÜR DEN DIENSTGEBRAUCH (VS-NfD)' and the reference to 'Anlage 4 zum Geheimschutzhandbuch des BMWK', which are important numerical/identifying details from the source clause."
+    },
+    {
+      "requirement_id": "df8876ad-3739-575a-bf26-ba6a23ff6694",
+      "document_name": "Verpflichtungserklaerung_Eignungsleihe_Unterauftraege_VV2.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "oder spätestens vor Zuschlagserteilung vorzulegen (bei Unterauftragsvergabe).",
+      "translation": "Bei Unterauftragsvergabe muss die Erklärung spätestens vor Zuschlagserteilung vorgelegt werden.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (submission of a declaration), the modality (must/muss), and the period (no later than before award/spätestens vor Zuschlagserteilung). It correctly makes the implicit subject ('die Erklärung') explicit, which is permitted by the evaluation steps. No duties are invented or dropped, and all numerical/temporal information is preserved."
+    },
+    {
+      "requirement_id": "cb4fc6d0-e373-5763-9d17-88a684fad92d",
+      "document_name": "Verpflichtungserklaerung_Scientology_VV2.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "Diese Erklärung ist dem Angebot beizufügen.",
+      "translation": "Diese Erklärung muss dem Angebot beigefügt werden.",
+      "score": 1.0,
+      "reason": "The source clause 'Diese Erklärung ist dem Angebot beizufügen' (This declaration must be attached to the offer) is correctly rendered as 'Diese Erklärung muss dem Angebot beigefügt werden' (This declaration must be attached to the offer). The duty (attaching the declaration to the offer) and its modality ('ist' implying 'must') are preserved. No numbers, currencies, dates, or periods were present in the source to be checked. The rendering accurately reflects the source clause without introducing new duties or omitting existing ones."
+    },
+    {
+      "requirement_id": "4642e940-efbb-5fa7-a6bf-392f91da9ed4",
+      "document_name": "Vordruck_Referenzen_VV2.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "Bitte füllen Sie die Liste der Referenzaufträge fortlaufend aus.",
+      "translation": "Die Liste der Referenzaufträge muss fortlaufend ausgefüllt werden.",
+      "score": 1.0,
+      "reason": "The source clause 'Bitte füllen Sie die Liste der Referenzaufträge fortlaufend aus' (Please fill in the list of reference orders continuously) is accurately rendered as 'Die Liste der Referenzaufträge muss fortlaufend ausgefüllt werden' (The list of reference orders must be filled in continuously). The duty (fill in the list of reference orders), modality (implied 'must' from 'Bitte' and the imperative verb, rendered explicitly as 'muss'), and the period ('fortlaufend' - continuously) are all preserved. No duties are invented or dropped, and no numbers, currencies, or dates are present to be checked."
+    },
+    {
+      "requirement_id": "9361c5e1-f039-5e17-87ba-e11002ef5185",
+      "document_name": "614251-2026.notice.de.pdf",
+      "page": 7,
+      "source_lang": "de",
+      "source_text": "Sofern Sie aus berechtigten Gründen die Unterlagen nicht beibringen können, teilen Sie diese Gründe im Angebot dem Beschaffungsamt des BMI mit und legen Sie einen anderen geeigneten Nachweis der personellen Leistungsfähigkeit vor.",
+      "translation": "Wenn Sie die Unterlagen aus berechtigten Gründen nicht vorlegen können, müssen Sie die Gründe im Angebot dem Beschaffungsamt des BMI mitteilen und einen anderen geeigneten Nachweis der personellen Leistungsfähigkeit vorlegen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (inform the BMI procurement office of reasons and provide alternative proof of capability), the modality (must/müssen), and all attached elements (offering, BMI procurement office, alternative suitable proof of personnel capability). No duties were invented or dropped, and all numerical/temporal/currency elements (none present in this case) were preserved. The change from 'Sofern Sie... mitteilen und legen Sie vor' to 'müssen Sie... mitteilen und... vorlegen' correctly makes the implicit mandatory nature explicit, aligning with step 2."
+    },
+    {
+      "requirement_id": "ac4a9b73-f4f1-5eab-88e9-5e62bb0cd5ce",
+      "document_name": "Allgemeine_Bewerbungsbedingungen_elektronisch.pdf",
+      "page": 9,
+      "source_lang": "de",
+      "source_text": "Soweit die Nachweise der Präqualifizierungsdatenbank den gestellten Anforderungen nicht vollständig entsprechen, sind ergänzende Nachweise und Angaben dem Teilnahmeantrag/Angebot beizufügen.",
+      "translation": "Soweit die Nachweise der Präqualifizierungsdatenbank die Anforderungen nicht vollständig erfüllen, müssen ergänzende Nachweise und Angaben dem Teilnahmeantrag bzw. Angebot beigefügt werden.",
+      "score": 1.0,
+      "reason": "The rendering accurately reflects the duty from the source clause, which is to attach supplementary evidence and information if the pre-qualification database evidence does not fully meet the requirements. The modality 'sind ... beizufügen' (are to be attached) is correctly translated to 'müssen ... beigefügt werden' (must be attached), preserving the mandatory nature of the duty. No numbers, currencies, dates, or periods were present in the source to be checked. The scope of the duty remains the same."
+    },
+    {
+      "requirement_id": "694b4593-1451-506b-af99-164d84536dcb",
+      "document_name": "Anlage_Unternehmensdaten_VV2.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "Anlage zum Angebot/Teilnahmeantrag „Unternehmensdaten“ (vom Bewerber/Bieter/anderen Unternehmen auszufüllen und einzureichen)",
+      "translation": "Der Bewerber, Bieter oder ein anderes Unternehmen muss die Anlage „Unternehmensdaten“ ausfüllen und mit dem Angebot bzw. Teilnahmeantrag einreichen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty from the source clause, which is to fill out and submit the 'Unternehmensdaten' attachment. The modality 'must' is correctly preserved. No numbers, currencies, dates, or periods were present in the source to be checked. The rendering correctly makes the subject explicit and maintains the original meaning and scope."
+    },
+    {
+      "requirement_id": "7f1821f7-188c-55c0-8aef-31fbe03d81b9",
+      "document_name": "Aufforderungsschreiben_VV2_V1.pdf",
+      "page": 1,
+      "source_lang": "de",
+      "source_text": "und den in den Bewerbungsbedingungen genannten Anforderungen entsprechen.",
+      "translation": "Ihr Angebot muss die in den Bewerbungsbedingungen genannten Anforderungen erfüllen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty ('erfüllen'/'entsprechen' - to meet/comply with), the modality ('muss'/'must'), and all associated details (the requirements mentioned in the application conditions). No duties were invented or dropped, and all numerical/temporal aspects (none present in this case) were preserved."
+    },
+    {
+      "requirement_id": "9ac591c9-729d-59e2-8da8-47492385d73b",
+      "document_name": "Besondere_Bewerbungsbedingungen_VV2_V1.pdf",
+      "page": 3,
+      "source_lang": "de",
+      "source_text": "Im Falle der Bildung von Bietergemeinschaften zusätzlich: Bewerber Bietergemeinschaftserklärung",
+      "translation": "Bei Bildung einer Bietergemeinschaft müssen Sie zusätzlich die Bewerber-Bietergemeinschaftserklärung einreichen.",
+      "score": 1.0,
+      "reason": "The output accurately reflects the duty from the source clause, which is to submit the 'Bewerber Bietergemeinschaftserklärung' when forming a joint venture. The modality 'müssen' (must) is correctly preserved. No numbers, currencies, dates, or periods were present in the source to check. The rendering makes the implicit subject ('Sie' - you) explicit, which is permitted by the evaluation steps."
+    },
+    {
+      "requirement_id": "bfd2e5fb-9944-5065-9a08-d941a873151d",
+      "document_name": "EVB_IT_Dienstleistung_AGB.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "Der Auftragnehmer ist zur Erbringung der vereinbarten Leistungen mit Hilfe von automatisierten Verfahren nur dann berechtigt, wenn er im Angebot das zu verwendende Produkt benennt",
+      "translation": "Will der Auftragnehmer automatisierte Verfahren einsetzen, muss er im Angebot das hierfür verwendete Produkt benennen.",
+      "score": 1.0,
+      "reason": "The rendering accurately captures the duty (naming the product for automated procedures), the modality (must/muss), and the condition under which the duty applies. It correctly makes the implicit subject explicit and maintains the original meaning without introducing new duties or altering the scope or modality."
+    },
+    {
+      "requirement_id": "4ea64558-2678-535b-917a-85fa654dc65e",
+      "document_name": "Eigenerklaerung_Ausschlussgruende_VV2.pdf",
+      "page": 3,
+      "source_lang": "de",
+      "source_text": "Haben Sie bei der Ausführung öffentlicher Aufträge gegen geltende\numwelt-, sozial- oder arbeitsrechtliche Verpflichtungen verstoßen?",
+      "translation": "Der Bieter muss angeben, ob er bei der Ausführung öffentlicher Aufträge gegen geltende umwelt-, sozial- oder arbeitsrechtliche Verpflichtungen verstoßen hat.",
+      "score": 1.0,
+      "reason": "The source clause asks a question about past violations of environmental, social, or labor law obligations. The output correctly transforms this into a mandatory duty for the bidder to state whether they have violated these obligations. The modality 'must' is correctly preserved, and no numbers, currencies, dates, or periods were present in the source to be checked. The rendering accurately reflects the duty without adding or omitting information."
+    },
+    {
+      "requirement_id": "be2507a5-a25e-553c-bb51-b29d918166d4",
+      "document_name": "Eigenerklaerung_Sanktionen_Russland_VV2.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "Ich/Wir verpflichte/n mich/uns, den Auftraggeber unverzüglich zu informieren, wenn und soweit sich nach Abgabe dieser Erklärung Umstände ergeben, die zu einem Ausschluss nach Artikel 5k der Verordnung (EU) Nr. 833/2014 in der jeweils geltend Fassung führen können oder die Einhaltung der Verordnung (EU) Nr. 269/2014 gefährden.",
+      "translation": "Der Auftraggeber ist unverzüglich zu informieren, wenn nach Abgabe der Erklärung Umstände eintreten, die einen Ausschluss nach Art. 5k der Verordnung (EU) Nr. 833/2014 bewirken können oder die Einhaltung der Verordnung (EU) Nr. 269/2014 gefährden.",
+      "score": 0.9,
+      "reason": "The rendering correctly identifies the duty (inform the client), the modality (must be done, implied by 'zu informieren'), and the relevant numbers and regulations (Art. 5k of Verordnung (EU) Nr. 833/2014 and Verordnung (EU) Nr. 269/2014). The phrase 'unverzüglich' (immediately) is also preserved. The only minor deviation is the elision of 'Ich/Wir verpflichte/n mich/uns' to 'Der Auftraggeber ist', which is permissible according to step 2 as it makes the subject explicit without changing the duty."
+    },
+    {
+      "requirement_id": "85b604f9-13bc-5225-84b8-775651c80885",
+      "document_name": "Eigenerklaerung_Verpflichtungsgesetz_VV2.pdf",
+      "page": 2,
+      "source_lang": "de",
+      "source_text": "Ich/Wir erkläre(n), dass ich/wir das Dokument „Verpflichtung der Auftragnehmerseite nach dem Verpflichtungsgesetz“ inkl. der zugehörigen Anlagen zur Kenntnis genommen habe(n) und im Falle der Auftragserteilung eine ausreichende Anzahl an Mitarbeiter/innen zur Verfügung stellen werde(n), die mit einer Verpflichtung auf die gewissenhafte Erfüllung seiner/ihrer Obliegenheiten nach § 1 Abs. 1 VerpflG einverstanden sind.",
+      "translation": "Der Bieter muss erklären, dass er das Dokument „Verpflichtung der Auftragnehmerseite nach dem Verpflichtungsgesetz“ einschließlich seiner Anlagen zur Kenntnis genommen hat. Außerdem muss er erklären, dass er im Fall der Auftragserteilung genügend Mitarbeitende bereitstellt, die einer Verpflichtung nach § 1 Abs. 1 VerpflG zustimmen.",
+      "score": 0.9,
+      "reason": "The rendering accurately captures the duties, modalities, and specific references from the source clause. It correctly identifies the bidder's obligation to acknowledge the document and provide sufficient staff. The modality 'must' is preserved for both duties. The reference to '§ 1 Abs. 1 VerpflG' is also maintained. There are no invented duties or dropped obligations."
+    }
+  ]
+}
