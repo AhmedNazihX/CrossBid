@@ -16,8 +16,10 @@ verdict before it is final.
 ## Status
 
 **Increments 0 to 4 are complete: 17 of 17 stories in the last one.** Increment 5, the
-submission evidence, is next. Eight migrations, sixty architectural decision records, 4 897
+submission evidence, is next. Nine migrations, sixty-two architectural decision records, 4 910
 backend tests at 100 % line and branch coverage, and a clean `make lint` across both halves.
+A further nine run against a real Postgres in CI, which is where the SQL is actually executed
+rather than inspected as a string.
 
 A bidder can sign in, describe their company, search TED and start a bid from a notice,
 upload a pack that is scanned for planted instructions before anything is embedded, read
@@ -76,7 +78,8 @@ Run `make help` for the full list.
 |---|---|
 | `make dev` | Start db + api + web in Docker |
 | `make dev-api` / `make dev-web` | Run one app on the host with reload |
-| `make test` | Tests, excluding those marked `live` |
+| `make test` | Tests, excluding those marked `live`. Offline: no socket, no money |
+| `make test-db` | Only the tests that need a real Postgres and spend nothing. CI runs these on every push |
 | `make test-live` | Only the tests that hit real services or an LLM (costs money) |
 | `make lint` | ruff, `ruff format --check`, pyright, eslint, prettier, `tsc --noEmit`, and the dependency-manifest check |
 | `make deps` | Regenerate `dependencies.txt` from both lock files |

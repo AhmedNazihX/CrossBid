@@ -1326,6 +1326,8 @@ export interface components {
              * @description Why the agent chose this status, in one or two sentences
              */
             agent_rationale: string;
+            /** @description What the agent decided, kept even after a reviewer overrules `status` */
+            agent_status?: components["schemas"]["RowStatus"] | null;
             /** @default pending */
             reviewer_status: components["schemas"]["ReviewerStatus"];
             /** Override Reason */
@@ -1566,7 +1568,7 @@ export interface components {
         StartBidRequest: {
             /**
              * Notice Number
-             * @description TED publication number the bid is opened against
+             * @description TED publication number the bid is opened against, as `123456-2026`
              */
             notice_number: string;
             /**
@@ -1792,9 +1794,16 @@ export interface components {
          *
          *     Every stage is listed, not only the three that call a model today. A node that starts
          *     spending later is attributed the moment it does, with nobody remembering to come back.
+         *
+         *     `CHAT` is the one member that is not a bid-graph node. "Ask the tender" runs its own
+         *     graph against a bid the bidder is looking at, and it spends real money on a model per
+         *     question — it was simply never given an attribution, so every chat turn landed in
+         *     `_warn_unattributed` and `/dev/costs` understated any bid whose reviewer asked anything.
+         *     The vocabulary is the report's, not the bid graph's; what the parity test still holds is
+         *     the direction that matters, that no graph node may be missing from it.
          * @enum {string}
          */
-        UsageNode: "parse_docs" | "extract_reqs" | "plan_checks" | "check_reqs" | "score_verdict" | "await_review" | "apply_review" | "finalize";
+        UsageNode: "parse_docs" | "extract_reqs" | "plan_checks" | "check_reqs" | "score_verdict" | "await_review" | "apply_review" | "finalize" | "chat";
         /**
          * UsageTotals
          * @description Tokens, calls and money over some set of `llm_usage` rows.

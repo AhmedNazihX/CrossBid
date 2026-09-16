@@ -4759,3 +4759,110 @@ Postgres in the suite or in CI**, so a malformed statement constant or a column 
 migration would pass with 100 % coverage; and **the frontend has no tests at all** across
 eighteen thousand lines, which is where three of the four blockers lived. Both are recorded on
 the audit board rather than here. Neither is a decision; they are work.
+
+---
+
+## ADR-0062 — Four items the audit called work, and the decisions they turned out to need
+
+**Date:** 2026-09-16 · **Stories:** cross-cutting, from the 2026-09-15 audit · **Status:** accepted
+
+ADR-0061 closed five guarantees the code described and did not provide. This entry covers the
+four the audit deliberately left as *work* rather than decisions — and records the decision
+each one turned out to contain once it was actually done.
+
+### 1. The agent's own verdict gets a column (H24)
+
+Found while building the surface meant to display it, which is the honest version of how it
+was found. `apply_review` writes the reviewer's status into `matrix_rows.status`, because that
+is what `score_verdict` re-runs on and what the dashboard counts. The agent's original
+therefore lived only in the LangGraph checkpoint, where no request can reach it — so the
+workspace could say a row was overridden and never say what it was overridden *from*, and
+S4.5.2's criterion that "the agent's original stays visible" held only for an edit nobody had
+submitted yet. The chat tool had the same blind spot, telling the model a row was overridden
+without being able to say from what.
+
+Migration 0009 adds `matrix_rows.agent_status`, and the rule around it is the decision:
+**exactly one writer.** `check_loop._row` sets it when the agent decides; `UPDATE_REVIEWED_ROW`
+deliberately does not name the column, which is the mirror of the split that already stops the
+agent's writer from overwriting a human's disposition. Both fields start equal and part
+company only when somebody overrules a row.
+
+**Nullable, and not backfilled for overridden rows.** A backfill would have to invent the
+answer: for a confirmed row `status` is still the agent's and copying it asserts nothing new,
+so the migration does copy it there; for an already-overridden row `status` is the reviewer's,
+and copying it would assert the agent agreed when the record says the opposite. Null means
+"not recorded", which is true, and the UI says nothing rather than something false.
+
+### 2. The SQL is executed, at last
+
+The audit's largest finding: `tests/conftest.py` fakes psycopg at the cursor, so no statement
+in `crossbid/readmodel/` had ever been parsed by a database. A malformed `LiteralString`, a
+column renamed in a migration and not in a read model, or a broken `on conflict` would pass
+lint, pass 4 900 tests and report 100 % coverage. Worse, the tenant predicate — the only thing
+between two companies, since the API's role has `BYPASSRLS` (ADR-0009) — was asserted by
+checking that a substring appeared in a string constant, which would also pass if the
+predicate compared the wrong column.
+
+The decision is the **`database` marker**, kept distinct from `live`: tests that need Postgres
+and spend no money. `live` continues to mean "reaches a real external service or an LLM", the
+two existing Postgres-only tests carry both, and `addopts` still excludes `live`, so `make
+test` is unchanged and offline. CI's backend job already had a pgvector service that nothing
+used; it now runs the migrations and `pytest -m database` against it on every push.
+
+`tests/integration/test_read_model_round_trip.py` is what runs there. It is deliberately not a
+second copy of the unit tests — those already pin what each function decides, cheaply and
+offline. It answers only what a database can answer: do the statements parse, does the schema
+match the model that reads it, and does the tenant predicate actually keep two companies
+apart. It earned its place immediately: writing it turned up three wrong assumptions in the
+test itself, and it then caught a real defect in this very ADR's first item — `agent_status`
+was written and selected but never read into the model, which the offline fake could not see
+because the fake hands back a row the test wrote.
+
+### 3. The design system is in the repository
+
+It lived only in `.claude/skills/CrossBid Design System/`, which `.gitignore` excludes, while
+roughly thirty component docstrings cited files inside it. A fresh clone had none of it, and
+one local directory on one machine was the only copy of the thing the UI is built from.
+
+Copied to `docs/design/system/`, tracked. The working copy stays where the tooling reads it,
+so the two can drift; `docs/design/system/README-TRACKED.md` carries the re-sync command and
+says plainly that a snapshot is a worse arrangement than one source and a better one than
+none. `docs/design/canvas/` — the confirmed artboards and `tokens.css` — was always tracked
+and remains the authority on the screens.
+
+### 4. Four deletions, and the principle behind them
+
+`scripts/spike_extract.py` (537 lines) went, three increments after S3.2.1 replaced it and
+exactly as SP.1's own criterion always said: excluded from ruff, pyright and coverage, and
+carrying the only hard-coded model slugs in the backend. Its evidence stays —
+`spike_golden_de.yaml` and `spike_reports/` are cited as provenance by three golden keys and
+by ADR-0003.
+
+`models/tender.py`'s `TedNotice` was a dead second class of that name with an incompatible
+field set and `extra="forbid"`, occupying the exported name of the live one, so the natural
+`from crossbid.models import TedNotice` handed out a class that would reject a real payload.
+`models/provider.py`'s `ModelRole` was a four-member copy of the five-member enum in
+`settings.py`, missing `FALLBACK`, which S3.4.4 depends on. `ProviderKeyStatus`,
+`ProviderSelection` and `KEY_HINT_LENGTH` were written ahead of S5.4, reached no route,
+appeared in no schema, and were exercised only by the test that walks `models.__all__`.
+
+The principle worth keeping: **a type nothing produces is a type nothing keeps honest.** It
+drifts from the flow it was written for, and the next reader cannot tell a contract from a
+sketch. They come back with S5.4, shaped by what `provider_keys` actually needs then.
+
+One attempt failed usefully and is recorded because the reason generalises. Re-exporting
+`models.ted.TedNotice` under the freed name broke a test immediately: `models.ted` describes
+*somebody else's* API, and it holds a field that is required and nullable (`buyer: str | None`
+with no default, because TED always sends the key and sometimes sends null). The package's own
+models may not do that, and bending `TedNotice` to fit would let a caller omit a field TED
+always provides. So `from crossbid.models import TedNotice` is now an ImportError — loud,
+immediate, and better than the wrong class.
+
+### What CI caught that a developer's machine could not
+
+The push before this one went red on two steps, both correct. `supabase_storage_bucket` lost
+its default (ADR-0061), and a router test had been relying on that default — it passed locally
+because a developer's `.env` supplies the value and failed in CI because a clean machine does
+not. And `frontend/lib/api.ts` was stale, because the commit before had changed the schema
+(`UsageNode` gained `chat`) without regenerating it. Both are the generated-file and clean-room
+checks doing exactly their job, on the first push where anything depended on them.

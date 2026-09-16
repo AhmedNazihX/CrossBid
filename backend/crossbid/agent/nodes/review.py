@@ -129,6 +129,12 @@ def _reviewed(row: MatrixRow, edit: RowEdit | None, *, reviewed_at: datetime) ->
 def _rebuilt(row: MatrixRow, changes: Mapping[str, Any], reviewed_at: datetime) -> MatrixRow:
     """`row` with `changes` applied, through the model's validators rather than around them.
 
+    `agent_status` is carried through untouched, and deliberately: it is the one field a
+    review may not rewrite. `status` becomes the reviewer's answer here because that is what
+    `score_verdict` re-runs on, which is exactly why the agent's own verdict needs somewhere
+    else to live (H24). A `changes` mapping that named it would be a bug, and `model_dump()`
+    below puts the original back under any key the caller did not supply.
+
     `model_copy(update=...)` is the obvious call here and is the wrong one: it assigns
     without validating, so a `supported` with nothing cited would be written to the database
     and rendered to a bidder as proof. Decision 4.

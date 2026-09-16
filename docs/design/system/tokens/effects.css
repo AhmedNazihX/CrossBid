@@ -1,0 +1,19 @@
+:root{
+/* Shadows: very restrained — GovDash-style cards rely on 1px borders, shadows only for floating layers */
+--shadow-xs:0 1px 2px rgba(17,17,17,0.04);
+--shadow-sm:0 1px 3px rgba(17,17,17,0.06),0 1px 2px rgba(17,17,17,0.04);
+--shadow-md:0 4px 12px rgba(17,17,17,0.08),0 1px 3px rgba(17,17,17,0.05);
+--shadow-lg:0 12px 32px rgba(17,17,17,0.12),0 2px 6px rgba(17,17,17,0.06);
+--shadow-focus:0 0 0 3px rgba(17,17,17,0.2);
+--shadow-active-nav:0 1px 2px rgba(17,17,17,0.06);
+/* Motion */
+--ease-standard:cubic-bezier(0.2,0,0,1);/* @kind other */
+--ease-out:cubic-bezier(0,0,0.2,1);/* @kind other */
+--duration-fast:120ms;/* @kind other */
+--duration-base:180ms;/* @kind other */
+--duration-slow:280ms;/* @kind other */
+/* Overlays */
+--overlay-scrim:rgba(17,17,17,0.4);
+--protect-gradient:linear-gradient(180deg,rgba(250,250,249,0) 0%,rgba(250,250,249,1) 100%);/* @kind other */
+--blur-glass:blur(12px);/* @kind other */
+}

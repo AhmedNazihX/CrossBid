@@ -41,12 +41,17 @@ const REVIEWER_STATUS_LABELS: Readonly<Record<Exclude<ReviewerStatus, 'pending'>
  * disposition and the time; an override's reason follows on its own line, whole, because a
  * reviewer reading their own audit trail should not have to open the row to find it.
  *
- * **This branch cannot say "agent said …", and does not pretend to.** The review node
- * (`agent/nodes/review.py::_reviewed`) writes the reviewer's status *into* `status`, so an
- * overridden row arrives with the reviewer's verdict on the badge and the agent's original
- * nowhere on the wire — only the checkpoint still has it. Until the API carries the agent's
- * status alongside the reviewer's, "Overridden by you" plus the reason is everything that
- * can be said truthfully, and it is what is said.
+ * **An override also names what it overruled, when the record has it.** The review node
+ * (`agent/nodes/review.py::_reviewed`) writes the reviewer's status *into* `status` — the
+ * scorer re-runs on that field — so the badge shows the reviewer's verdict, and the agent's
+ * own survives only in `agent_status`, written once by the check loop and never rewritten by
+ * a review. Where it is present and differs from `status`, the disposition line continues
+ * "· agent said …" in the pending branch's own words, so a submitted override reads as the
+ * settled form of a pending one rather than as a second vocabulary. Where it is `null` the
+ * line stops at the time: rows written before migration 0009 never recorded it, and for an
+ * already-overridden row copying `status` into it would have asserted the agent agreed when
+ * the record says the opposite. Null means "not recorded", and the cell says nothing rather
+ * than guess — which is the state every row of a bid finished before that migration is in.
  *
  * The three states are exclusive in practice — `pending` and `isConfirmed` come from the
  * review controls, which the workspace only mounts while the bid is `awaiting_review`, when
@@ -64,6 +69,13 @@ export function RowStatusChange({
   const reviewed =
     hasLocalEdit || row.reviewer_status === 'pending' ? undefined : row.reviewer_status
   const reason = (row.override_reason ?? '').trim()
+  const overruledFrom =
+    reviewed === 'overridden' &&
+    row.agent_status !== null &&
+    row.agent_status !== undefined &&
+    row.agent_status !== row.status
+      ? row.agent_status
+      : undefined
   return (
     <span className={cn('flex flex-col items-start gap-1', className)}>
       <RowStatusBadge status={isChanged ? pending : row.status} />
@@ -80,6 +92,9 @@ export function RowStatusChange({
           {REVIEWER_STATUS_LABELS[reviewed]}
           {row.reviewed_at !== null && row.reviewed_at !== undefined && (
             <> · {formatDateTime(row.reviewed_at)}</>
+          )}
+          {overruledFrom !== undefined && (
+            <> · agent said {ROW_STATUS_LABELS[overruledFrom].toLowerCase()}</>
           )}
         </span>
       )}

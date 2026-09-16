@@ -1,0 +1,24 @@
+const {MetricCard,Badge,Button,VerdictChip}=window.CrossBidDesignSystem_b81312;
+function AskBar(){const [v,setV]=React.useState('');return <div style={{border:'1px solid var(--border-default)',borderRadius:14,padding:'18px 22px 16px',boxShadow:'var(--shadow-xs)'}}>
+  <div style={{display:'flex',alignItems:'center',gap:12}}><Icons.search size={20} style={{color:'var(--text-muted)'}}/><input value={v} onChange={e=>setV(e.target.value)} placeholder="Ask about any tender, @ to add a document" style={{all:'unset',flex:1,font:'400 17px/1 var(--font-sans)',color:'var(--text-primary)'}}/></div>
+  <div style={{display:'flex',alignItems:'center',gap:8,marginTop:14}}><Button variant="secondary" size="sm" icon={<Icons.plus size={16}/>}>Upload tender</Button><Button variant="secondary" size="sm" icon={<Icons.lang size={16}/>}>Bidder language: DE</Button><div style={{flex:1}}/><Button variant="secondary" size="sm" iconRight={<Icons.chev size={14}/>}>Thorough</Button></div></div>}
+function QuickActions({go}){const items=[['Analyse tender','file',true],['Map certificates','layers',false],['Check evidence','fileCheck',false],['Review verdict','shield',true],['Compare lots','box',false],['Draft response','spark',false],['Company profile','db',false]];
+  return <div style={{display:'flex',justifyContent:'center',gap:28,margin:'28px 0 4px'}}>{items.map(([l,ic,solid])=>{const I=Icons[ic];return <button key={l} onClick={()=>go(l==='Review verdict'?'verdict':'matrix')} style={{all:'unset',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}><span style={{width:60,height:60,borderRadius:14,background:solid?'var(--surface-accent)':'var(--cb-blue-100)',color:solid?'#fff':'var(--cb-blue-500)',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><I size={24}/></span><span style={{font:'400 14px/1 var(--font-sans)',color:'var(--text-secondary)'}}>{l}</span></button>})}</div>}
+function TenderTable({go,rows}){const ph={Analysis:'info',Review:'warning',Confirmed:'success'};
+  return <div style={{border:'1px solid var(--border-default)',borderRadius:12,overflow:'hidden'}}>
+    <div style={{display:'grid',gridTemplateColumns:'minmax(0,2.2fr) 130px 150px minmax(0,1.6fr) 120px 170px',padding:'0 20px',height:46,alignItems:'center',font:'500 13px/1 var(--font-sans)',color:'var(--text-secondary)',borderBottom:'1px solid var(--border-default)'}}><span>Tender <Icons.chev size={12} style={{verticalAlign:-1}}/></span><span>Due</span><span>Phase <Icons.chev size={12} style={{verticalAlign:-1}}/></span><span>Buyer</span><span>Value</span><span>Verdict</span></div>
+    {rows.map((t,i)=><div key={t.id} onClick={()=>go(t.verdict==='conditional'?'verdict':'matrix')} onMouseEnter={e=>e.currentTarget.style.background='var(--surface-sunken)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'} style={{display:'grid',gridTemplateColumns:'minmax(0,2.2fr) 130px 150px minmax(0,1.6fr) 120px 170px',padding:'0 20px',height:56,alignItems:'center',borderBottom:i<rows.length-1?'1px solid var(--border-default)':'none',cursor:'pointer',font:'400 14px/1.2 var(--font-sans)'}}>
+      <span style={{color:'var(--text-link)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',paddingRight:16}}>{t.title}</span>
+      <span style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--text-secondary)'}}><Icons.clock size={15}/>{t.due}</span>
+      <span><Badge tone={ph[t.phase]} pill={false}>{t.phase}</Badge></span>
+      <span style={{color:'var(--text-secondary)',textTransform:'uppercase',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',paddingRight:16}}>{t.buyer}</span>
+      <span style={{color:'var(--text-secondary)'}}>{t.value}</span>
+      <span><VerdictChip verdict={t.verdict} size="sm"/></span></div>)}</div>}
+function Dashboard({go}){const d=window.CB_DATA;return <>
+  <PageHeader title="Good afternoon, Lena"><Button variant="secondary" icon={<Icons.grid size={16}/>}>Customize</Button></PageHeader>
+  <AskBar/><QuickActions go={go}/>
+  <SectionHead title="Key metrics" link="View reports"/>
+  <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:16}}><MetricCard label="Open tenders" value="6" delta="↑ 2" period="This week"/><MetricCard label="Requirements checked" value="187" delta="↑ 47" period="Last 7 days"/><MetricCard label="Verdicts awaiting review" value="3" delta="▲ 1" deltaTone="neutral" period="Current"/><MetricCard label="Go rate" value="50%" delta="↑ 8.3%" period="YTD"/></div>
+  <SectionHead title="Next 30 days" link="View all tenders"/>
+  <TenderTable go={go} rows={d.tenders}/></>}
+Object.assign(window,{Dashboard});

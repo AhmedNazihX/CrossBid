@@ -32,14 +32,15 @@ from crossbid.readmodel.bids import ConnectionSource
 
 UPSERT_MATRIX_ROW: Final[LiteralString] = """
 insert into matrix_rows (
-    id, requirement_id, bid_id, company_id, status, evidence, ecertis_evidence,
+    id, requirement_id, bid_id, company_id, status, agent_status, evidence, ecertis_evidence,
     agent_rationale
 ) values (
-    %(id)s, %(requirement_id)s, %(bid_id)s, %(company_id)s, %(status)s, %(evidence)s,
-    %(ecertis_evidence)s, %(agent_rationale)s
+    %(id)s, %(requirement_id)s, %(bid_id)s, %(company_id)s, %(status)s, %(agent_status)s,
+    %(evidence)s, %(ecertis_evidence)s, %(agent_rationale)s
 )
 on conflict (id) do update set
     status = excluded.status,
+    agent_status = excluded.agent_status,
     evidence = excluded.evidence,
     ecertis_evidence = excluded.ecertis_evidence,
     agent_rationale = excluded.agent_rationale
@@ -62,11 +63,16 @@ writer must stay unable to overwrite a human's disposition, so a resumed run tha
 requirement refreshes the finding and leaves the review alone. `status` is here as well as
 there because it is the one column both may write -- the agent proposes it and the reviewer
 may change it -- and at review time the reviewer's is the later word.
+
+`agent_status` is deliberately absent, which is the mirror of that rule: the reviewer's
+statement may not rewrite what the agent decided. It is what lets the workspace say a row was
+overridden *and what it was overridden from* (H24).
 """
 
 SELECT_MATRIX_ROWS: Final[LiteralString] = """
-select m.id, m.requirement_id, m.status, m.evidence, m.ecertis_evidence, m.agent_rationale,
-       m.reviewer_status, m.override_reason, m.attached_doc_ids, m.reviewed_at
+select m.id, m.requirement_id, m.status, m.agent_status, m.evidence, m.ecertis_evidence,
+       m.agent_rationale, m.reviewer_status, m.override_reason, m.attached_doc_ids,
+       m.reviewed_at
 from matrix_rows m
 join requirements r on r.id = m.requirement_id and r.company_id = m.company_id
 where m.company_id = %(company_id)s and m.bid_id = %(bid_id)s
@@ -139,6 +145,10 @@ def _params(row: MatrixRow, *, company_id: str, bid_id: str) -> dict[str, Any]:
         "bid_id": bid_id,
         "company_id": company_id,
         "status": row.status.value,
+        # Refreshed by the agent's own writer and by nobody else. `UPDATE_REVIEWED_ROW`
+        # deliberately does not name this column, so a review cannot rewrite what the agent
+        # decided -- which is the whole point of having it (H24).
+        "agent_status": None if row.agent_status is None else row.agent_status.value,
         "evidence": Jsonb([item.model_dump(mode="json") for item in row.evidence]),
         "ecertis_evidence": None if ecertis is None else Jsonb(ecertis.model_dump(mode="json")),
         "agent_rationale": row.agent_rationale,
@@ -170,6 +180,7 @@ def _matrix_row(record: Mapping[str, Any]) -> MatrixRow:
             "id": str(record["id"]),
             "requirement_id": str(record["requirement_id"]),
             "status": record["status"],
+            "agent_status": record.get("agent_status"),
             "evidence": list(record.get("evidence") or []),
             "ecertis_evidence": ecertis,
             "agent_rationale": record["agent_rationale"],

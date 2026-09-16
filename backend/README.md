@@ -75,6 +75,11 @@ disagreements, which is what a reviewer adjudicates instead of re-reading 257 la
 
 ## Spike
 
-`scripts/spike_extract.py` is the disposable SP.1 feasibility spike, with its results in
-`scripts/spike_reports/`. It is excluded from linting, typing and coverage, and is deleted when
-S3.2.1 lands. See ADR-0003.
+`scripts/spike_extract.py` was the disposable SP.1 feasibility spike. It was deleted on
+2026-09-16, three increments after S3.2.1 replaced it with `agent/nodes/extract_reqs.py`, as
+the story always said it would be: 537 lines excluded from ruff, pyright and coverage, with
+three hard-coded model slugs in a repo whose brief forbids them.
+
+Its evidence is kept, because three golden keys and ADR-0003 cite it as provenance:
+`scripts/spike_golden_de.yaml` (the 21 hand-written labels the 1.00 figure was measured
+against) and `scripts/spike_reports/`.

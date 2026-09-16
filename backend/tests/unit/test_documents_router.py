@@ -133,12 +133,21 @@ def post_pdf(api: TestClient, **part: Any) -> Any:
     )
 
 
+FAKE_BUCKET = "company-docs"
+"""Stated, not defaulted. `supabase_storage_bucket` lost its default on 2026-09-16 because a
+guessed bucket name is a bucket that does not exist: the old `company-documents` was not the
+Frankfurt project's `company-docs`, and `storage.py` swallows Storage's own 404 on purpose,
+so every upload failed with a sentence that named nothing. This test passed locally and broke
+CI, which is the difference between a developer's `.env` and a clean machine."""
+
+
 def with_storage(settings: Settings) -> Settings:
     """Settings whose env layer carries Storage wiring; the original is untouched."""
     env = settings.env.model_copy(
         update={
             "supabase_url": FAKE_SUPABASE_URL,
             "supabase_service_role_key": SecretStr(FAKE_SERVICE_KEY),
+            "supabase_storage_bucket": FAKE_BUCKET,
         }
     )
     return Settings(env=env, runtime=settings.runtime)

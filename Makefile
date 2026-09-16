@@ -77,6 +77,9 @@ test: ## Run tests, excluding those marked `live`
 test-live: ## Run only the tests that hit real services or an LLM (costs money)
 	cd $(BACKEND) && uv run pytest -m live
 
+test-db: ## Run only the tests that need a real Postgres (no LLM, no money). Needs DATABASE_URL.
+	cd $(BACKEND) && uv run pytest -m database
+
 # ---------------------------------------------------------------- dependencies
 
 deps: ## Regenerate dependencies.txt from both lock files

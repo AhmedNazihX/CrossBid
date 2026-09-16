@@ -9,8 +9,10 @@ scope. This file only covers what changed, what it cost, and what is genuinely o
 ## Where the project stands
 
 **Increment 4 is complete: 17 of 17 stories. Increment 5 is next and unstarted.**
-**4 897 tests, 100 % coverage, `make lint` clean** across both halves. The decision log runs
-to ADR-0061 with no gaps — ADR-0042 was backfilled on 2026-09-16, having been cited from
+**4 910 offline tests, 100 % coverage, `make lint` clean** across both halves, and **nine more
+that run against a real Postgres in CI** (`make test-db`) — the first time any statement in
+`crossbid/readmodel/` has been parsed by a database rather than by a fake. The decision log
+runs to ADR-0062 with no gaps; ADR-0042 was backfilled on 2026-09-16, having been cited from
 `require-company.tsx` since the day it was skipped. **Check migrations first.** A probe on
 2026-09-15 found 0007 applied: True, 0008 applied: False. Run `make migrate` before any live
 work.
@@ -20,10 +22,10 @@ ADR-0061 before anything else: it records five guarantees the code described in 
 not provide, all now delivered. What the audit *confirmed* matters as much as what it found —
 the test and lint numbers reproduce exactly, every ADR code claim it spot-checked was true,
 and the frontend is genuinely built. Two commits have landed against it, `163ccd5` and
-`6d91e28`, closing the four blockers and eleven further findings. The two largest remaining
-items are not cheap and are not decisions: **no SQL is executed against Postgres in the suite
-or in CI**, and **the frontend has no tests at all**. Three of the four blockers lived in the
-frontend, which is the argument for the second one.
+`6d91e28`, closing the four blockers and eleven further findings. Of the two largest
+findings, the first is closed — the SQL now runs against a throwaway pgvector on every push
+(ADR-0062) — and **the frontend still has no tests at all**. Three of the four blockers lived
+in the frontend, which is the whole argument for closing that one next.
 
 What a bidder can now do, end to end: sign in with a password, a magic link, register, or reset
 a password (S4.1.1, ADR-0038, ADR-0053); describe their company (S4.2.1); search TED and start a

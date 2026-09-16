@@ -631,11 +631,18 @@ def _row(
     *,
     evidence: tuple[Evidence, ...] = (),
 ) -> MatrixRow:
-    """One row, on the deterministic id a resumed run will upsert over."""
+    """One row, on the deterministic id a resumed run will upsert over.
+
+    `agent_status` is set here and nowhere else. `apply_review` overwrites `status` with the
+    reviewer's verdict, because that is what the scorer re-runs on, so this is the only
+    moment the agent's own answer exists to be recorded (H24). Both fields start equal; they
+    part company only when somebody overrules a row.
+    """
     return MatrixRow(
         id=matrix_row_id(requirement.id),
         requirement_id=requirement.id,
         status=status,
+        agent_status=status,
         evidence=evidence,
         ecertis_evidence=ecertis,
         agent_rationale=rationale,

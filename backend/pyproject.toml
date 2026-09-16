@@ -45,7 +45,7 @@ package = false
 [tool.ruff]
 line-length = 96
 target-version = "py312"
-extend-exclude = ["scripts/spike_extract.py"]   # disposable, deleted at S3.2.1
+extend-exclude = []   # disposable, deleted at S3.2.1
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "ASYNC", "S"]
@@ -61,13 +61,14 @@ ignore = [
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 include = ["crossbid"]
-exclude = ["scripts/spike_extract.py", ".venv"]
+exclude = [ ".venv"]
 reportMissingTypeStubs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
     "live: hits real external services or an LLM; excluded from the default run",
+    "database: needs a real Postgres but spends no money; CI runs these against a throwaway",
 ]
 addopts = "-m 'not live'"
 
@@ -76,7 +77,8 @@ source = ["crossbid"]
 branch = true
 
 [tool.coverage.report]
-# The spike is disposable and excluded from coverage (SP.1); scripts are entry points.
+# `scripts/` and `tests/` sit outside `source = ["crossbid"]` already; these two patterns
+# are belt and braces. Coverage is over `crossbid/` only -- say so wherever it is quoted.
 omit = ["scripts/*", "tests/*"]
 exclude_also = [
     "if TYPE_CHECKING:",

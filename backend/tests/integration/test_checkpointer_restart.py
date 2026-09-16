@@ -1,6 +1,9 @@
 """S0.2.2's acceptance criterion: a graph's state survives an API restart.
 
-Marked `live` because it needs Postgres. The DSN is resolved exactly as the API resolves
+Marked `live` because it reaches a real service, and `database` because that service is
+only Postgres -- no model, no money -- which is what lets CI run it on every push.
+
+The DSN is resolved exactly as the API resolves
 it -- `load_settings()`: the process environment first (CI's backend job exports the
 pgvector service), the repository-root `.env` second (`make test-live` on a developer's
 machine, against the Supabase project). With no `DATABASE_URL` either way the test skips
@@ -22,7 +25,7 @@ from langgraph.graph import END, START, StateGraph
 from crossbid.db import Database
 from crossbid.settings import SettingsError, bid_run_config, load_settings
 
-pytestmark = pytest.mark.live
+pytestmark = [pytest.mark.live, pytest.mark.database]
 
 
 def resolve_dsn() -> str | None:

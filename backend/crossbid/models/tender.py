@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -49,32 +49,19 @@ class DocumentKind(StrEnum):
     TENDER_ESPD_REQUEST = "tender_espd_request"
 
 
-class TedNotice(BaseModel):
-    """A published notice, as returned by TED's Search API v3.
-
-    Only fields the product actually uses. `document_urls` point at national platforms and are
-    shown to the bidder to click — never fetched (the no-scraping rule); across the DE and FR
-    samples, none pointed at TED itself.
-    """
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    publication_number: str = Field(description="e.g. '614251-2026'")
-    title: str
-    buyer_name: str
-    buyer_country: str = Field(min_length=2, max_length=3)
-    cpv_codes: tuple[str, ...] = ()
-
-    official_language: str = Field(min_length=2, max_length=5)
-    submission_languages: tuple[str, ...] = ()
-
-    publication_date: date | None = None
-    deadline: datetime | None = None
-
-    notice_pdf_url: str | None = Field(default=None, description="TED-hosted, safe to download")
-    document_urls: tuple[str, ...] = Field(
-        default=(), description="National platform pages. Displayed, never fetched."
-    )
+# `TedNotice` lived here until 2026-09-16 and was dead: a second class of that name, with a
+# different field set (`buyer_name`, `official_language`, `cpv_codes`, `document_urls`) and
+# `extra="forbid"`, so it would have rejected a real TED payload outright. Every production
+# importer used `crossbid.models.ted.TedNotice`, and that is now the only one.
+#
+# It is deliberately *not* re-exported from `crossbid.models` in its place. Doing so was the
+# first attempt and it failed a test immediately, which is the useful part: `models.ted` is
+# the shape of somebody else's API rather than one of ours, and it holds fields that are
+# required *and* nullable -- `buyer: str | None` with no default, because TED always sends the
+# key and sometimes sends null. The package's own models may not do that (`test_models.py`
+# asserts an optional annotation carries a default), and bending `TedNotice` to fit would let
+# a caller omit a field TED always provides. So `from crossbid.models import TedNotice` is now
+# an ImportError: loud, immediate, and better than the wrong class.
 
 
 class BidSummary(BaseModel):

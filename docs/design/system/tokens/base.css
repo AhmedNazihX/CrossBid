@@ -1,0 +1,5 @@
+html{font-family:var(--font-sans);color:var(--text-primary);background:var(--surface-canvas);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{margin:0;font:var(--type-body)}
+a{color:var(--text-link);text-decoration:none}
+a:hover{color:var(--cb-stone-600);text-decoration:underline}
+*,*::before,*::after{box-sizing:border-box}

@@ -59,6 +59,7 @@ CONSTRAINT_ENUMS: dict[str, type[enum.Enum]] = {
     "requirements_source_check": RequirementSource,  # 0005 (S2.5.1)
     "matrix_rows_status_check": RowStatus,
     "matrix_rows_reviewer_status_check": ReviewerStatus,
+    "matrix_rows_agent_status_check": RowStatus,  # 0009 (H24): the agent's own verdict
     "reviews_decision_check": Decision,
     "bids_decision_check": Decision,  # 0006 (S3.4.2): the reviewer's own final call
     "documents_status_check": DocumentStatus,  # 0002 (S2.2.3)
@@ -392,6 +393,7 @@ def test_the_advisory_lock_key_is_stable() -> None:
 
 
 @pytest.mark.live
+@pytest.mark.database
 def test_migrations_are_idempotent_against_a_real_database() -> None:
     """S0.2.1's acceptance criterion: run twice, apply once, record the version."""
     # Arrange

@@ -88,6 +88,23 @@ class MatrixRow(BaseModel):
         description="Why the agent chose this status, in one or two sentences"
     )
 
+    agent_status: RowStatus | None = Field(
+        default=None,
+        description="What the agent decided, kept even after a reviewer overrules `status`",
+    )
+    """Written once, by the check loop, and never rewritten.
+
+    `status` is the row's *effective* answer: `apply_review` puts the reviewer's verdict there
+    because that is what the scorer re-runs on and what the dashboard counts. That left the
+    agent's own verdict nowhere a request could reach — only in the checkpoint — so the
+    workspace could say a row was overridden and never say what it was overridden from
+    (H24; S4.5.2 asks for exactly that).
+
+    Nullable because rows written before migration 0009 have no answer and inventing one
+    would be worse than saying nothing: for an already-overridden row, copying `status` would
+    assert the agent agreed when the record says it did not.
+    """
+
     reviewer_status: ReviewerStatus = ReviewerStatus.PENDING
     override_reason: str | None = None
     attached_doc_ids: tuple[str, ...] = ()

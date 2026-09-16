@@ -65,6 +65,10 @@ def row(
         "id": str(uuid.uuid5(uuid.NAMESPACE_URL, req.id)),
         "requirement_id": req.id,
         "status": status,
+        # As `check_loop._row` writes it: both start equal, and they part company only when
+        # somebody overrules the row. A helper that left this unset would test a shape
+        # production never produces.
+        "agent_status": status,
         "agent_rationale": "Kein Nachweis im Bestand gefunden.",
     }
     return MatrixRow(**(values | overrides))
@@ -404,3 +408,47 @@ def test_the_builder_wires_the_real_scorer() -> None:
             raise AssertionError("building the node must not borrow a connection")
 
     assert isinstance(build_apply_review(FakeDatabase()), ReviewApplier)  # type: ignore[arg-type]
+
+
+def test_a_review_never_rewrites_what_the_agent_decided() -> None:
+    """H24. `status` becomes the reviewer's answer because `score_verdict` re-runs on it —
+    which is exactly why the agent's own verdict needs a column of its own. Without it the
+    workspace could say a row was overridden and never say what it was overridden *from*, so
+    S4.5.2's criterion that the agent's original stays visible held only for an edit nobody
+    had submitted yet.
+    """
+    # Arrange
+    reqs = [requirement("Umsatz", identifier="a")]
+    rows = [row(reqs[0], RowStatus.PARTIALLY_SUPPORTED)]
+    review = ReviewSubmission(
+        decision=Decision.GO,
+        row_edits=(
+            RowEdit(
+                matrix_row_id=rows[0].id,
+                status=RowStatus.NOT_APPLICABLE,
+                override_reason="Gilt nur für Bietergemeinschaften.",
+            ),
+        ),
+    )
+
+    # Act
+    applied = apply_edits(rows, review, reviewed_at=REVIEWED_AT)
+
+    # Assert -- two answers, both legible.
+    assert applied[0].status is RowStatus.NOT_APPLICABLE, (
+        "the effective status is the reviewer's"
+    )
+    assert applied[0].agent_status is RowStatus.PARTIALLY_SUPPORTED, "the agent's survives"
+    assert applied[0].reviewer_status is ReviewerStatus.OVERRIDDEN
+
+
+def test_a_confirmed_row_keeps_both_answers_and_they_agree() -> None:
+    reqs = [requirement("Umsatz", identifier="a")]
+    rows = [row(reqs[0], RowStatus.UNSUPPORTED)]
+
+    applied = apply_edits(
+        rows, ReviewSubmission(decision=Decision.NO_GO), reviewed_at=REVIEWED_AT
+    )
+
+    assert applied[0].status is applied[0].agent_status is RowStatus.UNSUPPORTED
+    assert applied[0].reviewer_status is ReviewerStatus.CONFIRMED

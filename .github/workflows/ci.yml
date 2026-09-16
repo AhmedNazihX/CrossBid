@@ -33,8 +33,14 @@ jobs:
         working-directory: backend
 
     services:
-      # pgvector image, not plain postgres: integration tests need the extension.
-      # Tests marked `live` hit real services and are excluded from this job.
+      # pgvector image, not plain postgres: the schema declares `vector(1536)` columns, so
+      # a plain postgres cannot even run the migrations.
+      #
+      # This service went unused for three increments. Every test that would have touched it
+      # was marked `live` and deselected, so the offline suite reported 100 % coverage while
+      # no statement in `crossbid/readmodel/` had ever been parsed by a database (audit,
+      # 2026-09-15). The `database` marker is the fix: tests that need Postgres and spend no
+      # money, run on every push by the step below.
       postgres:
         image: pgvector/pgvector:pg16
         env:
@@ -81,6 +87,21 @@ jobs:
           --cov-report=term-missing
           --cov-report=xml
           --cov-fail-under=80
+
+      # Everything above this line ran without a database. These two steps are the only
+      # place the SQL is executed rather than inspected as a string.
+      - name: Apply migrations
+        env:
+          DATABASE_URL: postgresql://crossbid:crossbid@localhost:5432/crossbid_test
+        run: uv run python scripts/migrate.py
+
+      - name: pytest (needs Postgres, spends nothing)
+        env:
+          DATABASE_URL: postgresql://crossbid:crossbid@localhost:5432/crossbid_test
+        # No coverage: the gate above already measured it, and these tests exist to prove the
+        # statements parse and the tenant predicate holds against a real engine, not to add
+        # covered lines. `-m database` overrides the `-m 'not live'` in `addopts`.
+        run: uv run pytest -m database --no-cov -q
 
       - name: Upload coverage
         if: always()
