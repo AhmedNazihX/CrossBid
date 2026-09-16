@@ -37,6 +37,9 @@ dev = [
     "pyright>=1.1.390",
     "pytest>=8.3",
     "pytest-cov>=6.0",   # 80% coverage gate in CI (S0.1.4); approved by the user 2026-09-10
+    "deepeval>=4.2.3",
+    "ragas>=0.4.3",
+    "langchain-community<0.4",
 ]
 
 [tool.uv]

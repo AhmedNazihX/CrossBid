@@ -1,0 +1,282 @@
+{
+  "fixture_dir": "tests/fixtures/tenders/fr",
+  "key_state": "draft",
+  "key_verified": false,
+  "questions": 30,
+  "means": {
+    "context_recall": 0.8,
+    "context_precision": 0.5458742183349695,
+    "faithfulness": 0.9300170068027211,
+    "answer_relevancy": 0.5826350932882911
+  },
+  "per_question": [
+    {
+      "id": "FR-Q-001",
+      "scores": {
+        "context_recall": 0.0,
+        "context_precision": 0.7499999999625,
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.5305650760194967
+      }
+    },
+    {
+      "id": "FR-Q-002",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.14583333332604165,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "FR-Q-003",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.8333333332916666,
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.5070297462385686
+      }
+    },
+    {
+      "id": "FR-Q-004",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6390085801918022
+      }
+    },
+    {
+      "id": "FR-Q-005",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.9999999999,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8212085055745034
+      }
+    },
+    {
+      "id": "FR-Q-006",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.9999999999,
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.9328106769253189
+      }
+    },
+    {
+      "id": "FR-Q-007",
+      "scores": {
+        "context_recall": 0.0,
+        "context_precision": 0.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "FR-Q-008",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.9999999999,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8039608392075738
+      }
+    },
+    {
+      "id": "FR-Q-009",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.19999999998,
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "FR-Q-010",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.9999999999,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.933526923224626
+      }
+    },
+    {
+      "id": "FR-Q-011",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.99999999995,
+        "answer_relevancy": 0.7886175481339442
+      }
+    },
+    {
+      "id": "FR-Q-012",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.59999999997,
+        "faithfulness": 0.8333333333333334,
+        "answer_relevancy": 0.6089326881484263
+      }
+    },
+    {
+      "id": "FR-Q-013",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.699999999965,
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.320745035571651
+      }
+    },
+    {
+      "id": "FR-Q-014",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.759523809508619,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.517884411107783
+      }
+    },
+    {
+      "id": "FR-Q-015",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.17424242423371214,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.911052004842673
+      }
+    },
+    {
+      "id": "FR-Q-016",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.187499999990625,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8222138518745918
+      }
+    },
+    {
+      "id": "FR-Q-017",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.9999999999,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6133062452328616
+      }
+    },
+    {
+      "id": "FR-Q-018",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.7499999999625,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7998058054344597
+      }
+    },
+    {
+      "id": "FR-Q-019",
+      "scores": {
+        "context_recall": 0.0,
+        "context_precision": 0.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "FR-Q-020",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.3333333333,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.3881751256873626
+      }
+    },
+    {
+      "id": "FR-Q-021",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7497330194866848
+      }
+    },
+    {
+      "id": "FR-Q-022",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.99999999998,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7374801702481357
+      }
+    },
+    {
+      "id": "FR-Q-023",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.8333333332916666,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "FR-Q-024",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.9999999999,
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.5860938069884273
+      }
+    },
+    {
+      "id": "FR-Q-025",
+      "scores": {
+        "context_recall": 0.0,
+        "context_precision": 0.27579365078675594,
+        "answer_relevancy": 0.5011288701693082
+      }
+    },
+    {
+      "id": "FR-Q-026",
+      "scores": {
+        "context_recall": 0.0,
+        "context_precision": 0.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7832789349486332
+      }
+    },
+    {
+      "id": "FR-Q-027",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.9999999999,
+        "faithfulness": 0.8571428571428571,
+        "answer_relevancy": 0.5539773510355803
+      }
+    },
+    {
+      "id": "FR-Q-028",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.49999999995,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7810231830684303
+      }
+    },
+    {
+      "id": "FR-Q-029",
+      "scores": {
+        "context_recall": 1.0,
+        "context_precision": 0.3333333333,
+        "faithfulness": 1.0,
+        "answer_relevancy": 1.0000000000000002
+      }
+    },
+    {
+      "id": "FR-Q-030",
+      "scores": {
+        "context_recall": 0.0,
+        "context_precision": 0.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8474943992878906
+      }
+    }
+  ]
+}

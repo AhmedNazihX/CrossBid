@@ -1,0 +1,295 @@
+meta:
+  fixture_dir: tests/fixtures/tenders/fr
+  source_language: fr
+  bidder_language: de
+  derived_from: golden.yaml
+  generated_by: openai/gpt-5.6-luna
+  generated_on: '2026-09-16'
+  state: draft
+  verified_by: null
+  verified_on: null
+  method: Question wording drafted by the cheap model from each label's verbatim quote and its human-verified
+    summary; the answer and the reference passage are the label's own fields, carried across untouched.
+    Labels sampled round-robin across the pack's documents with seed 20260916. A reviewer reads the
+    `question` field only.
+questions:
+- id: FR-Q-001
+  label_id: FR-014
+  question: Muss eine Unternehmenspräsentation dem Formular DC2 beigefügt werden?
+  reference: A presentation of the bidder must be annexed to form DC2.
+  reference_contexts:
+  - Une présentation du candidat [à joindre en annexe du formulaire DC2].
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 10
+- id: FR-Q-002
+  label_id: FR-029
+  question: Muss ich die einzureichenden Dateien vorab auf Viren prüfen?
+  reference: The bidder must check its files for viruses before submitting; an infected tender counts
+    as not received.
+  reference_contexts:
+  - Le candidat s’assure avant la constitution de son pli que les fichiers transmis ne comportent
+    pas de virus.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 15
+- id: FR-Q-003
+  label_id: FR-001
+  question: Was passiert mit Angeboten, die nach Ablauf der Abgabefrist eingehen?
+  reference: Tenders arriving after the deadline are not admitted.
+  reference_contexts:
+  - Les plis parvenant après la date et l’heure limites fixées ci-dessus ne seront pas admis.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 3
+- id: FR-Q-004
+  label_id: FR-040
+  question: Ist eine gültige Versicherungsbescheinigung erforderlich?
+  reference: A valid insurance certificate.
+  reference_contexts:
+  - Une attestation d'assurance en cours de validité ;
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 17
+- id: FR-Q-005
+  label_id: FR-045
+  question: Ist für die elektronische Signatur ein qualifiziertes Zertifikat nach eIDAS erforderlich?
+  reference: Electronic signatures must use an eIDAS-qualified certificate (level 3 advanced with
+    qualified certificate, or level 4 qualified).
+  reference_contexts:
+  - La signature électronique doit reposer sur un certificat qualifié, conforme au Règlement (UE)
+    n°910/2014 du Parlement européen et du Conseil du 23 juillet 2014 sur l’identification électronique
+    et les services de confiance pour les transactions électroniques au sein du marché intérieur (eIDAS).
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 18
+- id: FR-Q-006
+  label_id: FR-035
+  question: Welche von INSEE vergebene Nummer dient als eindeutige Identifikation des Unternehmens?
+  reference: The SIREN company identifier issued by INSEE.
+  reference_contexts:
+  - Le SIREN, numéro unique d’identification délivré par l’INSEE ;
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 17
+- id: FR-Q-007
+  label_id: FR-041
+  question: Muss die Verpflichtungserklärung vollständig ausgefüllt und unterschrieben eingereicht
+    werden?
+  reference: The completed and signed acte d'engagement.
+  reference_contexts:
+  - L’acte d’engagement complété et signé ;
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 17
+- id: FR-Q-008
+  label_id: FR-034
+  question: Welche Steuerbescheinigung muss der Zuschlagsempfänger von seiner zuständigen Finanzbehörde
+    vorlegen?
+  reference: A tax-clearance certificate from the awardee's tax administration.
+  reference_contexts:
+  - Le certificat attestant la souscription des déclarations et les paiements correspondants aux impôts
+    (impôts sur le revenu, sur les sociétés, taxe sur la valeur ajoutée) délivrée par l'administration
+    fiscale dont relève l'attributaire ;
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 17
+- id: FR-Q-009
+  label_id: FR-018
+  question: Müssen sämtliche Positionen ausgefüllt werden?
+  reference: Every line of the BPU must be filled in.
+  reference_contexts:
+  - Le soumissionnaire doit obligatoirement compléter l’ensemble des lignes.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 11
+- id: FR-Q-010
+  label_id: FR-025
+  question: Welche Mindestpunktzahl muss ein Bewerber bei den Auswahlkriterien erreichen, um nicht
+    ausgeschlossen zu werden?
+  reference: Candidates scoring less than 5/10 across the four selection criteria are eliminated.
+  reference_contexts:
+  - La note finale est obtenue par la somme des critères. Elle est exprimée sur 10. Les candidats
+    n'ayant pas obtenu la note de 5/10, équivalent au niveau de capacité attendu, sont éliminés.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 13
+- id: FR-Q-011
+  label_id: FR-015
+  question: Welche Nachweise belegen die fachliche Kompetenz im ausgeschriebenen Leistungsbereich?
+  reference: The bidder must give all information justifying its competence in the contract's field.
+  reference_contexts:
+  - Le candidat donne toutes les informations permettant de justifier de sa compétence dans le domaine
+    objet du marché
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 10
+- id: FR-Q-012
+  label_id: FR-013
+  question: Welche Umstände können zum Ausschluss eines Bieters vom Vergabeverfahren führen?
+  reference: The bidder must be in none of the exclusion situations of articles L.2141-1 ff. of the
+    Code de la commande publique.
+  reference_contexts:
+  - Il permet de justifier que le candidat (individuel ou membre d’un groupement) n’entre dans aucun
+    des motifs d’exclusion de la procédure de passation mentionnés aux articles L.2141-1 et suivants
+    du Code de la commande publique.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 10
+- id: FR-Q-013
+  label_id: FR-006
+  question: Muss mein Angebot sämtliche vorgegebenen Anforderungen erfüllen?
+  reference: The tender must comply in full with the consultation file.
+  reference_contexts:
+  - L’offre du candidat doit être entièrement conforme aux exigences du dossier de consultation.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 7
+- id: FR-Q-014
+  label_id: FR-008
+  question: Welche Unterlagen müssen je nach gewählter Bewerbungsart eingereicht werden, damit die
+    Bewerbung gültig ist?
+  reference: Producing the documents listed for the chosen candidature mode is a condition of the
+    candidature's validity.
+  reference_contexts:
+  - La production des documents figurant dans le tableau ci-dessous, en fonction du mode de candidature
+    choisi, conditionne la validité de la candidature.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 9
+- id: FR-Q-015
+  label_id: FR-003
+  question: Sind von Bietern vorgeschlagene Varianten zulässig?
+  reference: Bidder-initiated variants are not allowed.
+  reference_contexts:
+  - Les variantes proposées à l’initiative des soumissionnaires ne sont pas autorisées.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 5
+- id: FR-Q-016
+  label_id: FR-027
+  question: Welche Dateiformate gelten für die Angebotsunterlagen und die finanziellen Anhänge?
+  reference: The tender must be zipped PDFs, except financial annexes which must be .xls or .xlsx.
+  reference_contexts:
+  - L’offre dématérialisée doit être constituée de documents zippés en format PDF, à l’exception des
+    annexes financières qui doivent être remises au format .xls ou .xlsx.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 15
+- id: FR-Q-017
+  label_id: FR-036
+  question: Welche ausländischen Beschäftigten müssen in einer namentlichen Liste aufgeführt werden?
+  reference: A nominative list of foreign employees subject to work authorisation under art. D.8254-2.
+  reference_contexts:
+  - La liste nominative des salariés étrangers employés et soumis à l’autorisation de travail prévue
+    à l’article D.8254-2 du Code du Travail
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 17
+- id: FR-Q-018
+  label_id: FR-042
+  question: Wer ist berechtigt, die unterschriftspflichtigen Unterlagen für das Unternehmen rechtsverbindlich
+    zu datieren und zu unterzeichnen?
+  reference: Documents requiring signature must be dated and signed by a person empowered to bind
+    the company.
+  reference_contexts:
+  - Les pièces pour lesquelles la signature est exigée doivent être datées et signées d’une personne
+    ayant le pouvoir d’engager la société.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 18
+- id: FR-Q-019
+  label_id: FR-019
+  question: Muss ein datiertes technisches Konzept eingereicht werden?
+  reference: A dated technical memorandum with the listed sections must be submitted.
+  reference_contexts:
+  - 'Un « mémoire technique » daté comportant les rubriques suivantes :'
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 12
+- id: FR-Q-020
+  label_id: FR-028
+  question: Darf die Antwort ausführbaren Code, Makros oder Skripte enthalten?
+  reference: No active code (executables, macros, ActiveX, applets, scripts) may be used in the response.
+  reference_contexts:
+  - 'Le candidat ne doit pas utiliser de code actif dans sa réponse, tels que :'
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 15
+- id: FR-Q-021
+  label_id: FR-009
+  question: Welche gleichwertigen Nachweise oder Erklärungen müssen Bieter vorlegen, die nicht in
+    Frankreich niedergelassen sind?
+  reference: A bidder not established in France produces the equivalent certificates from its home
+    country, or failing that a declaration on honour or under oath.
+  reference_contexts:
+  - Le candidat non établi en France produit les attestations et certificats équivalents dans son
+    pays d’origine ou, à défaut, une déclaration sur l'honneur ou sous serment, selon le pays considéré.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 9
+- id: FR-Q-022
+  label_id: FR-026
+  question: Müssen die Angebote elektronisch über die PLACE-Plattform eingereicht werden?
+  reference: Tenders must be submitted electronically on the PLACE platform; any other route is irregular.
+  reference_contexts:
+  - Le mode de transmission des propositions indiqué au présent article est obligatoire.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 14
+- id: FR-Q-023
+  label_id: FR-016
+  question: Welchen Gesamtjahresumsatz muss der Bieter für das letzte verfügbare Geschäftsjahr angeben?
+  reference: The bidder must state its overall annual turnover for the last available financial year.
+  reference_contexts:
+  - Son chiffre d’affaires annuel global sur le dernier exercice disponible
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 11
+- id: FR-Q-024
+  label_id: FR-004
+  question: Darf ich in meinem Angebot Vorbehalte gegen die verpflichtende Klausel zur sozialen Eingliederung
+    durch Beschäftigung äußern?
+  reference: The tender may state no reservation about the compulsory social-insertion clause.
+  reference_contexts:
+  - Les candidats ne sont pas autorisés à formuler de réserve dans leur offre sur la clause obligatoire
+    d’insertion par l’activité économique.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 6
+- id: FR-Q-025
+  label_id: FR-032
+  question: Welche Unterlagen muss der vorgesehene Zuschlagsempfänger auf Aufforderung innerhalb der
+    gesetzten Frist vorlegen?
+  reference: The presumed awardee must produce the listed documents on request or its tender is rejected.
+  reference_contexts:
+  - le soumissionnaire auquel il est envisagé d’attribuer le marché produira dans un délai approprié
+    et mentionné dans la demande du ministère les documents et informations énumérés ci-dessous, selon
+    les modalités fixées par celle-ci. Dans le cas contraire, son offre sera rejetée.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 17
+- id: FR-Q-026
+  label_id: FR-007
+  question: Welche Sprachvorgaben gelten für Angebotsunterlagen von ausländischen Behörden?
+  reference: All tender documents must be in French, or translated if issued by a foreign authority.
+  reference_contexts:
+  - Tous les documents constituant ou accompagnant l’offre doivent être rédigés en français ou traduits
+    s’ils émanent d’une autorité étrangère.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 7
+- id: FR-Q-027
+  label_id: FR-017
+  question: Muss die ausgefüllte Einheitspreisliste als Anlage 1 zur Verpflichtungserklärung eingereicht
+    werden?
+  reference: The completed unit-price schedule (BPU), annex 1 to the acte d'engagement, must be submitted.
+  reference_contexts:
+  - L’annexe 1 à l’acte d’engagement valant Bordereau des Prix Unitaires (BPU), complétée.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 11
+- id: FR-Q-028
+  label_id: FR-046
+  question: Welche elektronischen Signaturformate werden akzeptiert?
+  reference: Accepted signature formats are XAdES, CAdES or PAdES.
+  reference_contexts:
+  - Les formats de signature sont XAdES, CAdES ou PAdES tels que mentionnés aux articles 1 et 2 de
+    la décision d'exécution (UE) n° 2015/1506 de la Commission du 8 septembre 2015.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 19
+- id: FR-Q-029
+  label_id: FR-002
+  question: Wie lange müssen die Angebote ab Ablauf der Einreichungsfrist gültig bleiben?
+  reference: The tender must remain valid for four months from the submission deadline.
+  reference_contexts:
+  - Les offres sont valables pendant une durée de quatre (4) mois à compter de la date limite de remise
+    des plis.
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 3
+- id: FR-Q-030
+  label_id: FR-033
+  question: Wie alt darf die Bescheinigung über die ordnungsgemäße Zahlung der Sozialversicherungsbeiträge
+    höchstens sein?
+  reference: A social-security clearance certificate (URSSAF attestation de vigilance) less than 6
+    months old.
+  reference_contexts:
+  - Une attestation de fourniture des déclarations sociales et de paiement des cotisations et contributions
+    de sécurité sociale prévue à l’article L.243-15 du Code de sécurité sociale émanant de l’organisme
+    de protection sociale chargé du recouvrement des cotisations et des contributions datant de moins
+    de 6 mois ;
+  doc: 26023_AOO_Conseil_Architecure_SI_RC_v1.pdf
+  page: 17

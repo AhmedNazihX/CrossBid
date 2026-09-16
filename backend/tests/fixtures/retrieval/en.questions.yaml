@@ -1,0 +1,306 @@
+meta:
+  fixture_dir: tests/fixtures/tenders/en
+  source_language: en
+  bidder_language: de
+  derived_from: golden.yaml
+  generated_by: openai/gpt-5.6-luna
+  generated_on: '2026-09-16'
+  state: draft
+  verified_by: null
+  verified_on: null
+  method: Question wording drafted by the cheap model from each label's verbatim quote and its human-verified
+    summary; the answer and the reference passage are the label's own fields, carried across untouched.
+    Labels sampled round-robin across the pack's documents with seed 20260916. A reviewer reads the
+    `question` field only.
+questions:
+- id: EN-Q-001
+  label_id: EN-046
+  question: Welche Kernfunktionen müssen die Mock-ups der Simulationsübung mindestens demonstrieren?
+  reference: The simulation-exercise mock-ups must demonstrate the listed core functionalities (map
+    display, table display, and the rest).
+  reference_contexts:
+  - 'The proposed mock-ups shall demonstrate, at a minimum, the following core functionalities:'
+  doc: Annex_9_Simulation_exercise_V1.pdf
+  page: 1
+- id: EN-Q-002
+  label_id: EN-003
+  question: Wird ein Angebot abgelehnt, wenn der Zeitstempel der elektronischen Einreichung nach Ablauf
+    der Frist liegt?
+  reference: Late tenders are rejected; the eSubmission timestamp is the proof of timeliness.
+  reference_contexts:
+  - A tender received after this time-limit for receipt of tenders will be rejected.
+  doc: Invitation_to_tender_V1.pdf
+  page: 2
+- id: EN-Q-003
+  label_id: EN-011
+  question: In welchen Ländern muss ein Bieter niedergelassen sein, um teilnehmen zu dürfen?
+  reference: Access to the procedure requires establishment in an EU Member State, Norway, Iceland,
+    Liechtenstein or Switzerland.
+  reference_contexts:
+  - This procurement procedure is open on equal terms to any natural or legal person wishing to bid
+    for the assignment and established in any of the European Union Member States, Norway, Iceland,
+    Liechtenstein or Switzerland.
+  doc: Tender_Specifications_V1.pdf
+  page: 11
+- id: EN-Q-004
+  label_id: EN-004
+  question: Welche Angaben und Unterlagen müssen bereits bei Angebotsabgabe vollständig eingereicht
+    werden?
+  reference: The tender must be complete at the moment of submission.
+  reference_contexts:
+  - Tenderers must ensure that their submitted tenders contain all the information and documents required
+    by the contracting authority at the time of submission as set out in the procurement documents.
+  doc: Invitation_to_tender_V1.pdf
+  page: 2
+- id: EN-Q-005
+  label_id: EN-022
+  question: Welches Formular muss als Nachweis der Rechtsfähigkeit vollständig ausgefüllt und unterschrieben
+    eingereicht werden?
+  reference: A completed and signed Business Partners Form must be submitted as legal-capacity evidence.
+  reference_contexts:
+  - a duly filled in and signed **Business Partners Form**
+  doc: Tender_Specifications_V1.pdf
+  page: 19
+- id: EN-Q-006
+  label_id: EN-006
+  question: Wie darf ich während des Verfahrens mit der Vergabestelle Kontakt aufnehmen?
+  reference: Contact with the contracting authority is prohibited except through the defined channels.
+  reference_contexts:
+  - 'Contacts between the contracting authority and tenderers are prohibited throughout the procedure
+    save in exceptional circumstances and under the following conditions only:'
+  doc: Invitation_to_tender_V1.pdf
+  page: 3
+- id: EN-Q-007
+  label_id: EN-013
+  question: Ist für die Teilnahme eine Registrierung im EU-Teilnehmerregister mit einer PIC-Nummer
+    erforderlich?
+  reference: The tenderer must be registered in the EU Participant Register and hold a PIC.
+  reference_contexts:
+  - Any economic operator willing to participate in this call for tenders must be registered in the
+    <u>Participant Register</u>
+  doc: Tender_Specifications_V1.pdf
+  page: 12
+- id: EN-Q-008
+  label_id: EN-005
+  question: Welches Angebot wird berücksichtigt, wenn ein Bieter mehrere Angebote einreicht?
+  reference: Only one tender per tenderer is considered; if several are submitted, only the latest
+    counts.
+  reference_contexts:
+  - No more than one tender can be considered per tenderer
+  doc: Invitation_to_tender_V1.pdf
+  page: 2
+- id: EN-Q-009
+  label_id: EN-009
+  question: Muss ich angeben, ob ich generative KI wie ChatGPT zur Erstellung meines Angebots verwendet
+    habe?
+  reference: The tender must state whether generative AI was used to prepare it.
+  reference_contexts:
+  - the tenderer must clearly indicate in their offer whether generative AI systems/models such as
+    Large Language Models (e.g. ChatGPT), were utilised in the preparation of their offers.
+  doc: Tender_Specifications_V1.pdf
+  page: 32
+- id: EN-Q-010
+  label_id: EN-001
+  question: Über welchen Weg kann ich mein Angebot einreichen?
+  reference: Tenders must be submitted through eSubmission; any other route is disregarded.
+  reference_contexts:
+  - Tenders must be submitted exclusively via the electronic submission system (eSubmission) available
+    from the above website
+  doc: Invitation_to_tender_V1.pdf
+  page: 1
+- id: EN-Q-011
+  label_id: EN-012
+  question: Welche Nachweise zum Sitzland des Bieters müssen eingereicht werden?
+  reference: The tenderer must state its country of establishment and supply the evidence normally
+    acceptable there.
+  reference_contexts:
+  - each tenderer must indicate its country of establishment (in case of a joint tender – the country
+    of establishment of each group member) and must present the supporting evidence normally acceptable
+    under the law of that country.
+  doc: Tender_Specifications_V1.pdf
+  page: 11
+- id: EN-Q-012
+  label_id: EN-031
+  question: Müssen T1-Referenzprojekte auf cloudnativer Infrastruktur betrieben werden?
+  reference: Each T1 reference project must run on container, PaaS/SaaS or equivalent cloud-native
+    infrastructure.
+  reference_contexts:
+  - Modern infrastructure, such as container-based hosting
+  doc: Tender_Specifications_V1.pdf
+  page: 21
+- id: EN-Q-013
+  label_id: EN-010
+  question: Dürfen der Bieter, beteiligte Unternehmen oder Nachunternehmer EU-Sanktionsmaßnahmen unterliegen?
+  reference: Neither the tenderer nor any involved entity or subcontractor may be subject to EU restrictive
+    measures under TEU art. 29 / TFEU art. 215.
+  reference_contexts:
+  - Tenderers must ensure that no involved entities (see Section 2.4) nor any subcontractors, including
+    those which do not need to be identified in the tender (see Section 2.4.2), are subject to
+  doc: Tender_Specifications_V1.pdf
+  page: 11
+- id: EN-Q-014
+  label_id: EN-018
+  question: Sind die in der Eigenerklärung genannten Nachweise zum Nichtvorliegen von Ausschlussgründen
+    bereits mit dem Angebot einzureichen?
+  reference: The supporting evidence named in the Declaration on Honour must accompany the tender.
+  reference_contexts:
+  - The documents mentioned in the Declaration on Honour as supporting evidence on non-exclusion must
+    be provided with the tender
+  doc: Tender_Specifications_V1.pdf
+  page: 18
+- id: EN-Q-015
+  label_id: EN-042
+  question: Müssen die Mock-ups jeweils als separate JPG- oder PNG-Dateien statt als Links zu Online-Design-Tools
+    eingereicht werden?
+  reference: Each mock-up must be a separate jpg or png file; links to design tools are not accepted.
+  reference_contexts:
+  - the tenderer shall submit a separate image file for each mockup in a standard image format (i.e.
+    jpg, png). Links to online design tools or cloud-based design platforms shall not be accepted
+    as a substitute for the required image files.
+  doc: Tender_Specifications_V1.pdf
+  page: 26
+- id: EN-Q-016
+  label_id: EN-021
+  question: Welche Nachweise müssen Bieter für ihre rechtliche und berufsrechtliche Befähigung zur
+    Vertragserfüllung vorlegen?
+  reference: 'Selection criterion §3.2.1: legal and regulatory capacity to perform the contract.'
+  reference_contexts:
+  - Tenderers must prove that they have the legal capacity to perform the contract and the regulatory
+    capacity to pursue the professional activity necessary to carry out the work subject to this call
+    for tenders.
+  doc: Tender_Specifications_V1.pdf
+  page: 19
+- id: EN-Q-017
+  label_id: EN-045
+  question: Wer ist zur Unterzeichnung der Dokumente berechtigt?
+  reference: Every document must be signed by the signatory or a duly authorised representative.
+  reference_contexts:
+  - All documents must be signed by the signatories (when they are individuals) or by their duly authorised
+    representatives.
+  doc: Tender_Specifications_V1.pdf
+  page: 33
+- id: EN-Q-018
+  label_id: EN-015
+  question: Welche Vorgaben gelten für die Unabhängigkeit eines Angebots von anderen Angeboten?
+  reference: The tender must be prepared independently of every other tender in this procedure.
+  reference_contexts:
+  - Tenders must be drawn and submitted in complete independence and autonomously from the other tenders.
+  doc: Tender_Specifications_V1.pdf
+  page: 12
+- id: EN-Q-019
+  label_id: EN-036
+  question: Welche Voraussetzungen gelten für die Einhaltung der Sicherheitsanforderungen und die
+    Benennung eines verantwortlichen IT-Sicherheitsmanagers mit Vertretung?
+  reference: 'Selection criterion T3: compliance with the security appendices and a named IT Security
+    Manager with a backup.'
+  reference_contexts:
+  - Compliance with Appendix 2 and Appendix 3 of the draft<br>Contract and availability of a responsible
+    IT Security<br>Manager (including backup).
+  doc: Tender_Specifications_V1.pdf
+  page: 23
+- id: EN-Q-020
+  label_id: EN-020
+  question: Wie muss der Bieter bestätigen, dass er die Auswahlkriterien erfüllt?
+  reference: The tenderer must declare on honour that it meets the selection criteria.
+  reference_contexts:
+  - When submitting its tender each tenderer shall declare on honour that it fulfils the selection
+    criteria for this call for tenders.
+  doc: Tender_Specifications_V1.pdf
+  page: 19
+- id: EN-Q-021
+  label_id: EN-043
+  question: Muss das vollständige Finanzangebot anhand des Musters in Anlage 6 eingereicht werden?
+  reference: A complete financial tender must be submitted on the Annex 6 model.
+  reference_contexts:
+  - A complete financial tender, including the breakdown of the price, needs to be submitted. For
+    this purpose, the Annex 6 - Model financial offer shall be used.
+  doc: Tender_Specifications_V1.pdf
+  page: 32
+- id: EN-Q-022
+  label_id: EN-017
+  question: Welche Ausschlusssituationen dürfen beim Bieter nicht vorliegen?
+  reference: The tenderer must be in none of the exclusion situations of Article 138(1) of the Financial
+    Regulation.
+  reference_contexts:
+  - The objective of the exclusion criteria is to assess whether the tenderer is in any of the exclusion
+    situations listed in Article 138(1) of the Financial Regulation.
+  doc: Tender_Specifications_V1.pdf
+  page: 17
+- id: EN-Q-023
+  label_id: EN-023
+  question: Welche offizielle Registrierungsbescheinigung mit Name, Anschrift und der von den nationalen
+    Behörden vergebenen Registrierungsnummer muss eingereicht werden?
+  reference: An official registration document showing name, address and national registration number.
+  reference_contexts:
+  - a copy of any official document (i.e. official gazette, register of companies etc.) showing the
+    individual’s / contractor’s name and address and the registration number given to it by the national
+    authorities.
+  doc: Tender_Specifications_V1.pdf
+  page: 20
+- id: EN-Q-024
+  label_id: EN-014
+  question: Wie muss der KMU-Status im Teilnehmerregister eingetragen und aktuell gehalten werden?
+  reference: The tenderer's SME status in the Participant Register must be registered and current.
+  reference_contexts:
+  - Each participant needs to ensure that its SME status in the Participant Register is registered
+    and kept up to date.
+  doc: Tender_Specifications_V1.pdf
+  page: 12
+- id: EN-Q-025
+  label_id: EN-037
+  question: Welche Nachweise der technischen und beruflichen Leistungsfähigkeit müssen bereits mit
+    dem Angebot eingereicht werden?
+  reference: T1 and T2 evidence must be filed with the tender; T3 evidence only on request.
+  reference_contexts:
+  - All other (T1 and T2) of the above-specified evidence of technical and professional capacity must
+    be provided with the tender.
+  doc: Tender_Specifications_V1.pdf
+  page: 24
+- id: EN-Q-026
+  label_id: EN-016
+  question: Kann ein Unternehmen im selben Verfahren gleichzeitig als Einzelbieter und als Mitglied
+    einer Bietergemeinschaft oder in mehreren Bietergemeinschaften teilnehmen?
+  reference: A person may not appear in this procedure both as a sole tenderer and as a group member,
+    or in two groups.
+  reference_contexts:
+  - A natural or legal person cannot participate at the same time and within the same procedure either
+    as member of two or more groups of economic operators or as a sole tenderer and member of another
+    group of economic operators.
+  doc: Tender_Specifications_V1.pdf
+  page: 12
+- id: EN-Q-027
+  label_id: EN-033
+  question: Muss ich mindestens ein Drupal-Projekt mit zugangsbeschränkter, loginpflichtiger Plattform
+    aus den letzten drei Jahren nachweisen?
+  reference: 'Selection criterion T2: at least one restricted-access (login-required) Drupal platform
+    project in the last three years.'
+  reference_contexts:
+  - at least one project involving a restricted-access
+  doc: Tender_Specifications_V1.pdf
+  page: 22
+- id: EN-Q-028
+  label_id: EN-040
+  question: Wie viele Seiten darf das technische Angebot höchstens umfassen?
+  reference: The technical offer is capped at 80 A4 pages, font 11, single spaced.
+  reference_contexts:
+  - The Technical Offer shall not exceed 80 pages (A4 format, minimum font size 11, single spacing).
+  doc: Tender_Specifications_V1.pdf
+  page: 25
+- id: EN-Q-029
+  label_id: EN-028
+  question: Welchen Mindestauftragswert muss jedes T1-Referenzprojekt haben?
+  reference: Each T1 reference project must have a contract value of at least EUR 100 000.
+  reference_contexts:
+  - minimum contract value of EUR 100 000, and being comparable
+  doc: Tender_Specifications_V1.pdf
+  page: 21
+- id: EN-Q-030
+  label_id: EN-027
+  question: Wie viele Projekte mit öffentlich zugänglichen Drupal-basierten Plattformen müssen nachgewiesen
+    werden?
+  reference: 'Selection criterion T1: at least two projects involving publicly accessible Drupal-based
+    platforms.'
+  reference_contexts:
+  - at least**two projects**involving publicly
+  doc: Tender_Specifications_V1.pdf
+  page: 21

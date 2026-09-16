@@ -1,0 +1,317 @@
+meta:
+  fixture_dir: tests/fixtures/tenders/de
+  source_language: de
+  bidder_language: de
+  derived_from: golden.yaml
+  generated_by: openai/gpt-5.6-luna
+  generated_on: '2026-09-16'
+  state: draft
+  verified_by: null
+  verified_on: null
+  method: Question wording drafted by the cheap model from each label's verbatim quote and its human-verified
+    summary; the answer and the reference passage are the label's own fields, carried across untouched.
+    Labels sampled round-robin across the pack's documents with seed 20260916. A reviewer reads the
+    `question` field only.
+questions:
+- id: DE-Q-001
+  label_id: DE-220
+  question: Welche Nachweise sind für Verstöße gegen rein innerstaatliche Ausschlussgründe erforderlich?
+  reference: The notice declares purely national exclusion grounds apply, evidenced per the procurement
+    documents.
+  reference_contexts:
+  - 'Verstoß gegen die in den rein innerstaatlichen Ausschlussgründen verankerten Verpflichtungen:
+    Nachweis gemäß Vergabeunterlagen'
+  doc: 614251-2026.notice.de.pdf
+  page: 2
+- id: DE-Q-002
+  label_id: DE-040
+  question: Bis wann muss der Teilnahmeantrag bzw. das Angebot vollständig eingegangen sein?
+  reference: The offer must arrive complete before the deadline expires.
+  reference_contexts:
+  - Der Teilnahmeantrag/das Angebot muss vor Ablauf der jeweiligen Frist vollständig eingegangen sein
+    (i.d.R. 11:30:00 Uhr).
+  doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+  page: 6
+- id: DE-Q-003
+  label_id: DE-320
+  question: Welche Angaben zu meinem Unternehmen muss ich zusammen mit dem Angebot einreichen?
+  reference: The company-data annex must be completed and submitted with the offer.
+  reference_contexts:
+  - Anlage zum Angebot/Teilnahmeantrag „Unternehmensdaten“ (vom Bewerber/Bieter/anderen Unternehmen
+    auszufüllen und einzureichen)
+  doc: Anlage_Unternehmensdaten_VV2.pdf
+  page: 1
+- id: DE-Q-004
+  label_id: DE-240
+  question: Was muss ich bei der fristgerechten Abgabe des Angebots beachten?
+  reference: The offer must arrive before the deadline named in the offer form and meet the application
+    conditions.
+  reference_contexts:
+  - Ihr Angebot muss bis zum Ablauf der im Angebotsformular genannten Frist eingehen und den in den
+    Bewerbungsbedingungen genannten Anforderungen entsprechen.
+  doc: Aufforderungsschreiben_VV2_V1.pdf
+  page: 1
+- id: DE-Q-005
+  label_id: DE-010
+  question: Welche Nachweise und Erklärungen zu den Leistungskriterien müssen eingereicht werden?
+  reference: Evidence and declarations on the performance criteria must be submitted.
+  reference_contexts:
+  - Nachweise und Erklärungen zur Leistung, s. Kriterienkatalog Leistung
+  doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+  page: 3
+- id: DE-Q-006
+  label_id: DE-089
+  question: Welche Umstände und Selbstreinigungsmaßnahmen muss ich bei Vorliegen eines Ausschlussgrundes
+    in einer gesonderten Anlage erläutern?
+  reference: Where a ground applies, the circumstances and any self-cleaning measures must be explained
+    on a separate annex.
+  reference_contexts:
+  - Sofern bei Ihnen einer oder mehrere Ausschlussgründe vorliegen, erläutern Sie bitte die näheren
+    Umstände und legen Sie dar, ob und gegebenenfalls welche Selbstreinigungsmaßnahmen i. S. d. §
+    125 Abs. 1 GWB Sie durchgeführt haben.
+  doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+  page: 2
+- id: DE-Q-007
+  label_id: DE-112
+  question: Muss mein Unternehmen bestätigen, dass weder es selbst noch seine Lieferanten nach der
+    Verordnung (EU) Nr. 269/2014 gelistet sind oder von einer gelisteten Person kontrolliert werden?
+  reference: The bidder must declare that neither it nor its suppliers are listed under Regulation
+    (EU) 269/2014 or controlled by a listed person.
+  reference_contexts:
+  - 'Ich/Wir erkläre/n ferner, dass weder ich/unser Unternehmen selbst noch von mir/uns eingesetzte
+    Unterauftragnehmer, Lieferant oder sonstige Dritte Personen oder Organisation sind:'
+  doc: Eigenerklaerung_Sanktionen_Russland_VV2.pdf
+  page: 3
+- id: DE-Q-008
+  label_id: DE-390
+  question: Muss jedes Mitglied einer Bietergemeinschaft eine ausgefüllte und unterschriebene Verpflichtungsgesetz-Erklärung
+    mit dem Angebot einreichen?
+  reference: The Verpflichtungsgesetz declaration must be completed, signed and submitted with the
+    offer.
+  reference_contexts:
+  - (vom Bieter bzw. jedem Mitglied einer Bietergemeinschaft auszufüllen und unterzeichnet mit dem
+    Angebot einzureichen)
+  doc: Eigenerklaerung_Verpflichtungsgesetz_VV2.pdf
+  page: 1
+- id: DE-Q-009
+  label_id: DE-171
+  question: Welche Variante des Plausibilitätsnachweises möchten Sie mit Ihrem Angebot wählen?
+  reference: The bidder must declare with the offer which plausibility-evidence variant it intends
+    to use.
+  reference_contexts:
+  - Bei Angebotsabgabe ist die beabsichtigte Auswahl der nachfolgenden Varianten zu erklären (Ziff.
+    6.).
+  doc: Erklaerung_zur_sozialen_Nachhaltigkeit_von_IT_VV2.pdf
+  page: 7
+- id: DE-Q-010
+  label_id: DE-395
+  question: In welcher Sprache müssen einzureichende Unterlagen und die Korrespondenz mit der Beschaffungsstelle
+    verfasst sein?
+  reference: Documents, records, declarations and correspondence must be in German.
+  reference_contexts:
+  - you must submit documents, records and declarations, as well as to conduct your correspondence
+    with the Procurement Office in German.
+  doc: Information_in_English.pdf
+  page: 1
+- id: DE-Q-011
+  label_id: DE-435
+  question: Wie viele abgerechnete Personentage wurden je Referenz erbracht?
+  reference: Each reference must state the volume delivered in invoiced person-days.
+  reference_contexts:
+  - Umfang der erbrachten Leistungen in abgerechneten Personentagessätzen (PT)
+  doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+  page: 2
+- id: DE-Q-012
+  label_id: DE-193
+  question: Wie viele Leistungspunkte muss ein Angebot im Unterstützungsbereich IT-Security mindestens
+    erreichen?
+  reference: 'Criterion A 2.3: at least 45 points on the IT-security ad-hoc questions.'
+  reference_contexts:
+  - Das Angebot muss für den Unterstützungsbereich „IT-Security“ mindestens 50% der Summe der maximalen
+    Leistungspunkte in den Kriterien B 2.7 bis 2.9, mindestens 45 LP, erreichen.
+  doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+  page: 14
+- id: DE-Q-013
+  label_id: DE-517
+  question: Welches Deutschniveau müssen externe Hardware-Mitarbeiter nachweisen?
+  reference: External hardware personnel must command German at CEFR level C1 or equivalent.
+  reference_contexts:
+  - Beherrschung der deutschen Sprache (in Wort und Schrift) auf dem Niveau C1 des gemeinsamen Europäischen
+    Referenzrahmens für Sprachen
+  doc: Leistungsbeschreibung_VV2_V1.pdf
+  page: 11
+- id: DE-Q-014
+  label_id: DE-140
+  question: Müssen Auftragnehmer die VS-NfD-Vorschriften einhalten und Verschlusssachen entsprechend
+    behandeln?
+  reference: The bidder must undertake to observe the VS-NfD classified-information rules.
+  reference_contexts:
+  - Sie müssen sich als VS-NfD-Auftragnehmer verpflichten, die im VS-NfD-Merkblatt (s. Anlage 4 zum
+    Geheimschutzhandbuch des BMWK) festgelegten Bestimmungen einzuhalten und die Verschlusssachen
+    entsprechend zu behandeln.
+  doc: Verpflichtung_VS-NfD_und_VS-NfD-Merkblatt_im_Anhang_VV2.pdf
+  page: 1
+- id: DE-Q-015
+  label_id: DE-131
+  question: Muss die Erklärung dem Angebot beigefügt werden?
+  reference: The declaration must be attached to the offer.
+  reference_contexts:
+  - Diese Erklärung ist dem Angebot beizufügen.
+  doc: Verpflichtungserklaerung_Scientology_VV2.pdf
+  page: 1
+- id: DE-Q-016
+  label_id: DE-534
+  question: Müssen die Referenzaufträge ohne Lücken fortlaufend aufgelistet werden?
+  reference: The list of reference contracts must be filled in consecutively.
+  reference_contexts:
+  - Bitte füllen Sie die Liste der Referenzaufträge fortlaufend aus.
+  doc: Vordruck_Referenzen_VV2.pdf
+  page: 1
+- id: DE-Q-017
+  label_id: DE-222
+  question: Wie lange muss mein Angebot gültig bleiben?
+  reference: The offer must remain valid for eight months.
+  reference_contexts:
+  - 'Dauer, während der das Angebot gültig bleiben muss: 8 Monate'
+  doc: 614251-2026.notice.de.pdf
+  page: 8
+- id: DE-Q-018
+  label_id: DE-306
+  question: Müssen alle eingereichten PDF-Dateien mit der aktuellen Version des Adobe Acrobat Readers
+    korrekt dargestellt werden können?
+  reference: Every submitted PDF must render correctly in a current Adobe Acrobat Reader.
+  reference_contexts:
+  - Stellen Sie bei der Abgabe **aller** PDF-Dokumente (Teilnahme- und Angebotsunterlagen inkl. Eigenerklärungen,
+    eigene zusätzliche Dokumente, etc.) sicher, dass die PDF-Dateien in dem Programm Adobe Acrobat
+    Reader in der aktuellen Version korrekt dargestellt werden.
+  doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+  page: 4
+- id: DE-Q-019
+  label_id: DE-151
+  question: Wie viele Beschäftigte waren im Durchschnitt in diesem Zeitraum tätig?
+  reference: Average headcount over the same period must be stated.
+  reference_contexts:
+  - 'Durchschnittliche Anzahl der Beschäftigten in diesem Zeitraum:'
+  doc: Anlage_Unternehmensdaten_VV2.pdf
+  page: 1
+- id: DE-Q-020
+  label_id: DE-014
+  question: Müssen die geforderten Dokumente für jedes Los separat eingereicht werden?
+  reference: The required documents must be submitted separately for each lot.
+  reference_contexts:
+  - Die geforderten Dokumente sind jeweils einzeln für jedes Los einzureichen.
+  doc: Besondere_Bewerbungsbedingungen_VV2_V1.pdf
+  page: 5
+- id: DE-Q-021
+  label_id: DE-097
+  question: Mussten Sie bei einem früheren öffentlichen Auftrag wegen erheblicher oder wiederholter
+    Leistungsprobleme eine vorzeitige Vertragsbeendigung, Schadensersatz oder eine vergleichbare Sanktion
+    hinnehmen?
+  reference: The bidder must declare prior significant or persistent deficient performance that led
+    to early termination, damages or a comparable sanction.
+  reference_contexts:
+  - Hat Ihr Unternehmen eine wesentliche Anforderung bei der Durchführung eines früheren öffentlichen
+    Auftrags oder Konzessionsvertrags erheblich oder fortdauernd mangelhaft erfüllt und hat dies zu
+    einer vorzeitigen Beendigung, zu Schadensersatz oder zu einer vergleichbaren Rechtsfolge geführt?
+  doc: Eigenerklaerung_Ausschlussgruende_VV2.pdf
+  page: 4
+- id: DE-Q-022
+  label_id: DE-373
+  question: Werden auch Handlungen im Namen oder auf Anweisung von Personen oder Unternehmen erfasst,
+    die unter die genannten Kriterien fallen?
+  reference: Acting on behalf of or on the instruction of such persons or undertakings is an Article
+    5k link.
+  reference_contexts:
+  - c) durch das Handeln der Bewerber/Bieter im Namen oder auf Anweisung von Personen oder Unternehmen,
+    auf die die Kriterien der Buchstaben a) und/oder b) zutrifft.
+  doc: Eigenerklaerung_Sanktionen_Russland_VV2.pdf
+  page: 2
+- id: DE-Q-023
+  label_id: DE-120
+  question: Müssen im Auftragsfall ausreichend viele Mitarbeiter für eine Verpflichtung nach § 1 Abs.
+    1 VerpflG bereitgestellt werden?
+  reference: The bidder declares it will provide enough staff willing to be formally obligated under
+    Section 1(1) VerpflG if awarded.
+  reference_contexts:
+  - Ich/Wir erkläre(n), dass ich/wir das Dokument „Verpflichtung der Auftragnehmerseite nach dem Verpflichtungsgesetz“
+    inkl. der zugehörigen Anlagen zur Kenntnis genommen habe(n) und im Falle der Auftragserteilung
+    eine ausreichende Anzahl an Mitarbeiter/innen zur Verfügung stellen werde(n), die mit einer Verpflichtung
+    auf die gewissenhafte Erfüllung seiner/ihrer Obliegenheiten nach § 1 Abs. 1 VerpflG einverstanden
+    sind.
+  doc: Eigenerklaerung_Verpflichtungsgesetz_VV2.pdf
+  page: 2
+- id: DE-Q-024
+  label_id: DE-434
+  question: Muss bei jeder Referenz angegeben werden, ob die Leistung als Hauptauftragnehmer oder
+    Unterauftragnehmer erbracht wurde?
+  reference: Each reference must say whether the service was delivered as main contractor or subcontractor.
+  reference_contexts:
+  - ob die Leistung als Haupt- oder Unteraufragnehmer erbracht wurde und
+  doc: Kriterienkatalog_Eignung_VV2_V1.pdf
+  page: 2
+- id: DE-Q-025
+  label_id: DE-191
+  question: Wie viele Leistungspunkte müssen bei den Ad-hoc-Fragen zur Netzwerk- und Informationstechnik
+    mindestens erreicht werden?
+  reference: 'Criterion A 2.1: at least 45 points on the network-technology ad-hoc questions.'
+  reference_contexts:
+  - Das Angebot muss für die Ad-Hoc-Fragen im Unterstützungsbereich „Netzwerk- und Informationstechnik“
+    mindestens 50% der Summe der maximalen Leistungspunkte in den Kriterien B 2.1 bis 2.3, d. h. mindestens
+    45 LP , erreichen.
+  doc: Kriterienkatalog_Leistung_VV2_V1_VEROeFFENTLICHT.pdf
+  page: 13
+- id: DE-Q-026
+  label_id: DE-504
+  question: Wie viele Referenzen sind für Junior- und Senior-Profile zum Nachweis praktischer Erfahrung
+    in der Planung individueller Sicherheitsmaßnahmen erforderlich?
+  reference: Practical experience planning individual security measures must be evidenced by one (Junior)
+    or three (Senior) references.
+  reference_contexts:
+  - Nachweis der praktischen Erfahrungen in der Planung von individuellen Sicherheitsmaßnahmen in
+    Vorbereitung und Durchführung von IPv6-Migrationsprojekten im Kontext von Sicherheitsmaßnahmen
+    zur weiteren Härtung des Netzwerks oder Systems anhand von **mind. einer Referenz (Junior) bzw.
+    mindesten drei Referenzen (Senior).**
+  doc: Leistungsbeschreibung_VV2_V1.pdf
+  page: 13
+- id: DE-Q-027
+  label_id: DE-520
+  question: Wie muss die VS-NfD-Verpflichtungserklärung ausgefüllt, unterzeichnet und eingereicht
+    werden?
+  reference: The VS-NfD undertaking must be completed, signed or sealed (or electronically signed)
+    and submitted.
+  reference_contexts:
+  - vom VS-NfD-Auftragnehmer = Bewerber/Bieter/Auftragnehmerin auszufüllen, mit Unterschrift und Stempel
+    zu versehen oder elektronisch zu signieren und einzureichen;
+  doc: Verpflichtung_VS-NfD_und_VS-NfD-Merkblatt_im_Anhang_VV2.pdf
+  page: 1
+- id: DE-Q-028
+  label_id: DE-530
+  question: Welche Referenzen müssen zum Nachweis der technischen und beruflichen Leistungsfähigkeit
+    eingereicht werden?
+  reference: A list of suitable references related to the subject matter must be submitted as evidence
+    of technical capability.
+  reference_contexts:
+  - Zum Nachweis Ihrer technischen und beruflichen Leistungsfähigkeit reichen Sie bitte eine Liste
+    von geeigneten Referenzen in Bezug zur gegenständlichen Leistung ein.
+  doc: Vordruck_Referenzen_VV2.pdf
+  page: 1
+- id: DE-Q-029
+  label_id: DE-221
+  question: Bis wann müssen die Angebote eingegangen sein?
+  reference: Offers must be received by 6 October 2026, 11:30 (CEST).
+  reference_contexts:
+  - 'Frist für den Eingang der Angebote: 06/10/2026 11:30:00 (UTC+02:00) Osteuropäische Zeit, Mitteleuropäische
+    Sommerzeit'
+  doc: 614251-2026.notice.de.pdf
+  page: 8
+- id: DE-Q-030
+  label_id: DE-301
+  question: Welche Angaben zur eindeutigen Identifizierung des Unternehmens und der handelnden Person
+    müssen im Teilnahmeantrag und Angebot enthalten sein?
+  reference: The request and the offer must identify the economic operator unambiguously (company,
+    legal form, address, acting person).
+  reference_contexts:
+  - Teilnahmeantrag und Angebot müssen eindeutige Angaben über Sie als Wirtschaftsteilnehmer enthalten
+    (Firma inkl. Rechtsform, Adresse, Name der handelnden Person).
+  doc: Allgemeine_Bewerbungsbedingungen_elektronisch.pdf
+  page: 3
