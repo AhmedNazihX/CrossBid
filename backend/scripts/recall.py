@@ -12,8 +12,10 @@ YAML is loaded on its own so the script runs in a checkout with no `.env`.
 (ADR-0012), so the rows come from a saved `ExtractionResult`. To produce a real one, run
 `make test-live` — `tests/integration/test_bid_run_live.py` writes the run it measures to
 `tests/fixtures/extractions/` — and score the file it leaves behind. The results committed
-today are `source: synthetic`: built from the golden labels to exercise this script, and
-marked on every report so their number is never mistaken for a measurement.
+today are `source: synthetic`: built from the golden labels by
+`scripts/build_extraction_fixtures.py` to exercise this script, and marked on every report so
+their number is never mistaken for a measurement. `make extraction-fixtures` rebuilds them and
+a test fails if what is committed is not what a fresh build produces (ADR-0078).
 
 **How a reviewer closes S6.4** — done for all three tenders on 2026-09-13, and kept here
 because the procedure is the deliverable. The report lists, per tender, the golden labels

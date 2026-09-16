@@ -45,6 +45,7 @@ from datetime import UTC, datetime
 from typing import Any, Final, Optional
 
 from langchain_core.runnables import RunnableConfig
+from langgraph.store.base import BaseStore
 from pydantic import ValidationError
 
 from crossbid.agent.nodes.score_verdict import VerdictScorer, build_score_verdict
@@ -204,6 +205,11 @@ async def finalize(
     return {"decision": review_of(state).decision}
 
 
-def build_apply_review(db: ConnectionSource) -> ReviewApplier:
-    """The node as the graph wires it, over the same scorer `score_verdict` uses."""
-    return ReviewApplier(build_score_verdict(db))
+def build_apply_review(db: ConnectionSource, store: BaseStore) -> ReviewApplier:
+    """The node as the graph wires it, over the same scorer `score_verdict` uses.
+
+    The store travels with the connection for that reason alone: "the same scorer" is only a
+    true sentence while both are built from the same two dependencies, and a reviewer's
+    statuses re-scored against a different view of the bidder would not be a re-score.
+    """
+    return ReviewApplier(build_score_verdict(db, store))

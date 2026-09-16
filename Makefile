@@ -15,7 +15,7 @@ FRONTEND := frontend
 COMPOSE  := docker compose --env-file .env -f infra/docker-compose.yml
 
 .PHONY: help dev dev-api dev-web up down logs install test test-live lint lint-backend \
-        lint-frontend format deps deps-check migrate seed-dev seed-demo demo-pack adversarial-pack eval \
+        lint-frontend format deps deps-check migrate seed-dev seed-demo demo-pack adversarial-pack extraction-fixtures eval \
         eval-db eval-db-stop eval-index eval-retrieval \
         build clean require-env
 
@@ -107,6 +107,9 @@ demo-pack: ## Rebuild the synthetic demo-company document pack (S6.3)
 
 adversarial-pack: ## Rebuild the adversarial fixtures the injection guard is tested against (S6.5)
 	cd $(BACKEND) && uv run python scripts/build_adversarial_pack.py
+
+extraction-fixtures: ## Rebuild the synthetic extraction fixtures `recall.py` runs offline against (S3.2.3)
+	cd $(BACKEND) && uv run python scripts/build_extraction_fixtures.py
 
 eval: ## Assemble backend/evaluations/REPORT.md from the saved measurements. Offline, free
 	cd $(BACKEND) && uv run python scripts/run_eval.py

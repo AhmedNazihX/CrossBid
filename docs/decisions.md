@@ -5533,3 +5533,104 @@ against 29 before, and the mechanical checks 5. Those narrow what a person reads
 is still set by hand, and `questions.py` still refuses to call a file verified without a name
 and a date. The human pass found what four automated checks did not, and that ordering is the
 finding: **automation narrows, people verify.**
+
+## ADR-0077 — The agent's memory is read, or it is not memory
+
+**Date:** 2026-09-16 · **Stories:** S2.4.1, S3.3.1, S3.4.1 · **Status:** accepted
+
+The LangGraph Store namespace `profile/{company_id}` was written by two callers — the company
+form and the demo seed — and **read by nobody**. `routers/companies.py` said in its own
+docstring that the Store "is what the agent reads"; `memory/profile.py` said `check_reqs`
+reasons from it. Both nodes that want the bidder's facts, `plan_checks` and `score_verdict`,
+went to the `companies` row through `CompaniesReadModel`, and the graph was compiled with a
+checkpointer and no store at all. It was the clearest surviving hallucination in the backend
+(audit finding H9), and it sat under the one row of the graded table — *Medium 2, long- and
+short-term memory* — that has nowhere else to point.
+
+**`RememberedProfile` is the read.** It satisfies the `CompanyLookup` protocol the two nodes
+were already built on, so neither node changed: memory first, the row behind it. Order
+matters and it is that way round deliberately — reading the row first would leave the
+namespace a write nobody opens, which is the finding rather than the fix.
+
+**The row stays the source of truth, and three things keep the memory honest about it.**
+
+1. Every save rewrites the item, as it always did.
+2. A save whose Store write **fails now deletes the item** instead of leaving the superseded
+   figures behind it. This is the hazard the change introduces and the reason the delete
+   exists: a bidder corrects their headcount, the row lands, the Store write does not, and
+   under memory-first reading the next bid would be checked against yesterday's number with
+   nothing on screen to say so. A miss is answered from the row; a stale hit is not answered
+   at all. The bidder still gets the same single `warning` — they are already being told to
+   retry, and the retry rewrites the item outright.
+3. A namespace with nothing in it is answered from the row **and repaired on the way out**,
+   which is what every company saved before this ADR gets on its first bid.
+
+**Nothing here fails a run the row could have answered.** A Store that cannot be read, an item
+written by an older build that no longer validates, a repair that cannot be written — each is
+a warning in the log and a fall through. What is deliberately *not* caught is the row itself
+failing: `plan_checks` and `score_verdict` each already decide what a run survives, and a
+memory that swallowed a dead database would check a pack against a bidder from nowhere.
+
+**`compile(store=…)` was not added.** Nothing resolves the store from the runnable config —
+the two nodes take it as a constructor argument, which is how every other collaborator in
+this graph arrives and what lets `RememberedProfile` be tested without compiling anything. A
+keyword whose only purpose is to look like the documented pattern is exactly the sort of
+claim this audit exists to remove. `build_apply_review` takes it too, because "the same
+scorer re-runs on the reviewer's statuses" (ADR-0025) is only true while both scorers are
+built from the same two dependencies.
+
+`tests/unit/test_remembered_profile.py` pins the eight paths; the three builder tests now
+assert the lookup is a `RememberedProfile` rather than that the node merely exists, because
+wiring the read model straight back in is precisely the regression.
+
+## ADR-0078 — The synthetic extraction fixtures have a generator, and it writes their method
+
+**Date:** 2026-09-16 · **Stories:** S3.2.3, S6.4 · **Status:** accepted
+
+`tests/fixtures/extractions/{de,fr,en}.json` carried a `meta.method` that described a script
+building them from the answer key — and **no such script was ever committed**, in the tree or
+in any commit. The numbers in that paragraph had also moved on without it: it claimed a
+denominator of 219 where the key scores 177, and 16 dropped labels where the file missed 11.
+The one artefact in this repository whose entire value is honest provenance could not be
+reproduced and misstated its own method (audit finding H23). Every other generated thing here
+— the demo pack, the adversarial pack, the eCertis cache, the retrieval question sets — has a
+build script and a test that rebuilds it and compares.
+
+**`scripts/build_extraction_fixtures.py` is that script, written forward rather than
+reverse-engineered.** The committed fixtures were regenerated from it, so what is on disk is
+now what the code produces; nothing pinned their old contents, only that each clears its
+threshold, and all three still do (0.93 against a 0.90 gate).
+
+**The base is `eval.recall.scored_labels`, imported rather than restated.** The generator and
+the scorer therefore cannot disagree about what the denominator is — which is exactly the
+disagreement the stale `method` was a record of. Every scored label becomes a row, less every
+13th, so recall is short of 1.00 and the miss list is a branch the offline run actually
+reaches. Some kept quotes are widened against the real page and some trimmed, both inside
+`eval/matching.py`'s stated tolerance, so a fixture that quoted every label back verbatim does
+not leave the matcher untested. Three deliberate imperfections keep the reviewer's other lists
+from being permanently empty: a contract-performance row, two sentences from documents the key
+does not label, and two rows with a judgement field changed — restricted to the two fields
+`DisagreementField` actually reports, so the file cannot claim a disagreement the report does
+not show.
+
+**`meta.method` is counted off the rows the build produced, never typed.** That is the part
+that matters: the failure was not a wrong sentence, it was a sentence that *could* go wrong
+independently of the file. Now the only way to change the description is to change the code
+that writes it.
+
+**The build refuses rather than writes** when a quote is not a verbatim span of the page it
+cites, using `extract_reqs._is_verbatim` — the extractor's own predicate, the same one
+`test_recall_script.py` checks the committed files with from the other side. A synthetic
+fixture is one careless edit from being a fabrication, and that check is what stands between
+them.
+
+`make extraction-fixtures` rebuilds; `--check` verifies and writes nothing.
+`tests/unit/test_extraction_fixtures.py` asserts a fresh build equals what is committed, and
+runs the write path against a temporary directory rather than the real one — pointed at the
+real directory it would rewrite the committed files as a side effect of the test meant to
+catch them drifting, and the tree would come out dirty with nothing failing.
+
+**One thing found on the way.** `eval/suite.py`'s `precision_split`, added in S7.1, had no
+test at all: the repository's 100 % coverage claim was 99.96 % and had been since. Five tests
+close it, and the floor is worth running as `--cov-fail-under=100` rather than trusting the
+number in a heading.

@@ -42,6 +42,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.tools import BaseTool, StructuredTool
+from langgraph.store.memory import InMemoryStore
 from pydantic import BaseModel, ValidationError
 
 from crossbid.agent.nodes import check_loop as check_loop_module
@@ -74,6 +75,7 @@ from crossbid.agent.nodes.check_reqs import (
 from crossbid.agent.state import BidState, CheckUpdate
 from crossbid.guards.wrap import DATA_BLOCK_POSTAMBLE, DATA_BLOCK_PREAMBLE, DataWrapError
 from crossbid.ingestion.embeddings import ChunkMatch, EmbeddingsClient
+from crossbid.memory.profile import RememberedProfile
 from crossbid.models.company import CompanyProfile, LegalForm
 from crossbid.models.matrix import MatrixRow, RowStatus
 from crossbid.models.requirement import Checkability
@@ -956,8 +958,12 @@ async def test_a_database_that_is_down_stops_the_run() -> None:
 # ================================================================= building for production
 
 
-def test_the_planner_is_built_over_the_companies_read_model() -> None:
-    assert isinstance(build_plan_checks(FakeConnectionSource()), CheckPlanner)
+def test_the_planner_is_built_over_the_agents_memory_not_the_row_alone() -> None:
+    """ADR-0077. Wiring the read model straight in is exactly the regression H9 was."""
+    planner = build_plan_checks(FakeConnectionSource(), InMemoryStore())
+
+    assert isinstance(planner, CheckPlanner)
+    assert isinstance(planner._companies, RememberedProfile)
 
 
 def test_the_checker_is_built_from_settings_without_opening_a_socket(

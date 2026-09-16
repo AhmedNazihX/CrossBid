@@ -14,6 +14,7 @@ import uuid
 from typing import Any
 
 import pytest
+from langgraph.store.memory import InMemoryStore
 
 from crossbid.agent.nodes.score_verdict import (
     DEFAULT_TONE,
@@ -21,6 +22,7 @@ from crossbid.agent.nodes.score_verdict import (
     build_score_verdict,
 )
 from crossbid.agent.state import BidState
+from crossbid.memory.profile import RememberedProfile
 from crossbid.models.company import CompanyProfile, LegalForm, Tone
 from crossbid.models.matrix import MatrixRow, RowStatus
 from crossbid.models.requirement import (
@@ -223,11 +225,17 @@ async def test_the_node_logs_what_it_decided(caplog: pytest.LogCaptureFixture) -
     assert f"Bid {BID_ID} scored no_go" in caplog.text
 
 
-def test_the_builder_wires_the_real_companies_read_model() -> None:
+def test_the_builder_wires_the_agents_memory_over_the_read_model() -> None:
+    """ADR-0077. The verdict states the bidder's figures, so it states the remembered ones."""
+
     # Arrange
     class FakeDatabase:
         def connection(self) -> Any:  # pragma: no cover -- never borrowed here
             raise AssertionError("building the node must not borrow a connection")
 
-    # Act / Assert
-    assert isinstance(build_score_verdict(FakeDatabase()), VerdictScorer)  # type: ignore[arg-type]
+    # Act
+    scorer = build_score_verdict(FakeDatabase(), InMemoryStore())  # type: ignore[arg-type]
+
+    # Assert
+    assert isinstance(scorer, VerdictScorer)
+    assert isinstance(scorer._companies, RememberedProfile)

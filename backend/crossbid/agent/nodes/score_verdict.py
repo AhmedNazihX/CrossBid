@@ -37,11 +37,13 @@ from datetime import UTC, date, datetime
 from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
+from langgraph.store.base import BaseStore
 
 from crossbid.agent.flags import flag_rows
 from crossbid.agent.nodes.check_reqs import CompanyLookup
 from crossbid.agent.scoring import score
 from crossbid.agent.state import BidState, ScoreUpdate, bidder_language_of
+from crossbid.memory.profile import RememberedProfile
 from crossbid.models.company import CompanyProfile, Tone
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.verdict import Verdict
@@ -149,6 +151,10 @@ class VerdictScorer:
             return None
 
 
-def build_score_verdict(db: ConnectionSource) -> VerdictScorer:
-    """The node as the graph wires it: the real companies read model over the pool."""
-    return VerdictScorer(CompaniesReadModel(db))
+def build_score_verdict(db: ConnectionSource, store: BaseStore) -> VerdictScorer:
+    """The node as the graph wires it: the agent's own memory, over the read model (ADR-0077).
+
+    The same pairing `build_plan_checks` is built from, and for the same reason: the verdict
+    states the bidder's recorded figures, so it must state the ones the agent remembers.
+    """
+    return VerdictScorer(RememberedProfile(store, CompaniesReadModel(db)))

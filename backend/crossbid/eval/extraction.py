@@ -5,10 +5,15 @@ Extraction costs money. One DE-pack run is 49 model calls, $1.38 and five minute
 produced. This module is that artefact's shape.
 
 **Provenance is a field, not a filename convention.** `source` says whether the rows came
-from a real model run or were built by hand, and the report prints a warning across the top
-of every synthetic one. A recall figure scored against a hand-built file is not a
+from a real model run or were built from the answer key, and the report prints a warning
+across the top of every synthetic one. A recall figure scored against a built file is not a
 measurement of anything; it exercises the script. Losing that distinction is exactly how a
 demonstration figure ends up quoted as a result.
+
+**And `method` is written by whatever produced the file, never typed.** It used to be prose
+describing a generator that had never been committed, quoting a denominator that had since
+moved (ADR-0078). A provenance note nobody can re-derive is the one kind of documentation
+that is worse than none.
 
 **The result names its own tender.** `fixture_dir` is repo-relative from `backend/`, the same
 convention `GoldenMeta` uses, and `golden_path` resolves the answer key from it. So a result
@@ -44,8 +49,9 @@ class ExtractionSource(StrEnum):
     """How the rows in a result file were produced.
 
     `LIVE_RUN` is the graph against OpenRouter on the real pack — the only kind of file whose
-    recall figure is a measurement. `SYNTHETIC` is hand-built from the golden labels to
-    exercise the script offline, and says so on every report it appears in.
+    recall figure is a measurement. `SYNTHETIC` is built from the golden labels by
+    `scripts/build_extraction_fixtures.py` to exercise the script offline, and says so on
+    every report it appears in.
     """
 
     LIVE_RUN = "live_run"

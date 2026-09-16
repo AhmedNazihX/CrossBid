@@ -58,6 +58,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from typing import Final, Optional, Protocol
 
 from langchain_core.runnables import RunnableConfig
+from langgraph.store.base import BaseStore
 
 from crossbid.agent.nodes.check_loop import (
     Bidder,
@@ -75,6 +76,7 @@ from crossbid.agent.state import (
 )
 from crossbid.ingestion.embeddings import EmbeddingsClient
 from crossbid.llm import chat_model, resilient
+from crossbid.memory.profile import RememberedProfile
 from crossbid.models.company import CompanyProfile
 from crossbid.models.requirement import Requirement
 from crossbid.readmodel.bids import ConnectionSource
@@ -227,9 +229,15 @@ class CheckPlanner:
         return profile.country
 
 
-def build_plan_checks(db: ConnectionSource) -> CheckPlanner:
-    """The node as the graph wires it: the real companies read model over the pool."""
-    return CheckPlanner(CompaniesReadModel(db))
+def build_plan_checks(db: ConnectionSource, store: BaseStore) -> CheckPlanner:
+    """The node as the graph wires it: the agent's own memory, over the read model (ADR-0077).
+
+    Two dependencies from one `Database` at the call site, and they are two on purpose —
+    `RememberedProfile` needs a namespace to read and a row to fall back to, and a builder
+    that took the whole `Database` would couple this node to the concrete class rather than
+    to the two protocols it actually uses.
+    """
+    return CheckPlanner(RememberedProfile(store, CompaniesReadModel(db)))
 
 
 # -------------------------------------------------------------------------- check_reqs

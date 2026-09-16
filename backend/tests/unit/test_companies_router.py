@@ -116,14 +116,24 @@ class InMemoryCompanies:
 class RecordingStore:
     """The slice of LangGraph's `BaseStore` the router uses, with an optional failure."""
 
-    def __init__(self, error: Exception | None = None) -> None:
+    def __init__(
+        self, error: Exception | None = None, *, delete_error: Exception | None = None
+    ) -> None:
         self.items: dict[tuple[tuple[str, ...], str], dict[str, Any]] = {}
         self._error = error
+        self._delete_error = delete_error
+        self.deletes: list[tuple[tuple[str, ...], str]] = []
 
     async def aput(self, namespace: tuple[str, ...], key: str, value: dict[str, Any]) -> None:
         if self._error is not None:
             raise self._error
         self.items[(namespace, key)] = value
+
+    async def adelete(self, namespace: tuple[str, ...], key: str) -> None:
+        self.deletes.append((namespace, key))
+        if self._delete_error is not None:
+            raise self._delete_error
+        self.items.pop((namespace, key), None)
 
 
 # ----------------------------------------------------------------------------- fixtures
@@ -388,6 +398,56 @@ def test_a_failed_store_write_is_a_200_carrying_a_warning_not_a_failed_save(
         "this line is the only record of why the Store write failed, and the bidder is told "
         "to retry — a recurring failure is undiagnosable without the frame it happened in"
     )
+
+
+def test_a_failed_store_write_forgets_the_stale_memory_rather_than_leaving_it(
+    offline_settings: Settings, records: InMemoryCompanies
+) -> None:
+    """Since ADR-0077 the agent *reads* this item, so a stale one is worse than none at all.
+
+    The hazard is specific: a bidder corrects their headcount, the row is written, the Store
+    write fails, and the next bid is checked against yesterday's figure with nothing on screen
+    to say so. Deleting turns that into a miss, and a miss is answered from the row.
+    """
+    # Arrange
+    stale = PROFILE.model_dump(mode="json")
+    store = RecordingStore(error=RuntimeError("connection pool exhausted"))
+    store.items[(profile_namespace(COMPANY), PROFILE_STORE_KEY)] = stale
+
+    # Act
+    with build_api(offline_settings, records, store) as api:
+        response = api.put(
+            "/companies/me",
+            json=body_of(PROFILE.model_copy(update={"staff_fte": 60.0})),
+            headers=AS_COMPANY,
+        )
+
+    # Assert
+    assert response.json()["warning"] == MEMORY_NOT_UPDATED_WARNING
+    assert store.deletes == [(profile_namespace(COMPANY), PROFILE_STORE_KEY)]
+    assert (profile_namespace(COMPANY), PROFILE_STORE_KEY) not in store.items
+
+
+def test_a_forget_that_also_fails_is_still_one_warning_and_no_raise(
+    offline_settings: Settings, records: InMemoryCompanies
+) -> None:
+    """A Store that is down fails both calls. The save still landed, so the answer is 200."""
+    # Arrange
+    store = RecordingStore(
+        error=RuntimeError("connection pool exhausted"),
+        delete_error=RuntimeError("connection pool exhausted"),
+    )
+    store.items[(profile_namespace(COMPANY), PROFILE_STORE_KEY)] = PROFILE.model_dump(
+        mode="json"
+    )
+
+    # Act
+    with build_api(offline_settings, records, store) as api:
+        response = api.put("/companies/me", json=body_of(PROFILE), headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 200
+    assert response.json()["warning"] == MEMORY_NOT_UPDATED_WARNING
 
 
 def test_a_save_that_wrote_both_carries_no_warning(api: TestClient) -> None:

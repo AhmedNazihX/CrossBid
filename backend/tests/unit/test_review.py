@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
+from langgraph.store.memory import InMemoryStore
 
 from crossbid.agent.nodes.review import (
     NOTHING_TO_REVIEW,
@@ -27,6 +28,7 @@ from crossbid.agent.nodes.review import (
 )
 from crossbid.agent.nodes.score_verdict import VerdictScorer
 from crossbid.agent.state import BidState
+from crossbid.memory.profile import RememberedProfile
 from crossbid.models.company import CompanyProfile, LegalForm, Tone
 from crossbid.models.matrix import Evidence, MatrixRow, ReviewerStatus, RowStatus
 from crossbid.models.requirement import Requirement
@@ -402,12 +404,19 @@ def test_the_default_clock_is_timezone_aware() -> None:
     assert utc_now().tzinfo is not None
 
 
-def test_the_builder_wires_the_real_scorer() -> None:
+def test_the_builder_wires_the_real_scorer_over_the_same_memory() -> None:
+    """ADR-0077: "the same scorer" means the same two dependencies, store included."""
+
     class FakeDatabase:
         def connection(self) -> Any:  # pragma: no cover -- never borrowed here
             raise AssertionError("building the node must not borrow a connection")
 
-    assert isinstance(build_apply_review(FakeDatabase()), ReviewApplier)  # type: ignore[arg-type]
+    store = InMemoryStore()
+
+    applier = build_apply_review(FakeDatabase(), store)  # type: ignore[arg-type]
+
+    assert isinstance(applier, ReviewApplier)
+    assert isinstance(applier._scorer._companies, RememberedProfile)
 
 
 def test_a_review_never_rewrites_what_the_agent_decided() -> None:

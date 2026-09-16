@@ -16,6 +16,7 @@ from typing import Any
 import pytest
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
 
 from crossbid.agent import graph as graph_module
@@ -181,6 +182,7 @@ class FakeDatabase:
 
     def __init__(self) -> None:
         self.checkpointer = MemorySaver()
+        self.store = InMemoryStore()
 
     def connection(self) -> Any:  # pragma: no cover -- never borrowed in these tests
         raise AssertionError("the graph must not borrow a connection here")

@@ -474,7 +474,11 @@ def build_graph(
     `agent.check_concurrency` `→ score_verdict → await_review → apply_review → finalize →
     END`, compiled on the process checkpointer
     so that a run interrupted by a restart continues from its last completed node
-    (`runner.resume_unfinished_runs`). The nine keyword seams exist for tests, which run the
+    (`runner.resume_unfinished_runs`). `db.store` travels to the three nodes that want the
+    bidder's own facts — `plan_checks`, `score_verdict` and the re-score inside `apply_review`
+    — which read them from the agent's memory rather than from the row (ADR-0077).
+
+    The nine keyword seams exist for tests, which run the
     real wiring over fake nodes, a recording projection, a recording usage sink and a
     `MemorySaver`; production passes none of them. Building the real `parse_docs` raises
     `StorageError` when Storage is not configured — see `build_parse_docs` — and that is
@@ -482,10 +486,10 @@ def build_graph(
     """
     parse = parse_docs if parse_docs is not None else build_parse_docs(settings, db)
     extract = extract_reqs if extract_reqs is not None else build_extract_reqs(settings)
-    plan = plan_checks if plan_checks is not None else build_plan_checks(db)
+    plan = plan_checks if plan_checks is not None else build_plan_checks(db, db.store)
     check = check_reqs if check_reqs is not None else build_check_reqs(settings, db)
-    scorer = score_verdict if score_verdict is not None else build_score_verdict(db)
-    applier = apply_review if apply_review is not None else build_apply_review(db)
+    scorer = score_verdict if score_verdict is not None else build_score_verdict(db, db.store)
+    applier = apply_review if apply_review is not None else build_apply_review(db, db.store)
     project = projection if projection is not None else ReadModelProjection(db)
     spend = usage if usage is not None else DatabaseUsageSink(db)
     saver = checkpointer if checkpointer is not None else db.checkpointer

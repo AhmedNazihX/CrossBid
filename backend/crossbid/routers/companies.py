@@ -284,6 +284,14 @@ async def _remember(
     the caller surfaces it to the bidder. What it is not is a failed request, because the row
     it is a copy of was written (see the module docstring).
 
+    **A failed write forgets the item rather than leaving the old one behind it.** Since
+    ADR-0077 the agent reads this namespace, so an item that still holds yesterday's headcount
+    is worse than no item at all: the next bid would be checked against the superseded figure
+    and nothing on screen would say so. `RememberedProfile` answers a missing item from the
+    row, so deleting turns a silent wrong answer into a slightly slower right one. A delete
+    that fails too is the same one warning — the bidder is already being told to retry, and
+    the retry rewrites the item outright.
+
     `logger.exception`, not `logger.error`: the bidder is told to retry, so a failure that
     keeps happening will be diagnosed from this line and nothing else. The message alone
     ("connection pool exhausted") does not say which of the Store's calls raised it.
@@ -296,5 +304,18 @@ async def _remember(
         logger.exception(
             "profile for company %s was saved but not written to the Store: %s", company_id, exc
         )
+        await _forget(store, company_id=company_id)
         return MEMORY_NOT_UPDATED_WARNING
     return None
+
+
+async def _forget(store: BaseStore, *, company_id: uuid.UUID) -> None:
+    """Drop the stale item so the agent falls back to the row. Never raises; see `_remember`."""
+    try:
+        await store.adelete(profile_namespace(company_id), PROFILE_STORE_KEY)
+    except Exception as exc:
+        logger.warning(
+            "the agent's superseded memory of company %s could not be dropped either (%s)",
+            company_id,
+            type(exc).__name__,
+        )

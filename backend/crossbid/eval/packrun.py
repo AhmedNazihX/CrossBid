@@ -50,6 +50,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Final
 
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.store.memory import InMemoryStore
 
 from crossbid.agent.graph import (
     AWAIT_REVIEW,
@@ -264,6 +265,11 @@ class NoDatabase:
     """
 
     checkpointer = MemorySaver()
+    store = InMemoryStore()
+    """The agent's long-term memory, in process. `build_apply_review` is the one node a pack
+    run does not inject — it parks at the interrupt and never reaches it — so this is a store
+    that gets *constructed* and never read. It is in memory rather than absent for the same
+    reason `checkpointer` is: refusing here would fail a run over a node it never runs."""
 
     def connection(self) -> Any:
         raise AssertionError(

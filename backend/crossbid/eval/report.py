@@ -34,9 +34,12 @@ LEAKS_HEADING: Final = "STAGE-FILTER LEAKS — matched pairs whose stage disagre
 DISAGREEMENTS_HEADING: Final = "DISAGREEMENTS — matched pairs whose judgement fields differ"
 
 SYNTHETIC_WARNING: Final = (
-    "SYNTHETIC INPUT — these rows were built by hand, not extracted. The figure below "
-    "exercises the script; it measures nothing."
+    "SYNTHETIC INPUT — these rows were built from the answer key by "
+    "scripts/build_extraction_fixtures.py, not extracted. The figure below exercises the "
+    "script; it measures nothing."
 )
+"""Named rather than described: "built by hand" was true until the generator was committed
+(ADR-0078), and a reader who wants to check the claim can now run the thing that made it."""
 
 CLOSING_S6_4: Final = "How a reviewer closes S6.4"
 CLOSING_BODY: Final = (

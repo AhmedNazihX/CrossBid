@@ -18,6 +18,7 @@ from crossbid.eval.extraction import ExtractionMeta, ExtractionResult, Extractio
 from crossbid.eval.faithfulness import FaithfulnessScore
 from crossbid.eval.recall import TenderScore
 from crossbid.eval.suite import (
+    BROAD,
     MISSING,
     NO_KEY_VERIFICATION,
     VERIFIED_KEY,
@@ -30,6 +31,7 @@ from crossbid.eval.suite import (
     money,
     number,
     partial_metrics,
+    precision_split,
 )
 from crossbid.models.golden import load_golden
 from tests.conftest import requirement
@@ -181,3 +183,52 @@ def test_a_synthetic_result_is_not_a_measurement() -> None:
 def test_a_draft_answer_key_says_so() -> None:
     assert retrieval(verified=False).key_state == NO_KEY_VERIFICATION
     assert retrieval(verified=True).key_state == VERIFIED_KEY
+
+
+# --------------------------------------------------------------- precision, split by effort
+
+
+def test_precision_is_split_by_how_many_passages_the_turn_pooled() -> None:
+    """One search and three searches are not the same measurement; see `PrecisionSplit`."""
+    # Arrange
+    scores = {"q1": 0.8, "q2": 0.6, "q3": 0.3, "q4": 0.1}
+    counts = {"q1": 5, "q2": 4, "q3": BROAD, "q4": 20}
+
+    # Act
+    split = precision_split(scores, counts)
+
+    # Assert
+    assert split.narrow == pytest.approx(0.7)
+    assert split.narrow_count == 2
+    assert split.broad == pytest.approx(0.2)
+    assert split.broad_count == 2
+
+
+def test_a_question_between_the_two_bands_counts_in_neither() -> None:
+    """Six to fourteen passages is a second search the split cannot characterise."""
+    split = precision_split({"q1": 0.9}, {"q1": 9})
+
+    assert split == precision_split({}, {})
+
+
+def test_a_band_with_nothing_in_it_is_none_rather_than_zero() -> None:
+    """Zero would read as perfect failure; the honest answer is that nobody measured it."""
+    split = precision_split({"q1": 0.5}, {"q1": 5})
+
+    assert split.narrow == pytest.approx(0.5)
+    assert (split.broad, split.broad_count) == (None, 0)
+
+
+def test_a_question_ragas_could_not_score_is_left_out_of_both_means() -> None:
+    """`None` is "no score", and averaging it in as anything at all invents a measurement."""
+    split = precision_split({"q1": None, "q2": 0.4}, {"q1": 5, "q2": 5})
+
+    assert split.narrow == pytest.approx(0.4)
+    assert split.narrow_count == 1
+
+
+def test_a_question_with_no_recorded_count_is_treated_as_one_search() -> None:
+    """`counts.get(qid, 0)` — an absent count is zero passages, which is the narrow band."""
+    split = precision_split({"q1": 0.6}, {})
+
+    assert (split.narrow_count, split.broad_count) == (1, 0)
