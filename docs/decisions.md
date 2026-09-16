@@ -5950,3 +5950,25 @@ So the remaining violation is in the *declared order*, not in the code: `tools/`
 those. Moving `tools/` up beside `agent/` would describe what is built. That is a plan edit
 rather than a refactor, it is the user's call, and it is recorded here rather than done
 quietly.
+
+## ADR-0085 — Two Radix primitives, not the umbrella that ships fifty-one
+
+**Date:** 2026-09-16 · **Stories:** S4.5.1 · **Status:** accepted
+
+`radix-ui`, the umbrella package, was a dependency for **two** primitives: a dialog behind
+`components/ui/sheet.tsx` and a slot behind `components/ui/button.tsx` (audit M24). It brought
+fifty-one transitive packages and a megabyte of `node_modules` for them.
+
+`@radix-ui/react-dialog@1.1.23` and `@radix-ui/react-slot@1.3.3` — the versions the umbrella
+already resolved to, read out of `package-lock.json` so nothing was silently upgraded — are
+now direct dependencies. Both export the same names the namespaced import used (`Root`,
+`Trigger`, `Close`, `Portal`, `Overlay`, `Content` and `Slot.Root`), checked against the
+installed packages rather than assumed, so the swap is two import lines.
+`dependencies.txt` is 49 packages shorter.
+
+**`components/ui/tabs.tsx` stays hand-rolled and this does not change that.** The audit noted
+that the umbrella already paid for Radix Tabs while the app rolls its own keyboard handling —
+true, and it is the control blocker B4 was found in, which now has unit tests and an e2e
+journey holding its measured 40 px height. Replacing a tested control is a separate decision
+from removing an unused dependency, and bundling the two would have made this commit
+unreviewable.

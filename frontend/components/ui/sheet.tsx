@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from 'cn'
-import { Dialog as SheetPrimitive } from 'radix-ui'
+import * as SheetPrimitive from '@radix-ui/react-dialog'
 
 import { Icon } from './icons'
 

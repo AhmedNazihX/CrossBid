@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { cn } from 'cn'
-import { Slot } from 'radix-ui'
+import * as Slot from '@radix-ui/react-slot'
 
 /**
  * Button — `components/core/Button.jsx`: five variants, three heights (32/40/48 px),
