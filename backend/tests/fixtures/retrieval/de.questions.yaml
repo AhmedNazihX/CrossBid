@@ -5,15 +5,18 @@ meta:
   derived_from: golden.yaml
   generated_by: openai/gpt-5.6-luna
   generated_on: '2026-09-16'
-  state: draft
-  verified_by: null
-  verified_on: null
+  state: human_verified
+  verified_by: Ahmed Nazih Ali
+  verified_on: '2026-09-16'
   method: 'Each question is drafted from the label''s human-verified English summary — the field the
     metric scores against — with the verbatim quote supplied for terminology only. The draft is then
     checked by google/gemini-2.5-flash-lite on four axes: answerable from the summary alone, specific
     enough to pick out this requirement, not a restatement of its own answer, and in the bidder''s
     language. A draft that fails is re-asked once and then the label is skipped. Labels sampled round-robin
-    across the pack''s documents with seed 20260916. A reviewer reads the `question` field only.'
+    across the pack''s documents with seed 20260916. A reviewer reads the `question` field only. Reviewed
+    by Ahmed Nazih Ali on 2026-09-16: the questions the checks flagged were read against their references.
+    DE-Q-007 asked which plausibility-evidence variant applies, which the reference never states,
+    and was rewritten to ask what the bidder must declare; the remainder were accepted as asked.'
 questions:
 - id: DE-Q-001
   label_id: DE-220
@@ -78,7 +81,7 @@ questions:
   page: 1
 - id: DE-Q-007
   label_id: DE-171
-  question: Welche Variante des Plausibilitätsnachweises muss der Bieter mit dem Angebot erklären?
+  question: Was muss der Bieter bei der Angebotsabgabe hinsichtlich des Plausibilitätsnachweises erklären?
   reference: The bidder must declare with the offer which plausibility-evidence variant it intends
     to use.
   reference_contexts:

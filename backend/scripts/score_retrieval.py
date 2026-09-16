@@ -170,6 +170,11 @@ async def _score_pack(pack: TenderPack, metrics: Mapping[str, object]) -> Path:
         json.dumps(
             {
                 "fixture_dir": pack.fixture_dir,
+                # The identity of the key these numbers were measured against. A count is not
+                # enough: a regenerated key can have the same number of questions and none of
+                # the same ones, which is exactly what happened to EN on 2026-09-16 and would
+                # have put numbers from questions that no longer exist into REPORT.md.
+                "question_ids": [str(entry["id"]) for entry in scored],
                 "key_state": question_set.meta.state.value,
                 "key_verified": question_set.meta.verified,
                 "questions": len(scored),

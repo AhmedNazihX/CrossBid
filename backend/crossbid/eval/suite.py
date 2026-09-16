@@ -142,3 +142,46 @@ def partial_metrics(reports: Sequence[TenderReport]) -> tuple[str, ...]:
         names = ", ".join(sorted(r.name for r in reports if r not in scored))
         partial.append(f"retrieval: not measured for {names}")
     return tuple(partial)
+
+
+@dataclass(frozen=True)
+class PrecisionSplit:
+    """Context precision, split by how many passages the agent pooled into one turn.
+
+    The split exists because `context_precision` assumes one retrieval and the product does
+    not: a ReAct agent that is unsure searches again, and every passage from every search in
+    the turn lands in one list (`eval/retrieval.py` explains why it is pooled that way). Each
+    extra search adds five passages, of which at most a few can be relevant, so the metric
+    falls as the agent works harder. Reporting the mean alone would read as a retrieval defect.
+    """
+
+    narrow: float | None
+    """Mean where the agent searched once — at most `NARROW` passages."""
+    narrow_count: int
+    broad: float | None
+    """Mean where it searched repeatedly — `BROAD` passages or more."""
+    broad_count: int
+
+
+NARROW: Final = 5
+"""Passages one `tender_rag_search` returns by default: one search, one question."""
+
+BROAD: Final = 15
+"""Three searches or more pooled into a single turn."""
+
+
+def precision_split(
+    scores: Mapping[str, float | None], counts: Mapping[str, int]
+) -> PrecisionSplit:
+    """Split the per-question precision by how many passages each turn pooled.
+
+    `scores` is context precision per question id; `counts` is passages retrieved per id.
+    """
+    narrow = [v for qid, v in scores.items() if v is not None and counts.get(qid, 0) <= NARROW]
+    broad = [v for qid, v in scores.items() if v is not None and counts.get(qid, 0) >= BROAD]
+    return PrecisionSplit(
+        narrow=sum(narrow) / len(narrow) if narrow else None,
+        narrow_count=len(narrow),
+        broad=sum(broad) / len(broad) if broad else None,
+        broad_count=len(broad),
+    )

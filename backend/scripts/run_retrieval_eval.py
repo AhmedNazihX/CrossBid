@@ -54,6 +54,20 @@ from crossbid.settings import SettingsError, load_settings  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from index_pack import ids_for  # noqa: E402
 
+PACE_SECONDS = 4.0
+"""Pause between questions.
+
+Each question is a whole chat turn — several tool calls and an answer — so thirty of them back
+to back is a burst of well over a hundred requests in a couple of minutes. OpenRouter's upstream
+providers rate-limit that as a burst while a single request at the same moment goes through
+(measured 2026-09-16: the collection failed five times in a row while a one-token probe answered
+200). Pacing costs two minutes per tender and is the difference between a run that finishes and
+one that does not.
+"""
+
+RATE_LIMIT_PAUSE_SECONDS = 60.0
+RATE_LIMIT_ATTEMPTS = 4
+
 RETRIEVAL_DIR = BACKEND_DIR / "tests" / "fixtures" / "retrieval"
 INPUT_ERROR = 2
 
@@ -82,6 +96,26 @@ async def _ask(graph: object, question: str, thread_id: str) -> tuple[ChatTurn, 
     return turn, contexts
 
 
+async def _asked_with_backoff(
+    graph: object, question: str, thread: str
+) -> tuple[ChatTurn, list[str]]:
+    """One question, waiting out an upstream rate limit rather than losing the run.
+
+    A 429 from a provider arrives as a `ValueError` carrying the provider's JSON, which is not
+    on `llm.RETRYABLE` and so is not something `resilient` will retry. Losing question 27 of 30
+    costs the whole tender's collection, so it is worth a minute.
+    """
+    for attempt in range(RATE_LIMIT_ATTEMPTS):
+        try:
+            return await _ask(graph, question, thread)
+        except ValueError as exc:
+            if "rate-limit" not in str(exc) or attempt == RATE_LIMIT_ATTEMPTS - 1:
+                raise
+            print(f"    rate-limited; waiting {RATE_LIMIT_PAUSE_SECONDS:.0f}s", flush=True)
+            await asyncio.sleep(RATE_LIMIT_PAUSE_SECONDS)
+    raise RuntimeError("unreachable")
+
+
 async def _collect(database: Database, settings: object, pack: TenderPack) -> Path:
     question_set: QuestionSet = load_question_set(question_set_path(pack))
     company_id, bid_id = ids_for(pack)
@@ -95,9 +129,11 @@ async def _collect(database: Database, settings: object, pack: TenderPack) -> Pa
         language=pack.bidder_language,
     ) as context:
         graph = build_chat_graph(context)
-        for question in question_set.questions:
+        for index, question in enumerate(question_set.questions):
+            if index:
+                await asyncio.sleep(PACE_SECONDS)
             thread = f"eval:{pack.name}:{question.id}:{uuid.uuid4()}"
-            turn, contexts = await _ask(graph, question.question, thread)
+            turn, contexts = await _asked_with_backoff(graph, question.question, thread)
             samples.append(
                 {
                     "id": question.id,
@@ -119,6 +155,18 @@ async def _collect(database: Database, settings: object, pack: TenderPack) -> Pa
                 f"  {question.id}: {len(contexts)} passages, {len(turn.citations)} citation(s)",
                 flush=True,
             )
+
+    retrieved = sum(1 for sample in samples if sample["retrieved_contexts"])
+    if retrieved == 0:
+        # Refuse to write, rather than overwrite a good file with a useless one. A run where
+        # the provider rate-limited every turn still produces one sample per question, each
+        # with an empty `retrieved_contexts` — a file that looks complete and scores 0.00 on
+        # both reference metrics. That happened on 2026-09-16 and the file was one command
+        # away from reaching REPORT.md as a measurement.
+        raise RuntimeError(
+            f"{pack.name}: {len(samples)} questions asked and not one retrieved a passage. "
+            "That is a failed run, not a result — the previous samples are left alone."
+        )
 
     path = samples_path(pack)
     path.parent.mkdir(parents=True, exist_ok=True)

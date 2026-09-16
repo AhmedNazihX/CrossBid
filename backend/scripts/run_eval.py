@@ -38,6 +38,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from crossbid.eval.extraction import load_extraction  # noqa: E402
 from crossbid.eval.faithfulness import score_faithfulness  # noqa: E402
+from crossbid.eval.questions import load_question_set  # noqa: E402
 from crossbid.eval.recall import score_tender  # noqa: E402
 from crossbid.eval.retrieval import METRIC_NAMES  # noqa: E402
 from crossbid.eval.suite import (  # noqa: E402
@@ -50,6 +51,7 @@ from crossbid.eval.suite import (  # noqa: E402
     money,
     number,
     partial_metrics,
+    precision_split,
 )
 from crossbid.models.golden import load_golden  # noqa: E402
 from crossbid.settings import SettingsError, load_runtime_settings  # noqa: E402
@@ -80,10 +82,26 @@ def _translation(stem: str) -> TranslationSummary | None:
 
 
 def _retrieval(name: str, judge: str) -> RetrievalSummary | None:
+    """This tender's retrieval figures, or `None` when they do not belong to the current key.
+
+    Scores and questions live in separate files and are produced by separate paid steps, so
+    they drift: regenerate the key and yesterday's scores are still sitting there, with the
+    same shape and the same tender name. Comparing the question ids is what makes a stale file
+    read as *not measured* instead of as a measurement of something else.
+    """
     path = RETRIEVAL / f"{name}.scores.json"
-    if not path.is_file():
+    questions = RETRIEVAL / f"{name}.questions.yaml"
+    if not path.is_file() or not questions.is_file():
         return None
     document = json.loads(path.read_text(encoding="utf-8"))
+    current = [question.id for question in load_question_set(questions).questions]
+    if document.get("question_ids") != current:
+        print(
+            f"  {name}: retrieval scores were measured against a different set of questions; "
+            "re-run scripts/score_retrieval.py",
+            file=sys.stderr,
+        )
+        return None
     return RetrievalSummary(
         means=document["means"],
         questions=document["questions"],
@@ -159,6 +177,58 @@ def _retrieval_table(reports: Sequence[TenderReport]) -> list[str]:
     return lines
 
 
+def _reading_retrieval(reports: Sequence[TenderReport]) -> list[str]:
+    """What the two weaker retrieval numbers mean, measured rather than asserted."""
+    lines: list[str] = []
+    for report in reports:
+        if report.retrieval is None:
+            continue
+        scores_path = RETRIEVAL / f"{report.name}.scores.json"
+        samples_path = RETRIEVAL / f"{report.name}.samples.json"
+        if not (scores_path.is_file() and samples_path.is_file()):
+            continue
+        scored = json.loads(scores_path.read_text(encoding="utf-8"))["per_question"]
+        samples = json.loads(samples_path.read_text(encoding="utf-8"))["samples"]
+        counts = {s["id"]: len(s["retrieved_contexts"]) for s in samples}
+        split = precision_split(
+            {e["id"]: e["scores"].get("context_precision") for e in scored}, counts
+        )
+        if split.narrow is None or split.broad is None:
+            continue
+        lines.append(
+            f"| {report.name.upper()} | {split.narrow:.3f} ({split.narrow_count}) "
+            f"| {split.broad:.3f} ({split.broad_count}) |"
+        )
+    if not lines:
+        return []
+    return [
+        "## Reading the two weaker retrieval numbers",
+        "",
+        "**Context precision is depressed by the agent searching more than once, not by bad "
+        "retrieval.** `context_precision` assumes a single retrieval; a ReAct agent that is "
+        "unsure searches again, and every passage from every search in the turn is pooled into "
+        "one list. Each extra search adds five passages of which at most a few can be "
+        "relevant, so the metric falls as the agent works harder.",
+        "",
+        "| Tender | One search (≤5 passages) | Several (≥15 passages) |",
+        "|---|---|---|",
+        *lines,
+        "",
+        "**Answer relevancy penalises the agent for refusing to guess.** Its worst case here "
+        'scores **0.00** on this answer: *"Die Bindefrist entspricht der Zuschlagsfrist … Die '
+        "konkrete Dauer bzw. das konkrete Enddatum ist in den abgerufenen Passagen nicht "
+        'genannt."* The agent declined to state a figure it had not retrieved, which is what '
+        "`prompts/chat.md` requires of it. Ragas computes the metric by generating questions "
+        "from the answer and comparing them with the original; an answer that declines to "
+        "answer generates none, and there is no way for the metric to tell a refusal from an "
+        "irrelevant reply. Longer answers also score slightly lower.",
+        "",
+        "Neither observation makes the numbers wrong. Both mean the mean is the wrong thing to "
+        "read alone.",
+        "",
+    ]
+
+
 def _cost_table(reports: Sequence[TenderReport]) -> list[str]:
     lines = [
         "## What the measurements cost",
@@ -205,6 +275,7 @@ def render(reports: Sequence[TenderReport], threshold: float, judge: str) -> str
         "",
         *_headline(reports, threshold),
         *_retrieval_table(reports),
+        *_reading_retrieval(reports),
         *_cost_table(reports),
         *_honesty(reports),
     ]
