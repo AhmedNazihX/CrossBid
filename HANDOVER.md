@@ -79,9 +79,27 @@ three — the structured path has no model in it.
   (350 requirements, 7 of 323 mandatory supported, 4 blocking gaps, $1.63, 520 s). **If you
   want a tender the demo company passes, it is not this one** — check the staff minimum before
   designing anything around it.
-- **The 90 retrieval questions need a human read-through** of the *wording only*; the answers
-  are already the labels verified on 2026-09-13. Set `state`, `verified_by` and `verified_on` in
-  each `tests/fixtures/retrieval/*.questions.yaml` and re-run `make eval`.
+- **EN retrieval is the one figure missing from `REPORT.md`**, and the report names it under
+  *What this report does not measure* rather than leaving a blank. It is blocked on OpenRouter
+  rate-limiting **`openai/gpt-5.6-luna`**, the slug the chat agent runs on — sustained runs fail
+  where single calls return 200, and a paced run with a 60 s per-question backoff still failed
+  on question 1 of 30 (2026-09-16). Nothing else depends on it. When the limit eases:
+
+  ```bash
+  make eval-db && make eval-index          # only if the throwaway was removed
+  DATABASE_URL=<throwaway> uv run python scripts/run_retrieval_eval.py en
+  uv run python scripts/score_retrieval.py en
+  make eval
+  ```
+
+  **Do not "fix" it by switching `models.cheap`.** That slug is the chat agent, the classifier
+  and the injection guard; measuring retrieval on a different one would describe a
+  configuration nobody deploys, and DE and FR would stop being comparable with it (decided with
+  the user, 2026-09-16).
+
+- **The retrieval keys are verified.** DE 30, FR 23, EN 30 questions, signed by Ahmed Nazih Ali
+  on 2026-09-16. The human pass found a defect class four automated checks had missed — see
+  ADR-0076 — so the generator was rebuilt to draft from the reference and check its own output.
 - **`project.md` is annotated rather than trimmed** (user decision): nothing was deleted and
   eleven `Built:` notes say what shipped. S7.6's criterion asks for "describes only what was
   built", so read the notes as the answer to it.
