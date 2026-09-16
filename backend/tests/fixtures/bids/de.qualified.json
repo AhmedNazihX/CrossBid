@@ -1,0 +1,2034 @@
+{
+  "pack": "de",
+  "company": "Beispiel IT Services GmbH",
+  "staff_fte": 25.0,
+  "staff_fte_relevant": 21.5,
+  "turnover": [
+    {
+      "year": 2023,
+      "amount": 3420000.0
+    },
+    {
+      "year": 2024,
+      "amount": 3985000.0
+    },
+    {
+      "year": 2025,
+      "amount": 4310000.0
+    }
+  ],
+  "requirements": 344,
+  "matrix_rows": 344,
+  "row_statuses": {
+    "not_applicable": 2,
+    "partially_supported": 330,
+    "supported": 7,
+    "unsupported": 5
+  },
+  "calls": 243,
+  "cost_usd": 1.625120506,
+  "elapsed_seconds": 520.4249355830252,
+  "decision": "no_go",
+  "mandatory_supported": 7,
+  "mandatory_total": 323,
+  "gaps": [
+    {
+      "severity": "blocking",
+      "summary": "Die durchschnittliche Zahl der Fachkräfte im einschlägigen Geschäftsbereich muss pro Geschäftsjahr mindestens 25 VZÄ für Los 1 bzw. 29 VZÄ für Los 2 betragen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "blocking",
+      "summary": "Der Bieter muss angeben, ob ein Insolvenzplan rechtskräftig bestätigt wurde, und diesen auf Verlangen vorlegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "blocking",
+      "summary": "Der Bieter muss angeben, ob sich sein Unternehmen in Liquidation befindet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "blocking",
+      "summary": "Bei Angeboten für mehr als ein Los müssen für das weitere Los die Mindestanforderungen an die Beschäftigtenzahl für Los 1 und Los 2 zusammengerechnet erfüllt sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es dürfen keine zwingenden oder fakultativen Ausschlussgründe nach §§ 123 oder 124 GWB vorliegen, soweit diese zum Ausschluss führen können oder müssen; hierfür ist das Formular „…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es darf kein Ausschlussgrund nach Artikel 5k der Verordnung (EU) 833/2014 vorliegen, der zum Ausschluss führt; hierfür ist das Formular „Eigenerklärung Sanktionen Russland“ vorges…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die Referenzen ist die Vorlage „Vordruck_Referenzen“ zu verwenden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Falls geforderte Angaben aus berechtigten Geheimhaltungsgründen nicht gemacht werden können, müssen Sie dies dem Beschaffungsamt des BMI mitteilen und einen anderen geeigneten Nac…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bestehen Zweifel an der Richtigkeit der abgegebenen Erklärung, können im Einzelfall weitere Nachweise verlangt werden, zum Beispiel ein behördliches Führungszeugnis.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bestehen Zweifel an der Richtigkeit der abgegebenen Erklärung, können im Einzelfall weitere Nachweise verlangt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alternativ kann eine selbst erstellte Referenzliste eingereicht werden, wenn sie die im Vordruck geforderten Angaben enthält und diese übersichtlich darstellt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es werden nur drei Referenzen gefordert.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zum Nachweis der technischen und beruflichen Leistungsfähigkeit müssen Sie für Los 2 mit der Angebotsabgabe eine Liste mit mindestens drei geeigneten Referenzen zur gegenständlich…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist eine Beschreibung der ausgeführten Leistungen nach Art und Umfang anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist anzugeben, ob die Leistungen aufgrund einer Rahmenvereinbarung oder eines Einzelauftrags erbracht wurden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist anzugeben, ob die Leistung als Haupt- oder Unterauftragnehmer erbracht wurde.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist der Umfang der erbrachten Leistungen in abgerechneten Personentagen (PT) anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist der Wert des Auftrags anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Leistungsfähigkeit für den Auftragsgegenstand und die hierfür relevanten Erfahrungen sind anhand der Referenzen darzustellen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Referenzen dürfen, gerechnet vom Datum der letzten Leistungserbringung im jeweiligen Referenzprojekt bis zum Tag der Auftragsbekanntmachung beziehungsweise Veröffentlichung, n…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Referenzaufträge müssen grundsätzlich abgeschlossen sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei noch nicht abgeschlossenen Referenzen ist der bisher erreichte Leistungsstand anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein nicht vollständig abgeschlossener Referenzauftrag kann mit entsprechender Erläuterung benannt werden, wenn sein bereits abgeschlossener Teil die Referenzanforderungen erfüllt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Noch nicht realisierte Leistungsstände können nicht berücksichtigt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zum Nachweis der personellen Leistungsfähigkeit müssen Sie die durchschnittliche Zahl der Beschäftigten und Führungskräfte der letzten drei Geschäftsjahre im einschlägigen Geschäf…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen hierzu eine Eigenerklärung in Form einer selbst erstellten Liste einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft oder Eignungsleihe nach § 47 VgV muss für jedes Mitglied beziehungsweise jedes eignungsverleihende Unternehmen eine selbst erstellte Liste als Eigener…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn Sie Angebote für mehr als ein Los abgeben, müssen im weiteren Los die Mindestanforderungen an die Beschäftigtenzahl für Los 1 und Los 2 zusammen erfüllt sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn Sie die Unterlagen aus berechtigten Gründen nicht vorlegen können, müssen Sie die Gründe im Angebot dem Beschaffungsamt des BMI mitteilen und einen anderen geeigneten Nachwei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zum Nachweis der wirtschaftlichen und finanziellen Leistungsfähigkeit müssen Sie den Umsatz im Tätigkeitsbereich des Auftrags, IT-Beratungsleistungen, für die letzten drei Geschäf…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen hierzu eine Eigenerklärung in Form einer selbst erstellten Liste übersenden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Umsatz muss mindestens 2.500.000,00 EUR pro Jahr für Los 1 beziehungsweise 3.000.000,00 EUR pro Jahr für Los 2 betragen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bieterkonstellation muss die Summe der Unternehmensumsätze den geforderten Mindestumsatz erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn Sie Angebote für mehr als ein Los abgeben, müssen im weiteren Los die Mindestumsatzanforderungen für Los 1 und Los 2 zusammen erfüllt sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Angebote oder Teilnahmeanträge müssen auf Deutsch eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein elektronischer Katalog ist nicht zulässig.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Varianten sind nicht zulässig.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bieter dürfen nicht mehrere Angebote einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss spätestens am 06/10/2026 um 11:30:00 Uhr (UTC+02:00), Osteuropäische Zeit beziehungsweise Mitteleuropäische Sommerzeit, eingehen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss 8 Monate gültig bleiben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn sich ein am Auftrag interessiertes Unternehmen durch einen Vergabeverstoß in seinen Rechten verletzt sieht, muss es diesen Verstoß innerhalb von zehn Kalendertagen gegenüber…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Aus der Bekanntmachung oder den Vergabeunterlagen erkennbare Verstöße müssen spätestens bis zur genannten Bewerbungs- oder Angebotsfrist gegenüber dem BeschA gerügt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Nachprüfungsantrag muss schriftlich oder elektronisch bei den Vergabekammern des Bundes beim Bundeskartellamt, Kaiser-FriedrichStraße 16, 53113 Bonn, eingereicht und begründet…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alle Dokumente, Nachweise und Erklärungen müssen auf Deutsch verfasst werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Korrespondenz mit dem Beschaffungsamt des BMI muss auf Deutsch erfolgen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Teilnahmeanträge und Angebote dürfen nicht auf anderem Weg, etwa schriftlich oder per E-Mail, abgegeben werden; dies führt zum Ausschluss.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die elektronische Abgabe eines Teilnahmeantrags oder Angebots ist eine Registrierung auf www.evergabe-online.de erforderlich.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für den Teilnahmeantrag muss das Teilnahmeantragsformular und für das Angebot das Angebotsformular verwendet werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Teilnahmeantrag und Angebot müssen eindeutige Angaben zum Wirtschaftsteilnehmer enthalten: Firma einschließlich Rechtsform, Adresse und Name der handelnden Person.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "An den vorgegebenen Texten der Vergabeunterlagen dürfen keine Zusätze oder Änderungen vorgenommen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Erläuterungen dürfen die in den Vergabeunterlagen festgelegten Bedingungen nicht ändern.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Falls Nebenangebote ausnahmsweise zugelassen sind, müssen die hierfür in den BBB festgelegten Bedingungen erfüllt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es dürfen grundsätzlich nicht mehrere Hauptangebote abgegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Teilnahmeantrag bzw. das Angebot muss elektronisch über www.evergabe-online.de (AnA-Web) mit der bereitgestellten Softwarekomponente eVergabeApp übermittelt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Teilnahmeantrag bzw. das Angebot sollte 1024 MB nicht überschreiten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alle zusammengehörenden Dokumente müssen grundsätzlich in einem einzigen Sendevorgang an die Plattform übertragen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Soweit die Vergabeunterlagen nichts Abweichendes regeln, müssen bereitgestellte Dokumente für elektronische Teilnahmeanträge und Angebote ausschließlich im vorgegebenen Dateiforma…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Soweit zusätzliche Dokumente eingereicht werden müssen, sind sie als PDF-Dateien zu übermitteln.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei allen PDF-Dokumenten, einschließlich Teilnahme- und Angebotsunterlagen, Eigenerklärungen und zusätzlichen eigenen Dokumenten, muss sichergestellt werden, dass sie in der aktue…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wird ein überarbeiteter Teilnahmeantrag oder ein überarbeitetes Angebot abgegeben, muss der vorherige Teilnahmeantrag bzw. das vorherige Angebot zurückgezogen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei jeder Bieterfrage ist der konkrete Bezug in den Vergabeunterlagen anzugeben, insbesondere Dokumentenname und Seitenzahl bzw. Ziffer.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Falls Gründe gegen die Veröffentlichung bestimmter Daten oder Informationen sprechen, muss dies in der Frage ausdrücklich mitgeteilt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Teilnahmeantrag bzw. das Angebot muss vor Ablauf der jeweiligen Frist vollständig eingegangen sein, in der Regel bis 11:30:00 Uhr.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Frist gilt auch für nachträgliche Berichtigungen, Änderungen oder die Rücknahme des Teilnahmeantrags bzw. Angebots.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bis zum Ablauf der Bindefrist ist der Bieter an sein Angebot gebunden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Während der Bindefrist darf das Angebot nicht geändert oder zurückgezogen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bewerber- bzw. Bietergemeinschaften müssen bei Angebotsabgabe beziehungsweise bei Verfahren mit Teilnahmewettbewerb bereits mit dem Teilnahmeantrag alle Mitglieder benennen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bewerber- bzw. Bietergemeinschaften müssen Art und Umfang des jeweiligen Leistungsteils jedes einzelnen Mitglieds angeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bewerber- bzw. Bietergemeinschaft muss ein Mitglied als Vertreter für Erklärungen im Vergabeverfahren sowie für Abschluss und Durchführung des Vertrags bevollmächtigen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bewerber- bzw. Bietergemeinschaft muss sich für alle im Zusammenhang mit dem Vertrag entstehenden Verbindlichkeiten zur gesamtschuldnerischen Haftung verpflichten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Angaben müssen vollständig sein; der Vordruck muss unterschrieben und als gescannte PDF-Datei dem Teilnahmeantrag bzw. Angebot beigefügt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mit dem Teilnahmeantrag bzw. Angebot muss für jedes Mitglied nachgewiesen werden, dass keine vergaberechtlichen Ausschlussgründe vorliegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Hierfür müssen die in den BBB aufgeführten Erklärungen eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jedes Mitglied sind entsprechend seinem geplanten Leistungsumfang die geforderten Eignungsnachweise mit dem Teilnahmeantrag bzw. Angebot einzureichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Nach Ablauf der Teilnahme- bzw. Angebotsfrist darf die Bietergemeinschaft bis zur Zuschlagserteilung nicht gebildet oder geändert werden; andernfalls wird das Angebot ausgeschloss…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn der Bewerber/Bieter Unteraufträge einsetzen oder Kapazitäten anderer Unternehmen zur Eignungsleihe nutzen will, muss er das Beschaffungsamt des BMI darüber informieren.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die hierfür vorgesehenen Leistungen bzw. Kapazitäten müssen im Teilnahmeantrag oder Angebot benannt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber/Bieter muss nachweisen, dass ihm die erforderlichen Kapazitäten der anderen Unternehmen zur Verfügung stehen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber/Bieter muss das Beschaffungsamt des BMI darüber informieren, dass bei jedem dieser anderen Unternehmen keine vergaberechtlichen Ausschlussgründe vorliegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber/Bieter muss Namen, gesetzlichen Vertreter und Kontaktdaten dieser Unternehmen angeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Entsprechende Verpflichtungserklärungen dieser Unternehmen müssen eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Eignungsleihe müssen die eignungsverleihenden Unternehmen bei Abgabe des Teilnahmeantrags bzw. Angebots benannt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Eignungsleihe müssen Art und Umfang der von diesen Unternehmen in Anspruch genommenen Kapazitäten angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Jedes benannte Unternehmen muss sich verpflichten, dem Bieter im Zuschlagsfall die entsprechenden Kapazitäten zur Verfügung zu stellen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mit dem Teilnahmeantrag bzw. Angebot ist für jedes benannte Unternehmen nachzuweisen, dass keine vergaberechtlichen Ausschlussgründe vorliegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jedes eignungsverleihende Unternehmen sind die geforderten Eignungsnachweise für jene Eignungskriterien einzureichen, für die dessen Kapazitäten genutzt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wer Unteraufträge oder die Eignungsleihe anderer Unternehmen beabsichtigt, muss das Beschaffungsamt des BMI darüber informieren und die vorgesehenen Leistungen bzw. Kapazitäten im…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber bzw. Bieter muss Namen, gesetzlichen Vertreter und Kontaktdaten dieser Unternehmen angeben sowie deren Verpflichtungserklärungen einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Eignungsleihe müssen die eignungsverleihenden Unternehmen bei Abgabe des Teilnahmeantrags bzw. Angebots benannt sowie Art und Umfang der in Anspruch genommenen Kapazitäten ang…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Nach gesonderter Aufforderung muss dem Beschaffungsamt des BMI eine entsprechende Haftungserklärung vorgelegt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Nach Ablauf der Teilnahme- bzw. Angebotsfrist dürfen ein oder mehrere benannte Unternehmen bis zur Zuschlagserteilung nicht ausgetauscht oder geändert werden; andernfalls wird das…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einfacher Unterauftragsvergabe müssen mit dem Angebot Art und Umfang des zu übertragenden Leistungsteils angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die anderen Unternehmen sind, soweit dies bei Angebotsabgabe bereits zumutbar ist, spätestens jedoch vor Zuschlagserteilung zu benennen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss nachweisen, dass ihm bei der Auftragsausführung die erforderlichen Kapazitäten und Mittel der vorgesehenen Unterauftragnehmer zur Verfügung stehen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Angaben im Vordruck müssen vollständig sein und der Vordruck ist zu unterschreiben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Vordruck ist gescannt als PDF-Datei einzureichen, sofern dies nicht bereits mit dem Teilnahmeantrag bzw. Angebot erfolgt ist, spätestens aber vor Zuschlagserteilung.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Spätestens vor Zuschlagserteilung ist für jeden vorgesehenen Unterauftragnehmer nachzuweisen, dass keine vergaberechtlichen Ausschlussgründe vorliegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sofern zutreffend, ist die Anerkennung als bevorzugter Bieter nachzuweisen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Eignungsnachweise bzw. Nachweise über das Nichtvorliegen von Ausschlussgründen können auch über die für das Beschaffungsamt des BMI frei zugängliche DIHK-Präqualifizierungsdatenba…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einfacher Unterauftragsvergabe sind mit dem Angebot Art und Umfang des zu übertragenden Leistungsteils anzugeben; die anderen Unternehmen sind, soweit dann bereits zumutbar, s…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Nutzung der Präqualifizierungsdatenbank müssen deren Nachweise die in diesem Vergabeverfahren verlangten Mindestbedingungen vollständig erfüllen, beispielsweise Haftungssummen…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Soweit die Nachweise der Präqualifizierungsdatenbank die Anforderungen nicht vollständig erfüllen, müssen ergänzende Nachweise und Angaben dem Teilnahmeantrag bzw. Angebot beigefü…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Anlage „Unternehmensdaten“ ist vom Bewerber, Bieter oder anderen Unternehmen auszufüllen und mit dem Angebot bzw. Teilnahmeantrag einzureichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Jedes für die Eignungsleihe eingesetzte andere Unternehmen sowie jedes Mitglied einer Bewerber- oder Bietergemeinschaft muss eine eigene Erklärung ausfüllen und einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Inländische Unternehmen müssen die für sie zutreffenden Angaben zur juristischen Person bzw. Personenvereinigung oder zur natürlichen Person in die vorgesehenen Felder eintragen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ihr Angebot muss spätestens bis zum Ablauf der im Angebotsformular genannten Frist eingehen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ihr Angebot muss den in den Bewerbungsbedingungen genannten Anforderungen entsprechen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Geforderte Unterlagen, für die kein Formular bereitgestellt ist, müssen Sie selbst erstellen und beispielsweise als eingescannte PDF-Datei einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Originale auf Verlangen des Beschaffungsamtes des BMI vorlegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen dem Beschaffungsamt des BMI unverzüglich alle während des Verfahrens eintretenden Umstände mitteilen, die Ihre Eignung oder sonstigen Erklärungen beeinflussen können, i…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen das Angebotsformular mit dem Angebot einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Nachweise und Erklärungen zu den Eignungskriterien gemäß dem Kriterienkatalog Eignung einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Eigenerklärung zu Ausschlussgründen einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Eigenerklärung zu Russland-Sanktionen einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Anlage „Unternehmensdaten“ mit dem Angebot einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Erklärung zur sozialen Nachhaltigkeit von IT einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Verpflichtungserklärung Scientology einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Verpflichtung VS-NfD einschließlich des VS-NfD-Merkblatts im Anhang einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Eigenerklärung zum Verpflichtungsgesetz einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Nachweise und Erklärungen zur Leistung gemäß dem Kriterienkatalog Leistung einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Bildung einer Bietergemeinschaft müssen Sie zusätzlich die Bewerber-Bietergemeinschaftserklärung einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft muss jedes Mitglied die Eigenerklärung zu Ausschlussgründen einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft muss jedes Mitglied die Eigenerklärung zu Russland-Sanktionen einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft muss jedes Mitglied die Anlage „Unternehmensdaten“ einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft muss jedes Mitglied die Eigenerklärung zum Verpflichtungsgesetz einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft muss jedes Mitglied die Verpflichtungserklärung Scientology einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft muss jedes Mitglied die Verpflichtung VS-NfD einschließlich des VS-NfD-Merkblatts im Anhang einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn Sie im Rahmen einer Eignungsleihe andere Unternehmen einsetzen, muss das eignungsverleihende Unternehmen zusätzlich die Verpflichtungserklärung Eignungsleihe Unteraufträge ei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Eignungsleihe muss das eignungsverleihende Unternehmen zusätzlich die Eigenerklärung zu Ausschlussgründen einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Eignungsleihe muss das eignungsverleihende Unternehmen zusätzlich die Anlage „Unternehmensdaten“ einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn Sie andere Unternehmen im Rahmen einer Unterauftragsvergabe einsetzen, müssen Sie zusätzlich die Anlage Unteraufträge einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Unterauftragnehmer spätestens vor der Zuschlagserteilung konkret benennen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jeden Unterauftragnehmer müssen Sie die Verpflichtungserklärung Eignungsleihe Unteraufträge einreichen; falls dies nicht bereits mit dem Angebot möglich ist, spätestens vor de…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jeden Unterauftragnehmer müssen Sie die Eigenerklärung zu Ausschlussgründen einreichen; falls dies nicht bereits mit dem Angebot möglich ist, spätestens vor der Zuschlagsertei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jeden Unterauftragnehmer müssen Sie die Verpflichtung VS-NfD einschließlich des VS-NfD-Merkblatts im Anhang einreichen; falls dies nicht bereits mit dem Angebot möglich ist, s…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Um Betriebs- und Geschäftsgeheimnisse zu wahren, müssen Sie unter Bezugnahme auf die betreffenden Unterlagen konkret angeben, welche Informationen vertraulich zu behandeln sind.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn Sie sich an mehr als einem Los beteiligen, müssen die Mindestanforderungen an Umsatz und Beschäftigtenzahl für Los 1 und Los 2 zusammen erfüllt sein, damit die Eignung für da…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die geforderten Dokumente für jedes Los jeweils einzeln einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die im Dokument „Kriterienkatalog Eignung“ geforderten Nachweise und Erklärungen vorlegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn Sie die nachfolgenden Nachweise und Erklärungen in einer separaten Anlage einreichen, müssen Sie die hier oder gegebenenfalls im Dokument „Kriterienkatalog Eignung“ angegeben…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Verweise auf Literatur oder Broschüren dürfen Sie nur als ergänzende Information verwenden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen Fragen vollständig und nachvollziehbar beantworten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die unter den Ziffern 3.6.1 bis 3.6.7 aufgeführten unternehmensbezogenen Erklärungen und Nachweise mit dem Angebot vorlegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ihr Unternehmen darf keinen Ausschlussgrund nach Artikel 5k der Verordnung (EU) 833/2014 aufweisen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sie müssen die Anlage „Unternehmensdaten“ vollständig ausfüllen und Ihrem Angebot beifügen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Erklärung zum Dokument „Eigenerklärung Verpflichtungsgesetz“ muss dem Angebot beigefügt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Dokument „Verpflichtungserklärung_Scientology“ muss dem Angebot beigefügt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Erklärung muss dem Teilnahmeantrag beigefügt oder spätestens vor dem Zuschlag eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Vordruck „Angebotsformular“ muss vollständig ausgefüllt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der für die angebotene Leistung geltende Umsatzsteuersatz muss im Angebotsformular über das bereitgestellte Drop-down-Menü ausgewählt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alle im Dokument „Kriterienkatalog Leistung“ geforderten Nachweise und Erklärungen müssen mit dem Angebot eingereicht werden; hierfür sind die Vorlagen „CV Externe Hardware“, „CV…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es wird geprüft, ob der Bieter die für die Durchführung des Auftrags notwendige Eignung besitzt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für eine Einladung zur Angebotspräsentation darf das Angebot insbesondere nicht wegen Nichterreichung des Mindesterfüllungsgrades in Kriterienhauptgruppe 1 (A-Kriterien im Kriteri…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das einzusetzende Personal muss die Mindestanforderungen aus Kapitel 4 der Leistungsbeschreibung (Anlage 1 zur Rahmenvereinbarung) sowie aus dem Angebot der Auftragnehmerin (Anlag…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber/Bieter bzw. das andere Unternehmen muss diese Eigenerklärung ausfüllen und einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Jedes Unternehmen, auf dessen Eignung zurückgegriffen wird, jeder Unterauftragnehmer sowie jedes Mitglied einer Bewerber- oder Bietergemeinschaft muss eine eigene Erklärung ausfül…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Liegen ein oder mehrere Ausschlussgründe vor, muss der Bieter die näheren Umstände erläutern und darlegen, ob und welche Selbstreinigungsmaßnahmen nach § 125 Abs. 1 GWB durchgefüh…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss hierzu eine gesonderte Anlage erstellen und dieser Erklärung beifügen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob sein Unternehmen zahlungsunfähig ist.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob ein Insolvenzverfahren oder ein vergleichbares Verfahren beantragt wurde.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob ein Antrag auf Eröffnung eines Insolvenzverfahrens oder vergleichbaren Verfahrens mangels Masse abgelehnt wurde.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob sein Unternehmen seine Tätigkeit eingestellt hat.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Hat der Bieter einen oder mehrere Punkte mit „Ja“ beantwortet, muss er die näheren Umstände erläutern und darlegen, warum er den Auftrag dennoch erfüllen kann.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob er bei der Ausführung öffentlicher Aufträge gegen geltende umwelt-, sozial- oder arbeitsrechtliche Verpflichtungen verstoßen hat.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob er oder eine ihm zurechenbare Person nach den genannten Vorschriften mit einer Freiheitsstrafe von mehr als drei Monaten, einer Geldstrafe von mehr als…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob gegen ihn gemäß § 22 Abs. 1 LkSG eine Geldbuße nach § 22 Abs. 2 LkSG verhängt wurde.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob gegen ihn ein Verstoß nach § 13 Abs. 1 BTTG gemäß § 14 BTTG unanfechtbar festgestellt wurde.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob sein Unternehmen oder eine ihm zurechenbare Person im Rahmen der beruflichen Tätigkeit eine nachweisliche schwere Verfehlung begangen hat, die die Inte…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob er mit einem anderen Unternehmen wettbewerbsverhindernde, -einschränkende oder -verfälschende Vereinbarungen getroffen oder Verhaltensweisen abgestimmt…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob sein Unternehmen in die Vorbereitung des Vergabeverfahrens einbezogen war.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss angeben, ob er bei einem früheren öffentlichen Auftrag oder Konzessionsvertrag eine wesentliche Anforderung erheblich oder fortdauernd mangelhaft erfüllt hat und d…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Hat der Bieter eine oder mehrere Fragen mit „Ja“ beantwortet, muss er die näheren Umstände erläutern und darlegen, ob und welche Selbstreinigungsmaßnahmen nach § 125 Abs. 1 GWB du…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber/Bieter, jedes im Rahmen der Eignungsleihe oder Unterauftragsvergabe eingesetzte Unternehmen sowie jedes Mitglied einer Bewerber- oder Bietergemeinschaft muss diese Er…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss den Auftraggeber unverzüglich informieren, wenn nach Abgabe der Erklärung Umstände eintreten, die einen Ausschluss nach Artikel 5k der Verordnung (EU) Nr. 833/2014…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss erklären, dass er nicht zu den Personen oder Unternehmen mit einem Russlandbezug im Sinne von Artikel 5k der Verordnung (EU) Nr. 833/2014 gehört.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss erklären, dass keine unter Ziffer (1) fallenden Unternehmen als Unterauftragnehmer, Lieferanten oder Unternehmen der Eignungsleihe beteiligt sind, sofern auf das j…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Liegt beim Bieter einer der unter (1) oder (2) genannten Ausschlussgründe vor, muss er in einer gesonderten Anlage erläutern, ob und warum eine Vergabe beziehungsweise Fortsetzung…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss erklären, dass weder er selbst noch eingesetzte Unterauftragnehmer, Lieferanten oder sonstige Dritte in den Anhängen der Verordnung (EU) Nr. 269/2014 gelistet sind…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter bzw. jedes Mitglied einer Bietergemeinschaft muss dieses Formular ausfüllen, unterzeichnen und zusammen mit dem Angebot einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss erklären, dass er das Dokument „Verpflichtung der Auftragnehmerseite nach dem Verpflichtungsgesetz“ einschließlich der zugehörigen Anlagen zur Kenntnis genommen ha…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss erklären, dass er im Fall der Auftragserteilung ausreichend viele Mitarbeitende bereitstellen wird, die mit einer Verpflichtung zur gewissenhaften Erfüllung ihrer…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Angebotsabgabe muss die beabsichtigte Auswahl der nachfolgenden Varianten gemäß Ziffer 6 erklärt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zu jeder aufgeführten ILO-Norm müssen die folgenden Aspekte dargestellt werden. Die Antwort darf insgesamt höchstens 13 Seiten umfassen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es muss dargestellt werden, mit welchen Maßnahmen beim Unternehmen und weiteren Beteiligten sichergestellt wird, dass bei der Auftragsausführung keine Arbeiten unter Verletzung de…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es muss dargestellt werden, mit welchem Nachweis dies nach der Auftragsausführung belegt wird.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mit Einreichung der Unterlagen ist zu erklären, dass diese sich tatsächlich auf die vertragsgegenständliche Leistung beziehen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, wie Arbeitsplatzrisiken durch Arbeitsplatzgestaltung, technische und administrative Kontrollen, vorbeugende Wartung, sichere Arbeitsverfahren einsc…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, wie das Trinkwasser in der Produktionsstätte überprüft wird.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Falls im Unternehmen geschweißt oder hartgelötet werden muss, ist mindestens darzustellen, dass vor Aufnahme der Tätigkeiten eine Schweißerlaubnis vorliegt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass die gesamte elektrische Installation im Unternehmen überprüft und gewartet ist.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass bei Reparatur oder Wartung von Maschinen diese für die Benutzung gesperrt und die Stromzufuhr unterbrochen wird.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass jeder gewerbliche Arbeitsplatz einer Risikoanalyse unterzogen wird, um den Bedarf an persönlicher Schutzausrüstung für Mitarbeitende festzuste…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass jeder Mitarbeitende erforderliche persönliche Schutzausrüstung erhält und regelmäßig in deren Nutzung unterwiesen wird.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass die chemische Zusammensetzung von Produkten geprüft, gemessen und dokumentiert wird.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass die Produkte gesetzlichen Materialrestriktionen, beispielsweise RoHS und REACH, entsprechen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass Stoffe, für die gesetzliche Materialrestriktionen gelten, nicht in der Produktion eingesetzt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, dass Gefahrstoffe und Chemikalien mit verständlichen Warnhinweisen gekennzeichnet sind.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, wie hoch der anwendbare gesetzliche Mindestlohn im Land beziehungsweise in der Region oder im Industriesektor der Produktionsstätte ist und welcher…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, welche Sozialleistungen gesetzlich vorgeschrieben sind und welche Sozialleistungen bei der Auftragsausführung tatsächlich an die Sozialversicherung…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, wie verhindert wird, dass Gehaltskürzungen als disziplinarische Maßnahme eingesetzt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, welche gesetzlichen Anforderungen im Land der Produktionsstätte für die maximal erlaubte reguläre Arbeitszeit pro Woche sowie für die maximal erlau…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, mit welchem Zeiterfassungs- und Zeitmanagementsystem die Einhaltung der gesetzlich vorgeschriebenen Arbeits- und Arbeitsunterbrechungszeiten sicher…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist mindestens darzustellen, wie sichergestellt wird, dass Mitarbeitende Informationen zu Richtlinien, Vorgehensweisen, Erwartungen und Leistungen in einer für alle Mitarbeiten…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist darzustellen, dass die Einhaltung der vereinbarten Arbeits- und Sozialstandards durch vertragliche Verpflichtungen zwischen einem Betrieb der Stufe 1 und einem Betrieb der…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist darzustellen, wie die Normen der ILO (International Labour Organisation) den Zulieferern bekannt gemacht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist darzustellen, wie die Einhaltung der vereinbarten ILO-Normen überwacht wird.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für ein gültiges Angebot müssen Sie Dokumente, Unterlagen und Erklärungen auf Deutsch einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die nachfolgend verlangten Erklärungen und Nachweise müssen mit dem Angebot vorliegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Umsatz im Tätigkeitsbereich IT-Beratungsleistungen für die letzten drei Geschäftsjahre ist anzugeben; ein Jahresabschluss muss noch nicht erfolgt sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mit Angebotsabgabe ist eine Eigenerklärung als selbst erstellte Liste einzureichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Umsatz muss mindestens 3.000.000,00 EUR pro Jahr betragen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Bietergemeinschaften oder Eignungsleihe ist für jedes Mitglied bzw. jedes eignungsverleihende Unternehmen eine selbst erstellte Eigenerklärung mit den Jahreswerten der letzten…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Bietergemeinschaften oder Eignungsleihe muss die Summe der Umsätze der Unternehmen den geforderten Mindestumsatz erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Angeboten für mehr als ein Los müssen für das weitere Los die Mindestumsatzanforderungen für Los 1 und Los 2 zusammengerechnet erfüllt sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn die Unterlagen aus berechtigten Gründen nicht beigebracht werden können, sind die Gründe im Angebot dem Beschaffungsamt des BMI mitzuteilen und ein anderer geeigneter Nachwei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mit Angebotsabgabe ist eine Liste mit mindestens drei geeigneten Referenzen zur gegenständlichen Leistung einzureichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Leistungsfähigkeit für den Auftragsgegenstand und die dafür relevanten Erfahrungen sind anhand der Referenzen darzustellen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist eine Beschreibung der ausgeführten Leistungen nach Art und Umfang anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist anzugeben, ob die Leistungen aufgrund einer Rahmenvereinbarung oder eines Einzelauftrags erbracht wurden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist anzugeben, ob die Leistung als Haupt- oder Unterauftragnehmer erbracht wurde.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist der Umfang der erbrachten Leistungen in abgerechneten Personentagessätzen (PT) anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist der Wert des Auftrags anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist der Zeitraum der Leistungserbringung anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz ist die zuständige Kontaktstelle beim Auftraggeber der Referenz einschließlich Anschrift und Kontaktdaten anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für Referenzen ist der Vordruck „Vordruck_Referenzen“ zu verwenden und bei Bedarf mehrfach zu nutzen. Alternativ darf eine selbst erstellte Referenzliste eingereicht werden, wenn…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn geforderte Angaben aus berechtigten Geheimhaltungsgründen nicht gemacht werden können, sind die Gründe dem Beschaffungsamt des BMI mitzuteilen und ein anderer geeigneter Nach…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Referenzen dürfen, gerechnet vom Datum der letzten Leistungserbringung bis zum Tag der Auftragsbekanntmachung, nicht älter als drei Jahre sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Umfang der erbrachten Leistungen muss auf Seiten des Leistungserbringers mindestens 25 abgerechnete Personentage umfassen, unabhängig von Rahmenvereinbarung oder mehreren Einz…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Referenzaufträge müssen grundsätzlich abgeschlossen sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei noch nicht abgeschlossenen Referenzen ist der bisher erreichte Leistungsstand anzugeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die durchschnittliche Anzahl der Beschäftigten und Führungskräfte pro Jahr in den letzten drei Geschäftsjahren im einschlägigen Geschäftsbereich ist in Vollzeitäquivalenten (VZÄ)…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die durchschnittliche Anzahl an Fachkräften im einschlägigen Geschäftsbereich muss pro Geschäftsjahr mindestens 29 VZÄ betragen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Bietergemeinschaften oder Eignungsleihe muss die Summe der Beschäftigtenzahlen in den Unternehmen die Mindestanzahl erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bieterin muss festlegen, für welchen Unterstützungsbereich jedes Personalprofil und die zugehörigen Personalreferenzen berücksichtigt werden sollen. Andernfalls werden die Ref…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mit Angebotsabgabe müssen Eigenerklärungen in Personalprofilen (CVs) und Personalreferenzen eingereicht werden; diese bilden die Grundlage der Bewertung.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alle Angaben müssen auf Anforderung der Vergabestelle nachgewiesen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zwingend sind die Vorlagen „CV Netzwerktechnik“, „CV Externe Hardware“, „CV IT-Security“ und „Personalreferenz“ zu verwenden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Aus den Eigenerklärungen muss eindeutig hervorgehen, welche Voraussetzungen und Anforderungen erfüllt sind.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Eine etwaige Gleichwertigkeit fachlicher Qualifikationen und/oder einschlägiger Erfahrungen muss begründet werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wertbar sind Personalreferenzen nur, wenn sie von einer Person stammen, die die Anforderungen an das eingesetzte Personal nach Kapitel 4 der Leistungsbeschreibung erfüllt und für…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Person, der die Referenz zugeordnet ist, muss in beiden Erfahrungsstufen Deutsch in Wort und Schrift auf Niveau C1 des Gemeinsamen Europäischen Referenzrahmens für Sprachen od…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Referenz darf nicht älter als zehn Jahre sein. Maßgeblich ist das Datum der letzten persönlichen Leistungserbringung, gerechnet bis zum Datum der Bekanntmachung des Teilnahmew…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die persönlich erbrachte Leistung muss mindestens 20 abgerechnete Personentage umfassen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die als Senior bewertete Person muss mindestens sechs Jahre Berufserfahrung haben, davon mindestens vier Jahre im Leistungsgegenstand des Unterstützungsbereichs nach Leistungsbesc…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die als Senior bewertete Person muss mindestens ein genanntes Weiterbildungszertifikat oder ein jeweils gleichwertiges Zertifikat besitzen: CNE6 Silver, CNE6 Gold, CCNP Enterprise…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die als Senior bewertete Person muss mindestens drei verschiedene Referenzen für IPv6-Migrationseinzelprojekte im Unterstützungsbereich Netzwerkthemen vorweisen, die zusammen mind…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "In mindestens einer Senior-Referenz muss Projekterfahrung für ein Unternehmen oder eine Organisation mit mehr als 500 Mitarbeitenden oder 1.000 Endgeräten oder Gleichwertigem nach…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die als Junior bewertete Person muss mindestens drei Jahre Berufserfahrung haben, davon mindestens ein Jahr im umfassten Leistungsgegenstand nach Leistungsbeschreibung Ziff. 4.1.1…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die zu bewertende Referenz muss mindestens drei der nachfolgend aufgeführten Inhalte aus dem Themenbereich Netzwerkthemen, Planung IPv6Migration/Anbindung oder Routing umfassen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss im B-Kriterium B 1.3 „Referenzen – Netzwerk- und Informationstechnik“ mindestens 50 % der maximalen Leistungspunkte, also mindestens 80 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die der bewerteten Senior-Referenz zugeordnete Person muss mindestens drei verschiedene Referenzen für Hardwareberatung mit Bezug auf IPv6-Migrationen oder gleichwertige Projekte…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Von diesen Referenzen muss mindestens eine Projekterfahrung für ein Unternehmen oder eine Organisation mit mehr als 500 Mitarbeitenden oder 1.000 Endgeräten belegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die zu bewertende Referenz muss mindestens drei der nachfolgend genannten Inhalte aus den Themenbereichen Konfiguration, Routing/Protokolle oder Migrationsszenarien umfassen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss im B-Kriterium B 1.2 „Referenzen – Externe Hardware“ mindestens 50 % der maximalen Leistungspunkte, also mindestens 20 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die der bewerteten Referenz zugeordnete Person der Erfahrungsstufe „Senior“ muss mindestens sechs Jahre Berufserfahrung haben, davon mindestens vier Jahre im Leistungsgegenstand d…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mindestens eine dieser Referenzen muss die Identifikation und Mitigation IPv6-spezifischer Bedrohungen zum Inhalt haben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die der bewerteten Senior-Referenz zugeordnete Person im Unterstützungsbereich „ITSecurity“ muss mindestens das Zertifikat IPv6 Forum Certified IPv6 Security Engineer (Gold), CISC…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die der bewerteten Junior-Referenz zugeordnete Person muss mindestens eine Referenz vorweisen, welche IPv4/IPv6-relevante Sicherheitsthemen und IPv6-spezifische Bedrohungsszenarie…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die der bewerteten Junior-Referenz zugeordnete Person muss mindestens eine Referenz zur Durchführung und Dokumentation von Sicherheitsmaßnahmen im Kontext von IPv6-Migrationen vor…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die zu bewertende Referenz muss mindestens drei der nachfolgend genannten Inhalte aus den Themenbereichen IPv4/IPv6-relevante Sicherheitsthemen, BSIGrundschutz oder Planung indivi…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss im B-Kriterium B 1.3 „Referenzen – IT-Security“ mindestens 50 % der maximalen Leistungspunkte, also mindestens 45 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss für die KHG 1 mindestens 60 % der maximalen Gesamt-Leistungspunkte, also mindestens 174 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Unterlagen, die während der Vorbereitung oder für die Ergebnispräsentation verwendet werden, müssen nach dem Vortrag der Auftraggeberin übergeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Angebotspräsentation muss von einer als Teamleitung eingesetzten Person der Erfahrungsstufe „Senior“ durchgeführt werden. Für diese Person muss ein Personalprofil eingereicht…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Vor dem Präsentationstermin müssen der Vergabestelle Name oder Pseudonym des Präsentationsteams einschließlich Teamleitung und gegebenenfalls unterstützender Personen mitgeteilt w…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Jede genannte Person darf nur für einen der drei Unterstützungsbereiche benannt und eingesetzt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die Bearbeitung einer Ad-Hoc-Frage stehen dem jeweiligen Präsentationsteam 5 Minuten zur Verfügung.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Anschließend hat das Präsentationsteam 10 Minuten Zeit, die Antworten zu präsentieren.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die Bearbeitung der Aufgabenstellung der Probearbeiten stehen dem jeweiligen Präsentationsteam 30 Minuten zur Verfügung.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Anschließend hat das Präsentationsteam 20 Minuten Zeit, die Arbeitsergebnisse zu präsentieren.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss bei den Ad-Hoc-Fragen im Unterstützungsbereich „Netzwerk- und Informationstechnik“ in den Kriterien B 2.1 bis B 2.3 mindestens 50 % der maximalen Leistungspunkte,…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss bei den Ad-Hoc-Fragen im Unterstützungsbereich „Externe Hardware“ in den Kriterien B 2.4 bis B 2.6 mindestens 50 % der maximalen Leistungspunkte, mindestens 45 LP…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss im Unterstützungsbereich „IT-Security“ in den Kriterien B 2.7 bis B 2.9 mindestens 50 % der maximalen Leistungspunkte, mindestens 45 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss bei der Probearbeit im Unterstützungsbereich „Netzwerk- und Informationstechnik“ im Kriterium B 2.10 mindestens 50 % der maximalen Leistungspunkte, also mindesten…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss bei der Probearbeit im Unterstützungsbereich „Externe Hardware“ im Kriterium B 2.11 mindestens 50 % der maximalen Leistungspunkte, mindestens 60 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss bei der Probearbeit im Unterstützungsbereich „IT-Security“ im Kriterium B 2.12 mindestens 50 % der maximalen Leistungspunkte, mindestens 60 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss für die KHG 2 insgesamt mindestens 60 % der maximalen Leistungspunkte, also mindestens 378 LP, erreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Studiengang oder eine Berufsausbildung wird als „MINT“ anerkannt, wenn er bzw. sie überwiegend, das heißt zu mehr als 50 %, mathematische, (informations-)technische und/oder n…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das eingesetzte Personal muss Deutsch mündlich und schriftlich mindestens auf Niveau C1 des Gemeinsamen Europäischen Referenzrahmens für Sprachen oder gleichwertig beherrschen. Ei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das eingesetzte Personal muss einen berufsqualifizierenden Hochschul- oder Berufsabschluss im MINT-Bereich haben. Alternativ ist ein Abschluss in einer anderen Fachrichtung mit zu…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Praktische Erfahrung in den genannten IPv4/IPv6-relevanten Netzwerkthemen muss durch mindestens eine Referenz für Junior-Personal beziehungsweise mindestens drei Referenzen für Se…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Personal der Senior-Erfahrungsstufe muss mindestens sechs Jahre Berufserfahrung haben, davon mindestens vier Jahre im Leistungsgegenstand nach Ziffer 4.1.1 oder gleichwertige Erfa…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Personal der Senior-Erfahrungsstufe muss praktische Erfahrung in IPv6-Migrationseinzelprojekten zu Netzwerkthemen und der Migration von Netzkomponenten oder gleichwertige Erfahrun…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei mindestens einer Referenz des Senior-Personals muss Projekterfahrung bei einem Unternehmen oder einer Organisation mit mehr als 500 Mitarbeitenden oder 1.000 Endgeräten oder G…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Personal der Senior-Erfahrungsstufe muss mindestens eines der aufgeführten Weiterbildungszertifikate oder ein jeweils gleichwertiges Zertifikat besitzen. Die Auftragnehmerin muss…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Personal der Junior-Erfahrungsstufe muss praktische Erfahrung in IPv6-Migrationseinzelprojekten zu Netzwerkthemen und der Migration von Netzkomponenten durch eine Referenz nachwei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Praktische Erfahrungen in der Hardwareberatung im Kontext von IPv6-Migrationen müssen nachgewiesen werden, insbesondere bei der Anpassung von Hardwarekonfigurationen im Rahmen von…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das eingesetzte Personal muss praktische Erfahrung in der Hardwareberatung mit Bezug auf IPv6-Migrationen oder in gleichwertigen Projekten durch drei verschiedene Referenzen beleg…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das eingesetzte Personal muss Deutsch mündlich und schriftlich mindestens auf Niveau C1 des Gemeinsamen Europäischen Referenzrahmens oder gleichwertig beherrschen. Die Auftragnehm…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das eingesetzte Personal muss einen berufsqualifizierenden Hochschul- oder Berufsabschluss im MINT-Bereich haben. Alternativ ist ein Abschluss einer anderen Fachrichtung mit zusät…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Anerkennung des Abschlusses in Deutschland kann anhand der genannten oder gleichwertiger Datenbanken überprüft werden. Die Auftragnehmerin muss die Gleichwertigkeit einer ande…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Praktische Erfahrungen mit den IPv6 betreffenden Bestandteilen des BSI-IT-Grundschutzkompendiums in IPv6-Migrationsprojekten müssen durch Referenzen nachgewiesen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Praktische Erfahrungen bei der Planung individueller Sicherheitsmaßnahmen für IPv6-Migrationsprojekte zur weiteren Härtung von Netzwerk oder System müssen nachgewiesen werden: min…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Studiengang oder eine Berufsausbildung mit überwiegend, das heißt mehr als 50 %, mathematischen, informations- oder sonstigen technischen und/oder naturwissenschaftlichen Inha…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Personal der Senior-Erfahrungsstufe muss mindestens sechs Jahre Berufserfahrung haben, davon mindestens vier Jahre im Leistungsgegenstand gemäß Ziffer 4.3.1 oder gleichwertige Erf…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Personal der Senior-Erfahrungsstufe muss praktische Erfahrung in Planung, Durchführung und Dokumentation von Sicherheitsmaßnahmen bei IPv6-Migrationen besitzen und diese durch dre…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Eine Referenz für die Senior-Erfahrungsstufe wird nur anerkannt, wenn der persönliche Einsatz mindestens 20 PT umfasst.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Von den Referenzen für die Senior-Erfahrungsstufe muss mindestens eine die Identifikation und Mitigation IPv6-spezifischer Bedrohungen zum Gegenstand haben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für Personal im Unterstützungsbereich „IT-Security“ ist mindestens ein Weiterbildungszertifikat als IPv6 Forum Certified IPv6 Security Engineer (Gold), CISCO CCIE Security oder ei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Auftragnehmerin muss sich bei Angebotsabgabe verpflichten, die in Ziffer 1 der Anlage 12 („Erklärung zur sozialen Nachhaltigkeit von IT“ / ILO-Erklärung) geforderten Normen de…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sieht ein am Auftrag interessiertes Unternehmen seine Rechte durch einen Vergabeverstoß verletzt, muss es diesen innerhalb von zehn Kalendertagen gegenüber dem BeschA rügen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Erkennbare Verstöße aus der Bekanntmachung oder den Vergabeunterlagen müssen spätestens bis zur in der Bekanntmachung genannten Frist für Bewerbung oder Angebotsabgabe beim BeschA…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn das BeschA einer Rüge nicht abhelfen will, kann das Unternehmen innerhalb von 15 Tagen nach Eingang dieser Mitteilung einen Nachprüfungsantrag bei der Vergabekammer stellen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Nachprüfungsantrag muss schriftlich oder elektronisch bei der Vergabekammer des Bundes beim Bundeskartellamt, Kaiser-Friedrich-Straße 16, 53113 Bonn, eingereicht und begründet…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Um Betriebs- und Geschäftsgeheimnisse zu schützen, müssen Sie bezogen auf die jeweiligen Angebotsdokumente konkret mitteilen, welche Informationen als Betriebs- und Geschäftsgehei…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber/Bieter muss diese Anlage ausfüllen und einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Teil des Auftrags, der an einen Unterauftragnehmer vergeben werden soll, ist bereits bei Angebotsabgabe auszufüllen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bewerberin/Bieterin muss die VS-NfD-Verpflichtung ausfüllen, unterschreiben und stempeln oder elektronisch signieren und einreichen. Bei elektronischer Verfahrensführung ist e…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bieterin muss sich als VS-NfD-Auftragnehmerin verpflichten, die Bestimmungen des VS-NfD-Merkblatts (Anlage 4 zum Geheimschutzhandbuch des BMWK) einzuhalten und Verschlusssache…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sollen andere Unternehmen einer Bewerber-/Bietergemeinschaft ebenfalls Kenntnis von den genannten Verschlusssachen erhalten, müssen sie benannt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die benannten anderen Unternehmen müssen ebenfalls jeweils eine eigene Erklärung abgeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bieterin muss von ihren Unterauftragnehmern die Verpflichtungserklärung einholen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die Einhaltung und Durchführung der erforderlichen Schutzmaßnahmen für VS-NfD-Verschlusssachen nach dem VS-NfD-Merkblatt müssen verantwortliche Personen benannt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss durch Abgabe der nachfolgenden Erklärung nachweisen, dass ihm die für den Auftrag erforderlichen Mittel tatsächlich zur Verfügung stehen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das andere Unternehmen muss erklären, dass die genannten technischen, personellen und/oder finanziellen Mittel für die vertragsgerechte Leistungserbringung verfügbar sind.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Erklärung muss vollständig ausgefüllt und mit Unterschriften beziehungsweise Stempeln versehen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Eignungsleihe ist die Erklärung dem Angebot oder Teilnahmeantrag beizufügen: bei Papierabgabe im Original, ansonsten als gescannte PDF-Datei. Bei Unterauftragsvergabe ist sie…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber bzw. Bieter muss diese Verpflichtungserklärung ausfüllen und einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Diese Erklärung muss dem Angebot beigefügt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Erklärung darf nicht gesondert unterschrieben oder signiert werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zum Nachweis Ihrer technischen und beruflichen Leistungsfähigkeit reichen Sie bitte eine Liste von geeigneten Referenzen in Bezug zur gegenständlichen Leistung ein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zu Ihren Referenzen sind folgende Angaben zu machen:\n\n- Beschreibung der ausgeführten Leistungen,\n\n- Wert des Auftrages,\n\n- Zeitraum der Leistungserbringung,\n\n- Angabe der zuständ…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Referenzen, die die in den „Besonderen Bewerbungsbedingungen“ aufgestellten Eignungsanforderungen nicht erfüllen, gelten als fehlerhaft und können zum Ausschluss aus dem Verfahren…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist Ihnen daher unbenommen, auch mehr als die Mindestanzahl an geforderten Referenzen zu benennen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Angaben, die einer Nachprüfung nicht standhalten, können zum Ausschluss vom Vergabeverfahren führen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bitte füllen Sie die Liste der Referenzaufträge fortlaufend aus.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Soweit Sie mehr als drei Referenzen aufführen, benutzen Sie bitte die Folgeseiten mehrfach.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alternativ können Sie eine selbst erstellte Referenzliste einreichen, wenn die in diesem Vordruck geforderten Angaben enthalten und übersichtlich dargestellt sind.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Im Falle der Eignungsleihe geben Sie bitte den Unterauftragnehmer im Formularfeld „Bewerber/Bieter/Leistungserbringer“ an.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Beschreibung der ausgeführten Leistungen muss dem Beschaffungsamt des BMI die Prüfung ermöglichen, ob Ihre Referenz die aufgestellten Eignungsanforderungen erfüllt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sofern Sie aus berechtigten Geheimhaltungsgründen geforderte Angaben nicht machen können, teilen Sie diese Gründe mit dem Angebot dem Beschaffungsamt des BMI mit und legen Sie ein…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Nachfordern und Beibringen eines anderen (geeigneteren) Nachweises ist nach dem Ende der Angebotsfrist aus vergaberechtlichen Gründen nicht mehr möglich.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bitte berücksichtigen Sie, dass Sie sofern es Ihnen z. B. aus Geheimhaltungsgründen nicht möglich ist, den konkreten Auftragswert anzugeben, den Wert des Auftrags auch in Margen a…",
+      "required": null,
+      "actual": null
+    }
+  ]
+}

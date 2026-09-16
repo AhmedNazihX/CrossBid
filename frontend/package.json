@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o lib/api.ts"
+    "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o lib/api.ts",
+    "guide:shots": "playwright test --config playwright.guide.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

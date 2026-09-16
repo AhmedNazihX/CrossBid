@@ -9,6 +9,7 @@
 /coverage/
 # playwright (npm run test:e2e): reports, traces, screenshots
 /test-results/
+/test-results-guide/
 /playwright-report/
 /blob-report/
 /.playwright/
