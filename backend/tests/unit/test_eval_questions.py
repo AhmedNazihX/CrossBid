@@ -19,10 +19,14 @@ from crossbid.eval.questions import (
     QuestionSetError,
     QuestionSetMeta,
     RetrievalQuestion,
+    ReviewFlag,
     VerificationState,
+    content_words,
     dump_question_set,
+    flagged_questions,
     load_question_set,
     questions_by_label,
+    review_flags,
 )
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "retrieval"
@@ -149,3 +153,70 @@ def test_the_committed_key_reads_and_names_its_tender(fixture: str) -> None:
     assert question_set.fixture_name == fixture
     assert len(question_set.questions) == 30
     assert all(q.reference_contexts for q in question_set.questions)
+
+
+# ------------------------------------------------------- narrowing a draft key for a reviewer
+
+
+def test_a_question_in_the_forms_own_voice_is_flagged() -> None:
+    """The defect a human found that no overlap measure could: the model copied the register
+    of the document instead of asking about it. A bidder does not type "which variant would
+    you like to choose?" into a search box — the form asks them that."""
+    drafted = question(
+        question=(
+            "Welche Variante des Plausibilitätsnachweises möchten Sie mit Ihrem Angebot wählen?"
+        )
+    )
+
+    assert ReviewFlag.FORM_VOICE in review_flags(drafted)
+
+
+def test_a_question_that_reuses_the_clause_is_flagged() -> None:
+    asked = question(
+        question="Muss der Teilnahmeantrag vor Ablauf der Frist vollständig eingegangen sein?",
+        reference_contexts=(
+            "Der Teilnahmeantrag/das Angebot muss vor Ablauf der jeweiligen Frist "
+            "vollständig eingegangen sein (i.d.R. 11:30:00 Uhr).",
+        ),
+    )
+
+    assert ReviewFlag.ECHOES_CLAUSE in review_flags(asked)
+
+
+def test_an_ordinary_question_is_not_flagged() -> None:
+    assert review_flags(question()) == ()
+
+
+def test_the_echo_check_compares_the_question_with_the_clause_not_the_reference() -> None:
+    """The bug this pins, which shipped for one commit and flagged 86 of 90 questions.
+
+    The question is in the bidder's language and `reference` is one line of English, so any
+    lexical comparison between them measures the language gap and nothing else. Comparing the
+    question with its *clause* compares like with like — both are in the tender's language.
+    """
+    german = question(
+        question="Wie lange muss mein Angebot gültig bleiben?",
+        reference="The offer must remain valid for eight months.",
+        reference_contexts=("Dauer, während der das Angebot gültig bleiben muss: 8 Monate",),
+    )
+
+    # Shares nothing with the English reference, and plenty with the German clause.
+    assert ReviewFlag.ECHOES_CLAUSE in review_flags(german)
+
+
+def test_flagged_questions_returns_only_the_ones_with_flags() -> None:
+    clean = question("DE-Q-001")
+    voiced = question("DE-Q-002", question="Welche Variante möchten Sie wählen?")
+    question_set = QuestionSet(meta=meta(), questions=(clean, voiced))
+
+    flagged = flagged_questions(question_set)
+
+    assert [q.id for q, _ in flagged] == ["DE-Q-002"]
+
+
+def test_content_words_ignore_short_tokens() -> None:
+    assert content_words("Der Bieter muss Umsatz nachweisen") == {
+        "bieter",
+        "umsatz",
+        "nachweisen",
+    }

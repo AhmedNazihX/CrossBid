@@ -29,6 +29,7 @@ question (ADR to follow).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from datetime import date
 from enum import StrEnum
@@ -144,3 +145,84 @@ def dump_question_set(question_set: QuestionSet, path: Path) -> None:
 def questions_by_label(questions: Sequence[RetrievalQuestion]) -> dict[str, RetrievalQuestion]:
     """Index by the golden label each question came from."""
     return {question.label_id: question for question in questions}
+
+
+# ------------------------------------------------------------------ reviewing a draft key
+
+FORM_VOICE: Final = (
+    "möchten sie",
+    "wählen sie",
+    "bitte geben sie",
+    "tragen sie",
+    "kreuzen sie",
+    "ihrem angebot",
+    "ihres angebots",
+)
+"""Phrases in which a tender *form* addresses the bidder.
+
+A question carrying one was copied out of the document's own register rather than asked by
+somebody reading it — "Welche Variante möchten Sie wählen?" is a field on a form, not something
+a bidder types into a search box. Found by a human reviewer on 2026-09-16 and kept as a check
+because the generator will run again.
+"""
+
+
+class ReviewFlag(StrEnum):
+    """Why a drafted question needs a person to look at it."""
+
+    FORM_VOICE = "form_voice"
+    """The question is addressed *to* the bidder, in the document's own register."""
+
+    ECHOES_CLAUSE = "echoes_clause"
+    """The question reuses most of the source clause's wording.
+
+    Not automatically wrong — German compounds the domain nouns, so any natural question about
+    a clause reuses its words — but it is where a question that hands over its own answer will
+    be found, so it is worth a reviewer's eye.
+    """
+
+
+ECHO_OVERLAP: Final = 0.7
+"""Share of a question's words that may also appear in the clause it was drafted from.
+
+Compared against the **clause**, not the reference: the clause is in the tender's language and
+so is the question, while `GoldenRequirement.summary` is one line of English. Comparing a
+German question with an English summary measures the language gap and nothing else — which an
+earlier version of this check did, flagging 86 of 90 questions.
+"""
+
+
+def content_words(text: str) -> set[str]:
+    """Words long enough to carry retrieval signal."""
+    return set(re.findall(r"\w{5,}", text.casefold()))
+
+
+def review_flags(question: RetrievalQuestion) -> tuple[ReviewFlag, ...]:
+    """What is mechanically suspicious about one drafted question.
+
+    **Deliberately only the two things a machine can see.** Whether a question is answerable
+    from its reference, and whether it restates its own answer, are semantic judgements across
+    two languages; `scripts/review_questions.py` asks the judge those, because a lexical
+    approximation of them is worse than nothing — it was tried and it flagged everything.
+    """
+    flags: list[ReviewFlag] = []
+    lowered = question.question.casefold()
+    if any(phrase in lowered for phrase in FORM_VOICE):
+        flags.append(ReviewFlag.FORM_VOICE)
+
+    asked = content_words(question.question)
+    clause = content_words(question.reference_contexts[0])
+    if asked and len(asked & clause) / len(asked) >= ECHO_OVERLAP:
+        flags.append(ReviewFlag.ECHOES_CLAUSE)
+    return tuple(flags)
+
+
+def flagged_questions(
+    question_set: QuestionSet,
+) -> tuple[tuple[RetrievalQuestion, tuple[ReviewFlag, ...]], ...]:
+    """Every question with at least one flag, paired with its flags."""
+    return tuple(
+        (question, flags)
+        for question in question_set.questions
+        if (flags := review_flags(question))
+    )

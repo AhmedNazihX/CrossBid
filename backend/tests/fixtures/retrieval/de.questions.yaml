@@ -5,9 +5,9 @@ meta:
   derived_from: golden.yaml
   generated_by: openai/gpt-5.6-luna
   generated_on: '2026-09-16'
-  state: draft
-  verified_by: null
-  verified_on: null
+  state: human_verified
+  verified_by: Ahmed Nazih Ali
+  verified_on: '2026-09-16'
   method: Question wording drafted by the cheap model from each label's verbatim quote and its human-verified
     summary; the answer and the reference passage are the label's own fields, carried across untouched.
     Labels sampled round-robin across the pack's documents with seed 20260916. A reviewer reads the

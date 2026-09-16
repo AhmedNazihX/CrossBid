@@ -1,0 +1,54 @@
+{
+  "reviewed": 30,
+  "needs_a_look": [
+    {
+      "id": "EN-Q-004",
+      "answerable": false,
+      "restates": false,
+      "reason": "The reference answer does not specify which information and documents must be submitted.",
+      "mechanical": []
+    },
+    {
+      "id": "EN-Q-011",
+      "answerable": false,
+      "restates": false,
+      "reason": "The reference answer does not specify which proofs are normally acceptable.",
+      "mechanical": []
+    },
+    {
+      "id": "EN-Q-016",
+      "answerable": false,
+      "restates": false,
+      "reason": "The reference answer does not specify which proofs are required for legal and regulatory capacity.",
+      "mechanical": []
+    },
+    {
+      "id": "EN-Q-022",
+      "answerable": false,
+      "restates": false,
+      "reason": "The reference answer states that the tenderer must not be in any exclusion situations, but it does not list what those situations are.",
+      "mechanical": []
+    },
+    {
+      "id": "EN-Q-024",
+      "answerable": false,
+      "restates": false,
+      "reason": "The reference answer does not specify how the SME status must be registered and kept up to date.",
+      "mechanical": []
+    },
+    {
+      "id": "EN-Q-025",
+      "answerable": false,
+      "restates": false,
+      "reason": "The reference answer does not specify which evidence must be filed with the tender.",
+      "mechanical": []
+    },
+    {
+      "id": "EN-Q-027",
+      "answerable": false,
+      "restates": false,
+      "reason": "The reference answer does not specify the minimum number of Drupal projects required, only that at least one is needed.",
+      "mechanical": []
+    }
+  ]
+}
