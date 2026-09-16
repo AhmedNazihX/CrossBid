@@ -33,7 +33,7 @@ from crossbid.eval.extraction import ExtractionResult, ExtractionSource, load_ex
 from crossbid.eval.recall import scored_labels
 from crossbid.eval.report import CLOSING_S6_4, NOTHING_SCORED
 from crossbid.models.golden import load_golden
-from crossbid.models.requirement import Requirement, RequirementKind
+from crossbid.models.requirement import Requirement, RequirementKind, RequirementSource
 from tests.conftest import TENDERS_DIR, parsed_fixture_pdf, tender_pack_pdfs
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -98,10 +98,30 @@ def shipped(path: Path) -> ExtractionResult:
 
 
 def row_cases() -> list[pytest.ParameterSet]:
+    """Every shipped row whose citation is a page, which is the only kind this check reads.
+
+    Filtered on the source that paginates rather than on "has a page", and filtered at all
+    only since S7.1: until `fr.live.json` was recorded, every shipped result came from a pack
+    with no published DUME and every row therefore had a page. The FR run has 30 rows out of
+    144 that cite a canonical eCertis criterion id instead — correctly, and enforced by
+    `Requirement._the_citation_matches_the_source` — and `parsed_fixture_pdf` cannot open an
+    XML file to look for a page that does not exist. Their citation is checked by
+    `test_a_shipped_espd_row_cites_a_criterion_the_register_knows` below.
+    """
     return [
         pytest.param(path, row, id=f"{path.stem}-{index}")
         for path in shipped_paths()
         for index, row in enumerate(shipped(path).requirements)
+        if row.source is RequirementSource.TENDER_DOCUMENT
+    ]
+
+
+def espd_row_cases() -> list[pytest.ParameterSet]:
+    return [
+        pytest.param(path, row, id=f"{path.stem}-{index}")
+        for path in shipped_paths()
+        for index, row in enumerate(shipped(path).requirements)
+        if row.source is not RequirementSource.TENDER_DOCUMENT
     ]
 
 
@@ -125,6 +145,7 @@ def live_paths() -> list[Path]:
 FILE_CASES = [pytest.param(path, id=path.stem) for path in shipped_paths()]
 SYNTHETIC_CASES = [pytest.param(path, id=path.stem) for path in synthetic_paths()]
 ROW_CASES = row_cases()
+ESPD_ROW_CASES = espd_row_cases()
 
 
 # ------------------------------------------------------------------------- the fixtures
@@ -172,8 +193,24 @@ def test_a_shipped_row_quotes_the_page_it_cites(path: Path, row: Requirement) ->
     document = parsed_fixture_pdf(tender_pack_pdfs(fixture_dir)[row.document_name])
 
     # Act & Assert
+    assert row.page is not None
     assert row.page <= document.page_count
     assert _is_verbatim(row.source_text, document.pages[row.page - 1].text)
+
+
+@pytest.mark.parametrize(("path", "row"), ESPD_ROW_CASES)
+def test_a_shipped_row_without_a_page_cites_something_else_a_reviewer_can_follow(
+    path: Path, row: Requirement
+) -> None:
+    """The other half of the citation promise, for the rows that have no page.
+
+    A DUME row's locator is its criterion id, and the id is typed against the generated
+    eCertis register (S1.1.3), so a row that has neither a page nor an id cites nothing at
+    all — which is the one shape `Requirement` allows that a reviewer cannot follow.
+    """
+    # Act & Assert
+    assert row.page is None, "a row with a page belongs to the check above"
+    assert row.ecertis_criterion_id, f"{row.document_name}: no page and no criterion id"
 
 
 # ---------------------------------------------------------------------------- the script
