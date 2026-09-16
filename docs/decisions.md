@@ -5483,3 +5483,53 @@ eCertis resolution was **identical across all three** (30 rows, 29 resolved). Th
 path — a criterion id read out of a published DUME, looked up in a cached register — has no
 model in it and does not vary. That contrast is worth keeping in view: the deterministic half
 of this product is deterministic.
+
+---
+
+## ADR-0076 — The retrieval questions are drafted from the answer they are graded against
+
+**Date:** 2026-09-16 · **Stories:** S7.1 · **Status:** accepted
+
+A human reviewing the first drafted key found four defects in questions no automated check had
+flagged. The sharpest: a question asking whether **each member of a consortium** must sign,
+whose passage says so and whose `reference` does not. `context_recall` scores retrieved
+contexts against the reference, so a retriever finding exactly the right passage was marked
+down.
+
+**The cause was structural, not four bad rolls.** The generator drafted each question from the
+**clause** while the metric grades against the **reference** — the label's one-line English
+summary — so a question was free to be more specific than the thing it is scored on. Every
+instance of that defect follows from the design.
+
+**The generator now drafts from the reference**, with the clause supplied for terminology only,
+and **checks its own output before writing it down**: answerable from the summary alone,
+specific enough to pick out this requirement, not a restatement. A draft that fails is re-asked
+once and then **the label is skipped** and the sampler draws another.
+
+Skipping is the part worth defending. Some verified labels summarise to a phrase too terse to
+support any good question — *"A valid insurance certificate."* admits nothing better than
+"Which document is required?", which would retrieve every document requirement in the pack.
+Writing that down weakens the metric silently; leaving it out is visible. FR's key is
+consequently **23 questions, not 30**: seven labels were skipped and the pack has only 30
+scored labels to draw from. A short key is a fact about the answer key.
+
+**Two checks were tried in the judge and moved out of it, for opposite reasons.**
+
+- *Is this answerable from the reference?* stayed with the judge. A first attempt did it
+  lexically and **flagged 86 of 90**, because the questions are in the bidder's language and the
+  reference is one line of English — it was measuring the language gap.
+- *Is this written in the right language?* moved **out** of the judge to a function-word rule.
+  Asked whether a German question was in German, `gemini-2.5-flash-lite` answered "no, the
+  expected language is English" for every question in the pack: it anchored on the word
+  *English* in the surrounding prompt and could not be talked out of it. Which language a
+  sentence is in is decidable; a model is the wrong instrument, exactly as it is for whether a
+  quote appears on a page (ADR-0068).
+
+A third bug sat underneath that one: the prompt interpolated the BCP-47 **code**, so the judge
+was reading "should be in de". A code is an identifier; a prompt needs a word.
+
+**What this does not do is verify the key.** After regeneration the judge flags **11 of 83**
+against 29 before, and the mechanical checks 5. Those narrow what a person reads; `meta.state`
+is still set by hand, and `questions.py` still refuses to call a file verified without a name
+and a date. The human pass found what four automated checks did not, and that ordering is the
+finding: **automation narrows, people verify.**

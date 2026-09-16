@@ -2,85 +2,27 @@
   "reviewed": 30,
   "needs_a_look": [
     {
-      "id": "DE-Q-001",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify what evidence is required for violations of purely national exclusion grounds.",
-      "mechanical": []
-    },
-    {
-      "id": "DE-Q-002",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify the deadline, only that the offer must arrive before it.",
-      "mechanical": [
-        "echoes_clause"
-      ]
-    },
-    {
-      "id": "DE-Q-003",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify which details about the company must be submitted with the offer.",
-      "mechanical": []
-    },
-    {
       "id": "DE-Q-004",
       "answerable": false,
       "restates": false,
-      "reason": "The question asks what to consider for timely submission, but the reference answer only states that the offer must arrive before the deadline and meet application conditions, not the specific considerations.",
+      "reason": "The reference answer does not specify which details are required in the annex, only that circumstances and self-cleaning measures must be explained.",
       "mechanical": []
     },
     {
-      "id": "DE-Q-005",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify which performance criteria require evidence and declarations.",
-      "mechanical": []
-    },
-    {
-      "id": "DE-Q-009",
+      "id": "DE-Q-007",
       "answerable": false,
       "restates": false,
       "reason": "The reference answer does not specify which variants of plausibility evidence are available.",
-      "mechanical": [
-        "form_voice"
-      ]
-    },
-    {
-      "id": "DE-Q-011",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer states that the volume delivered must be stated in invoiced person-days, but it does not specify the number of invoiced person-days.",
       "mechanical": []
     },
     {
-      "id": "DE-Q-016",
+      "id": "DE-Q-013",
       "answerable": true,
       "restates": true,
-      "reason": "The question restates the answer by asking if the reference contracts must be filled in consecutively, which is exactly what the reference answer states.",
-      "mechanical": []
-    },
-    {
-      "id": "DE-Q-019",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer states that the average headcount must be stated, but does not provide the actual number, which the question asks for.",
-      "mechanical": []
-    },
-    {
-      "id": "DE-Q-027",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify how the VS-NfD undertaking must be completed, signed, or submitted.",
-      "mechanical": []
-    },
-    {
-      "id": "DE-Q-028",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify which references must be submitted, only that suitable references must be submitted.",
-      "mechanical": []
+      "reason": "The question restates the answer by asking if the declaration must be attached to the offer, which is exactly what the reference answer states.",
+      "mechanical": [
+        "echoes_clause"
+      ]
     }
   ]
 }

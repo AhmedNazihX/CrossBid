@@ -31,6 +31,9 @@ from crossbid.eval.questions import (
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "retrieval"
 
+MINIMUM_KEY = 20
+"""Below this a tender's retrieval figures are too few to read as a rate."""
+
 
 def meta(**overrides: object) -> QuestionSetMeta:
     base: dict[str, object] = {
@@ -151,8 +154,13 @@ def test_the_committed_key_reads_and_names_its_tender(fixture: str) -> None:
     question_set = load_question_set(FIXTURES / f"{fixture}.questions.yaml")
 
     assert question_set.fixture_name == fixture
-    assert len(question_set.questions) == 30
     assert all(q.reference_contexts for q in question_set.questions)
+    # Not a fixed 30. The generator skips a label whose summary cannot carry a specific
+    # question, and the FR pack has only 30 scored labels to draw from in the first place, so
+    # its key is 23. A key shorter than asked for is a fact about the answer key, not a bug --
+    # what must never happen is a key padded with questions that measure nothing.
+    assert len(question_set.questions) >= MINIMUM_KEY
+    assert len({q.id for q in question_set.questions}) == len(question_set.questions)
 
 
 # ------------------------------------------------------- narrowing a draft key for a reviewer

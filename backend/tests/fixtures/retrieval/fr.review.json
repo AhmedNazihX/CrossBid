@@ -1,81 +1,25 @@
 {
-  "reviewed": 30,
+  "reviewed": 23,
   "needs_a_look": [
     {
-      "id": "FR-Q-007",
-      "answerable": true,
-      "restates": true,
-      "reason": "The question restates the answer by asking if the 'acte d'engagement' must be completed and signed, which is exactly what the reference answer states.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-008",
+      "id": "FR-Q-001",
       "answerable": false,
       "restates": false,
-      "reason": "The reference answer does not specify which tax certificate is required, only that it is a tax-clearance certificate.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-011",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify what 'Nachweise' (evidence) are required to prove competence.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-012",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify the circumstances that can lead to the exclusion of a bidder.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-014",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify which documents must be submitted for each application type.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-017",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify which foreign employees must be listed, only that they are subject to work authorization.",
+      "reason": "The reference answer does not specify which bidder document must be attached.",
       "mechanical": []
     },
     {
       "id": "FR-Q-018",
       "answerable": false,
       "restates": false,
-      "reason": "The reference answer does not specify who is empowered to bind the company.",
+      "reason": "The reference answer does not state the amount of the overall annual turnover.",
       "mechanical": []
     },
     {
-      "id": "FR-Q-019",
+      "id": "FR-Q-020",
       "answerable": false,
       "restates": false,
-      "reason": "The reference answer does not specify if a technical concept must be dated, only that a technical memorandum must be dated.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-022",
-      "answerable": true,
-      "restates": true,
-      "reason": "The question restates the answer by asking if tenders must be submitted electronically on the PLACE platform, which is directly stated in the reference answer.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-023",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not state the specific amount of overall annual turnover required.",
-      "mechanical": []
-    },
-    {
-      "id": "FR-Q-025",
-      "answerable": false,
-      "restates": false,
-      "reason": "The reference answer does not specify which documents must be submitted.",
+      "reason": "The reference answer does not specify which documents must be submitted, only that 'listed documents' must be produced.",
       "mechanical": []
     }
   ]
