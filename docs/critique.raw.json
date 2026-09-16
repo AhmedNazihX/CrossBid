@@ -1,0 +1,48 @@
+{
+  "critic": "google/gemini-2.5-flash",
+  "findings": [
+    {
+      "area": "prompt_engineering",
+      "severity": "high",
+      "title": "Conflicting instructions on `stage` field in extraction prompt",
+      "locator": "PROMPT: extraction — backend/crossbid/agent/prompts/extract.md, The `stage` field section",
+      "finding": "The prompt states: \"The test: would a company still have to do this if it never won the contract? If no, it is `contract_performance`.\" However, it immediately follows with an exception for 'statement of work' documents, where 'minimum qualifications a bidder's staff must already hold' are `bid_eligibility` even if the company never won the contract. This creates a conflict for the model, as the general rule is contradicted by a specific, important exception. A model might struggle to consistently apply the 'never won the contract' test when faced with such exceptions, leading to miscategorization of critical requirements.",
+      "suggested_fix": "Rephrase the `stage` field instructions to clearly define `bid_eligibility` and `contract_performance` based on whether the requirement is a pre-condition for bidding or a post-award obligation, rather than a 'never won the contract' test that is then immediately contradicted. For example, '`bid_eligibility` are conditions that must be met to submit a valid bid, while `contract_performance` are duties that only apply if the contract is awarded.' Then, clarify how staff qualifications in a statement of work fit into `bid_eligibility` as a specific type of selection criteria."
+    },
+    {
+      "area": "prompt_engineering",
+      "severity": "medium",
+      "title": "Ambiguous instruction on `tool_budget` in per-requirement checking prompt",
+      "locator": "PROMPT: per-requirement checking — backend/crossbid/agent/prompts/check.md, How to work section",
+      "finding": "The prompt states: \"When your budget is spent you answer from what you have. Running out of calls is not a reason to guess, and it is not a reason to call the requirement unmet either: it is a reason to say what is still missing.\" This instruction is ambiguous. If the model runs out of tool calls and cannot definitively determine the status, it's unclear whether it should default to `partially_supported` (saying what's missing) or `unsupported` (if no evidence was found at all). The phrasing 'not a reason to call the requirement unmet' could be interpreted as avoiding `unsupported`, but `partially_supported` implies some evidence was found, which might not be the case if the budget is spent before any relevant information is retrieved. This could lead to inconsistent status assignments.",
+      "suggested_fix": "Clarify the expected status when the `tool_budget` is exhausted and no conclusive evidence (either for or against) has been found. For example, explicitly state: 'If your budget is spent and you have not found conclusive evidence, mark the requirement as `partially_supported` and clearly state what information is still missing or could not be verified.'"
+    },
+    {
+      "area": "security",
+      "severity": "high",
+      "title": "Potential for information leakage in `_around` function for injection findings",
+      "locator": "SECURITY: injection heuristics — backend/crossbid/guards/injection.py, `_around` function",
+      "finding": "The `_around` function extracts an `EXCERPT_CONTEXT` window around a matched injection pattern. While `re.sub(r'\\s+', ' ', window).strip()` attempts to sanitize whitespace, it does not remove or escape potentially malicious characters or sequences that could be present in the `text` itself. If the `excerpt` is logged or displayed to a user without further sanitization, a sophisticated attacker could craft a tender document containing an injection pattern surrounded by characters that, when rendered, could lead to XSS or other display-based vulnerabilities in a logging system or UI that consumes these excerpts. The current sanitization only addresses whitespace, not content.",
+      "suggested_fix": "Ensure that any `excerpt` returned by `scan` is further sanitized or escaped before being logged or displayed to any user. For example, apply HTML entity encoding if the excerpt is to be displayed in a web UI, or ensure that logging systems are configured to handle untrusted input safely. The `_around` function itself could also perform more robust sanitization, such as replacing non-printable characters or encoding special characters, although the primary defense should be at the point of consumption."
+    },
+    {
+      "area": "usability",
+      "severity": "high",
+      "title": "Misleading 'Ready' status for documents in user guide",
+      "locator": "USABILITY: the user guide — docs/user-guide.md, 'Your evidence pack' section",
+      "finding": "The user guide states: \"Wait for each to read **Ready**. A document still parsing is not yet searchable, and a bid started before it finishes will be checked without it.\" This implies that 'Ready' means the document is fully processed and available for RAG. However, the `partition_by_guard` and `review_flagged` functions in `guarding.py` indicate that documents can be flagged for injection and withheld from the RAG corpus even after parsing. A user might see 'Ready', assume full availability, and start a bid, only for critical information to be missing because it was in a flagged chunk that was withheld. The guide does not mention this possibility, leading to a false sense of security about document availability.",
+      "suggested_fix": "Clarify what 'Ready' truly signifies. Either 'Ready' should only be displayed after all guarding and potential review processes are complete and the document is fully indexed and available for RAG, or the user guide should explicitly state that 'Ready' means parsing is complete, but some parts of the document might still be withheld if they contain suspected injection attempts. It should also guide the user on how to check for and address flagged chunks."
+    },
+    {
+      "area": "usability",
+      "severity": "medium",
+      "title": "Lack of guidance on `ecertis_criterion_id` usage in extraction prompt",
+      "locator": "PROMPT: extraction — backend/crossbid/agent/prompts/extract.md, `ecertis_criterion_id` field",
+      "finding": "The prompt states: \"`ecertis_criterion_id` — **null unless the section itself prints an ESPD criterion UUID.** ... Never derive one from the wording of a criterion: an id that is not on the official list is discarded and the entry loses its mapping.\" While this is a clear instruction for the model, the user guide does not explain to the user *why* this field is important or how it impacts the cross-border functionality. The guide mentions 'criterion mapping needs no guessing' when a DUME is uploaded, but doesn't link this to the `ecertis_criterion_id` or explain the consequences of its absence. A user might not understand the value of uploading `DUME_acheteur.xml` beyond 'structured ESPD request' if they don't know it enables this specific, critical mapping.",
+      "suggested_fix": "In the user guide, when discussing the `DUME_acheteur.xml` upload, explicitly mention that it provides the `ecertis_criterion_id` which is crucial for automatic cross-border evidence mapping. Explain that without this ID, Crossbid cannot reliably map national evidence, even if the requirement's wording is similar, because the model is instructed not to guess these IDs."
+    }
+  ],
+  "disagreements": [
+    "The accepted risk 'No route reads the chat thread back, so reloading the page loses the visible conversation while the agent still remembers it on its thread. Accepted in ADR-0058.' is problematic. While the agent remembering the thread is good, the user losing visibility of the conversation is a significant usability issue that can lead to frustration, repeated questions, or a lack of trust in the system's memory. This could be mitigated by storing the visible conversation in local storage or a temporary session, even if not persisted on the backend, to improve the user experience without requiring a full backend thread retrieval mechanism. The current state forces users to remember or re-ask, which is inefficient."
+  ]
+}
