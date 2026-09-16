@@ -5045,3 +5045,387 @@ with a bid carrying the DE pack, so the Source panel asks for a signed URL that 
 stubs, and the fixture rightly fails the test for an un-stubbed call. The bid it lands on now
 lists no documents. The lesson is the fixture's, not the app's: **a test that navigates
 somewhere must stub what that destination asks for, not only what the journey to it did.**
+
+---
+
+## ADR-0066 — One definition of "a run against a fixture pack", and the two defects that proved it was needed
+
+**Date:** 2026-09-16 · **Stories:** S7.1, S3.1.1 · **Status:** accepted
+
+S7.1 needs the graph run over three tenders and over a second model, where
+`tests/integration/test_bid_run_live.py` had run it over one since S3.1.1. The run machinery
+lived in that test as module-local helpers — a recording projection, a refusing database, a
+fixture parser, a cost callback — so four callers meant four copies, after which the numbers
+they produced would have stopped being comparable, which is the only reason to record them.
+
+The machinery moved to **`crossbid/eval/packrun.py`** and the live test kept the judgement.
+`run_pack` runs the committed graph over a pack and returns what it produced; the live test
+asserts S3.1.1's budget on DE, and `scripts/extract_pack.py` re-records the others and asserts
+nothing, because a budget is a property of a pack and its settings rather than of running one.
+This is the same rule `eval/matching.py` already follows by importing `extract_reqs._comparable`
+instead of restating what a comparable quote is.
+
+**Moving it into `crossbid/` is what found the defects**, because `crossbid/` is type-checked
+and covered and `tests/` is neither. Two of them, and together they mean
+**`test_bid_run_live.py` could not have completed a run since S5.2 landed**:
+
+1. **The usage sink went to Postgres.** `graph.stage` wraps every node in a `UsageRecorder`
+   (ADR-0056) and `build_graph` defaults the sink to `DatabaseUsageSink(db)`. The test passed
+   a fake database whose `connection()` raises, so the first captured model response raised
+   inside `stage` and surfaced as a failed *stage* — never as a message about cost. `run_pack`
+   passes its own `RecordingUsageSink`, and summing that sink is now where the run's cost
+   comes from: the production path, rather than a callback that only saw chat completions.
+2. **`score_verdict` reads the company profile unconditionally**, and `_profile` catches only
+   `CompanyReadModelError` and `ValueError` — a database that is not there raises straight
+   through as `scoring failed`. `run_pack` passes a lookup answering `None`, which is exactly
+   what the real node produces for a company with no profile, so the real scorer and the real
+   rules still run.
+
+Neither was hypothetical and neither was visible: the repository's DE cost figure is dated
+2026-09-13 because nothing had re-run it, and the run would have failed if anything had.
+`tests/unit/test_packrun.py` pins both offline — the first by asserting that the default sink
+over a refusing database raises, which is the sentence that would stop being true if
+`usage=sink` were ever dropped.
+
+**Consequence.** `pyright` and the coverage gate now apply to the run harness. That is the
+point: the projection had to grow the three `RunProjection` methods the test-local version
+never implemented, and writing them is what showed that `set_verdict` really is reached before
+the interrupt while the two review writes are not.
+
+---
+
+## ADR-0067 — The notice PDF is part of a pack run, and six labels stop being unreachable
+
+**Date:** 2026-09-16 · **Stories:** S7.1, S3.2.1 · **Status:** accepted
+
+`test_bid_run_live.py` globbed `documents/*.pdf` — 28 files, 191 pages for DE. The DE answer
+key labels **six scored requirements on `614251-2026.notice.de.pdf`**, which sits one level
+above `documents/` and which no run had ever read. Six of a 177-label denominator is 3.4 points
+of recall that no extractor could have earned, and nothing in the recall report said the pages
+had never been opened: a miss caused by a document that was not read renders identically to a
+miss caused by a model that did not find it.
+
+`pack_documents` now reads the pack root as well, labelling that file `TENDER_NOTICE`. Three
+reasons, in the order that decided it: a bidder uploads the notice (it is the first field of
+the start form, and the kind exists for it); the answer key labels it, so its authors
+considered it in scope; and `parse_docs` routes only `TENDER_ESPD_REQUEST` away from the PDF
+parser, so a notice was always going to be read like any other document once it arrived.
+
+**A figure recorded after this change is not comparable with one recorded before it**, and the
+report says so rather than printing 2026-09-13 and 2026-09-16 side by side. The DE run went
+from 284 rows to 311, of which 34 came from the notice.
+
+CLAUDE.md already recorded that this pack gives two different page counts depending on the
+glob — 191 against 202. That note existed and the run still took the smaller number. A count
+written down is not a decision made.
+
+---
+
+## ADR-0068 — Citation faithfulness is a substring check, not a judge
+
+**Date:** 2026-09-16 · **Stories:** S7.1 · **Status:** accepted
+
+The plan's tech stack names DeepEval `GEval` for faithfulness. **It is not used**, and the
+departure is deliberate.
+
+GEval puts a judge in front of a claim and a source and asks it to rate agreement on a 0–1
+scale. That is the right instrument when agreement is a matter of degree. The claim here is
+not: *"the row's `source_text` occurs on page p of document d"* is decidable, the repository
+already owns the decision procedure (`extract_reqs._is_verbatim`), and a judge could only add
+cost and variance to an answer that is exactly true or exactly false.
+
+So `eval/faithfulness.py` re-runs the extractor's own predicate over the **independently
+re-parsed pack**, and normalisation is imported rather than restated — a second definition of
+"verbatim" would let the metric and the extractor disagree about the same quote.
+
+**The number is 1.0000 on all four runs (1065 checkable citations), and the report explains why
+rather than presenting it as a discovery.** The extractor drops a row whose quote is not on its
+page, so a high score is expected by construction; what this adds is that the property still
+holds *after* merging, de-duplication, serialisation to a fixture and re-parsing from disk, and
+that it holds against the file the row names rather than the section the model was shown.
+
+A metric that cannot fail is not evidence (ADR-0063), so every failure mode is driven by
+mutating a real row from a real pack: a word changed (`not_on_page`), a page past the end of
+the file (`no_such_page`), a plausible filename that is not in the pack (`no_such_document`).
+The last is the one worth having — a citation that opens the wrong document looks right on
+screen, which makes it worse than a wrong quote.
+
+**Rows with no page are set aside, not passed.** An ESPD row cites a criterion id and a notice
+row cites a TED field; both are correct to have no page. Counting them faithful would have
+inflated the FR score by 30 of 144 rows — a fifth of the tender — on evidence the metric never
+looked at.
+
+---
+
+## ADR-0069 — Ragas comes off the cut list for retrieval, with a key derived from the verified labels
+
+**Date:** 2026-09-16 · **Stories:** S7.1, S3.3.1, S3.5.1 · **Status:** accepted
+
+`docs/roadmap.md` listed Ragas as cut and the plan said "DeepEval only". **The user asked for
+Ragas for retrieval metrics on 2026-09-16, and that reopens it.** The gap it fills is real:
+recall and faithfulness score what the graph read out of a pack, and nothing measured the half
+of the product a bidder drives — "ask the tender", which is the brief's *agentic RAG* item.
+That gap is how `tender_chunks` went three increments with no writer, answering "nothing found"
+to every question, well-formed and useless (ADR-0057).
+
+**Four metrics, and two of them need an answer key.** `context_recall` and
+`context_precision` can say "retrieval missed the passage"; `faithfulness` and
+`answer_relevancy` can only say the answer is consistent with whatever came back. A suite of
+the reference-free pair alone would score a system that retrieves the wrong passage and answers
+it faithfully as perfect, so the key is not optional.
+
+**The key is derived from the golden labels rather than invented.** Every question is built
+from one `GoldenRequirement`: `reference` is its human-verified `summary`, `reference_contexts`
+is its verbatim `quote`, and `doc`/`page` are the citation that quote came from. Only the
+*wording* of the question is generated, by the cheap model, from the quote and the summary.
+S6.4 cost a day of adjudication to learn that an unverified key makes the metric it feeds a
+decoration; inventing a second unverified key would have repeated it exactly. What remains for
+a reviewer is thirty question strings per tender, not ninety answers.
+
+`questions.py` therefore refuses to call a file verified without **state, name and date
+together**, and `REPORT.md` prints `draft key` beside every reference-scored figure until all
+three are set. As of this entry all three keys are drafts.
+
+**The corpus is a throwaway pgvector, not Frankfurt.** A retrieval figure measured against one
+person's Supabase project is a claim nobody else can check and it drifts as that project's data
+changes — the weakness that made the 2026-09-13 cost figure stale. `scripts/index_pack.py`
+rebuilds it from committed fixtures on the same `pgvector/pgvector:pg16` image CI already runs
+for `make test-db`, using the production chunker, embedder and injection guard, because a score
+over a corpus chunked differently from the shipping one describes a system nobody runs.
+
+**Questions are asked on their own threads.** Sharing one would let question 12 be answered from
+what question 11 retrieved, and the number would then measure a conversation.
+
+**The dependency cost is real and is recorded here rather than discovered later.** Ragas 0.4.3
+pins `langchain-community <0.4` (it imports `langchain_community.chat_models.vertexai`, removed
+in 0.4) and downgrades `openai` 3.11 → 3.3. DeepEval brings **`pytest-asyncio`**, which CLAUDE.md
+explicitly forbids adding; it arrives transitively, our async tests still use `anyio`, and
+pytest-asyncio in its default strict mode only collects tests marked `@pytest.mark.asyncio`, of
+which there are none. The full offline suite passes and the live OpenRouter path was re-verified
+by a paid run after the downgrade. **If any of that stops being true, the cheapest fix is to drop
+ragas rather than to work around it.**
+
+---
+
+## ADR-0070 — The translation rubric measured the wrong contract, and was rewritten to the right one
+
+**Date:** 2026-09-16 · **Stories:** S7.1, S3.2.1 · **Status:** accepted
+
+The first version of `eval/translation.py`'s GEval steps scored **literal translation
+fidelity**: "penalise heavily if it adds a requirement the source does not contain". On the
+first six FR rows it returned 0.20 and 0.30 for rows like this one:
+
+- source: *"Le pouvoir habilitant le signataire à engager le sous-traitant ;"* — a bullet in a
+  list of documents
+- rendering: *"Für jeden Unterauftragnehmer muss eine Vollmacht eingereicht werden, die den
+  Unterzeichner zur Verpflichtung des Unterauftragnehmers berechtigt."*
+
+The judge was right that the rendering says more than the bullet does. The rubric was wrong
+that this is a defect. `prompts/extract.md` instructs: *"the same obligation in
+{bidder_language} … **Say what the bidder must do, not what the clause is about**"*, and
+`Requirement.translation` is documented as a *bidder-language rendering*, not a translation.
+The rubric was scoring the extractor for obeying its own prompt.
+
+**The steps were rewritten to the documented contract, and this entry exists because rewriting
+a rubric after seeing a low number needs a reason that is not the number.** The relaxation is
+exactly one clause: making an elided subject, condition or action explicit is correct and is
+no longer penalised. Everything that changes what a bidder would *do* is still a failure —
+inventing a duty, dropping one, flipping modality, changing a figure — and a scope the source
+does not state is still called an error, which is why the same two FR rows still score 0.40
+after the rewrite rather than jumping to 0.90. `test_eval_translation.py` asserts the surviving
+clauses are still in the steps, so the relaxation cannot quietly widen.
+
+**The finding underneath is real and belongs in the report**: on document-list bullets the
+extractor adds scope the source does not carry. Mild, and worth a prompt fix later.
+
+---
+
+## ADR-0071 — The eval judge moves to `google/gemini-2.5-flash-lite`
+
+**Date:** 2026-09-16 · **Stories:** S7.1, S5.1 · **Status:** accepted
+
+`models.judge` was `anthropic/claude-haiku-4.5` (ADR-0005). It is now
+`google/gemini-2.5-flash-lite`.
+
+The rule the judge exists to satisfy is S7.1's: **a different vendor than the models under
+test**. Extraction, checking and chat all run on OpenAI slugs, so both candidates satisfy it
+equally and the choice is free on correctness grounds.
+
+What decided it is volume. The retrieval suite asks four metrics over ninety questions and each
+metric decomposes into several calls — `Faithfulness` splits an answer into statements and
+verifies each, `AnswerRelevancy` generates questions back from the answer — which makes the
+judge the most-called model in the project by a wide margin. flash-lite is **$0.10/$0.40**
+against haiku's **$1/$5**, and it answers fast enough that scoring a tender went from over
+twenty minutes to about two.
+
+**It was measured before it was trusted**, on both reference-scored metrics: 1.00 against the
+passage that answers the question and 0.00 against one that does not. A judge that cannot
+discriminate is worse than no judge, and cheapness is not a reason to skip the check.
+
+haiku stays in `available_models` as the more capable fallback, and the slug is a setting, so
+re-running the suite against it is a configuration change and not an edit.
+
+**A consequence worth stating:** the FR translation sample committed today was scored on haiku,
+before the switch, and every retrieval figure on flash-lite. `REPORT.md` prints the judge, and
+the remaining translation runs will be on flash-lite — so DE and EN translation adequacy, when
+the key limit allows them, will not be strictly comparable with FR's six-row sample. FR should
+be re-scored rather than compared across judges.
+
+---
+
+## ADR-0072 — The user guide's screenshots are captured, not taken
+
+**Date:** 2026-09-16 · **Stories:** S7.4, S7.7 · **Status:** accepted
+
+A user guide's characteristic failure is a screenshot that quietly stopped being true. This
+repository already had four of them — `01-start-bid.png` and friends, loose at the repository
+root, dated 2026-09-14, taken before Increment 4 changed the screens they show. Nothing
+referenced them and nothing could have told you they had gone stale.
+
+So the guide's images are **generated**: `npm run guide:shots` drives the real Next app through
+the same fake API the Playwright suite uses (`e2e/support/fake-api.ts`), writes seven PNGs into
+`docs/user-guide/img/`, and needs no database, no key and no money. Two properties follow, and
+both are the point:
+
+- **Anyone can regenerate them**, so an image that no longer matches the app is a command away
+  from being fixed rather than a research task.
+- **A renamed backend field breaks the capture at `tsc`**, because the fixtures are typed from
+  `lib/api.ts`. A stale screenshot becomes a failing build instead of a wrong picture.
+
+**A separate config rather than a spec in `e2e/`.** `npm run test:e2e` is a CI gate and must
+stay fast and deterministic; capturing images writes binaries into `docs/`, and a CI run that
+rewrote eight PNGs on every push would put churn in every diff. `playwright.guide.config.ts`
+reuses everything from the suite's config and changes only the test directory and the output.
+
+**The data is fixture data, and the guide says so** in a callout rather than leaving a reader to
+assume the screens came from one specific live run. The alternative — capturing against
+Frankfurt — was rejected for the reason the stale PNGs demonstrate: images nobody can reproduce
+rot silently, and the project has already been bitten by unreproducible evidence twice (the
+spike's 1.00, the 2026-09-13 cost figure).
+
+**One exception, decided with the user:** the eCertis cross-border card is worth a live capture,
+because its value is precisely that the evidence came back from a real register for a real
+criterion id. That shot is not in the generated set.
+
+---
+
+## ADR-0073 — The no-go was measured, and the experiment that was designed for it failed
+
+**Date:** 2026-09-16 · **Stories:** S7.4, S3.4.1 · **Status:** accepted
+
+S7.4 asks the guide to walk through a bid the agent recommends against. Writing a `no_go` row
+into the database by hand was rejected outright — a fabricated record next to measured ones.
+Showing a reviewer *overriding* a conditional verdict is real and free but demonstrates a
+human's decision rather than the agent's.
+
+**The design was an experiment with one variable.** `index_pack.py --profile small` seeds the
+demo company scaled below every minimum — €820,000 a year, 6 FTE against 3.42–4.31 M and 25 —
+and `run_full_bid.py` runs the same tender, same evidence documents, same models. Thresholds
+are compared arithmetically (`agent/scoring.py`), so an under-qualified company should produce
+an unsupported mandatory row, a blocking gap and a `no_go`, while the unmodified company should
+not.
+
+**Both runs came back `no_go`, and the experiment isolated nothing.** Measured on the DE pack,
+29 documents, checking included:
+
+| | qualified (as committed) | shrunk |
+|---|---|---|
+| staff FTE / relevant | 25.0 / 21.5 | 6.0 / 4.0 |
+| turnover per year | 3.42 – 4.31 M | 820 k |
+| decision | **no_go** | **no_go** |
+| mandatory supported | 7 of 323 | 7 of 331 |
+| rows | 330 partial · 7 supported · 5 unsupported · 2 n/a | 336 partial · 8 supported · 6 unsupported |
+| cost / wall clock | $1.6251 / 520 s | $1.9685 / 406 s |
+
+The difference is inside the run-to-run noise, and **the top blocking gap is the same
+requirement in both**: *"Die durchschnittliche Zahl der Fachkräfte im einschlägigen
+Geschäftsbereich muss pro Geschäftsjahr mindestens 25 VZÄ für Los 1 bzw. 29 VZÄ für Los 2
+betragen."* The committed demo company has **21.5** relevant FTE. It was never qualified for
+this tender, so shrinking it could not change the verdict.
+
+**This was foreseeable from the fixture and was not foreseen.** `tests/fixtures/company/profile.yaml`
+claims only that *"turnover clears the threshold in all three years"*. It never claimed the
+staff minimum was cleared, and 21.5 < 25 is arithmetic. The ADR that described this experiment
+asserted "seed `--profile demo` and the same inputs come back differently" **before the control
+had been run**, which is the error this entry exists to record: a two-armed experiment written
+up from one arm is not evidence, whatever the arm showed.
+
+**What is kept.** The measurement, which is better than the experiment it came from: on a real
+German framework contract, with ten real evidence documents indexed, the agent recommends
+against bidding and names why — a staff minimum the company does not meet. `tests/fixtures/bids/de.qualified.json`
+is the committed run. The guide uses it, and says the company is blocked on staff rather than
+on turnover.
+
+**Two things the runs show that are worth knowing before reading them as defects.**
+
+- **330 of 350 rows are `partially_supported`, and that is the design.** Most of a German
+  procurement pack is "submit form X", which is `checkable: document_submission` — a class
+  ADR-0003 found no corpus of company facts can settle, and which `prompts/check.md` sends to
+  the reviewer as partially supported rather than guessing. A low supported count on this pack
+  is the honest answer, not a retrieval failure.
+- **The shrunk run hit OpenRouter rate limits** and fell back to the smaller slug repeatedly
+  (S3.4.4's resilience working as intended). Its figures are therefore the noisier of the two,
+  which is a second reason to quote the qualified run.
+
+**What was built for this, and is worth more than the walkthrough.**
+
+1. `index_pack.py --with-evidence` indexes the ten committed company PDFs into `company_chunks`
+   through the **real** `DocumentPipeline`. Without it `company_rag_search` searches an empty
+   table and everything comes back unsupported for the wrong reason — the failure `tender_chunks`
+   had for three increments (ADR-0057).
+2. `run_pack(..., database=...)` runs the graph with **nothing stubbed**, ReAct loop included.
+   Every figure in `REPORT.md` comes from the stubbed shape, so the two are **not comparable on
+   cost or duration**: extraction alone on this pack is $1.68 and 294 s; with checking it is
+   $1.63–1.97 and 406–520 s.
+
+**What did not need paying for.** That one unsupported mandatory row blocks a bid is a property
+of the scorer, proven offline and deterministically by
+`test_a_mandatory_row_that_is_unsupported_blocks_the_bid`. The live runs establish the smaller
+claim that the whole pipeline reaches it on a real tender.
+
+---
+
+## ADR-0074 — The critique is triaged before it is published
+
+**Date:** 2026-09-16 · **Stories:** S7.5 · **Status:** accepted
+
+S7.5 asks for an LLM critique "with the fixes applied". The shape that invites is a document
+listing what a model said, which is worth very little: a critic that has never run the code
+produces confident findings about things that are not there, and a repository that files them
+verbatim has added noise and called it review.
+
+So the story is split in two. `scripts/run_critique.py` writes `docs/critique.raw.json` — the
+model's findings, unedited, committed so a reader can see what was actually said.
+**`docs/critique.md` is the deliverable, and nothing reaches it unverified.** Every finding is
+traced to the code and either fixed or declined with the evidence for declining it.
+
+The 2026-09-16 run, `google/gemini-2.5-flash` over the three prompts, five security surfaces
+and the user guide: **five findings, two accepted and fixed, three declined, one disagreement
+with an accepted risk recorded.**
+
+The declines are the reason the triage exists, and all three failed the same way — a real
+concern aimed at the wrong place:
+
+- Two prompt findings ("conflicting instructions", "ambiguous outcome") were each answered by
+  the prompt **one section further down** than the critic read. Quoted in the critique.
+- The security finding claimed an HTML-injection sink for the scanner's excerpt. Every consumer
+  was traced: four **log lines**, and the only injection result crossing the API is
+  `flagged_chunks: list[int]` — indices, no text. The suggested fix would have hardened a path
+  that does not exist.
+
+The two accepted findings were both mine, in the user guide, and one was substantive: it said
+a document reading **Ready** is searchable, when a document with withheld passages also reads
+Ready — so "no evidence found" means two different things and nothing told the bidder which.
+The read model's own field docstring had said this mattered since S2.3.1; the guide contradicted
+it.
+
+**One thing the critique did not do, stated in the document rather than left implied:** it never
+saw the running UI, so nothing in it speaks to layout, contrast or focus order. A critique whose
+limits are unstated reads as a clean bill of health.
+
+**What was declined that a careful reader might have expected to be fixed.** The critic
+suggested reordering a paragraph in `prompts/extract.md` so its resolving sentence comes before
+its worked example. It reads better that way. It was not done: that passage was added on direct
+evidence (ADR-0021), extraction recall has a noise floor of about four points across runs, and a
+single $1.68 run cannot separate a prompt improvement from noise. Reordering measured prompt
+text on an unmeasured hunch is how a result already paid for gets lost.

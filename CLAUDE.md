@@ -4,12 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## State of the repo
 
-**Increments 0 to 4 are complete: 17 of 17 stories in the last one. Increment 5, the
-submission evidence, is next and unstarted.** Increment 0 (the SP.1 extraction spike) is
-complete — see `docs/decisions.md` ADR-0003 for the recall result and its caveats. The
-decision log runs to ADR-0065 with no gaps. Nine migrations exist, `0001` through `0009`, and
-all nine are applied to Frankfurt as of 2026-09-16 00:43 — 0008 and 0009 went on by hand that
-morning, after a missing 0008 made every bid fetch return 500. **Check before any live work.**
+**Increments 0 to 4 are complete. Increment 5, the submission evidence, is in progress.**
+Increment 0 (the SP.1 extraction spike) is complete — see `docs/decisions.md` ADR-0003 for the
+recall result and its caveats. The decision log runs to **ADR-0071** with no gaps. Nine
+migrations exist, `0001` through `0009`, and all nine are applied to Frankfurt as of
+2026-09-16 00:43 — 0008 and 0009 went on by hand that morning, after a missing 0008 made every
+bid fetch return 500. **Check before any live work.**
+
+**S7.1 and S7.3 landed on 2026-09-16.** `make eval` works; `docs/architecture.md` exists.
+S7.4 (user guide), S7.5 (critique) and the rest of S7.6 are open, and **S7.5 is blocked on the
+OpenRouter key, which reached its $25 spending limit during the eval suite** — `limit_remaining`
+was 0 when the last measurement stopped. Translation adequacy for DE and EN is blocked on the
+same thing. Nothing needs re-running: every artefact is on disk and `make eval` re-renders
+offline.
 
 **What runs, end to end.** A bidder signs in with a password, a magic link, a registration or
 a reset (S0.3.1, S4.1.1); describes their company (S4.2.1); searches TED and starts a bid from
@@ -25,13 +32,24 @@ node and switches models, prompts and tools from `/runs` without a redeploy (S5.
 S4.6.2). Runs are checkpointed in Supabase and resumed at startup, and bounded by a real
 deadline. CORS allows only `WEB_ORIGIN`.
 
-**The one criterion that is not met, deliberately in the open.** Requirement recall on the DE
-golden tender is **0.72** on the committed run and **about 0.74 ± 0.02** across four, against a
-0.90 threshold set before anything had been measured.
-`uv run scripts/recall.py tests/fixtures/extractions/de.live.json` reproduces it and exits 1,
-and `test_recall_script.py` pins that red result so it cannot drift green unnoticed. Do not
-quote 0.72 as precise and do not quote the spike's 1.00 as current: that figure measured 21
-hand-written requirements, not the verified 177-label key.
+**The measured quality, as of 2026-09-16.** Recall is **DE 0.831 (fails the 0.90 gate), FR
+0.933, EN 0.950**; citation faithfulness is **1.0000** on all four runs (1065 checkable
+citations); retrieval context recall is **DE 0.929, FR 0.800, EN 0.893**.
+`uv run scripts/recall.py tests/fixtures/extractions/de.live.json` reproduces the DE figure and
+exits 1, and `test_recall_script.py` pins the red result.
+
+**Do not quote the old 0.72 / "0.74 ± 0.02" as current.** Those were measured before two
+things: the notice PDF is now read, and it carries six of the 177 scored labels that no run had
+ever opened (ADR-0067); and the live test could not complete a run at all between S5.2 and
+S7.1, so Increment 2's three extraction fixes had never been re-measured (ADR-0066). Do not
+quote the spike's 1.00 either: that figure measured 21 hand-written requirements, not the
+verified 177-label key.
+
+**Two caveats that belong beside those numbers.** FR and EN clear the gate against denominators
+of 30 and 40 labels against DE's 177, so one more miss takes FR to 0.90 — they are far noisier.
+And the three retrieval answer keys are **drafts**: the answers are the human-verified golden
+labels, the question wording is not yet read by a person, and `REPORT.md` prints `draft key`
+next to every figure that depends on it.
 
 **A 16-part audit ran on 2026-09-15 and was worked through on 2026-09-16.** Of the 66 findings
 on its board, **43 are closed** across seven commits, `163ccd5` through `e84aaf7`; nothing open
@@ -89,7 +107,7 @@ Run from the repository root; `make help` lists everything.
 | `make test-live` | Only tests that hit real services or an LLM (costs money) |
 | `make deps` / `make deps-check` | Regenerate / verify `dependencies.txt` |
 | `make migrate` | Apply `backend/migrations/*.sql` (S0.2.1); LangGraph's own tables are created by the API at startup, not here |
-| `make eval` | Not built yet — lands with S7.1 |
+| `make eval` | Assemble `backend/evaluations/REPORT.md` from saved measurements. Offline and free; `backend/scripts/run_eval.py` lists the paid steps that produce them |
 
 Backend-only equivalents, from `backend/`: `uv run ruff check .`, `uv run pyright`,
 `uv run pytest`, `uv run uvicorn crossbid.main:app --reload`. Frontend-only, from `frontend/`:
