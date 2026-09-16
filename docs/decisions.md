@@ -4866,3 +4866,75 @@ because a developer's `.env` supplies the value and failed in CI because a clean
 not. And `frontend/lib/api.ts` was stale, because the commit before had changed the schema
 (`UsageNode` gained `chat`) without regenerating it. Both are the generated-file and clean-room
 checks doing exactly their job, on the first push where anything depended on them.
+
+---
+
+## ADR-0063 — The web app gets tests, and the browser ones stub the API at the network edge
+
+**Date:** 2026-09-16 · **Stories:** S7.7, brought forward · **Status:** accepted
+
+The frontend had **no tests at all** across eighteen thousand lines — the second of the two
+largest findings of the 2026-09-15 audit, and the more embarrassing one, because **three of
+the four blockers that audit found lived here**. Two suites now exist. The interesting part is
+not that they exist; it is what each is for, and what the browser one deliberately does not do.
+
+### Why both, and in that order
+
+The four blockers are the specification, and they split cleanly:
+
+| Blocker | jsdom sees it? | A browser sees it? |
+|---|---|---|
+| Two sibling components each fetched the document list once on mount | possible, awkwardly | yes |
+| The upload form defaulted to the one kind the next step filters out | yes | yes |
+| `bg-accent-default` names no token, so the control painted nothing | **no** | yes |
+| A flex child with no `shrink-0` collapsed to 2 px | **no** | yes |
+
+jsdom has no layout and does not resolve real CSS, so it is structurally incapable of seeing
+half of them. That is the argument for Playwright first. It is not an argument against Vitest:
+the unit suite holds what a browser test is a poor and slow instrument for — fixed-offset
+deadline arithmetic at every boundary, a polling hook's timer discipline, the row-edit rules
+that mirror the backend's 422s by hand, and the number-field bug that turned `1.5` into `15`.
+
+**Both suites were checked for vacuity rather than assumed.** Putting the decimal defect back
+turned three unit tests red; putting each blocker back turned the matching browser test red.
+One did not, and that is recorded below, because it is the most useful thing in this entry.
+
+### The browser suite claims the API origin instead of running the stack
+
+`page.route` fulfils every call to the API origin from fixtures typed against
+`components['schemas']` in the generated `lib/api.ts`. Nothing reaches a server. An
+un-stubbed call fails the test by name rather than escaping, and `console.error` fails it too.
+
+The alternative was a real stack: `AUTH_MODE=dev` needs no account, and CI now has a database
+(ADR-0062). It was rejected on what the *journeys* need. An upload only reaches `ready`
+through Supabase Storage and an embeddings call, and a verdict needs a graph run at roughly
+$1.74 — so the two journeys most worth protecting are exactly the two a real stack cannot give
+CI for free. The cost is real and is stated rather than hidden: **these tests do not verify the
+API contract at run time.** They verify it at compile time, which is not the same thing, and a
+backend change that keeps the field names while changing their meaning would pass. That gap is
+what `-m database` and the backend suite cover from the other side.
+
+### The test that could not fail, and the rule it produced
+
+The tab-strip test asserted the tablist's height was at least 38 px. It passed with the defect
+put back. The fixture built **one** requirement and one matrix row, so the sticky column never
+exceeded its `max-h-[calc(100dvh-2rem)]` cap, nothing was ever squeezed, and `shrink-0` made no
+difference either way. A height assertion on an element under no pressure asserts nothing.
+
+The diagnosis was also half wrong in an instructive way. The obvious culprit was the Verdict
+panel's 142 gap lines — but that panel is `hidden` until its tab is chosen and contributes
+nothing to the initial layout. What actually squeezed the column was the **Source** card: a
+fixed 560 px frame under a chip per document, and a real pack has a dozen chips that wrap.
+
+Fixed by giving the fixture a real twelve-document pack, and by adding two things the height
+alone could not carry: `document.elementFromPoint` at the tab's centre must return the tab (the
+shipped symptom was a click swallowed for five seconds), and a click with an explicit 1.5 s
+timeout. Measured both ways: **40 px** with `shrink-0`, **2 px** without, and in the defect
+state `elementFromPoint` returns the Source card instead of the tab.
+
+The rule, which is the part to keep: **a test asserts a precondition it depends on.** The spec
+now ends by asserting `scrollHeight > clientHeight` with the message "nothing squeezes the
+strip, and this test cannot fail for the defect it protects", so a future fixture that gets
+lighter makes the test *fail* rather than quietly stop testing anything. Every test that needs
+its subject to be under some condition should say so out loud, or it will one day pass for the
+wrong reason and nobody will know.

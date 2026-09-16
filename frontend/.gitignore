@@ -7,6 +7,11 @@
 
 # test output
 /coverage/
+# playwright (npm run test:e2e): reports, traces, screenshots
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/
 
 # typescript
 *.tsbuildinfo

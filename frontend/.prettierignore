@@ -3,6 +3,11 @@
 # output, never formatted — without this line `make lint` fails for as long as it exists.
 .next-verify/
 node_modules/
+# Playwright's own output (npm run test:e2e): a generated HTML report, traces, screenshots.
+test-results/
+playwright-report/
+blob-report/
+.playwright/
 public/
 package-lock.json
 # Generated from the backend's OpenAPI schema; never hand-edited or reformatted.

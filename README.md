@@ -19,7 +19,8 @@ verdict before it is final.
 submission evidence, is next. Nine migrations, sixty-two architectural decision records, 4 910
 backend tests at 100 % line and branch coverage, and a clean `make lint` across both halves.
 A further nine run against a real Postgres in CI, which is where the SQL is actually executed
-rather than inspected as a string.
+rather than inspected as a string. The web app has 105 unit tests and 6 browser journeys,
+both added on 2026-09-16 after an audit found it had none.
 
 A bidder can sign in, describe their company, search TED and start a bid from a notice,
 upload a pack that is scanned for planted instructions before anything is embedded, read
@@ -80,6 +81,8 @@ Run `make help` for the full list.
 | `make dev-api` / `make dev-web` | Run one app on the host with reload |
 | `make test` | Tests, excluding those marked `live`. Offline: no socket, no money |
 | `make test-db` | Only the tests that need a real Postgres and spend nothing. CI runs these on every push |
+| `npm test` (in `frontend/`) | Vitest in jsdom: the web app's pure logic and component branches |
+| `npm run test:e2e` (in `frontend/`) | Playwright: six browser journeys over a stubbed API. No database, no key, no cost |
 | `make test-live` | Only the tests that hit real services or an LLM (costs money) |
 | `make lint` | ruff, `ruff format --check`, pyright, eslint, prettier, `tsc --noEmit`, and the dependency-manifest check |
 | `make deps` | Regenerate `dependencies.txt` from both lock files |

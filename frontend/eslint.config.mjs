@@ -21,6 +21,11 @@ const eslintConfig = [
       'out/**',
       'build/**',
       'next-env.d.ts',
+      // Playwright's output (npm run test:e2e): a generated report and traces, never source.
+      'test-results/**',
+      'playwright-report/**',
+      'blob-report/**',
+      '.playwright/**',
     ],
   },
 ]
