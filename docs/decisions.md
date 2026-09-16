@@ -5972,3 +5972,46 @@ true, and it is the control blocker B4 was found in, which now has unit tests an
 journey holding its measured 40 px height. Replacing a tested control is a separate decision
 from removing an unused dependency, and bundling the two would have made this commit
 unreviewable.
+
+## ADR-0086 — The workspace is four files, and the seam was already there
+
+**Date:** 2026-09-16 · **Stories:** S4.5.1 · **Status:** accepted
+
+`components/bids/bid-workspace.tsx` was **709 lines** — the audit counted 400 (M23) and it had
+grown since, carrying the fixes for H15, M4, M5 and M28. One component held the poll, six
+pieces of state, three memos, five callbacks, seven custom hooks and **both complete
+layouts**: the only god component in the tree, on the busiest screen in the product.
+
+**The split is along the seam that was already in the file**, between everything a layout
+would have to compute and the two ways of drawing it:
+
+| | |
+|---|---|
+| `bid-workspace.tsx` | 152 — the loader, its deadline, and which layout to draw |
+| `workspace-state.ts` | 303 — `useWorkspaceState` and the helpers only it uses |
+| `desktop-workspace.tsx` | 255 — `Main.dc.html` |
+| `phone-workspace.tsx` | 186 — `WorkspacePhone.dc.html` |
+| `decision-line.tsx` | 52 — the line both layouts carry under the header |
+
+**A pure refactor, and the markup is byte-identical.** Each layout destructures
+`WorkspaceState` at the top, so not one line of JSX was retyped — the risk in a change this
+size is transcription, not design. Every docblock moved with the code it explains, including
+the measured ones (ADR-0060's 23 204 px page, the 12 rem gap line, why Source is unmounted on
+the phone and hidden on the desktop).
+
+**Two conditionals became unconditional, and that is the only semantic change.**
+`onBackToMatrix={isDesktop === false ? backToMatrix : undefined}` is now `backToMatrix` in the
+phone layout and `undefined` in the desktop one, because each renders only under the branch it
+was testing for. Nothing else reads `isDesktop` below the split.
+
+**What did not move is the point.** `useBidChat`, `useRowEdits` and `useRowFeedback` stay in
+the hook, which lives in `LiveWorkspace` above the breakpoint switch — so a resize across
+900 px still keeps the exchanges, the row edits and the thumbs, which is what the original
+docstring promised and what a naive split would have broken.
+
+The total is 948 lines against 709. The extra is per-file imports and the `WorkspaceState`
+interface, which is now the written contract between the state and the two layouts and did not
+exist before. Every file is inside the 200–400 line band the style rules ask for.
+
+Evidence: 145 Vitest tests and 8 Playwright journeys, green before and after, plus lint,
+typecheck, build and prettier.
