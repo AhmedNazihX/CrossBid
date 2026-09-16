@@ -11,7 +11,7 @@ evidence for declining it.
 | **Run** | 2026-09-16, `uv run python scripts/run_critique.py` |
 | **Raw output** | [`critique.raw.json`](critique.raw.json), unedited |
 | **Findings** | 5, plus 1 disagreement with an accepted risk |
-| **Outcome** | 2 accepted and fixed · 3 declined · 1 disagreement recorded |
+| **Outcome** | 2 accepted and fixed (both in `1eafa50`) · 3 declined · 1 disagreement recorded |
 
 **Why the critic is not an OpenAI model.** Extraction, checking and chat all run on OpenAI
 slugs through OpenRouter, so a critic from the same family is not an outside opinion — the
@@ -50,8 +50,8 @@ The sharp edge is not the withholding — that is ADR-0049's design and it is ri
 **"no evidence found" means two different things** depending on whether anything was withheld,
 and nothing told the bidder which they were looking at.
 
-**Fixed** in `docs/user-guide.md` — the evidence-pack section now states that a document can be
-Ready with passages withheld, what that does to a "not found" result, and what to check when a
+**Fixed in [`1eafa50`](../../commit/1eafa50)** (`docs/user-guide.md`) — the evidence-pack section
+now states that a document can be Ready with passages withheld, what that does to a "not found" result, and what to check when a
 document you know proves something comes back as not proving it.
 
 **What is still open, and is a product debt rather than a doc one:** the per-document flagged
@@ -70,8 +70,8 @@ cross-border evidence mapping stays dark", but it never said what the mapping is
 what happens to the rest of the bid without one — leaving a reader who skipped the upload
 unsure whether they had broken something.
 
-**Fixed** in `docs/user-guide.md`: the criterion id is named as the thing the evidence lookup is
-keyed on, the refusal to infer one is explained as a choice (a wrong id maps you to the wrong
+**Fixed in [`1eafa50`](../../commit/1eafa50)** (`docs/user-guide.md`): the criterion id is named as
+the thing the evidence lookup is keyed on, the refusal to infer one is explained as a choice (a wrong id maps you to the wrong
 national document, which is worse than none), and it now says plainly that without a DUME
 everything else still works.
 
