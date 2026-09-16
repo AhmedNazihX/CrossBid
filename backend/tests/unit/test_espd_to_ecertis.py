@@ -43,6 +43,10 @@ def french_tender_requirements() -> tuple[Requirement, ...]:
         bid_id=BID_ID,
         document_name=DOCUMENT,
         source_lang="fr",
+        # The demo bidder is German and this is the French pack — the cross-border case the
+        # whole module is about, and since ADR-0082 the one where these rows carry the
+        # register's German wording as their `translation`.
+        bidder_language="de",
     )
 
 

@@ -36,14 +36,18 @@ reviewer follows the citation by opening the named file and searching for the cr
 which is the identifier the file itself is keyed on. `source_text` is the buyer's own
 wording, preferring `cbc:Description` (the operative question) and falling back to
 `cbc:Name` when the description is blank — one criterion in the French fixture has a
-description of a single space. `translation` stays `None`: nothing translated it, and the
-eCertis lookup already names the criterion in the bidder's language (S1.1.2).
+description of a single space. `translation` is the **eCertis register's own name for the
+criterion in the bidder's language** (S1.1.2), looked up by the canonical UUID the DUME
+declares — a dictionary hit against a cached file, no model and no network. It used to stay
+`None` on the grounds that the eCertis card already said it; see `_translations` for why that
+was not enough (M3, ADR-0082).
 """
 
 from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -59,6 +63,8 @@ from crossbid.models.requirement import (
     RequirementSource,
     RequirementStage,
 )
+from crossbid.reference.ecertis_client import EcertisCacheError, load_localisation
+from crossbid.reference.ecertis_schema import CachedLocalisation
 
 logger = logging.getLogger(__name__)
 
@@ -121,25 +127,73 @@ ESPD_STAGE: Final = RequirementStage.BID_ELIGIBILITY
 
 
 def requirements_from_espd(
-    request: EspdRequest, *, bid_id: str, document_name: str, source_lang: str
+    request: EspdRequest,
+    *,
+    bid_id: str,
+    document_name: str,
+    source_lang: str,
+    bidder_language: str,
 ) -> tuple[Requirement, ...]:
     """`request`'s criteria as requirements of `bid_id`, in the order the buyer declared them.
 
     `source_lang` is the tender's own language, used when the file declares none — ESPD
     1.0.2 has no language element, so that is the normal case (see `ingestion/espd.py`).
+    `bidder_language` is what the rows are translated *into*; see `_translations`.
     """
     language = request.language or source_lang
+    translations = _translations(bidder_language)
     rows = (
         _requirement(
-            criterion, bid_id=bid_id, document_name=document_name, source_lang=language
+            criterion,
+            bid_id=bid_id,
+            document_name=document_name,
+            source_lang=language,
+            translations=translations,
         )
         for criterion in request.criteria
     )
     return tuple(row for row in rows if row is not None)
 
 
+def _translations(bidder_language: str) -> Mapping[str, CachedLocalisation]:
+    """The eCertis overlay for `bidder_language`, or an empty one meaning "no translation".
+
+    **This is where an ESPD row's bidder-language wording comes from, and it costs nothing**
+    (M3). A DUME declares each criterion under its canonical ESPD UUID, which is the same id
+    eCertis is keyed on (CLAUDE.md, verified on real data), and S1.1.2 already cached that
+    register's words in the bidder's language. So the translation is a dictionary lookup
+    against a file in the repository: no model call, no network, and exact rather than
+    inferred.
+
+    Before this, `translation` was left `None` on every ESPD row on the grounds that the
+    eCertis *card* names the criterion in the bidder's language. That was true and it was
+    not enough: the card is on the matrix row, and nothing else reads it. The verdict's gap
+    list falls back to `source_text`, so a German bidder reading a French tender got a German
+    recommendation followed by a gap list in French — 30 of the FR pack's 144 rows, every one
+    of them from the DUME. The paragraph a non-lawyer actually reads changed language halfway
+    down.
+
+    A language with no cached overlay gets an empty mapping and the old behaviour, which is
+    the honest answer: `de` is cached, and inventing the rest is not something a lookup can
+    do.
+    """
+    try:
+        return load_localisation(bidder_language).entries
+    except EcertisCacheError:
+        logger.info(
+            "No eCertis overlay for %s; ESPD rows keep the buyer's own wording",
+            bidder_language,
+        )
+        return {}
+
+
 def _requirement(
-    criterion: EspdCriterion, *, bid_id: str, document_name: str, source_lang: str
+    criterion: EspdCriterion,
+    *,
+    bid_id: str,
+    document_name: str,
+    source_lang: str,
+    translations: Mapping[str, CachedLocalisation],
 ) -> Requirement | None:
     """One criterion as a requirement, or `None` plus a log line naming what stopped it.
 
@@ -162,6 +216,7 @@ def _requirement(
             source_lang=source_lang,
             document_name=document_name,
             page=None,
+            translation=_translation(criterion, translations),
             ecertis_criterion_id=criterion.id,
         )
     except ValidationError as exc:
@@ -191,6 +246,21 @@ def _wording(criterion: EspdCriterion) -> str:
     where both are blank, so this always returns something.
     """
     return criterion.description.strip() or criterion.name.strip()
+
+
+def _translation(
+    criterion: EspdCriterion, translations: Mapping[str, CachedLocalisation]
+) -> str | None:
+    """The register's bidder-language name for this criterion, or `None`.
+
+    The register's *name*, not its description: the description is a paragraph of directive
+    text and `source_text` is already the buyer's own wording of the same duty. What a gap
+    line needs is the criterion said once, in the reader's language.
+    """
+    entry = translations.get(criterion.id)
+    if entry is None or not entry.name.strip():
+        return None
+    return entry.name.strip()
 
 
 def _requirement_id(bid_id: str, document_name: str, criterion_id: str) -> str:

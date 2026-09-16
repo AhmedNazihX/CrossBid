@@ -5794,3 +5794,49 @@ reads *Ready* may have had passages withheld from the agent by the injection gua
 screen said so; the documents table has a *Withheld* column and a badge that says it in words.
 
 Every fix was measured failing first, as ADR-0063 requires.
+
+## ADR-0082 — The gap list was in French because the DUME path never translated anything
+
+**Date:** 2026-09-16 · **Stories:** S1.1.2, S3.4.1, S4.5.3 · **Status:** accepted
+
+Audit finding M3: *"The German verdict lists its gaps in French."* Its prescribed fix was
+`frontend/components/bids/verdict-gaps.tsx` — *"feed the gap list the bidder-language label
+rather than the source label."* **That was the wrong layer, and following it would have
+changed nothing.** ADR-0065's rule earned again: a bug report names a symptom, not a cause.
+
+`scoring._summary` already prefers `requirement.translation` and falls back to the source
+quote only when there is none, deliberately, because "a gap in the wrong language is still
+actionable and an invented one is not". And `verdict-gaps.tsx`'s `labels` map is
+`REQ-001`-style display indices, which have no language at all.
+
+**Measured instead of reasoned about.** Across the three committed live extractions: DE 0 of
+311 rows untranslated, EN 0 of 201, **FR 30 of 144 — every one of them `source: espd_request`,
+every one from `DUME_acheteur.xml`.** The extraction path translates (S3.2.1). The ESPD path
+never did, and `espd_requirements.py`'s docstring said so in as many words: *"`translation`
+stays `None`: nothing translated it, and the eCertis lookup already names the criterion in the
+bidder's language."*
+
+That was true and it was not enough. The eCertis *card* is on the matrix row; the verdict's
+gap list does not read it. So a German bidder reading a French tender got a German
+recommendation followed by a gap list in French — in the paragraph that is the one thing a
+non-lawyer reads, on the product's own cross-border wedge.
+
+**The fix costs nothing, which is why it is the right one.** A DUME declares each criterion
+under its canonical ESPD UUID, which is the same id eCertis is keyed on (CLAUDE.md, verified
+on real data), and S1.1.2 already cached that register's words in the bidder's language. So
+`translation` is now a dictionary lookup against `l10n_de.json` — no model call, no network,
+exact rather than inferred, and it reaches everything downstream rather than only the verdict.
+All 30 French criteria come back in German; the `source_text` quote stays the buyer's own, as
+it must.
+
+**What it does not do.** Only `de` is cached, so any other bidder language gets an empty
+overlay and the previous behaviour. A lookup cannot invent the rest, and putting English in a
+field that says it is the bidder's language would be the worse answer. The register's *name*
+is used and not its description: a gap line needs the criterion said once, and `source_text`
+already carries the buyer's own wording of the same duty.
+
+The missing-entry guard is asserted on the helper rather than through the public call, because
+it cannot be reached that way: `EspdCriterion.id` is a Literal over the 56 canonical criteria
+and the German overlay carries all 56. It exists because those are two separately cached
+files, and a refreshed `criteria.json` that adds a criterion before the overlay is rebuilt is
+exactly the drift it catches.

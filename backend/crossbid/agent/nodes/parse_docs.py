@@ -57,6 +57,7 @@ from crossbid.agent.state import (
     ExtractionProblemReason,
     ParseUpdate,
     TenderDocument,
+    bidder_language_of,
 )
 from crossbid.ingestion.chunker import Chunker
 from crossbid.ingestion.embeddings import ChunkVectorStore, EmbeddingsClient
@@ -161,7 +162,9 @@ class DocumentParser:
         requirements: list[Requirement] = []
         for row in rows:
             if row.kind is DocumentKind.TENDER_ESPD_REQUEST:
-                found, reported = await self._read_espd(company_id, row, bid_id, language)
+                found, reported = await self._read_espd(
+                    company_id, row, bid_id, language, bidder_language_of(state)
+                )
                 requirements.extend(found)
                 problems.extend(reported)
                 continue
@@ -283,7 +286,12 @@ class DocumentParser:
             )
 
     async def _read_espd(
-        self, company_id: str, row: BidDocumentRow, bid_id: str, language: str
+        self,
+        company_id: str,
+        row: BidDocumentRow,
+        bid_id: str,
+        language: str,
+        bidder_language: str,
     ) -> tuple[tuple[Requirement, ...], tuple[ExtractionProblem, ...]]:
         """A published DUME as requirements, plus what it could not contribute.
 
@@ -301,7 +309,11 @@ class DocumentParser:
             return (), (ExtractionProblem(reason=reason, document_name=row.name),)
 
         found = requirements_from_espd(
-            request, bid_id=bid_id, document_name=row.name, source_lang=language
+            request,
+            bid_id=bid_id,
+            document_name=row.name,
+            source_lang=language,
+            bidder_language=bidder_language,
         )
         logger.info(
             "Bid %s: %s declares %d ESPD criterion/criteria the register knows",

@@ -12,7 +12,7 @@ import logging
 
 import pytest
 
-from crossbid.agent.espd_requirements import requirements_from_espd
+from crossbid.agent.espd_requirements import _translation, requirements_from_espd
 from crossbid.ingestion.espd import EspdCriterion, EspdRequest, parse_espd_request
 from crossbid.models.ecertis_criteria import CRITERION_IDS
 from crossbid.models.requirement import (
@@ -23,6 +23,7 @@ from crossbid.models.requirement import (
     RequirementSource,
     RequirementStage,
 )
+from crossbid.reference.ecertis_schema import CachedLocalisation
 from tests.conftest import espd_request_bytes
 
 BID_ID = "bid-1"
@@ -45,10 +46,23 @@ def criterion(
     )
 
 
-def rows_for(*criteria: EspdCriterion, language: str | None = None, fallback: str = "fr"):
+def rows_for(
+    *criteria: EspdCriterion,
+    language: str | None = None,
+    fallback: str = "fr",
+    bidder_language: str = "en",
+):
+    """`bidder_language` defaults to `en`, which has no cached eCertis overlay.
+
+    So these rows carry no translation unless a test asks for one, and every assertion below
+    stays about the mapping rather than about the register (M3, ADR-0082)."""
     request = EspdRequest(criteria=criteria, language=language)
     return requirements_from_espd(
-        request, bid_id=BID_ID, document_name=DOCUMENT, source_lang=fallback
+        request,
+        bid_id=BID_ID,
+        document_name=DOCUMENT,
+        source_lang=fallback,
+        bidder_language=bidder_language,
     )
 
 
@@ -62,7 +76,11 @@ def test_every_criterion_of_the_french_fixture_becomes_a_mapped_requirement() ->
 
     # Act
     rows = requirements_from_espd(
-        request, bid_id=BID_ID, document_name=DOCUMENT, source_lang="fr"
+        request,
+        bid_id=BID_ID,
+        document_name=DOCUMENT,
+        source_lang="fr",
+        bidder_language="en",
     )
 
     # Assert
@@ -83,7 +101,11 @@ def test_the_fixture_maps_to_the_families_the_type_codes_declare() -> None:
 
     # Act
     rows = requirements_from_espd(
-        request, bid_id=BID_ID, document_name=DOCUMENT, source_lang="fr"
+        request,
+        bid_id=BID_ID,
+        document_name=DOCUMENT,
+        source_lang="fr",
+        bidder_language="en",
     )
 
     # Assert
@@ -230,10 +252,18 @@ def test_the_same_criterion_in_two_bids_gets_two_ids() -> None:
 
     # Act
     [first] = requirements_from_espd(
-        request, bid_id="bid-1", document_name=DOCUMENT, source_lang="fr"
+        request,
+        bid_id="bid-1",
+        document_name=DOCUMENT,
+        source_lang="fr",
+        bidder_language="en",
     )
     [second] = requirements_from_espd(
-        request, bid_id="bid-2", document_name=DOCUMENT, source_lang="fr"
+        request,
+        bid_id="bid-2",
+        document_name=DOCUMENT,
+        source_lang="fr",
+        bidder_language="en",
     )
 
     # Assert
@@ -261,3 +291,82 @@ def test_wording_too_long_to_be_a_quote_is_dropped_rather_than_truncated(
 
 def test_a_request_with_no_criteria_yields_no_rows() -> None:
     assert rows_for() == ()
+
+
+# ------------------------------------------- the bidder's own language, from the register
+
+
+def test_a_german_bidder_gets_every_french_criterion_in_german() -> None:
+    """M3, on the real DUME. The whole cross-border wedge, on the one path that lacked it.
+
+    A German bidder reading this French tender used to get a German recommendation followed
+    by a gap list in French, because `translation` was `None` on every ESPD row and
+    `scoring._summary` falls back to the source quote. The register already held the words:
+    the DUME declares each criterion under the canonical ESPD UUID, which is the id S1.1.2's
+    overlay is keyed on.
+    """
+    # Arrange
+    request = parse_espd_request(espd_request_bytes())
+
+    # Act
+    rows = requirements_from_espd(
+        request,
+        bid_id=BID_ID,
+        document_name=DOCUMENT,
+        source_lang="fr",
+        bidder_language="de",
+    )
+
+    # Assert
+    assert len(rows) == 30
+    translated = [row for row in rows if row.translation]
+    assert len(translated) == 30, "every criterion of this DUME is in the cached register"
+    assert all(row.source_lang == "fr" for row in rows), "the quote stays the buyer's own"
+    assert all(row.translation != row.source_text for row in translated)
+
+
+def test_a_bidder_language_with_no_overlay_keeps_the_buyers_wording() -> None:
+    """`de` is cached and the rest are not. A lookup cannot invent the others, and pretending
+    otherwise would put English text in a field that says it is the bidder's language."""
+    rows = rows_for(criterion(), bidder_language="pl")
+
+    assert rows[0].translation is None
+    assert rows[0].source_text == criterion().description
+
+
+def test_a_criterion_the_overlay_does_not_carry_keeps_the_buyers_wording() -> None:
+    """Asserted on the helper, because it cannot be reached through the public call.
+
+    `EspdCriterion.id` is a Literal over the 56 canonical criteria and the German overlay
+    carries all 56, so today no valid criterion misses. The guard is there because those are
+    **two separately cached files**: a refreshed `criteria.json` that adds a criterion before
+    the overlay is rebuilt is exactly the drift it catches, and a missing entry has to read
+    as "not translated" rather than as an empty translation.
+    """
+    assert _translation(criterion(), {}) is None
+
+
+def test_an_overlay_entry_with_a_blank_name_is_not_a_translation() -> None:
+    """eCertis machine-translates, and a blank is a failure of that rather than an answer."""
+    blank = CachedLocalisation(name="   ", description="", issuers=())
+
+    assert _translation(criterion(), {CRITERION_IDS[0]: blank}) is None
+
+
+def test_the_translation_is_the_registers_name_and_not_its_description() -> None:
+    """A gap line needs the criterion said once. The description is a paragraph of directive
+    text, and `source_text` already carries the buyer's own wording of the same duty."""
+    # Arrange -- a criterion whose German entry the cache really holds
+    request = parse_espd_request(espd_request_bytes())
+
+    # Act
+    rows = requirements_from_espd(
+        request,
+        bid_id=BID_ID,
+        document_name=DOCUMENT,
+        source_lang="fr",
+        bidder_language="de",
+    )
+
+    # Assert -- names are short; a description would run to a paragraph
+    assert all(len(row.translation or "") < 300 for row in rows)
