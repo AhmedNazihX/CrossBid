@@ -99,8 +99,12 @@ test.describe('Analyse tender — upload the pack, then start', () => {
       const status = polls === 1 ? 'parsed' : 'ready'
       return { status: 200, json: { ...accepted, status, pages: 12 } }
     })
-    api.on('POST', '/bids', { status: 202, json: queuedBidFixture() })
-    api.on('GET', `/bids/${BID_ID}`, { status: 200, json: queuedBidFixture() })
+    // The bid the flow lands on lists no documents: this test ends at the workspace's URL,
+    // and a bid that carries the DE pack makes the Source panel ask for a signed URL that
+    // nothing here stubs — which the `api` fixture rightly fails the test for.
+    const landed = queuedBidFixture({ documents: [] })
+    api.on('POST', '/bids', { status: 202, json: landed })
+    api.on('GET', `/bids/${BID_ID}`, { status: 200, json: landed })
     api.on('GET', `/bids/${BID_ID}/feedback`, { status: 200, json: { feedback: [] } })
 
     await page.getByLabel('File', { exact: true }).setInputFiles({

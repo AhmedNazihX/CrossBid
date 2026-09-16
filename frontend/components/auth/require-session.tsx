@@ -25,15 +25,26 @@
  *
  * The redirect carries the path that was asked for, so following a deep link to a bid and
  * signing in lands on that bid rather than on the dashboard.
+ *
+ * **`failed` is drawn, not waited through.** Until 2026-09-16 the provider could stay
+ * `loading` for ever — its bootstrap had no `catch`, so a stale tab whose auth chunk the
+ * dev server no longer served sat at "Loading…" with the only clue in the console — and
+ * this guard, which only knew `loading`, drew exactly that. It now renders the provider's
+ * `problem` in the same danger `Notice` the bid workspace uses for a bid that could not be
+ * loaded, with the two ways forward that case has: reload, or sign in again. The sign-in
+ * link is a plain anchor rather than a `Link` on purpose — a full navigation fetches the
+ * current build, which a client-side transition inside a stale one cannot.
  */
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 import { useSession } from '@/components/auth/session-provider'
 import { LoadingState } from '@/components/common/loading-state'
+import { Button } from '@/components/ui/button'
+import { Notice } from '@/components/ui/notice'
 
 export function RequireSession({ children }: Readonly<{ children: React.ReactNode }>) {
-  const { status } = useSession()
+  const { status, problem } = useSession()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -44,6 +55,28 @@ export function RequireSession({ children }: Readonly<{ children: React.ReactNod
   }, [status, pathname, router])
 
   if (status === 'signedIn' || status === 'disabled') return <>{children}</>
+  if (status === 'failed') return <SessionProblem problem={problem} pathname={pathname} />
 
   return <LoadingState message={status === 'loading' ? 'Loading…' : 'Taking you to sign in…'} />
+}
+
+function SessionProblem({
+  problem,
+  pathname,
+}: Readonly<{ problem: string | undefined; pathname: string }>) {
+  return (
+    <>
+      <Notice tone="danger" title="Your session could not be checked">
+        {problem ?? 'Something went wrong while reading your session.'}
+      </Notice>
+      <div className="mt-4 flex gap-2">
+        <Button variant="secondary" onClick={() => window.location.reload()}>
+          Reload the page
+        </Button>
+        <Button asChild variant="ghost">
+          <a href={`/login?next=${encodeURIComponent(pathname)}`}>Sign in</a>
+        </Button>
+      </div>
+    </>
+  )
 }

@@ -17,6 +17,19 @@
  * On the dev bridge (`isAuthEnabled === false`) there is no client to subscribe to, and
  * the provider reports `disabled` — every screen then renders exactly as it did before
  * this story, with `X-Dev-Company` doing the work.
+ *
+ * **`failed` exists because `loading` used to be a state with no exit.** The bootstrap
+ * below was a bare `void (async () => …)()`: when the dynamic import of the auth client
+ * rejected — a `next dev` server recompiled while the tab was open, so the chunk it asked
+ * for was gone — the rejection went to the console as an uncaught error and `status`
+ * stayed `loading`. Every guarded route then showed `RequireSession`'s "Loading…" with no
+ * message, no button and no end, and nothing but DevTools said why (reproduced 2026-09-16
+ * while chasing a report that blamed the bid workspace, which was in fact fine). The same
+ * held when `getSession()` simply never answered: supabase-js retries a token refresh for
+ * up to 30 s and then gives up, but a refresh that hangs at the transport is never retried
+ * and never rejects. So the bootstrap now has a `catch` and a deadline, both of which land
+ * on `failed` with a sentence in `problem`, and `RequireSession` draws that as an error
+ * with a way forward. A session that arrives late still wins: `adopt` overwrites `failed`.
  */
 import type { Session } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
@@ -26,10 +39,23 @@ import { isAuthEnabled } from '@/lib/auth-mode'
 import { PASSWORD_RESET_PATH } from '@/lib/safe-next-path'
 import { authCallbackUrl, getSupabaseClient } from '@/lib/supabase'
 
-export type SessionStatus = 'loading' | 'signedIn' | 'signedOut' | 'disabled'
+export type SessionStatus = 'loading' | 'signedIn' | 'signedOut' | 'disabled' | 'failed'
+
+/**
+ * How long the first read of the session may take before the shell stops waiting.
+ *
+ * Longer than supabase-js's own 30 s refresh-retry window (`AUTO_REFRESH_TICK_DURATION_MS`)
+ * on purpose: a refresh that *fails* inside that window ends in `signedOut` and a redirect to
+ * sign in, which is the right answer, and a deadline shorter than the window would show an
+ * error card first and then snatch it away. Only a read that has neither succeeded nor
+ * failed by then is a hang, and that is the one this catches.
+ */
+export const SESSION_READ_DEADLINE_MS = 45_000
 
 export interface SessionState {
   readonly status: SessionStatus
+  /** Why `status` is `failed`, as one sentence for the screen; `undefined` otherwise. */
+  readonly problem: string | undefined
   /** The signed-in user's email, or `undefined`. Shown in the sidebar, never sent anywhere. */
   readonly email: string | undefined
   /**
@@ -96,31 +122,51 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
   const [session, setSession] = useState<Session | null>(null)
   const [status, setStatus] = useState<SessionStatus>(isAuthEnabled ? 'loading' : 'disabled')
 
+  const [problem, setProblem] = useState<string | undefined>(undefined)
+
   useEffect(() => {
+    if (!isAuthEnabled) return
     let active = true
     let unsubscribe: (() => void) | undefined
 
+    // `deadline` is declared below, after the closures that clear it; none of them runs
+    // before the timer exists.
+    const settle = () => clearTimeout(deadline)
     const adopt = (next: Session | null) => {
       if (!active) return
+      settle()
       setSession(next)
+      setProblem(undefined)
       setStatus(next === null ? 'signedOut' : 'signedIn')
       setAccessToken(next?.access_token)
     }
+    const fail = (sentence: string) => {
+      if (!active) return
+      settle()
+      setProblem(sentence)
+      setStatus('failed')
+    }
 
+    const deadline = setTimeout(() => fail(describeDeadline()), SESSION_READ_DEADLINE_MS)
     void (async () => {
-      const supabase = await getSupabaseClient()
-      if (supabase === null || !active) return
-      // Subscribed before the first read, not after: the magic-link exchange can complete
-      // while `getSession` is still in flight, and a listener attached afterwards would
-      // miss the one event that matters on this page.
-      const { data } = supabase.auth.onAuthStateChange((_event, next) => adopt(next))
-      unsubscribe = () => data.subscription.unsubscribe()
-      const { data: current } = await supabase.auth.getSession()
-      adopt(current.session)
+      try {
+        const supabase = await getSupabaseClient()
+        if (supabase === null || !active) return
+        // Subscribed before the first read, not after: the magic-link exchange can complete
+        // while `getSession` is still in flight, and a listener attached afterwards would
+        // miss the one event that matters on this page.
+        const { data } = supabase.auth.onAuthStateChange((_event, next) => adopt(next))
+        unsubscribe = () => data.subscription.unsubscribe()
+        const { data: current } = await supabase.auth.getSession()
+        adopt(current.session)
+      } catch (cause: unknown) {
+        fail(describeBootstrapFailure(cause))
+      }
     })()
 
     return () => {
       active = false
+      settle()
       unsubscribe?.()
     }
   }, [])
@@ -180,6 +226,7 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
   const value = useMemo<SessionState>(
     () => ({
       status,
+      problem,
       email: session?.user.email,
       sendMagicLink,
       signInWithPassword,
@@ -190,6 +237,7 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
     }),
     [
       status,
+      problem,
       session,
       sendMagicLink,
       signInWithPassword,
@@ -201,6 +249,34 @@ export function SessionProvider({ children }: Readonly<{ children: React.ReactNo
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+}
+
+function describeDeadline(): string {
+  return (
+    `Checking your session took longer than ${SESSION_READ_DEADLINE_MS / 1000} seconds. ` +
+    'The sign-in service may be unreachable from this network.'
+  )
+}
+
+/**
+ * The one cause seen in the wild gets its own sentence. A chunk that fails to load is a
+ * page from a build the server no longer serves — the dev server recompiled, or a deploy
+ * went out — and the fix is a reload, which the card offers. Anything else is named as it
+ * came, because the next cause will be one nobody has seen yet.
+ */
+function describeBootstrapFailure(cause: unknown): string {
+  const message = cause instanceof Error ? cause.message : ''
+  const isStaleBuild =
+    (cause instanceof Error && cause.name === 'ChunkLoadError') || /chunk/i.test(message)
+  if (isStaleBuild) {
+    return (
+      'The sign-in code could not be loaded. This usually means the app was updated while ' +
+      'this page was open; reloading fetches the current version.'
+    )
+  }
+  return message.length > 0
+    ? `Your session could not be checked: ${message}`
+    : 'Your session could not be checked.'
 }
 
 export function useSession(): SessionState {

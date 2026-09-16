@@ -7,10 +7,10 @@
  * - `consoleErrors` collects `console.error` and uncaught exceptions and fails the test on
  *   any. Eighteen thousand lines had no test at all when the 2026-09-15 audit ran; a page
  *   that renders and logs an error is the cheapest whole class of defect to refuse. One line
- *   is not counted: Chrome's own "Failed to load resource: … status of NNN" for a status the
- *   test itself chose — an answer the fake served, or the document the test navigated to
- *   (the 404 page's whole point). A missing chunk, a broken image or a React error on the
- *   app's origin is still an error.
+ *   is not counted: Chrome's own "Failed to load resource: …" for an outcome the test itself
+ *   chose — a status the fake served, a stub it aborted (`net::ERR_FAILED`), or the document
+ *   the test navigated to (the 404 page's whole point). A missing chunk, a broken image or a
+ *   React error on the app's origin is still an error.
  *
  * The shell probes `GET /dev/settings` on every screen (`lib/use-developer-access.ts`); the
  * `api` fixture answers it 403, which is what a bidder who is not on `DEVELOPER_EMAILS`
@@ -62,7 +62,7 @@ export const test = base.extend<E2EOptions & E2EFixtures>({
       // A collector: appended to by the page's events while the test runs, read at the end.
       const errors: string[] = []
       page.on('console', (message) => {
-        if (message.type() !== 'error' || isChosenStatus(message, page, apiOrigin)) return
+        if (message.type() !== 'error' || isChosenOutcome(message, page, apiOrigin)) return
         errors.push(`console.error: ${message.text()}`)
       })
       page.on('pageerror', (error) => {
@@ -77,17 +77,18 @@ export const test = base.extend<E2EOptions & E2EFixtures>({
 
 export { expect }
 
-const RESOURCE_STATUS_LINE =
-  /^Failed to load resource: the server responded with a status of \d{3}/
+const RESOURCE_OUTCOME_LINE =
+  /^Failed to load resource: (the server responded with a status of \d{3}|net::ERR_FAILED)/
 
 /**
- * Chrome writes a `console.error` for every response with a 4xx/5xx status. When that
- * status came from the fake (the test chose it) or is the document itself (the test
- * navigated there and asserts the status), the line reports the test's own decision back
- * to it. Everything else on the app's origin — a chunk, an image, a font — is real.
+ * Chrome writes a `console.error` for every response with a 4xx/5xx status, and one for a
+ * request that failed outright. When that outcome came from the fake (the test chose the
+ * status, or aborted the stub) or is the document itself (the test navigated there and
+ * asserts the status), the line reports the test's own decision back to it. Everything else
+ * on the app's origin — a chunk, an image, a font — is real.
  */
-function isChosenStatus(message: ConsoleMessage, page: Page, apiOrigin: string): boolean {
-  if (!RESOURCE_STATUS_LINE.test(message.text())) return false
+function isChosenOutcome(message: ConsoleMessage, page: Page, apiOrigin: string): boolean {
+  if (!RESOURCE_OUTCOME_LINE.test(message.text())) return false
   const url = message.location().url
   if (url === page.url()) return true
   try {

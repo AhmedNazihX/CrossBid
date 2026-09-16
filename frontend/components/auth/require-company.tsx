@@ -31,6 +31,14 @@
  * the sidebar and header stay put and only the frame shows `LoadingState` — the same line
  * `RequireSession` shows, from the same component, so the two waits cannot drift apart.
  *
+ * **The wait has a deadline.** The `catch` below covers a request that *fails* — a 500, an
+ * unreachable API, a CORS refusal — but a request that never settles reaches neither branch,
+ * and until 2026-09-16 that left every route at "Loading…" for as long as the tab was open
+ * (reproduced against a stubbed `/companies/me` that never answered). The deadline aborts
+ * the request and takes the same exit a failure does: the screen renders and reports its
+ * own trouble. It is a separate `AbortController` from the unmount one so the two aborts
+ * stay distinguishable — an unmount must not set state, a timeout must.
+ *
  * `/company` itself is exempt, for the obvious reason.
  */
 import { usePathname, useRouter } from 'next/navigation'
@@ -41,6 +49,9 @@ import { LoadingState } from '@/components/common/loading-state'
 import { loadProfile } from '@/lib/companies'
 
 const ONBOARDING_PATH = '/company'
+
+/** How long `GET /companies/me` may take before the guard stops waiting and lets the screen render. */
+export const COMPANY_CHECK_DEADLINE_MS = 20_000
 
 type Check = 'checking' | 'hasCompany' | 'needsCompany' | 'skipped'
 
@@ -64,22 +75,32 @@ export function RequireCompany({ children }: Readonly<{ children: React.ReactNod
       return
     }
     const controller = new AbortController()
+    const deadline = new AbortController()
+    const timer = setTimeout(() => deadline.abort(), COMPANY_CHECK_DEADLINE_MS)
     // Back to `checking` first, so the redirect below cannot fire on the previous answer
     // while this one is still in flight — which is the whole defect this re-run fixes.
     setCheck('checking')
     void (async () => {
       try {
-        const { profile } = await loadProfile(controller.signal)
+        const { profile } = await loadProfile(
+          AbortSignal.any([controller.signal, deadline.signal])
+        )
         if (controller.signal.aborted) return
         found.current = profile !== undefined
         setCheck(profile === undefined ? 'needsCompany' : 'hasCompany')
       } catch {
-        // A failure here is the API being unreachable, not a missing company. Render the
-        // screen and let it show its own error rather than redirecting on a network blip.
+        // A failure here — or the deadline above — is the API being unreachable, not a
+        // missing company. Render the screen and let it show its own error rather than
+        // redirecting on a network blip.
         if (!controller.signal.aborted) setCheck('skipped')
+      } finally {
+        clearTimeout(timer)
       }
     })()
-    return () => controller.abort()
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [status, pathname])
 
   useEffect(() => {

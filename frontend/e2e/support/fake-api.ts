@@ -27,6 +27,14 @@
  * fixture asserts is empty. A screen that starts calling a route nobody stubbed fails its
  * test by name, rather than reaching whatever happens to listen on port 8000.
  *
+ * **An answer may also be no answer.** What the browser sees when the API is down — or when
+ * a response is refused by CORS, as it was on 2026-09-16 while migrations were pending and
+ * Starlette dropped the headers from its 500 — is neither a status nor a body but a rejected
+ * `fetch`; `{ failure: 'abort' }` reproduces exactly that. `{ failure: 'hang' }` is a request
+ * that never settles: nothing fulfils it, and the page's own deadline is what a test then
+ * waits for. A fulfilled 500 is *not* the CORS case, because Playwright adds
+ * `Access-Control-Allow-Origin` to every fulfilled cross-origin response itself.
+ *
  * Handlers are matched newest-first, so a test can override what its `beforeEach` set up.
  */
 import type { Page, Route } from '@playwright/test'
@@ -42,6 +50,13 @@ export interface FakeResponse {
   readonly contentType?: string
 }
 
+/** No answer at all: the request fails at the transport (`abort`), or never settles (`hang`). */
+export interface FakeFailure {
+  readonly failure: 'abort' | 'hang'
+}
+
+export type FakeAnswer = FakeResponse | FakeFailure
+
 export interface RecordedRequest {
   readonly method: string
   /** Path and query without the origin, e.g. `/documents/1234`. */
@@ -50,7 +65,7 @@ export interface RecordedRequest {
   readonly body: string | undefined
 }
 
-export type Responder = (request: RecordedRequest, match: RegExpMatchArray) => FakeResponse
+export type Responder = (request: RecordedRequest, match: RegExpMatchArray) => FakeAnswer
 
 interface Handler {
   readonly method: HttpMethod
@@ -79,7 +94,7 @@ function toPathPattern(path: string | RegExp): RegExp {
   return typeof path === 'string' ? new RegExp(`^${escapeForRegExp(path)}$`) : path
 }
 
-function toResponder(answer: Responder | FakeResponse): Responder {
+function toResponder(answer: Responder | FakeAnswer): Responder {
   return typeof answer === 'function' ? answer : () => answer
 }
 
@@ -87,7 +102,7 @@ function toResponder(answer: Responder | FakeResponse): Responder {
  * Answers in turn, then repeats the last one for ever — the shape of anything the app polls:
  * a document that is `parsed` on one poll and `ready` on the next stays `ready`.
  */
-export function sequence(answers: readonly FakeResponse[]): Responder {
+export function sequence(answers: readonly FakeAnswer[]): Responder {
   const last = answers[answers.length - 1]
   if (last === undefined) {
     throw new Error('sequence() needs at least one answer')
@@ -124,7 +139,7 @@ export class FakeApi {
   ) {}
 
   /** Registers an answer for `method` + `path` (exact string, or a RegExp on the pathname). */
-  on(method: HttpMethod, path: string | RegExp, answer: Responder | FakeResponse): void {
+  on(method: HttpMethod, path: string | RegExp, answer: Responder | FakeAnswer): void {
     const handler: Handler = { method, path: toPathPattern(path), respond: toResponder(answer) }
     this.handlers = [handler, ...this.handlers]
   }
@@ -171,6 +186,10 @@ export class FakeApi {
       return
     }
     const answer = found.handler.respond(recorded, found.match)
+    if ('failure' in answer) {
+      if (answer.failure === 'abort') await route.abort('failed')
+      return
+    }
     await route.fulfill(
       answer.body === undefined
         ? { status: answer.status, json: answer.json, headers: CORS_HEADERS }

@@ -16,11 +16,11 @@ verdict before it is final.
 ## Status
 
 **Increments 0 to 4 are complete: 17 of 17 stories in the last one.** Increment 5, the
-submission evidence, is next. Nine migrations, sixty-two architectural decision records, 4 910
-backend tests at 100 % line and branch coverage, and a clean `make lint` across both halves.
-A further nine run against a real Postgres in CI, which is where the SQL is actually executed
-rather than inspected as a string. The web app has 105 unit tests and 6 browser journeys,
-both added on 2026-09-16 after an audit found it had none.
+submission evidence, is next. Nine migrations, sixty-five architectural decision records,
+4 915 backend tests at 100 % line and branch coverage, and a clean `make lint` across both
+halves. A further nine run against a real Postgres in CI, which is where the SQL is actually
+executed rather than inspected as a string. The web app has 119 unit tests and 8 browser
+journeys, both added on 2026-09-16 after an audit found it had none.
 
 A bidder can sign in, describe their company, search TED and start a bid from a notice,
 upload a pack that is scanned for planted instructions before anything is embedded, read

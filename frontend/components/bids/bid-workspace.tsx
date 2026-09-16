@@ -25,7 +25,7 @@ import { Notice } from '@/components/ui/notice'
 import { Tabs } from '@/components/ui/tabs'
 import { VerdictChip } from '@/components/ui/verdict-chip'
 import { Tag } from '@/components/ui/tag'
-import { describeApiError } from '@/lib/api-client'
+import { API_BASE_URL, describeApiError } from '@/lib/api-client'
 import {
   getBid,
   isAwaitingReview,
@@ -46,6 +46,19 @@ type LoadState =
   | { readonly phase: 'loading' }
   | { readonly phase: 'failed'; readonly message: string }
   | { readonly phase: 'loaded'; readonly bid: BidResponse }
+
+/**
+ * How long the first `GET /bids/{id}` may take before the screen stops waiting.
+ *
+ * A failed request has always landed in the `failed` card below; a request that *never
+ * settled* had no exit, and "Loading the bid…" stayed for as long as the tab was open
+ * (reproduced 2026-09-16 against a stub that never answered). Twenty seconds is an order
+ * of magnitude over the read's normal latency, cold pooler included, and short enough that
+ * a bidder is told something before they reach for the reload button themselves. The e2e
+ * suite waits this long for the card, so `e2e/bid-workspace-failures.spec.ts` repeats the
+ * figure and must change with it.
+ */
+export const BID_LOAD_DEADLINE_MS = 20_000
 
 /**
  * The bid workspace (story S4.5.1, Increment 1) — `Main.dc.html` on the desktop,
@@ -81,16 +94,26 @@ export function BidWorkspace({ bidId }: { readonly bidId: string }) {
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
+    // Two controllers, because the two aborts mean opposite things: an unmount (or a new
+    // attempt) must set no state, and the deadline must set `failed`.
     const controller = new AbortController()
+    const deadline = new AbortController()
+    const timer = setTimeout(() => deadline.abort(), BID_LOAD_DEADLINE_MS)
     setState({ phase: 'loading' })
-    getBid(bidId, controller.signal)
+    getBid(bidId, AbortSignal.any([controller.signal, deadline.signal]))
       .then((bid) => setState({ phase: 'loaded', bid }))
       .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ phase: 'failed', message: describeApiError(cause) })
-        }
+        if (controller.signal.aborted) return
+        setState({
+          phase: 'failed',
+          message: deadline.signal.aborted ? describeLoadDeadline() : describeApiError(cause),
+        })
       })
-    return () => controller.abort()
+      .finally(() => clearTimeout(timer))
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [bidId, attempt])
 
   useEffect(() => {
@@ -131,6 +154,13 @@ export function BidWorkspace({ bidId }: { readonly bidId: string }) {
     )
   }
   return <LiveWorkspace initial={state.bid} />
+}
+
+function describeLoadDeadline(): string {
+  return (
+    `The API at ${API_BASE_URL} did not answer within ${BID_LOAD_DEADLINE_MS / 1000} seconds. ` +
+    'It may be starting up or unreachable.'
+  )
 }
 
 type PhoneTab = 'matrix' | 'source' | 'verdict' | 'ask'

@@ -4984,3 +4984,64 @@ has the facts**. Trimming needs only the value, so the server owns it and the br
 a convenience. Recognising a no-op needs the row, which only the browser holds at edit time, so
 the browser owns it and the server never sees the case. Where both sides have the facts, the
 server wins.
+
+## ADR-0065 — Every wait gets a deadline, and a session that cannot be read says so
+
+**Date:** 2026-09-16 · **Stories:** S0.3.1, S4.1.1, S4.5.1 · **Status:** accepted
+
+A report said the bid workspace sits at "Loading…" for ever when `GET /bids/{id}` fails. It
+was investigated before it was believed, and **the report was mis-attributed**: a rejected
+load — a 500, an unreachable API, or the CORS-stripped 500 that started the report — has
+always landed in the danger Notice "The bid could not be loaded" with **Try again** and
+**Back to tenders**. Driving the real app in Chrome with the API replaced at the network edge
+reproduced that card every time, in dev auth mode and in Supabase mode.
+
+Three genuine endless waits were found underneath it, and they share one shape: **a promise
+that neither resolves nor rejects reaches no `catch`.** Every `catch` in the shell was
+correct and none of them ran.
+
+1. **`SessionProvider`'s bootstrap had no `catch` at all.** `await getSupabaseClient()`
+   dynamically imports the auth client; when a `next dev` server recompiles while a tab is
+   open, that chunk is gone and the import rejects. The rejection went to the console as an
+   uncaught error and `status` stayed `loading`, so **every guarded route** showed
+   `RequireSession`'s bare "Loading…" with no message, no control and no end. This is the
+   likeliest thing the original observer actually saw, since their server had been
+   recompiling.
+2. **`RequireCompany` waited on `GET /companies/me` with no time limit.** Its `catch` handles
+   a failure correctly; a request that hangs at the transport never gets there.
+3. **The workspace's own first `getBid`** had the same gap behind its otherwise-correct
+   failed branch.
+
+### What changed
+
+`SessionStatus` gains `failed` and `SessionState` gains a one-sentence `problem`. The
+bootstrap has a `catch` and a 45 s deadline; `RequireSession` draws `failed` as the same
+danger Notice the workspace uses, offering **Reload the page** and a **Sign in** link that is
+a plain anchor rather than a `Link`, because a full navigation fetches the current build and a
+client-side transition inside a stale one cannot. The two data waits take 20 s deadlines
+through a second `AbortController`, combined with the unmount one by `AbortSignal.any` — two
+controllers because the two aborts mean opposite things: an unmount must set no state, a
+deadline must.
+
+The 45 s is not arbitrary. supabase-js retries a token refresh for up to 30 s and then gives
+up, which ends in `signedOut` and the correct redirect to sign in; a deadline inside that
+window would show an error card and then snatch it away. Only a read that has neither
+succeeded nor failed by 45 s is a hang.
+
+### What the harness learned
+
+`e2e/support/fake-api.ts` can now answer with **no answer**: `{failure: 'abort'}` is the
+rejected `fetch` the browser really sees when the API is down or a response is refused by
+CORS, and `{failure: 'hang'}` never settles, which is the only way to test a deadline. Worth
+recording because it was measured: **a fulfilled 500 is not the CORS case** — Playwright adds
+`Access-Control-Allow-Origin` to every cross-origin response it fulfils, so a test that
+stubs a 500 is testing an error the app was told about, not one it was blocked from reading.
+
+### The pre-existing red
+
+The same run found `e2e/new-bid-flow.spec.ts` failing on `main`, which CI had been reporting
+since `f8b5999` and which is unrelated to the loading work: the flow ends on the workspace
+with a bid carrying the DE pack, so the Source panel asks for a signed URL that nothing
+stubs, and the fixture rightly fails the test for an un-stubbed call. The bid it lands on now
+lists no documents. The lesson is the fixture's, not the app's: **a test that navigates
+somewhere must stub what that destination asks for, not only what the journey to it did.**
