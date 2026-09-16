@@ -8,14 +8,34 @@ overrides it. These are the shapes that cross the interrupt, resuming the graph 
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Self
+from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from crossbid.models.matrix import MAX_QUOTE_CHARS, RowStatus
 from crossbid.models.verdict import Decision
 
 MAX_COMMENT_CHARS = 4000
+
+
+def _blank_is_not_a_reason(value: str | None) -> str | None:
+    """Whitespace is not an explanation.
+
+    The browser already trims before it sends (`normalisedEdit` in
+    `frontend/components/matrix/row-edit-rules.ts`), so a reason of spaces never reaches here
+    from our own UI. The server is the authority and must not be the laxer of the two: without
+    this, `"   "` is truthy and buys an unexplained override through the API, and the row is
+    stored as `overridden` with a reason a human cannot read.
+    """
+    if value is None:
+        return None
+    return value.strip() or None
+
+
+ReviewReason = Annotated[
+    str | None, Field(max_length=MAX_COMMENT_CHARS), AfterValidator(_blank_is_not_a_reason)
+]
+"""A free-text reason, trimmed, with blank normalised to "no reason given"."""
 
 
 class RowEdit(BaseModel):
@@ -25,7 +45,7 @@ class RowEdit(BaseModel):
 
     matrix_row_id: str
     status: RowStatus | None = Field(default=None, description="None leaves the agent's status")
-    override_reason: str | None = Field(default=None, max_length=MAX_COMMENT_CHARS)
+    override_reason: ReviewReason = None
     attached_doc_ids: tuple[str, ...] = ()
 
     @model_validator(mode="after")
@@ -59,9 +79,8 @@ class ReviewSubmission(BaseModel):
 
     decision: Decision
     row_edits: tuple[RowEdit, ...] = ()
-    override_reason: str | None = Field(
+    override_reason: ReviewReason = Field(
         default=None,
-        max_length=MAX_COMMENT_CHARS,
         description="Required when the reviewer's decision differs from the agent's",
     )
 

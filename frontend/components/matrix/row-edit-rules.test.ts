@@ -116,17 +116,35 @@ describe('hasReason and normalisedEdit', () => {
 
   test('the edit on the wire carries a trimmed reason, and null rather than whitespace', () => {
     expect(
-      normalisedEdit(edit({ override_reason: '  Umsatz reicht aus.  ' })).override_reason
+      normalisedEdit(row(), edit({ override_reason: '  Umsatz reicht aus.  ' })).override_reason
     ).toBe('Umsatz reicht aus.')
-    expect(normalisedEdit(edit({ override_reason: '   ' })).override_reason).toBeNull()
-    expect(normalisedEdit(edit({ override_reason: undefined })).override_reason).toBeNull()
+    expect(normalisedEdit(row(), edit({ override_reason: '   ' })).override_reason).toBeNull()
+    expect(
+      normalisedEdit(row(), edit({ override_reason: undefined })).override_reason
+    ).toBeNull()
   })
 
   test('normalising returns a new edit and leaves the original untouched', () => {
     const original = edit({ override_reason: '  padded  ' })
-    const normalised = normalisedEdit(original)
+    const normalised = normalisedEdit(row(), original)
     expect(normalised).not.toBe(original)
     expect(original.override_reason).toBe('  padded  ')
+  })
+
+  test("a status equal to the row's own is not a change, and is dropped from the wire", () => {
+    // The server cannot tell a restated status from a changed one — `RowEdit` carries no row —
+    // so it would demand a reason for a change the reviewer never made. The browser can tell,
+    // and this is where it does.
+    expect(normalisedEdit(cited(), edit({ status: 'supported' })).status).toBeNull()
+  })
+
+  test("a status that differs from the row's is kept", () => {
+    expect(normalisedEdit(cited(), edit({ status: 'unsupported' })).status).toBe('unsupported')
+  })
+
+  test('restating the status with nothing else normalises to an edit that is empty', () => {
+    // So the caller can drop it, as `RowEdit._edit_must_do_something` otherwise would.
+    expect(isEmptyEdit(normalisedEdit(cited(), edit({ status: 'supported' })))).toBe(true)
   })
 })
 
@@ -152,11 +170,21 @@ describe('describeBlocker — RowEdit._changing_a_status_needs_a_reason', () => 
     ).toBeUndefined()
   })
 
-  test('setting the status the row already has still needs a reason, as the server requires', () => {
-    // Python checks `self.status is not None`, not "differs from the row" — so does this.
-    expect(describeBlocker(cited(), edit({ status: 'supported' }))).toBe(
-      STATUS_CHANGE_NEEDS_A_REASON
-    )
+  test('restating the status the row already has is not a change, and needs no reason', () => {
+    // Python checks `self.status is not None` because `RowEdit` never sees the row. The
+    // browser does, and `normalisedEdit` drops the restated status before it is sent — so
+    // the server never sees a status here, and neither must this. The alternative blocked
+    // the reviewer on a change `describeChange` refused to show them.
+    expect(describeBlocker(cited(), edit({ status: 'supported' }))).toBeUndefined()
+  })
+
+  test('restating the status with a reason is a comment, and accepted', () => {
+    expect(
+      describeBlocker(
+        cited(),
+        edit({ status: 'supported', override_reason: 'Nachweis geprüft, stimmt.' })
+      )
+    ).toBeUndefined()
   })
 
   test('a reason with no status change is a comment and needs nothing else', () => {
@@ -225,6 +253,20 @@ describe('describeBlocker — MatrixRow._supported_requires_evidence via _check_
     'marking a row %s needs no evidence',
     (status) => {
       expect(describeBlocker(row(), marking({ status }))).toBeUndefined()
+    }
+  )
+})
+
+describe('describeBlocker and describeChange agree', () => {
+  test.each(['supported', 'partially_supported', 'unsupported', 'not_applicable'] as const)(
+    'a bare status of %s is blocked for want of a reason exactly when a change is shown',
+    (status) => {
+      // The defect this pins: a reviewer blocked on a change the interface does not display.
+      const target = cited()
+      const bare = edit({ status })
+      const isBlockedForReason = describeBlocker(target, bare) === STATUS_CHANGE_NEEDS_A_REASON
+      const isShownAsChange = describeChange(target, bare) !== undefined
+      expect(isBlockedForReason).toBe(isShownAsChange)
     }
   )
 })

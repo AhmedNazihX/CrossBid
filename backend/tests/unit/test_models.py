@@ -750,6 +750,41 @@ def test_a_row_edit_with_a_status_and_a_reason_is_accepted() -> None:
     assert edit.status is RowStatus.SUPPORTED
 
 
+def test_a_reason_of_only_whitespace_does_not_buy_a_status_change() -> None:
+    """The browser trims before it sends; the server must not be the laxer of the two."""
+    from crossbid.models import RowEdit
+
+    with pytest.raises(ValidationError, match="override_reason"):
+        RowEdit(matrix_row_id="row-1", status=RowStatus.SUPPORTED, override_reason="   \n ")
+
+
+def test_a_row_edit_that_is_only_whitespace_changes_nothing() -> None:
+    from crossbid.models import RowEdit
+
+    with pytest.raises(ValidationError, match="must change a status"):
+        RowEdit(matrix_row_id="row-1", override_reason="  ")
+
+
+def test_a_reason_is_stored_trimmed() -> None:
+    """Surrounding whitespace is the reviewer's typing, not part of the record."""
+    from crossbid.models import RowEdit
+
+    edit = RowEdit(
+        matrix_row_id="row-1",
+        status=RowStatus.SUPPORTED,
+        override_reason="  Nachweis liegt bei.\n",
+    )
+    assert edit.override_reason == "Nachweis liegt bei."
+
+
+def test_a_submission_reason_of_only_whitespace_is_no_reason() -> None:
+    """`routers/bids.py` refuses a disagreeing decision without a reason; blank must count."""
+    from crossbid.models import ReviewSubmission
+
+    review = ReviewSubmission(decision=Decision.GO, override_reason=" \t ")
+    assert review.override_reason is None
+
+
 def test_duplicate_row_edits_are_rejected() -> None:
     """Two edits to one row would make the outcome depend on application order."""
     from crossbid.models import ReviewSubmission, RowEdit

@@ -31,9 +31,9 @@ export interface RowEditBlocker {
 
 export interface RowEditsController {
   /**
-   * Every pending edit, in matrix order, reasons trimmed and the no-op edits dropped —
-   * ready for `ReviewSubmission.row_edits`. Spread it: the generated schema's field is a
-   * mutable array.
+   * Every pending edit, in matrix order, reasons trimmed, a status that restates the row's
+   * own dropped, and the edits left with nothing to say dropped with it — ready for
+   * `ReviewSubmission.row_edits`. Spread it: the generated schema's field is a mutable array.
    */
   readonly edits: readonly RowEdit[]
   /** How many rows carry a pending edit. */
@@ -159,10 +159,16 @@ export function useRowEdits(rows: readonly MatrixRow[]): RowEditsController {
 
   const edits = useMemo(
     () =>
-      rows
-        .map((row) => state.pending.get(row.id))
-        .filter((edit): edit is RowEdit => edit !== undefined)
-        .map(normalisedEdit),
+      rows.flatMap((row) => {
+        const pending = state.pending.get(row.id)
+        if (pending === undefined) {
+          return []
+        }
+        const edit = normalisedEdit(row, pending)
+        // A restated status normalises to nothing, and the server refuses an edit that says
+        // nothing (`RowEdit._edit_must_do_something`) — so it is not sent.
+        return isEmptyEdit(edit) ? [] : [edit]
+      }),
     [rows, state.pending]
   )
 

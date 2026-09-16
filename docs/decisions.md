@@ -4938,3 +4938,49 @@ strip, and this test cannot fail for the defect it protects", so a future fixtur
 lighter makes the test *fail* rather than quietly stop testing anything. Every test that needs
 its subject to be under some condition should say so out loud, or it will one day pass for the
 wrong reason and nobody will know.
+
+## ADR-0064 — Two review rules the browser and the server disagreed about
+
+**Date:** 2026-09-16 · **Stories:** S4.5.2, S3.3.1 · **Status:** accepted
+
+Writing the first tests for `row-edit-rules.ts` (ADR-0063) turned up two places where the
+browser and the API answered the same question differently. Neither could be reached through
+the shipped UI, which is why both had survived: the browser normalises before it sends, so its
+own laxity and its own strictness cancelled out. A defect that only an API client can reach is
+still a defect, and the two needed opposite fixes.
+
+### Whitespace is not a reason — fixed on the server
+
+`RowEdit._changing_a_status_needs_a_reason` asked `not self.override_reason`, so `"   "` is
+truthy and bought an unexplained override. The browser trimmed first and refused it. **The
+server is the authority and must never be the laxer of the two**, so the fix went there:
+`ReviewReason` is an annotated `str | None` that strips and turns blank into `None`, used by
+both `RowEdit.override_reason` and `ReviewSubmission.override_reason`. Two existing checks then
+work without being touched — an edit that was only whitespace now correctly fails
+`_edit_must_do_something`, and `routers/bids.py`'s "your decision differs from the agent's"
+check now refuses a submission whose reason is spaces.
+
+### Restating the agent's status is not changing it — fixed in the browser
+
+`describeBlocker` demanded a reason whenever `edit.status` was set, including when it equalled
+`row.status`; `describeChange` showed nothing for that case. The reviewer was blocked on a
+change the screen did not display.
+
+This one could not be fixed on the server: `RowEdit` carries no row, so the model cannot tell
+"same" from "different" — only `routers/bids.py::_check_row_edit` has both, and it validates
+the row as the edit would leave it rather than restating rules. So the browser decides it:
+`normalisedEdit(row, edit)` drops a status equal to the row's own, `describeBlocker` judges the
+normalised form rather than what was typed, and `useRowEdits` drops an edit that normalises to
+nothing. The two functions now agree by construction instead of by two parallel conditions, and
+a test asserts that invariant across all four statuses.
+
+Nothing is lost by not sending it: a row nobody edited is already recorded `CONFIRMED` by
+`apply_edits`, which is exactly what restating the agent's status means.
+
+### The pattern worth keeping
+
+A rule duplicated across the boundary needs an owner, and the owner is decided by **which side
+has the facts**. Trimming needs only the value, so the server owns it and the browser's copy is
+a convenience. Recognising a no-op needs the row, which only the browser holds at edit time, so
+the browser owns it and the server never sees the case. Where both sides have the facts, the
+server wins.

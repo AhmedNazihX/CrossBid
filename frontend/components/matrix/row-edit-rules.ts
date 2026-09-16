@@ -53,10 +53,16 @@ export function hasReason(edit: RowEdit): boolean {
   return (edit.override_reason ?? '').trim().length > 0
 }
 
-/** The edit as it would be sent: the reason trimmed, and blank rather than whitespace. */
-export function normalisedEdit(edit: RowEdit): RowEdit {
+/**
+ * The edit as it would be sent: the reason trimmed and blank rather than whitespace, and a
+ * status that merely restates the row's own dropped. The server cannot make that second call
+ * — `RowEdit` carries no row — so it would demand a reason for a change nobody made, and
+ * `describeChange` would rightly show none. Restating is not changing; nothing is sent.
+ */
+export function normalisedEdit(row: MatrixRow, edit: RowEdit): RowEdit {
   const reason = (edit.override_reason ?? '').trim()
-  return { ...edit, override_reason: reason.length > 0 ? reason : null }
+  const status = edit.status === row.status ? null : edit.status
+  return { ...edit, status, override_reason: reason.length > 0 ? reason : null }
 }
 
 /**
@@ -64,16 +70,21 @@ export function normalisedEdit(edit: RowEdit): RowEdit {
  * it. Mirrors `_check_row_edit`, which re-validates the row as the edit would leave it rather
  * than restating the rule — so this asks the same question: with this status and these
  * attachments, is the row still saveable?
+ *
+ * It judges the edit as `normalisedEdit` would send it, not as typed, so it and
+ * `describeChange` cannot disagree: a reviewer is never blocked on a change the screen does
+ * not show.
  */
 export function describeBlocker(row: MatrixRow, edit: RowEdit): string | undefined {
-  const reason = (edit.override_reason ?? '').trim()
+  const sent = normalisedEdit(row, edit)
+  const reason = sent.override_reason ?? ''
   if (reason.length > MAX_REASON_CHARS) {
     return REASON_TOO_LONG
   }
-  if (edit.status !== null && edit.status !== undefined && reason.length === 0) {
+  if (sent.status !== null && sent.status !== undefined && reason.length === 0) {
     return STATUS_CHANGE_NEEDS_A_REASON
   }
-  const status = edit.status ?? row.status
+  const status = sent.status ?? row.status
   const attachments = row.attached_doc_ids.length + edit.attached_doc_ids.length
   if (status === 'supported' && row.evidence.length === 0 && attachments === 0) {
     return SUPPORTED_NEEDS_EVIDENCE

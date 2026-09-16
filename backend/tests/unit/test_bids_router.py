@@ -944,6 +944,22 @@ def test_disagreeing_with_the_agent_without_a_reason_is_refused(
     assert response.json()["detail"] == bids_router.OVERRIDE_NEEDS_A_REASON_DETAIL
 
 
+def test_disagreeing_with_the_agent_on_a_reason_of_only_spaces_is_refused(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """Spaces are not an explanation, and the API is the authority the browser is not."""
+    # Arrange
+    bid, _row = parked_bid(read_model)
+    body = review_body(decision="go", override_reason="    ")
+
+    # Act
+    response = client.post(f"/bids/{bid.id}/review", json=body, headers=headers())
+
+    # Assert
+    assert response.status_code == 422
+    assert response.json()["detail"] == bids_router.OVERRIDE_NEEDS_A_REASON_DETAIL
+
+
 def test_disagreeing_with_the_agent_with_a_reason_is_accepted(
     client: TestClient, read_model: InMemoryReadModel, runner: FakeRunner
 ) -> None:
