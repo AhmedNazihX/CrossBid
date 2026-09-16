@@ -49,6 +49,7 @@ from psycopg import AsyncConnection
 from psycopg.rows import DictRow
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from crossbid.http_retry import is_retryable
 from crossbid.ingestion.chunker import Chunk
 from crossbid.llm import OPENROUTER_BASE_URL
 from crossbid.settings import ModelRole, Settings
@@ -56,15 +57,16 @@ from crossbid.settings import ModelRole, Settings
 OPENROUTER_EMBEDDINGS_PATH: Final = "embeddings"
 """Relative to `OPENROUTER_BASE_URL`, which `crossbid.llm` already owns (one base URL)."""
 
-REQUEST_TIMEOUT_S: Final = 60.0
-MAX_ATTEMPTS: Final = 3
-RETRY_BACKOFF_S: Final = 2.0
-"""Sleeps 2s then 4s before giving up, the same shape as `EcertisRestClient`."""
+EMBEDDINGS_REQUEST_TIMEOUT_S: Final = 60.0
+EMBEDDINGS_MAX_ATTEMPTS: Final = 3
+EMBEDDINGS_RETRY_BACKOFF_S: Final = 2.0
+"""Sleeps 2s then 4s before giving up, the same shape as `EcertisRestClient`.
 
-RETRYABLE_STATUS_CODES: Final = frozenset({408, 409, 425, 429, 500, 502, 503, 504})
-"""Only these are retried. A 400/401/404 will not become a 200 on the third try, and 404 is
-precisely how this account's data policy refuses an unusable slug (ADR-0005) — retrying it
-turns a clear configuration error into a slow one."""
+Which failures are worth that sleep is `crossbid.http_retry.is_retryable`'s judgement, not
+this module's any more (M21). The rule has not changed — a 400/401/404 will not become a 200
+on the third try, and 404 is precisely how this account's data policy refuses an unusable slug
+(ADR-0005), so retrying it turns a clear configuration error into a slow one. What changed is
+that the other three clients now share it instead of retrying everything."""
 
 DEFAULT_BATCH_SIZE: Final = 64
 """Texts per request. `text-embedding-3-small` accepts 8191 tokens *per input* and the
@@ -115,7 +117,7 @@ class EmbeddingsClient:
         *,
         client: httpx.AsyncClient | None = None,
         batch_size: int = DEFAULT_BATCH_SIZE,
-        max_attempts: int = MAX_ATTEMPTS,
+        max_attempts: int = EMBEDDINGS_MAX_ATTEMPTS,
     ) -> None:
         if batch_size < MIN_BATCH_SIZE:
             raise ValueError(f"batch_size must be at least {MIN_BATCH_SIZE}, got {batch_size}")
@@ -139,7 +141,7 @@ class EmbeddingsClient:
         )
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(
-            base_url=OPENROUTER_BASE_URL, timeout=REQUEST_TIMEOUT_S
+            base_url=OPENROUTER_BASE_URL, timeout=EMBEDDINGS_REQUEST_TIMEOUT_S
         )
 
     @property
@@ -253,7 +255,7 @@ class EmbeddingsClient:
                 )
                 response.raise_for_status()
             except httpx.HTTPStatusError as err:
-                if err.response.status_code not in RETRYABLE_STATUS_CODES:
+                if not is_retryable(err):
                     raise EmbeddingsError(
                         f"POST /{OPENROUTER_EMBEDDINGS_PATH} for '{self._model}' returned "
                         f"HTTP {err.response.status_code}, which will not change on a "
@@ -266,7 +268,7 @@ class EmbeddingsClient:
             else:
                 return self._decode(response)
             if attempt < self._max_attempts:
-                await self._sleep(RETRY_BACKOFF_S * attempt)
+                await self._sleep(EMBEDDINGS_RETRY_BACKOFF_S * attempt)
 
         raise EmbeddingsError(
             f"POST /{OPENROUTER_EMBEDDINGS_PATH} for '{self._model}' failed after "

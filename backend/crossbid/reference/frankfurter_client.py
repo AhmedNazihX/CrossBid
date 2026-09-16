@@ -63,16 +63,18 @@ from typing import Annotated, Any, Final
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
 
+from crossbid.http_retry import is_retryable
+
 logger = logging.getLogger(__name__)
 
 RATE_URL_TEMPLATE: Final = "https://api.frankfurter.dev/v2/providers/ECB/rate/{base}/{quote}"
 """The ECB alone, not the multi-provider blend. See the module docstring."""
 
-REQUEST_TIMEOUT_S: Final = 10.0
+FRANKFURTER_REQUEST_TIMEOUT_S: Final = 10.0
 """Half of TED's: this is one CDN-cached object of about seventy bytes, and a tool call that
 hangs is a per-requirement ReAct loop that hangs."""
 
-MAX_ATTEMPTS: Final = 2
+FRANKFURTER_MAX_ATTEMPTS: Final = 2
 """One retry, matching `ted_client`. A rate that is down twice in a row is down."""
 
 NOT_A_PUBLISHED_PAIR: Final = frozenset({404, 422})
@@ -160,7 +162,7 @@ class FrankfurterClient:
         self,
         http: httpx.Client,
         *,
-        max_attempts: int = MAX_ATTEMPTS,
+        max_attempts: int = FRANKFURTER_MAX_ATTEMPTS,
         cache: RateCache = RATE_CACHE,
     ) -> None:
         self._http = http
@@ -201,6 +203,13 @@ class FrankfurterClient:
                 response.raise_for_status()
             except httpx.HTTPError as error:
                 _refuse_unpublished_pair(error, base, quote)
+                if not is_retryable(error):
+                    # M21. The unpublished-pair check above already turns 404 and 422 into
+                    # the right refusal; this catches everything else permanent, which was
+                    # being sent twice for no reason.
+                    raise RateUnavailableError(
+                        f"Frankfurter refused {base}/{quote} and will refuse it again: {error}"
+                    ) from error
                 last_error = error
                 logger.warning("Frankfurter attempt %s for %s failed: %s", attempt, url, error)
             else:

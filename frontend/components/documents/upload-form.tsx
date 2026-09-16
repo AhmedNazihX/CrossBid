@@ -1,11 +1,13 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Notice } from '@/components/ui/notice'
 import { Select } from '@/components/ui/select'
+import { describeApiError } from '@/lib/api-client'
+import { retryAt, useRateLimit } from '@/lib/use-rate-limit'
 import {
   DOCUMENT_KINDS,
   isDocumentKind,
@@ -24,7 +26,12 @@ import { DOCUMENT_KIND_LABELS } from './document-labels'
 const FALLBACK_KIND: DocumentKind = 'company_evidence'
 
 export interface UploadFormProps {
-  /** Resolves when the API accepted the file; rejects with the error to show. */
+  /**
+   * Resolves when the API accepted the file; rejects with what the call threw. An `ApiError`
+   * must arrive as itself, not wrapped: this form reads its status and `Retry-After` to tell
+   * a full hour's allowance from a bad file (audit M12), and `describeApiError` turns either
+   * into the sentence shown.
+   */
   readonly onUpload: (file: File, kind: DocumentKind) => Promise<void>
   /**
    * The type the select starts on and returns to after each upload. A pack is twenty files
@@ -37,13 +44,21 @@ export interface UploadFormProps {
  * File + kind + submit (story S4.2.2) on the design system's `Input`, `Select` and `Button`
  * (`components/forms/*.jsx`, ADR-0014). The browser's own file input and a native `<select>`
  * sit inside the styled boxes, so keyboard and screen-reader behaviour stay complete.
+ *
+ * **A 429 is a wait, not an error.** `document_upload_limit` is thirty an hour per company,
+ * and a pack is twenty files, so a bidder can genuinely hit it. When they do, the button is
+ * disabled until the second the API named and the notice says the clock time, the way the
+ * ask panel does (`lib/use-rate-limit.ts`); until 2026-09-16 the API's sentence was shown
+ * with the button still live, so the number in it was stale and the next press was refused.
  */
 export function UploadForm({ onUpload, defaultKind = FALLBACK_KIND }: UploadFormProps) {
   const fileId = useId()
   const kindId = useId()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [kind, setKind] = useState<DocumentKind>(defaultKind)
   const [error, setError] = useState<string | undefined>(undefined)
   const [isUploading, setIsUploading] = useState(false)
+  const rateLimit = useRateLimit()
   // The ESPD request is XML and every other kind is a PDF, so the picker's filter, its hint
   // and the refusals all follow the chosen type rather than assuming one shape.
   const shape = uploadShapeFor(kind)
@@ -51,8 +66,10 @@ export function UploadForm({ onUpload, defaultKind = FALLBACK_KIND }: UploadForm
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    const file = new FormData(form).get('file')
-    const chosenFile = file instanceof File ? file : undefined
+    // Read from the input itself rather than `new FormData(form)`: the two agree in every
+    // browser, but jsdom's form-data algorithm never sees a `FileList` set on the element,
+    // so the FormData route made the form untestable while looking perfectly fine live.
+    const chosenFile = fileRef.current?.files?.[0]
 
     const problem = validateUploadFile(chosenFile, kind)
     if (problem !== undefined || chosenFile === undefined) {
@@ -67,11 +84,18 @@ export function UploadForm({ onUpload, defaultKind = FALLBACK_KIND }: UploadForm
       form.reset()
       setKind(defaultKind)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'The upload failed. Try again.')
+      // A wait the hook can time is the hook's to say — clearing `error` here stops an older
+      // refusal from resurfacing under the button the moment the wait lifts.
+      setError(rateLimit.noteRefusal(cause) ? undefined : describeApiError(cause))
     } finally {
       setIsUploading(false)
     }
   }
+
+  const message =
+    rateLimit.blockedUntil === undefined
+      ? error
+      : `This company has used its hour's uploads. ${retryAt(rateLimit.blockedUntil)}`
 
   return (
     <form
@@ -82,6 +106,7 @@ export function UploadForm({ onUpload, defaultKind = FALLBACK_KIND }: UploadForm
     >
       <div className="grid gap-4 shell:grid-cols-2">
         <Input
+          ref={fileRef}
           id={fileId}
           label="File"
           name="file"
@@ -110,14 +135,19 @@ export function UploadForm({ onUpload, defaultKind = FALLBACK_KIND }: UploadForm
         />
       </div>
 
-      {error !== undefined && (
+      {message !== undefined && (
         <Notice tone="danger" title="The file was not uploaded">
-          {error}
+          {message}
         </Notice>
       )}
 
       <div>
-        <Button type="submit" size="lg" disabled={isUploading} className="w-full shell:w-auto">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={isUploading || rateLimit.isBlocked}
+          className="w-full shell:w-auto"
+        >
           {isUploading ? 'Uploading…' : 'Upload file'}
         </Button>
       </div>

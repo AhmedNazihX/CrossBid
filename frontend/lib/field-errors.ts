@@ -47,6 +47,37 @@ export function fieldErrorsFrom(body: unknown): FieldErrors {
   }
 }
 
+/**
+ * The same 422 as one sentence, for a screen that has no field to put it under.
+ *
+ * `ApiError.detail` uses this for every validation list (audit finding M18): until it did,
+ * a list `detail` was `JSON.stringify`ed, and the one screen where a model-level refusal
+ * could actually happen — an override reason past `MAX_COMMENT_CHARS` — printed a pydantic
+ * array in red. The path is made readable rather than shown raw (`override_reason` →
+ * "Override reason", `row_edits.0.override_reason` → "Row edits › 0 › override reason"):
+ * the field's own screen-side rules are where a bidder should learn about a limit, so this
+ * sentence only ever has to be honest, not pretty. `undefined` when there is nothing to say.
+ */
+export function describeFieldErrors(errors: FieldErrors): string | undefined {
+  const named = Object.entries(errors.byField).map(
+    ([path, message]) => `${humanisePath(path)}: ${message}`
+  )
+  const parts = errors.formLevel === undefined ? named : [...named, errors.formLevel]
+  if (parts.length === 0) return undefined
+  return parts.map(withoutTrailingStop).join('. ') + '.'
+}
+
+const PATH_SEPARATOR = ' › '
+
+/** `row_edits.0.override_reason` → `Row edits › 0 › override reason`. */
+function humanisePath(path: string): string {
+  return capitalise(path.split('.').join(PATH_SEPARATOR).replaceAll('_', ' '))
+}
+
+function withoutTrailingStop(sentence: string): string {
+  return sentence.endsWith('.') ? sentence.slice(0, -1) : sentence
+}
+
 function validationEntries(body: unknown): readonly ValidationEntry[] {
   if (typeof body !== 'object' || body === null) return []
   const detail = (body as { detail?: unknown }).detail

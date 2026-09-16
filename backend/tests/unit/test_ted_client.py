@@ -329,9 +329,37 @@ def test_a_failure_that_clears_on_the_retry_succeeds() -> None:
     assert attempts == 2
 
 
-def test_a_400_is_retried_and_then_typed() -> None:
-    with pytest.raises(TedUnavailableError):
-        client_for(answering({"message": "bad query"}, status=400)).search(TedSearchQuery())
+def test_a_400_is_refused_at_once_rather_than_sent_twice() -> None:
+    """M21. A 400 is TED saying the *query* is wrong — `IN (72)` rather than `IN (72000000)`,
+    or an expert-syntax slip. Sending it again only makes the bidder wait twice as long to be
+    told the same thing, and this used to do exactly that."""
+    # Arrange
+    attempts = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(400, json={"message": "bad query"})
+
+    # Act / Assert
+    with pytest.raises(TedUnavailableError, match="will refuse it again"):
+        client_for(handler).search(TedSearchQuery())
+    assert attempts == 1, "a permanent refusal was retried"
+
+
+@pytest.mark.parametrize("code", [429, 500, 503])
+def test_a_transient_status_is_still_retried(code: int, no_ted_sleep: None) -> None:
+    """The other half of M21: narrowing what is retried must not stop retrying a blip."""
+    attempts = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(code)
+
+    with pytest.raises(TedUnavailableError, match="2 attempts"):
+        client_for(handler).search(TedSearchQuery())
+    assert attempts == 2
 
 
 def test_a_body_that_is_not_json_is_typed_immediately() -> None:

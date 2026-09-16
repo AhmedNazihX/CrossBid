@@ -26,7 +26,7 @@ import httpx
 import pytest
 
 from crossbid.reference.ecertis_client import (
-    MAX_ATTEMPTS,
+    ECERTIS_MAX_ATTEMPTS,
     RESPONSE_LANGUAGE,
     TAXONOMY_NATIONAL_ENTITY,
     EcertisRestClient,
@@ -88,7 +88,9 @@ def test_persistent_empty_body_is_reported_as_unanswered(no_sleep: None) -> None
     assert row.criterion_id == TAXES_ID
     assert row.criterion_name == "Payment of taxes"
     assert row.sub_criteria == ()
-    assert len(seen) == MAX_ATTEMPTS, "an empty body must be retried, not accepted at once"
+    assert len(seen) == ECERTIS_MAX_ATTEMPTS, (
+        "an empty body must be retried, not accepted at once"
+    )
 
 
 def test_empty_then_full_body_succeeds(no_sleep: None, ecertis_fixture: Any) -> None:
@@ -145,7 +147,7 @@ def test_transport_error_raises_after_the_last_attempt(no_sleep: None) -> None:
     # Act / Assert
     with pytest.raises(EcertisUnavailableError, match="failed after"):
         client.fetch_evidence(_criterion(), "de")
-    assert len(attempts) == MAX_ATTEMPTS
+    assert len(attempts) == ECERTIS_MAX_ATTEMPTS
 
 
 def test_http_error_status_raises(no_sleep: None) -> None:
@@ -156,7 +158,20 @@ def test_http_error_status_raises(no_sleep: None) -> None:
     # Act / Assert
     with pytest.raises(EcertisUnavailableError, match="failed after"):
         client.fetch_evidence(_criterion(), "de")
-    assert len(seen) == MAX_ATTEMPTS
+    assert len(seen) == ECERTIS_MAX_ATTEMPTS
+
+
+def test_a_permanent_refusal_is_not_slept_over_three_times(no_sleep: None) -> None:
+    """M21. A 404 here is not "try again". Retried, a cache build would sleep six seconds
+    per bad path across fifty-six criteria in two countries before saying so."""
+    # Arrange
+    handler, seen = _scripted(httpx.Response(404, text="no such path"))
+    client = _client(handler)
+
+    # Act / Assert
+    with pytest.raises(EcertisUnavailableError, match="will be refused again"):
+        client.fetch_evidence(_criterion(), "de")
+    assert len(seen) == 1
 
 
 def test_a_transport_error_that_clears_is_retried_successfully(no_sleep: None) -> None:
@@ -433,7 +448,7 @@ def test_backoff_grows_with_the_attempt_number(monkeypatch: pytest.MonkeyPatch) 
     client.fetch_evidence(_criterion(), "fr")
 
     # Assert
-    assert len(waits) == MAX_ATTEMPTS - 1, "no wait after the final attempt"
+    assert len(waits) == ECERTIS_MAX_ATTEMPTS - 1, "no wait after the final attempt"
     assert waits == sorted(waits)
     assert waits[0] < waits[-1]
 

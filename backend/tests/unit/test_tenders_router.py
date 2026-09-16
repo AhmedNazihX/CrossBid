@@ -168,11 +168,26 @@ def test_the_route_is_behind_authentication(client: TestClient) -> None:
     assert client.get("/tenders/search").status_code == 401
 
 
-def test_the_default_dependency_builds_a_real_client() -> None:
-    """Every test above overrides it, so this is the one place the wiring is exercised."""
+def test_the_default_dependency_builds_a_real_client_and_closes_it() -> None:
+    """Every test above overrides it, so this is the one place the wiring is exercised.
+
+    M22: it is a `yield` dependency, and the half after the yield is what closes the
+    connection pool and the TLS context. Returning the client left one of each per search to
+    the garbage collector, which is not a resource policy.
+    """
     from crossbid.reference.ted_client import TedSearchClient
 
-    assert isinstance(get_ted_client(), TedSearchClient)
+    # Arrange / Act -- drive the generator by hand, as FastAPI does around a response
+    dependency = get_ted_client()
+    built = next(dependency)
+
+    # Assert
+    assert isinstance(built, TedSearchClient)
+    http = built._http
+    assert not http.is_closed, "closed before the handler ever ran"
+    with pytest.raises(StopIteration):
+        next(dependency)
+    assert http.is_closed, "the pool outlived the request"
 
 
 def test_the_search_runs_off_the_event_loop(client: TestClient, ted: FakeTed) -> None:

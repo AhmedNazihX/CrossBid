@@ -28,7 +28,7 @@ import pytest
 from crossbid.models.ecertis_criteria import CRITERION_IDS
 from crossbid.reference import ecertis_client
 from crossbid.reference.ecertis_client import (
-    MAX_ATTEMPTS,
+    ECERTIS_MAX_ATTEMPTS,
     EcertisCacheError,
     EcertisRestClient,
     EcertisUnavailableError,
@@ -244,7 +244,7 @@ def test_fetch_localised_evidence_of_a_silent_criterion_is_empty_not_an_error(
 
     # Assert
     assert entries == {}
-    assert len(seen) == MAX_ATTEMPTS
+    assert len(seen) == ECERTIS_MAX_ATTEMPTS
 
 
 def test_fetch_localised_evidence_still_rejects_a_structurally_wrong_payload(

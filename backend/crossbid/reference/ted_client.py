@@ -45,6 +45,7 @@ from typing import Any, Final
 
 import httpx
 
+from crossbid.http_retry import is_retryable
 from crossbid.models.ted import (
     CONTRACT_NOTICE_TYPE,
     MAX_REACHABLE_RESULTS,
@@ -56,8 +57,8 @@ from crossbid.models.ted import (
 logger = logging.getLogger(__name__)
 
 TED_SEARCH_URL: Final = "https://api.ted.europa.eu/v3/notices/search"
-REQUEST_TIMEOUT_S: Final = 20.0
-MAX_ATTEMPTS: Final = 2
+TED_REQUEST_TIMEOUT_S: Final = 20.0
+TED_MAX_ATTEMPTS: Final = 2
 """One retry, as the story asks: TED is occasionally slow, never usefully hammered."""
 
 SORT_CLAUSE: Final = "SORT BY publication-date DESC"
@@ -160,7 +161,7 @@ class TedUnavailableError(RuntimeError):
 class TedSearchClient:
     """Searches TED. Construct with an `httpx.Client`; a test passes a `MockTransport`."""
 
-    def __init__(self, http: httpx.Client, *, max_attempts: int = MAX_ATTEMPTS) -> None:
+    def __init__(self, http: httpx.Client, *, max_attempts: int = TED_MAX_ATTEMPTS) -> None:
         self._http = http
         self._max_attempts = max_attempts
 
@@ -229,6 +230,14 @@ class TedSearchClient:
                 response.raise_for_status()
                 decoded = response.json()
             except httpx.HTTPError as error:
+                if not is_retryable(error):
+                    # M21: this used to be retried like any other failure. A 400 is TED
+                    # saying the *query* is wrong — `IN (72)` rather than `IN (72000000)`,
+                    # or an expert-syntax slip — and sending it again only makes the bidder
+                    # wait twice as long to be told the same thing.
+                    raise TedUnavailableError(
+                        f"TED refused the search and will refuse it again: {error}"
+                    ) from error
                 last_error = error
                 logger.warning("TED search attempt %s failed: %s", attempt, error)
             except ValueError as error:  # not JSON at all

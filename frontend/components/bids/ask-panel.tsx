@@ -84,9 +84,9 @@ export interface AskPanelProps {
  * page's status line being borrowed for a German paragraph.
  *
  * **A 429 says when.** When the browser can read `Retry-After`, the form is disabled until
- * that second and the hint names the clock time; when it cannot (the header is not on the
- * CORS safelist and the API does not yet expose it), the API's own sentence — which carries
- * the same number of seconds — is shown verbatim under the question, the way
+ * that second and the hint names the clock time; when it cannot (the API exposes the header
+ * through CORS, but a proxy may strip it), the API's own sentence — which carries the same
+ * number of seconds — is shown verbatim under the question, the way
  * `sign-in-card.tsx` shows Supabase's rate-limit text rather than "something went wrong".
  */
 export function AskPanel({

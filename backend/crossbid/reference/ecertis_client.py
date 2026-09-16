@@ -40,6 +40,7 @@ from typing import Any, Final
 import httpx
 from pydantic import ValidationError
 
+from crossbid.http_retry import is_retryable
 from crossbid.reference.ecertis_schema import (
     CachedCriterion,
     CachedCriterionEvidence,
@@ -64,9 +65,9 @@ CRITERIA_FILENAME: Final = "criteria.json"
 EVIDENCE_FILENAME_TEMPLATE: Final = "evidence_{country}.json"
 L10N_FILENAME_TEMPLATE: Final = "l10n_{language}.json"
 
-REQUEST_TIMEOUT_S: Final = 60.0
-MAX_ATTEMPTS: Final = 3
-RETRY_BACKOFF_S: Final = 2.0
+ECERTIS_REQUEST_TIMEOUT_S: Final = 60.0
+ECERTIS_MAX_ATTEMPTS: Final = 3
+ECERTIS_RETRY_BACKOFF_S: Final = 2.0
 """Sleeps 2s then 4s before giving up on a request.
 
 Measured on 2026-09-10: eCertis answers `200` with an empty body in two different
@@ -384,13 +385,13 @@ class EcertisRestClient:
         base_url: str = ECERTIS_BASE_URL,
         *,
         client: httpx.Client | None = None,
-        max_attempts: int = MAX_ATTEMPTS,
+        max_attempts: int = ECERTIS_MAX_ATTEMPTS,
     ) -> None:
         self._max_attempts = max_attempts
         self._owns_client = client is None
         self._client = client or httpx.Client(
             base_url=base_url,
-            timeout=REQUEST_TIMEOUT_S,
+            timeout=ECERTIS_REQUEST_TIMEOUT_S,
             headers={"Accept": "application/json"},
             follow_redirects=True,
         )
@@ -515,13 +516,19 @@ class EcertisRestClient:
                 response = self._client.get(path, params=dict(params))
                 response.raise_for_status()
             except httpx.HTTPError as err:
+                if not is_retryable(err):
+                    # M21. A 404 here is not "try again", and neither is a 400: the cache
+                    # build would otherwise sleep six seconds per bad path across 56
+                    # criteria in two countries before saying so.
+                    message = f"GET {path} was refused and will be refused again: {err}"
+                    raise EcertisUnavailableError(message) from err
                 last_error = err
             else:
                 if response.content.strip():
                     return self._decode(path, response)
                 last_error = None
             if attempt < self._max_attempts:
-                self._sleep(RETRY_BACKOFF_S * attempt)
+                self._sleep(ECERTIS_RETRY_BACKOFF_S * attempt)
         if last_error is not None:
             message = f"GET {path} failed after {self._max_attempts} attempts: {last_error}"
             raise EcertisUnavailableError(message) from last_error

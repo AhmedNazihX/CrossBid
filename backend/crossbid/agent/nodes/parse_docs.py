@@ -82,7 +82,7 @@ from crossbid.readmodel.bids import (
     bid_documents,
     set_bid_deadline_if_unset,
 )
-from crossbid.reference.ted_client import REQUEST_TIMEOUT_S, TedSearchClient
+from crossbid.reference.ted_client import TED_REQUEST_TIMEOUT_S, TedSearchClient
 from crossbid.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -335,6 +335,26 @@ class DocumentParser:
         return TenderDocument(parsed=parsed, name=row.name, language=language)
 
 
+async def fetch_notice(notice_number: str) -> TedNotice | None:
+    """The bid's own notice, by publication number. Exactly one match or none.
+
+    **Module level, not a closure inside `build_parse_docs`.** It captures nothing from the
+    builder, and as a closure the one thing worth asserting about it — that the HTTP client
+    it opens is closed again (M22) — could not be reached from a test without standing up
+    Storage, a database and a pack.
+
+    The client is closed on the way out; each one holds a connection pool and a TLS context
+    until the garbage collector runs. `to_thread` because the client is synchronous and this
+    is an async node, which is the reason `routers/tenders.py` gives for the same call.
+    """
+    with httpx.Client(timeout=TED_REQUEST_TIMEOUT_S) as http:
+        return await asyncio.to_thread(
+            TedSearchClient(http).search_by_publication_number,
+            notice_number,
+            language=None,
+        )
+
+
 def build_parse_docs(
     settings: Settings, db: ConnectionSource, *, store: CompanyDocumentStore | None = None
 ) -> DocumentParser:
@@ -349,14 +369,6 @@ def build_parse_docs(
 
     async def load(company_id: str, bid_id: str) -> Sequence[BidDocumentRow]:
         return await bid_documents(db, company_id=company_id, bid_id=bid_id)
-
-    async def fetch_notice(notice_number: str) -> TedNotice | None:
-        """The bid's own notice, by publication number. Exactly one match or none."""
-        client = TedSearchClient(httpx.Client(timeout=REQUEST_TIMEOUT_S))
-        page = await asyncio.to_thread(
-            client.search_by_publication_number, notice_number, language=None
-        )
-        return page
 
     async def record_deadline(company_id: str, bid_id: str, notice: TedNotice) -> None:
         if notice.deadline is None:  # pragma: no cover - the caller checks first

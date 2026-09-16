@@ -20,6 +20,7 @@ from datetime import date
 from typing import Any
 from unittest.mock import patch
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
@@ -179,3 +180,52 @@ def test_the_currencies_asked_for_reach_the_client() -> None:
         run_tool(amount=1.0, from_currency="pln", to_currency="EUR")
 
     assert seen == [("pln", "EUR")]
+
+
+def opened_clients(monkeypatch: pytest.MonkeyPatch) -> list[httpx.Client]:
+    """Records every `httpx.Client` the module under test opens, and hands back the real one.
+
+    M22: the leak is in the tool, not in the client wrapper the other tests patch out, so it
+    is only visible from here — one layer further down than the fake.
+    """
+    opened: list[httpx.Client] = []
+    real = httpx.Client
+
+    def recording(*args: Any, **kwargs: Any) -> httpx.Client:
+        client = real(*args, **kwargs)
+        opened.append(client)
+        return client
+
+    monkeypatch.setattr(httpx, "Client", recording)
+    return opened
+
+
+def test_the_tool_closes_the_http_client_it_opened(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The worst of the four leaks: this tool is built per call inside a per-requirement
+    loop, so a 350-requirement pack left 350 connection pools to the garbage collector."""
+    # Arrange
+    opened = opened_clients(monkeypatch)
+
+    # Act
+    with patch("crossbid.tools.currency_convert.FrankfurterClient", answering(PLN_EUR)):
+        run_tool(amount=2_000_000, from_currency="PLN")
+
+    # Assert
+    assert opened, "the tool opened no client at all; this test is watching the wrong thing"
+    assert all(client.is_closed for client in opened)
+
+
+def test_a_downed_rate_service_still_closes_the_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A leak on the failure path is the one that compounds: it happens when TED or the ECB
+    is having a bad day and the loop is retrying."""
+    opened = opened_clients(monkeypatch)
+
+    with patch(
+        "crossbid.tools.currency_convert.FrankfurterClient",
+        raising(RateUnavailableError("no route to host")),
+    ):
+        run_tool(amount=1.0, from_currency="PLN")
+
+    assert opened and all(client.is_closed for client in opened)

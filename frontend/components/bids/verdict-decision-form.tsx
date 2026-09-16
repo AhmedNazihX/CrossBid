@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from 'react'
 import { cn } from 'cn'
 
+import { MAX_REASON_CHARS } from '@/components/matrix/row-edit-rules'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -190,6 +191,11 @@ export function VerdictDecisionForm({
             name="override_reason"
             rows={4}
             value={reason}
+            // The server's `MAX_COMMENT_CHARS`, mirrored as the row editor and the feedback
+            // comment already do (ADR-0064: both sides hold the fact, so the server's number
+            // wins). Without it this was the one box that could send a reason the server
+            // refused, and the 422 came back as a pydantic list (audit M18).
+            maxLength={MAX_REASON_CHARS}
             disabled={isLocked}
             required={isReasonRequired}
             aria-describedby={reasonHintId}

@@ -15,8 +15,9 @@ import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { startBid } from '@/lib/bids'
 import { hasPages, TENDER_DOCUMENT_KINDS, type DocumentResponse } from '@/lib/documents'
-import { formatDate, plural } from '@/lib/format'
+import { plural } from '@/lib/format'
 import { sourceLanguageOf, type TedNotice } from '@/lib/tenders'
+import { retryAt, useRateLimit } from '@/lib/use-rate-limit'
 import {
   DOCUMENT_KIND_LABELS,
   DOCUMENT_STATUS_LABELS,
@@ -46,6 +47,23 @@ type OffsetValue = '' | '0' | '60' | '120' | '180'
 const DEADLINE_NEEDS_ITS_ZONE =
   'Give the zone the notice states, or clear the deadline. A time with no zone would move it.'
 
+/**
+ * The date and the hour are two fields because TED publishes one and never the other
+ * (ADR-0043): a `datetime-local` cannot hold a date without an hour — the browser empties
+ * it — so with one field the notice's date could only ever be a hint the bidder retyped,
+ * and a bid started from a notice routinely ended up with no deadline at all (audit M10).
+ * A date with no hour blocks the submit for the same reason a time with no zone does: a
+ * deadline half-known is not dropped silently, it is asked about.
+ */
+const DEADLINE_NEEDS_ITS_HOUR =
+  'Add the hour the notice states, or clear the date. TED publishes no time of day.'
+const DEADLINE_NEEDS_ITS_DATE = 'Give the date the hour belongs to, or clear the hour.'
+
+/** `YYYY-MM-DD` — what `<input type="date">` holds and what TED's `deadline` is. */
+const DATE_LENGTH = 10
+/** `HH:mm` — what `<input type="time">` yields unless a `step` demands seconds. */
+const TIME_LENGTH = 5
+
 const DEADLINE_OFFSETS: readonly { value: OffsetValue; label: string }[] = [
   { value: '', label: 'As the notice states…' },
   { value: '0', label: 'UTC+00:00 · UK, Portugal, Ireland' },
@@ -55,12 +73,13 @@ const DEADLINE_OFFSETS: readonly { value: OffsetValue; label: string }[] = [
 ]
 
 /**
- * `2026-10-09T16:00` plus `120` becomes `2026-10-09T16:00:00+02:00` — the wall clock the
- * buyer printed, carrying the offset they printed it in. `null` unless both halves are
- * present, because either alone describes nothing the backend will accept.
+ * `2026-10-09`, `16:00` and `120` become `2026-10-09T16:00:00+02:00` — the wall clock the
+ * buyer printed, carrying the offset they printed it in. `null` unless all three are
+ * present, because any subset describes nothing the backend will accept; the form blocks
+ * the submit on a subset rather than letting this return `null` behind the bidder's back.
  */
-function deadlineAt(local: string, offsetMinutes: OffsetValue): string | null {
-  if (local === '' || offsetMinutes === '') {
+function deadlineAt(date: string, time: string, offsetMinutes: OffsetValue): string | null {
+  if (date === '' || time === '' || offsetMinutes === '') {
     return null
   }
   const minutes = Number(offsetMinutes)
@@ -68,9 +87,8 @@ function deadlineAt(local: string, offsetMinutes: OffsetValue): string | null {
   const absolute = Math.abs(minutes)
   const hh = String(Math.floor(absolute / 60)).padStart(2, '0')
   const mm = String(absolute % 60).padStart(2, '0')
-  // `datetime-local` yields `YYYY-MM-DDTHH:mm`, and omits `:ss` unless a step demands it.
-  const withSeconds = local.length === 16 ? `${local}:00` : local
-  return `${withSeconds}${sign}${hh}:${mm}`
+  const withSeconds = time.length === TIME_LENGTH ? `${time}:00` : time
+  return `${date}T${withSeconds}${sign}${hh}:${mm}`
 }
 
 export interface StartBidFormProps {
@@ -78,11 +96,12 @@ export interface StartBidFormProps {
    * The notice picked on TED (S4.3.1), or `undefined` when the bidder typed it in.
    *
    * What it prefills is everything TED actually published — the publication number, the
-   * buyer, the source language and the deadline's **offset**. What it deliberately does not
-   * prefill is the hour: TED publishes a date and never a time (ADR-0043), and a `00:00`
-   * sitting in the field would be an invented deadline that looks like a read one. The date
-   * is shown in the hint instead, so the bidder copies the hour from the notice they can
-   * see and we cannot.
+   * title, the buyer, the source language, the deadline's **date** and its **offset**. What
+   * it deliberately does not prefill is the hour: TED publishes a date and never a time
+   * (ADR-0043), and a `00:00` sitting in the field would be an invented deadline that looks
+   * like a read one. The hour field starts empty and its hint says where to find it, so the
+   * bidder copies it from the notice they can see and we cannot. (Until 2026-09-16 the date
+   * was only a hint too, and the title was never sent — audit M10.)
    */
   readonly notice?: TedNotice
   /**
@@ -101,7 +120,9 @@ export interface StartBidFormProps {
  * A notice number, the tender's language, a checklist of the company's tender documents
  * (kinds in `TENDER_DOCUMENT_KINDS`, not yet attached to a bid), and Start analysis →
  * `POST /bids` → the workspace. Documents still processing are listed but cannot be chosen,
- * with their status; the API's `detail` is shown on any refusal.
+ * with their status; the API's `detail` is shown on any refusal — except a 429 whose wait
+ * the browser can read, which disables Start until the second the API named and says the
+ * clock time, as the ask panel and the upload form do (`lib/use-rate-limit.ts`, audit M12).
  *
  * The list is the flow's, not this form's. Step 2 above owns the one `GET /documents` on the
  * page and reports every change through `DocumentsPanel`'s `onDocumentsChange`. Until
@@ -116,7 +137,12 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
     notice === undefined ? 'fr' : sourceLanguageOf(notice)
   )
   const [buyer, setBuyer] = useState(notice?.buyer ?? '')
-  const [deadlineLocal, setDeadlineLocal] = useState('')
+  const [deadlineDate, setDeadlineDate] = useState(
+    notice?.deadline === null || notice?.deadline === undefined
+      ? ''
+      : notice.deadline.slice(0, DATE_LENGTH)
+  )
+  const [deadlineTime, setDeadlineTime] = useState('')
   const [deadlineOffset, setDeadlineOffset] = useState<OffsetValue>(
     notice?.deadline_utc_offset_minutes === null ||
       notice?.deadline_utc_offset_minutes === undefined
@@ -126,6 +152,7 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [error, setError] = useState<string | undefined>(undefined)
   const [isStarting, setIsStarting] = useState(false)
+  const rateLimit = useRateLimit()
 
   const tenderDocuments = useMemo(
     () =>
@@ -137,12 +164,20 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
     [documentList]
   )
   const readyCount = tenderDocuments.filter((document) => document.status === 'ready').length
-  // A deadline with no offset is not "a deadline we can almost use": it is refused by the
-  // backend and, worse, would be dropped silently here. So it blocks the submit rather than
-  // being discarded — a reviewer who typed a date must not find the bid has none.
-  const isDeadlineIncomplete = deadlineLocal !== '' && deadlineOffset === ''
+  // A deadline with a part missing is not "a deadline we can almost use": it is refused by
+  // the backend and, worse, would be dropped silently here. So each missing part blocks the
+  // submit under its own field rather than being discarded — a bidder who was shown a date
+  // must not find the bid has none. The zone alone is inert: it describes nothing by itself.
+  const needsHour = deadlineDate !== '' && deadlineTime === ''
+  const needsDate = deadlineTime !== '' && deadlineDate === ''
+  const needsZone = (deadlineDate !== '' || deadlineTime !== '') && deadlineOffset === ''
+  const isDeadlineIncomplete = needsHour || needsDate || needsZone
   const canStart =
-    selected.size > 0 && noticeNumber.trim().length > 0 && !isDeadlineIncomplete && !isStarting
+    selected.size > 0 &&
+    noticeNumber.trim().length > 0 &&
+    !isDeadlineIncomplete &&
+    !isStarting &&
+    !rateLimit.isBlocked
 
   function toggle(documentId: string, isChecked: boolean) {
     setSelected((current) => {
@@ -168,15 +203,26 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
         notice_number: noticeNumber.trim(),
         document_ids: [...selected],
         source_language: sourceLanguage,
+        // The tender's name, so the dashboard reads it rather than the publication number
+        // (`Dashboard.dc.html`); the API falls back to the number when none is sent.
+        title: notice?.title,
         buyer: buyer.trim() === '' ? null : buyer.trim(),
-        deadline: deadlineAt(deadlineLocal, deadlineOffset),
+        deadline: deadlineAt(deadlineDate, deadlineTime, deadlineOffset),
       })
       router.push(`/bids/${encodeURIComponent(bid.id)}`)
     } catch (cause) {
-      setError(describeApiError(cause))
+      // A 429 whose wait the browser can read is the hook's to time and to word
+      // (`lib/use-rate-limit.ts`); anything else is the API's own sentence.
+      setError(rateLimit.noteRefusal(cause) ? undefined : describeApiError(cause))
       setIsStarting(false)
     }
   }
+
+  const message =
+    rateLimit.blockedUntil === undefined
+      ? error
+      : `This company has used its hour's bids. ${retryAt(rateLimit.blockedUntil)}`
+  const hasNoticeDate = notice?.deadline !== null && notice?.deadline !== undefined
 
   return (
     <form
@@ -225,17 +271,35 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
             autoComplete="off"
             hint="The contracting authority, as the notice names it."
           />
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <div className="grid gap-4 shell:col-span-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
             <Input
-              label="Deadline (optional)"
-              name="deadline"
-              type="datetime-local"
-              value={deadlineLocal}
-              onChange={(event) => setDeadlineLocal(event.target.value)}
+              label="Deadline date (optional)"
+              name="deadline_date"
+              type="date"
+              value={deadlineDate}
+              onChange={(event) => setDeadlineDate(event.target.value)}
+              error={needsDate ? DEADLINE_NEEDS_ITS_DATE : undefined}
               hint={
-                notice?.deadline == null
-                  ? 'The date and time the notice states, exactly as it prints them.'
-                  : `TED publishes ${formatDate(notice.deadline)} for this notice and no time. Add the hour from the notice itself.`
+                needsDate
+                  ? undefined
+                  : hasNoticeDate
+                    ? 'As TED publishes it for this notice.'
+                    : 'The date the notice states.'
+              }
+            />
+            <Input
+              label="Deadline time"
+              name="deadline_time"
+              type="time"
+              value={deadlineTime}
+              onChange={(event) => setDeadlineTime(event.target.value)}
+              error={needsHour ? DEADLINE_NEEDS_ITS_HOUR : undefined}
+              hint={
+                needsHour
+                  ? undefined
+                  : hasNoticeDate
+                    ? 'TED publishes no time of day — take the hour from the notice itself.'
+                    : 'The time the notice states, on the buyer’s clock.'
               }
             />
             <Select
@@ -244,8 +308,8 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
               value={deadlineOffset}
               onValueChange={setDeadlineOffset}
               options={DEADLINE_OFFSETS}
-              error={isDeadlineIncomplete ? DEADLINE_NEEDS_ITS_ZONE : undefined}
-              hint={isDeadlineIncomplete ? undefined : 'Exactly as the notice prints it.'}
+              error={needsZone ? DEADLINE_NEEDS_ITS_ZONE : undefined}
+              hint={needsZone ? undefined : 'Exactly as the notice prints it.'}
             />
           </div>
         </div>
@@ -284,9 +348,9 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
           </Button>
         </div>
 
-        {error !== undefined && (
+        {message !== undefined && (
           <Notice tone="danger" title="The bid was not started" className="mt-4">
-            {error}
+            {message}
           </Notice>
         )}
       </Card>

@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { ApiError, describeApiError } from '@/lib/api-client'
+import { describeApiError } from '@/lib/api-client'
 import { askAboutBid, type ChatCitation, type ChatTurn } from '@/lib/chat'
+import { useRateLimit } from '@/lib/use-rate-limit'
 
 /**
  * The questions asked about one bid in this browser session, and what became of each
@@ -26,11 +27,12 @@ import { askAboutBid, type ChatCitation, type ChatTurn } from '@/lib/chat'
  * not also cost the bidder what they typed. A retry replaces the failed exchange rather than
  * appending a twin: one question, one place in the log, whatever it took to answer it.
  *
- * **A 429 is a wait, not an error.** The API's `Retry-After` names the second the next
- * question will be accepted; when the browser can read it (see `ApiError.retryAfterSeconds`)
- * `blockedUntil` holds that instant so the panel can disable the form until then and say
- * the time. When it cannot, the API's `detail` still carries the same number in prose, and
- * that sentence is shown verbatim — never "something went wrong".
+ * **A 429 is a wait, not an error.** `useRateLimit` holds the second the API named so the
+ * panel can disable the form until then and say the time; the treatment was written here
+ * first (ADR-0058) and moved to `lib/use-rate-limit.ts` when the upload and start forms
+ * needed the same one (audit M12). The failed exchange still shows the API's `detail`, which
+ * carries the same number in prose, so a browser that could not read the header is never
+ * told "something went wrong".
  *
  * Nothing aborts the call. The server has already spent the money and written the thread by
  * the time an abort could land; an unmounted panel drops the answer instead.
@@ -60,12 +62,9 @@ export interface BidChatController {
   retry(exchangeId: string): Promise<void>
 }
 
-const RATE_LIMITED_STATUS = 429
-const MILLISECONDS_PER_SECOND = 1000
-
 export function useBidChat(bidId: string): BidChatController {
   const [exchanges, setExchanges] = useState<readonly ChatExchange[]>([])
-  const [blockedUntil, setBlockedUntil] = useState<number | undefined>(undefined)
+  const { blockedUntil, noteRefusal } = useRateLimit()
   const isAskingRef = useRef(false)
   const isMountedRef = useRef(true)
   const nextIdRef = useRef(0)
@@ -76,21 +75,6 @@ export function useBidChat(bidId: string): BidChatController {
       isMountedRef.current = false
     }
   }, [])
-
-  // The limit lifts itself at the second the API named, so the form re-enables without a
-  // reload or a failed probe that would itself be refused.
-  useEffect(() => {
-    if (blockedUntil === undefined) {
-      return
-    }
-    const wait = blockedUntil - Date.now()
-    if (wait <= 0) {
-      setBlockedUntil(undefined)
-      return
-    }
-    const timer = setTimeout(() => setBlockedUntil(undefined), wait)
-    return () => clearTimeout(timer)
-  }, [blockedUntil])
 
   const send = useCallback(
     async (id: string, question: string): Promise<void> => {
@@ -110,12 +94,7 @@ export function useBidChat(bidId: string): BidChatController {
         if (!isMountedRef.current) {
           return
         }
-        if (cause instanceof ApiError && cause.status === RATE_LIMITED_STATUS) {
-          const seconds = cause.retryAfterSeconds
-          if (seconds !== undefined) {
-            setBlockedUntil(Date.now() + seconds * MILLISECONDS_PER_SECOND)
-          }
-        }
+        noteRefusal(cause)
         setExchanges((all) =>
           upsert(all, {
             id,
@@ -127,7 +106,7 @@ export function useBidChat(bidId: string): BidChatController {
         isAskingRef.current = false
       }
     },
-    [bidId]
+    [bidId, noteRefusal]
   )
 
   const ask = useCallback(

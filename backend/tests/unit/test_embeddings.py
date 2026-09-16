@@ -34,7 +34,7 @@ from crossbid.ingestion.embeddings import (
     COMPANY_SEARCH_SQL,
     DEFAULT_SEARCH_LIMIT,
     DELETE_TENDER_CHUNKS_SQL,
-    MAX_ATTEMPTS,
+    EMBEDDINGS_MAX_ATTEMPTS,
     OPENROUTER_EMBEDDINGS_PATH,
     SEARCH_STATEMENTS,
     TENANT_PREDICATE,
@@ -437,9 +437,9 @@ async def test_retries_are_exhausted_with_growing_backoff(
 
     # Act / Assert
     async with client:
-        with pytest.raises(EmbeddingsError, match=f"{MAX_ATTEMPTS} attempts"):
+        with pytest.raises(EmbeddingsError, match=f"{EMBEDDINGS_MAX_ATTEMPTS} attempts"):
             await client.embed_query("hello")
-    assert len(seen) == MAX_ATTEMPTS
+    assert len(seen) == EMBEDDINGS_MAX_ATTEMPTS
     assert sleeps == [pytest.approx(2.0), pytest.approx(4.0)]
 
 

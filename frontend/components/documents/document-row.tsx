@@ -11,7 +11,7 @@ import {
   isDocumentSettled,
   type DocumentResponse,
 } from '@/lib/documents'
-import { formatPageList } from '@/lib/format'
+import { formatPageList, plural } from '@/lib/format'
 import { usePolling } from '@/lib/use-polling'
 import {
   DOCUMENT_KIND_LABELS,
@@ -89,8 +89,43 @@ export function DocumentRow({ document, onChange }: DocumentRowProps) {
       <Td className="text-right tabular-nums">
         <UnreadPages document={value} hasCount={isParsed && isPaginated} />
       </Td>
+      <Td className="text-right tabular-nums">
+        <WithheldPassages document={value} />
+      </Td>
     </Tr>
   )
+}
+
+/**
+ * Said once, for the pointer (`title`) and the screen reader (visually hidden text) alike.
+ * Calm and factual on purpose: this is neither an error nor an accusation. The file is
+ * fine, the rest of it was read in full, and the count exists so a bidder who can see a
+ * passage on the page that was never cited knows why.
+ */
+const WITHHELD_EXPLANATION =
+  'These passages read like instructions aimed at the agent rather than tender text, so they were not given to the agent. The rest of the document was read in full.'
+
+/**
+ * The injection guard's result for this document (S2.3.1, S5.3; audit M11) — how many
+ * passages were kept out of the corpus, from `flagged_chunk_count`, which the API has sent
+ * "for a badge" since S2.3.1 and which no screen read until 2026-09-16.
+ *
+ * A warning badge in words rather than a red one, because nothing is wrong with the file;
+ * the sentence is in the text, not in the colour. The chunk numbers are the pipeline's, not
+ * pages, so they are not printed — a bidder has nothing to turn to. `0` is shown only once
+ * the document is `ready`: the guard runs before embedding, so an earlier zero would claim a
+ * count that has not yet been taken, the same reason `UnreadPages` waits for a parse.
+ */
+function WithheldPassages({ document }: { document: DocumentResponse }) {
+  if (document.flagged_chunk_count > 0) {
+    return (
+      <Badge tone="warning" size="sm" title={WITHHELD_EXPLANATION}>
+        <span>{plural(document.flagged_chunk_count, 'passage')} withheld</span>
+        <span className="sr-only">. {WITHHELD_EXPLANATION}</span>
+      </Badge>
+    )
+  }
+  return <>{document.status === 'ready' ? '0' : '—'}</>
 }
 
 /**

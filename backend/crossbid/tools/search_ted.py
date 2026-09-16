@@ -33,7 +33,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from crossbid.models.ted import MAX_RESULTS_PER_PAGE, Cpv, TedNotice, TedSearchQuery
 from crossbid.reference.ted_client import (
-    REQUEST_TIMEOUT_S,
+    TED_REQUEST_TIMEOUT_S,
     TedSearchClient,
     TedUnavailableError,
 )
@@ -120,9 +120,12 @@ def build_tool(context: ToolContext) -> BaseTool:
             keyword=keyword,
             limit=limit,
         )
-        client = TedSearchClient(httpx.Client(timeout=REQUEST_TIMEOUT_S))
+        # The client is closed on the way out (M22). It holds a connection pool and a TLS
+        # context, and a tool runs inside a loop: leaking one per call left them to the
+        # garbage collector, which is not a resource policy.
         try:
-            page = client.search(query, language=language)
+            with httpx.Client(timeout=TED_REQUEST_TIMEOUT_S) as http:
+                page = TedSearchClient(http).search(query, language=language)
         except TedUnavailableError as error:
             # Total, like every tool the ReAct loop calls: a third party being down must not
             # end a run that has already cost money (S3.3.1's rule for `ecertis_evidence`).

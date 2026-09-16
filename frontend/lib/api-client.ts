@@ -29,6 +29,7 @@
  */
 import type { paths } from './api'
 import { AUTH_MODE, DEV_COMPANY_ID } from './auth-mode'
+import { describeFieldErrors, fieldErrorsFrom } from './field-errors'
 
 /** Used when `NEXT_PUBLIC_API_URL` is absent, i.e. local development. */
 const DEFAULT_API_BASE_URL = 'http://localhost:8000'
@@ -184,9 +185,10 @@ export class ApiError extends Error {
    * `undefined` when the answer carried none — or when the browser could not see it.
    *
    * The API is on another origin, and `Retry-After` is not on the CORS safelist, so the
-   * header reaches this code only if the API lists it in `Access-Control-Expose-Headers`.
-   * Until it does, a screen that wants the wait has to fall back to the `detail` sentence,
-   * which the rate limiter writes with the same number in it.
+   * header reaches this code only because the API lists it in
+   * `Access-Control-Expose-Headers` (`crossbid/main.py`). A proxy that strips it leaves
+   * this `undefined`, and a screen then falls back to the `detail` sentence, which the rate
+   * limiter writes with the same number in it. `lib/use-rate-limit.ts` is the one reader.
    */
   readonly retryAfterSeconds: number | undefined
 
@@ -423,7 +425,17 @@ function parseRetryAfter(headers: Headers | undefined): number | undefined {
   return Math.max(0, Math.ceil((at - Date.now()) / MILLISECONDS_PER_SECOND))
 }
 
-/** Pulls a human-readable message out of FastAPI's `{ detail: ... }` error payload. */
+/**
+ * Pulls a human-readable message out of FastAPI's `{ detail: ... }` error payload.
+ *
+ * `detail` is a sentence from an `HTTPException` and a **list** from a request the model
+ * refused — pydantic's `{type, loc, msg, …}` entries. The list goes through the field-error
+ * parser that already reads that shape for the profile form, so a bidder sees "Override
+ * reason: String should have at most 4000 characters." rather than the array as JSON, which
+ * is what the verdict form printed for a reason one character too long (audit M18). Any
+ * other object is still stringified: it is a shape FastAPI does not send, and hiding it
+ * would hide the bug that produced it.
+ */
 function extractDetail(body: unknown): string | undefined {
   if (typeof body === 'string' && body.length > 0) {
     return body
@@ -434,6 +446,9 @@ function extractDetail(body: unknown): string | undefined {
   const { detail } = body as { detail: unknown }
   if (typeof detail === 'string' && detail.length > 0) {
     return detail
+  }
+  if (Array.isArray(detail)) {
+    return describeFieldErrors(fieldErrorsFrom(body))
   }
   return detail === undefined ? undefined : JSON.stringify(detail)
 }

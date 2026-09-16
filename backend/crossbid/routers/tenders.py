@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Iterator
 from typing import Annotated, Final
 
 import httpx
@@ -40,7 +41,7 @@ from pydantic import StringConstraints
 from crossbid.auth import CompanyContext, current_company
 from crossbid.models.ted import MAX_RESULTS_PER_PAGE, Cpv, TedSearchPage, TedSearchQuery
 from crossbid.reference.ted_client import (
-    REQUEST_TIMEOUT_S,
+    TED_REQUEST_TIMEOUT_S,
     TedSearchClient,
     TedUnavailableError,
 )
@@ -63,10 +64,18 @@ model's own `Alpha2` is lower-case only, which is right for the model and wrong 
 somebody typed."""
 
 
-def get_ted_client() -> TedSearchClient:
-    """One client per request: the search is rare and a pooled connection to TED buys
-    nothing, while a module-level client would outlive the event loop in tests."""
-    return TedSearchClient(httpx.Client(timeout=REQUEST_TIMEOUT_S))
+def get_ted_client() -> Iterator[TedSearchClient]:
+    """One client per request, **closed when the response is done** (M22).
+
+    A `yield` dependency rather than a plain return: FastAPI runs the rest of the generator
+    after the response, which is the only place a per-request client can be closed. Returning
+    it left a connection pool and a TLS context to the garbage collector on every search.
+
+    One per request and not one per process: the search is rare, a pooled connection to TED
+    buys nothing, and a module-level client would outlive the event loop in tests.
+    """
+    with httpx.Client(timeout=TED_REQUEST_TIMEOUT_S) as http:
+        yield TedSearchClient(http)
 
 
 @router.get(
@@ -98,7 +107,7 @@ async def search_tenders(
     )
     try:
         # `TedSearchClient` is synchronous (one `httpx.Client`), and this handler is not:
-        # calling it inline would park the event loop for up to `REQUEST_TIMEOUT_S` x the
+        # calling it inline would park the event loop for up to `TED_REQUEST_TIMEOUT_S` x the
         # client's attempts, stalling every other request in the process -- document polls,
         # a bid run's own callbacks, a chat turn. `routers/documents.py` already hands the
         # synchronous Storage client to a thread for the same reason.

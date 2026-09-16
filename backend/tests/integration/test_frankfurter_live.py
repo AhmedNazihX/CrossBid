@@ -19,7 +19,7 @@ import httpx
 import pytest
 
 from crossbid.reference.frankfurter_client import (
-    REQUEST_TIMEOUT_S,
+    FRANKFURTER_REQUEST_TIMEOUT_S,
     FrankfurterClient,
     RateCache,
     UnknownCurrencyPairError,
@@ -31,7 +31,9 @@ pytestmark = pytest.mark.live
 @pytest.fixture
 def client() -> FrankfurterClient:
     """A cache of its own, so a live answer never leaks into the process-wide one."""
-    return FrankfurterClient(httpx.Client(timeout=REQUEST_TIMEOUT_S), cache=RateCache())
+    return FrankfurterClient(
+        httpx.Client(timeout=FRANKFURTER_REQUEST_TIMEOUT_S), cache=RateCache()
+    )
 
 
 def test_the_ecb_rate_differs_from_the_multi_provider_blend(client: FrankfurterClient) -> None:
@@ -39,7 +41,7 @@ def test_the_ecb_rate_differs_from_the_multi_provider_blend(client: FrankfurterC
     exactly why this has to be asserted rather than eyeballed."""
     ours = client.rate("PLN", "EUR")
     blended = httpx.get(
-        "https://api.frankfurter.dev/v2/rate/PLN/EUR", timeout=REQUEST_TIMEOUT_S
+        "https://api.frankfurter.dev/v2/rate/PLN/EUR", timeout=FRANKFURTER_REQUEST_TIMEOUT_S
     ).json()
 
     assert ours.rate != blended["rate"], "the providers/ECB prefix has stopped selecting"

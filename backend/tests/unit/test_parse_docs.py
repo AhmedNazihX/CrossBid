@@ -40,6 +40,7 @@ from crossbid.models.ted import TedNotice
 from crossbid.models.tender import DocumentKind
 from crossbid.readmodel.bids import BidDocumentRow
 from crossbid.readmodel.documents import DocumentStatus
+from crossbid.reference.ted_client import TedUnavailableError
 from crossbid.settings import Settings
 from tests.conftest import espd_request_bytes, espd_request_xml
 
@@ -857,3 +858,65 @@ def test_the_production_node_is_built_with_a_real_indexer(offline_settings: Sett
 
     # Assert
     assert node._index is not None
+
+
+# ------------------------------------------------- the notice fetch's own client (M22)
+
+
+async def test_fetching_the_notice_closes_the_http_client_it_opened(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One connection pool and one TLS context per bid, left to the garbage collector."""
+    # Arrange
+    opened: list[httpx.Client] = []
+    real = httpx.Client
+
+    def recording(*args: Any, **kwargs: Any) -> httpx.Client:
+        client = real(*args, **kwargs)
+        opened.append(client)
+        return client
+
+    class Fake:
+        def __init__(self, *_: Any, **__: Any) -> None: ...
+
+        def search_by_publication_number(self, *_: Any, **__: Any) -> None:
+            return None
+
+    monkeypatch.setattr(httpx, "Client", recording)
+    monkeypatch.setattr(parse_docs_module, "TedSearchClient", Fake)
+
+    # Act
+    answer = await parse_docs_module.fetch_notice("629758-2026")
+
+    # Assert
+    assert answer is None
+    assert opened, "no client was opened; this test is watching the wrong thing"
+    assert all(client.is_closed for client in opened)
+
+
+async def test_a_notice_fetch_that_raises_still_closes_the_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The failure path is where a leak compounds: TED is down and the run is retrying."""
+    # Arrange
+    opened: list[httpx.Client] = []
+    real = httpx.Client
+
+    def recording(*args: Any, **kwargs: Any) -> httpx.Client:
+        client = real(*args, **kwargs)
+        opened.append(client)
+        return client
+
+    class Fake:
+        def __init__(self, *_: Any, **__: Any) -> None: ...
+
+        def search_by_publication_number(self, *_: Any, **__: Any) -> None:
+            raise TedUnavailableError("no route to host")
+
+    monkeypatch.setattr(httpx, "Client", recording)
+    monkeypatch.setattr(parse_docs_module, "TedSearchClient", Fake)
+
+    # Act / Assert
+    with pytest.raises(TedUnavailableError):
+        await parse_docs_module.fetch_notice("629758-2026")
+    assert opened and all(client.is_closed for client in opened)

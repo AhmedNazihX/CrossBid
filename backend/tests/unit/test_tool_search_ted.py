@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import patch
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
@@ -171,3 +172,52 @@ def test_a_country_is_lower_cased_before_it_reaches_the_client() -> None:
         run_tool(countries=("FR", "De"))
 
     assert seen[0].countries == ("fr", "de")
+
+
+# ---------------------------------------------------------------- the client it opens (M22)
+
+
+def opened_clients(monkeypatch: pytest.MonkeyPatch) -> list[httpx.Client]:
+    """Records every `httpx.Client` the tool opens, and hands back the real one.
+
+    The leak is in the tool, not in the client wrapper the tests above patch out, so it is
+    only visible from one layer further down than the fake.
+    """
+    opened: list[httpx.Client] = []
+    real = httpx.Client
+
+    def recording(*args: Any, **kwargs: Any) -> httpx.Client:
+        client = real(*args, **kwargs)
+        opened.append(client)
+        return client
+
+    monkeypatch.setattr(httpx, "Client", recording)
+    return opened
+
+
+def test_the_tool_closes_the_http_client_it_opened(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each one holds a connection pool and a TLS context until the garbage collector runs."""
+    # Arrange
+    opened = opened_clients(monkeypatch)
+
+    # Act
+    with patch("crossbid.tools.search_ted.TedSearchClient", answering(PAGE)):
+        run_tool(cpv=["72000000"])
+
+    # Assert
+    assert opened, "the tool opened no client at all; this test is watching the wrong thing"
+    assert all(client.is_closed for client in opened)
+
+
+def test_a_downed_ted_still_closes_the_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A leak on the failure path is the one that compounds, because it happens when the
+    third party is having a bad day and the loop is retrying."""
+    opened = opened_clients(monkeypatch)
+
+    with patch(
+        "crossbid.tools.search_ted.TedSearchClient",
+        raising(TedUnavailableError("no route to host")),
+    ):
+        run_tool(cpv=["72000000"])
+
+    assert opened and all(client.is_closed for client in opened)

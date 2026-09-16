@@ -93,13 +93,11 @@ export function DocumentsPanel({
     return () => controller.abort()
   }, [])
 
+  // A refusal propagates as the `ApiError` it is: the form reads its status and
+  // `Retry-After` to time a 429 (audit M12), and until 2026-09-16 this wrapped it in a plain
+  // `Error` whose message was the sentence — which is why the form could only ever print it.
   const handleUpload = useCallback(async (file: File, kind: DocumentKind) => {
-    let accepted: DocumentResponse
-    try {
-      accepted = await uploadDocument(file, kind)
-    } catch (cause) {
-      throw new Error(describeApiError(cause), { cause })
-    }
+    const accepted = await uploadDocument(file, kind)
     setDocuments((current) => [accepted, ...current.filter((d) => d.id !== accepted.id)])
     setAnnouncement(`${accepted.name} uploaded. ${DOCUMENT_STATUS_LABELS[accepted.status]}`)
   }, [])

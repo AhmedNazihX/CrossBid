@@ -25,6 +25,7 @@ import httpx
 import pytest
 
 from crossbid.reference.frankfurter_client import (
+    FRANKFURTER_MAX_ATTEMPTS,
     RATE_CACHE,
     ExchangeRate,
     FrankfurterClient,
@@ -318,3 +319,37 @@ def test_a_rate_that_cannot_be_read_is_typed_rather_than_guessed(body: dict[str,
     the world into nothing."""
     with pytest.raises(RateUnavailableError, match="cannot read"):
         client_for(answering(body)).rate("PLN", "EUR")
+
+
+# --------------------------------------------------- what is worth a second attempt (M21)
+
+
+def test_a_permanent_refusal_is_not_sent_twice() -> None:
+    """A 403 will be a 403 again. The unpublished-pair check already owns 404 and 422;
+    everything else permanent used to be retried for no reason at all."""
+    # Arrange
+    attempts = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(403, json={"message": "forbidden"})
+
+    # Act / Assert
+    with pytest.raises(RateUnavailableError, match="will refuse it again"):
+        client_for(handler).rate("PLN", "EUR")
+    assert attempts == 1
+
+
+def test_a_transient_status_is_still_retried() -> None:
+    """Narrowing what is retried must not stop retrying a blip."""
+    attempts = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(503)
+
+    with pytest.raises(RateUnavailableError, match="attempts"):
+        client_for(handler).rate("PLN", "EUR")
+    assert attempts == FRANKFURTER_MAX_ATTEMPTS

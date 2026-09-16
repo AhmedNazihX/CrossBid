@@ -5717,3 +5717,80 @@ generated client and the browser with them, and the second needs a concept the A
 have yet. Until then, both list caps at least stop being *silent*: reaching one logs that the
 answer is truncated and that the fix is a cursor rather than a larger number. A bound nobody
 is told about is the next bug.
+
+## ADR-0080 — Four HTTP clients keep their loops and share one judgement
+
+**Date:** 2026-09-16 · **Stories:** S1.2.1, S1.3.1, S1.1.1, S2.2.1 · **Status:** accepted
+
+Crossbid talks to four third parties — TED, Frankfurter, eCertis and OpenRouter's embeddings
+endpoint — and each has its own retry loop. Two audit findings sat on them.
+
+**M21: they disagreed about what is worth retrying, and three were simply wrong.** Only the
+embeddings client asked; the other three caught `httpx.HTTPError` flat, so a 400 was sent
+again as readily as a reset connection. A malformed TED query went twice, and an eCertis path
+that does not exist slept two seconds between three attempts before saying so — six seconds
+per bad path, across 56 criteria in two countries, on a cache build.
+
+`crossbid/http_retry.py` holds `is_retryable`, and all four now use it. **The loops themselves
+stay separate, deliberately.** eCertis reads a whole catalogue on a sixty-second budget and
+can afford to sleep; a TED search sits inside a request a person is waiting on and is bounded
+at two attempts with no pause at all. Collapsing those into one parameterised helper means a
+function with a flag for every difference, which is how a shared abstraction ends up harder to
+read than the four things it replaced. What they *must* agree on is which failures are
+permanent, because that is a fact about HTTP rather than a policy of the caller.
+
+**The constants are named for whose they are.** All four modules exported `REQUEST_TIMEOUT_S`
+and `MAX_ATTEMPTS` with four different values, and three call sites imported one by bare name
+— correct today only because each happened to import from the matching module.
+`tools/currency_convert.py` picking up TED's twenty seconds for a Frankfurter call would have
+been invisible. They are now `TED_`, `FRANKFURTER_`, `ECERTIS_` and `EMBEDDINGS_` prefixed, so
+the ambiguity cannot be written.
+
+**M22: four HTTP clients were opened and never closed**, each holding a connection pool and a
+TLS context until the garbage collector ran. The worst was `currency_convert`, built per tool
+call inside a loop that runs once per requirement — a 350-requirement pack left 350 pools
+behind. Each is now closed: a `yield` dependency in `routers/tenders.py`, because the half
+after the yield is the only place a per-request client can be closed, and a `with` block in
+each tool.
+
+`parse_docs`' notice fetch moved **out of the builder closure to module level**. It captured
+nothing from the builder, and as a closure the one thing worth asserting about it — that the
+client is closed again — could not be reached from a test without standing up Storage, a
+database and a pack. Every one of the six closure tests was measured failing with its fix
+reverted.
+
+## ADR-0081 — The deadline is three fields, because a `datetime-local` cannot hold a date
+
+**Date:** 2026-09-16 · **Stories:** S4.3.1, S4.4.1 · **Status:** accepted · **Supersedes part
+of ADR-0044**
+
+Audit finding M10 said the notice's deadline was not carried onto the bid: the date field
+started empty, the bidder retyped it, and a bid started from a notice routinely ended with no
+deadline at all. The title was never sent either, so every bid was named by its publication
+number while the artboard shows the tender's name.
+
+The title was one line. The date was not. **A `datetime-local` input cannot hold a date
+without an hour** — the browser sanitises a value with no time component to empty — and TED
+publishes a date with an offset and *never* a time of day (ADR-0043, measured across 58 lot
+deadlines). So under ADR-0044's single field, the notice's own date could never be more than
+a hint in the caption, which is exactly the state the audit found.
+
+The deadline is now **date · time · zone**, three inputs. The date is seeded from the notice.
+The hour stays blank, for the reason ADR-0044 gave and which has not changed: a `00:00` in the
+field would be an invented deadline that looks like a read one. A seeded date with no hour
+**blocks Start** rather than being dropped — the same rule the form already applied to a time
+with no zone, and for the same reason. A bidder who was shown a date must not discover the bid
+has none.
+
+Two smaller findings landed with it. **M12**: the rate-limit treatment chat already had — read
+`Retry-After`, disable the control until that second, name the clock time, lift the block on
+its own — was extracted to `lib/use-rate-limit.ts` and given to the upload form and the start
+form, which had only the API's own sentence and no countdown. **M18**: a 422 whose `detail` is
+pydantic's list was `JSON.stringify`ed into the user's face; it now goes through the
+field-error parser that already reads that shape, and the override-reason textarea mirrors the
+server's `MAX_COMMENT_CHARS` so the refusal is unreachable from the browser in the first place
+(ADR-0064 — where both sides hold the fact, the server's number wins). **M11**: a document that
+reads *Ready* may have had passages withheld from the agent by the injection guard, and no
+screen said so; the documents table has a *Withheld* column and a badge that says it in words.
+
+Every fix was measured failing first, as ADR-0063 requires.

@@ -38,7 +38,7 @@ from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from crossbid.reference.frankfurter_client import (
-    REQUEST_TIMEOUT_S,
+    FRANKFURTER_REQUEST_TIMEOUT_S,
     ExchangeRate,
     FrankfurterClient,
     RateUnavailableError,
@@ -110,9 +110,12 @@ def build_tool(context: ToolContext) -> BaseTool:
     del context
 
     def run(amount: float, from_currency: str, to_currency: str = EURO) -> dict[str, Any]:
-        client = FrankfurterClient(httpx.Client(timeout=REQUEST_TIMEOUT_S))
+        # Closed on the way out (M22). This is the worst of the four leaks the audit found:
+        # the tool is built per call inside a loop that runs once per requirement, so a
+        # 350-requirement pack left 350 connection pools to the garbage collector.
         try:
-            rate = client.rate(from_currency, to_currency)
+            with httpx.Client(timeout=FRANKFURTER_REQUEST_TIMEOUT_S) as http:
+                rate = FrankfurterClient(http).rate(from_currency, to_currency)
         except UnknownCurrencyPairError as error:
             return {"status": "unknown_currency", "detail": str(error)}
         except RateUnavailableError as error:

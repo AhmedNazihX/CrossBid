@@ -16,14 +16,14 @@ import httpx
 import pytest
 
 from crossbid.models.ted import TedSearchQuery
-from crossbid.reference.ted_client import REQUEST_TIMEOUT_S, TedSearchClient
+from crossbid.reference.ted_client import TED_REQUEST_TIMEOUT_S, TedSearchClient
 
 pytestmark = pytest.mark.live
 
 
 @pytest.fixture
 def client() -> TedSearchClient:
-    return TedSearchClient(httpx.Client(timeout=REQUEST_TIMEOUT_S))
+    return TedSearchClient(httpx.Client(timeout=TED_REQUEST_TIMEOUT_S))
 
 
 def test_a_cpv_and_country_search_returns_usable_notices(client: TedSearchClient) -> None:
