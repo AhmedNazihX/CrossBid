@@ -1,4 +1,4 @@
-# Handover — end of the Increment 3 backend session (2026-09-14)
+# Handover — end of the audit-fix session (2026-09-16)
 
 Written for whoever picks this up next, including a future me with no memory of the session.
 `CLAUDE.md` is still the standing brief; `docs/project-plan.md` is still the source of truth for
@@ -9,23 +9,57 @@ scope. This file only covers what changed, what it cost, and what is genuinely o
 ## Where the project stands
 
 **Increment 4 is complete: 17 of 17 stories. Increment 5 is next and unstarted.**
-**4 910 offline tests, 100 % coverage, `make lint` clean** across both halves, and **nine more
-that run against a real Postgres in CI** (`make test-db`) — the first time any statement in
-`crossbid/readmodel/` has been parsed by a database rather than by a fake. The decision log
-runs to ADR-0062 with no gaps; ADR-0042 was backfilled on 2026-09-16, having been cited from
-`require-company.tsx` since the day it was skipped. **Check migrations first.** A probe on
-2026-09-15 found 0007 applied: True, 0008 applied: False. Run `make migrate` before any live
-work.
+**4 915 offline tests, 100 % coverage, `make lint` clean** across both halves, **nine more
+against a real Postgres** (`make test-db`, and in CI on every push), and the web app's own
+**119 unit tests and 8 browser journeys** (`npm test`, `npm run test:e2e`). The decision log
+runs to **ADR-0065** with no gaps. **Migrations 0001 through 0009 are all applied** to
+Frankfurt as of 2026-09-16 00:43 — 0008 and 0009 were applied by hand that morning after a
+missing 0008 made every bid fetch return 500. Still check before live work.
 
-**A 16-part audit ran on 2026-09-15 and its findings are being worked through.** Read
-ADR-0061 before anything else: it records five guarantees the code described in prose and did
-not provide, all now delivered. What the audit *confirmed* matters as much as what it found —
-the test and lint numbers reproduce exactly, every ADR code claim it spot-checked was true,
-and the frontend is genuinely built. Two commits have landed against it, `163ccd5` and
-`6d91e28`, closing the four blockers and eleven further findings. Of the two largest
-findings, the first is closed — the SQL now runs against a throwaway pgvector on every push
-(ADR-0062) — and **the frontend still has no tests at all**. Three of the four blockers lived
-in the frontend, which is the whole argument for closing that one next.
+**The 2026-09-15 audit is worked through, and this is the last session of that work.** Sixteen
+read-only agents read the whole repository; the triage board lists 66 findings and **43 are
+closed** across seven commits: `163ccd5`, `6d91e28`, `8476651`, `8ad9beb`, `f8b5999`,
+`d8c052f`, `e84aaf7`. Read **ADR-0061** first — five guarantees the code described in prose
+and did not provide — then ADR-0062 through ADR-0065 for what the fixes decided.
+
+What the audit *confirmed* matters as much as what it found: the test and lint numbers
+reproduce exactly, every ADR code claim it spot-checked was true against the source, and the
+frontend is genuinely built. What had rotted was the **status layer** — the standing brief and
+the readme described a repo from three increments earlier, the readme advertised a recall of
+1.00 against a measured 0.72, the design system called "the reference" was untracked, and
+shipped code cited an ADR that did not exist. All four are fixed.
+
+Both of the audit's two largest findings are closed. The SQL now runs against a throwaway
+pgvector on every push (ADR-0062), and **the web app, which had no tests at all across
+eighteen thousand lines, now has two suites** (ADR-0063). Three of the four blockers lived in
+the frontend, which was the whole argument for closing that one.
+
+**Three lessons from the fixing that are worth more than the fixes.**
+
+1. **A test must be shown to fail.** The first Playwright test written in this repo passed
+   with its defect put back, because the fixture built one matrix row and nothing was ever
+   under pressure. Every test added since has been measured red with the fix reverted, and
+   that discipline caught a defect in a fix of my own: `agent_status` was written and selected
+   and never read back into the model, which only a real database could see.
+2. **A rule duplicated across the boundary needs an owner, decided by which side has the
+   facts** (ADR-0064). Trimming a reason needs only the value, so the server owns it. Spotting
+   a status that restates the row needs the row, which only the browser holds, so the browser
+   owns it. Where both sides have the facts, the server wins.
+3. **Reproduce a bug report before believing it** (ADR-0065). A report blamed the bid
+   workspace for an endless spinner; the workspace was innocent and had always shown its error
+   card. Three real endless waits sat above it in the shell, each one a promise that neither
+   resolved nor rejected and so reached no `catch`.
+
+**What is still open, for whoever wants it.** The board is the list, at
+`https://claude.ai/artifact/HGVjjzzBgd68bEKgwS5GxW`. Nothing open is a blocker. The largest
+remaining items are H23 (the extraction fixtures name a generator script that has never
+existed), D6 (five module docstrings that describe callers or guarantees that are not there),
+L11 and L12 (the type checker skips tests and scripts; nothing enforces the documented 100 %),
+and a batch of medium product debts — the injection guard's per-document result never reaches
+the screen, rate-limit refusals show no retry time outside chat, the notice's deadline and
+title are not carried onto the bid. CI also still runs Node-20 actions, which GitHub has
+deprecated; that pairs naturally with a Vitest 5 upgrade, held back today only because Vitest
+5 wants `@types/node` ^22 and the repo pins ^20.
 
 What a bidder can now do, end to end: sign in with a password, a magic link, register, or reset
 a password (S4.1.1, ADR-0038, ADR-0053); describe their company (S4.2.1); search TED and start a
