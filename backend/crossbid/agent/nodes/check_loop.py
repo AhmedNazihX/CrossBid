@@ -71,7 +71,7 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Protocol
+from typing import Any, Final, NamedTuple, Protocol
 
 from langchain_core.messages import (
     AIMessage,
@@ -295,13 +295,23 @@ TOOL_FAILED: Final = (
     "exists."
 )
 UNKNOWN_TOOL: Final = (
-    "There is no tool called '{tool}'. This call has been counted against your budget. Use "
-    "one of the tools you were given."
+    "There is no tool called '{tool}'. Nothing was retrieved, so your search budget is "
+    "untouched, but there is a limit on how many times you may try. Use one of the tools you "
+    "were given."
 )
 BUDGET_REFUSED: Final = (
     "Not run: your tool budget for this requirement is already spent. Answer from what you "
     "have retrieved so far."
 )
+
+ATTEMPTS_PER_RETRIEVAL: Final = 2
+"""How many tool calls a requirement may *make* per retrieval it is allowed to *keep*.
+
+The budget counts retrievals rather than attempts (M17), which on its own would let a model
+whose every call fails search for ever: each failure refills a budget it never spent, and each
+turn costs money. So attempts have a ceiling of their own. Derived from `max_tool_calls`
+rather than configured beside it — two knobs where one has a sensible multiple is a second
+thing to get wrong, and nothing has yet asked to tune them apart."""
 """Every one of these names a tool and an exception *type* and nothing else. A tool error
 message can quote a URL, a row or a document, and an error built from untrusted input is how
 untrusted input escapes (ADR-0008)."""
@@ -396,21 +406,34 @@ async def _react(
     coordinate system `EvidenceRef.search` is expressed in — a call that returned no
     passages (the eCertis lookup, a failure, a refusal) contributes an empty tuple so that
     the numbering the model sees and the numbering resolved here cannot drift apart.
+
+    **Two counters, and they are not the same number** (M17). `len(searches)` is the
+    numbering, and it counts every call the model made, because that is what a citation is an
+    index into. `retrieved` is the budget, and it counts only the calls that reached a tool
+    and came back: a flaky embeddings call used to cost a quarter of a requirement's evidence,
+    and four malformed calls left it with none — a row answered `unsupported` because the
+    index blinked rather than because the bidder lacked the paper. The budget can therefore no
+    longer end a runaway loop on its own, so `ATTEMPTS_PER_RETRIEVAL` does.
     """
     messages: list[BaseMessage] = _opening_messages(requirement, context, ecertis)
     searches: list[tuple[RagHit, ...]] = []
+    retrieved = 0
+    ceiling = context.max_tool_calls * ATTEMPTS_PER_RETRIEVAL
 
-    while len(searches) < context.max_tool_calls:
+    while retrieved < context.max_tool_calls and len(searches) < ceiling:
         answer = await context.turn(messages)
         messages.append(answer)
         if not answer.tool_calls:
             break
         for call in answer.tool_calls:
-            message, hits = await _run_call(call, context, spent=len(searches))
-            searches.append(hits)
-            messages.append(message)
+            outcome = await _run_call(
+                call, context, retrieved=retrieved, attempted=len(searches), ceiling=ceiling
+            )
+            searches.append(outcome.hits)
+            retrieved += int(outcome.ran)
+            messages.append(outcome.message)
 
-    messages.append(HumanMessage(content=_verdict_ask(len(searches), context.max_tool_calls)))
+    messages.append(HumanMessage(content=_verdict_ask(retrieved, context.max_tool_calls)))
     return await _verdict_with_one_re_ask(messages, context), tuple(searches)
 
 
@@ -445,39 +468,67 @@ async def _verdict_with_one_re_ask(
     raise CheckError("unreachable: the loop either returns or raises")  # pragma: no cover
 
 
+class ToolOutcome(NamedTuple):
+    """What one tool call produced: the answer the model is owed, and whether it cost a search.
+
+    `ran` is false for every way a call can fail to reach a tool — an unbound name, an
+    exception, a tool that broke its own contract, a refusal because the budget is gone. Those
+    answers still occupy a position in the numbering (`hits` is an empty tuple), they just do
+    not spend the requirement's evidence. See `_react` for why the two are separate.
+    """
+
+    message: ToolMessage
+    hits: tuple[RagHit, ...]
+    ran: bool
+
+
+def _not_run(content: str, *, call_id: str, name: str) -> ToolOutcome:
+    return ToolOutcome(
+        ToolMessage(content=content, tool_call_id=call_id, name=name), (), ran=False
+    )
+
+
 async def _run_call(
-    call: Mapping[str, Any], context: CheckContext, *, spent: int
-) -> tuple[ToolMessage, tuple[RagHit, ...]]:
+    call: Mapping[str, Any],
+    context: CheckContext,
+    *,
+    retrieved: int,
+    attempted: int,
+    ceiling: int,
+) -> ToolOutcome:
     """Run one tool call, or say why it did not run. Always returns a `ToolMessage`.
 
     Every tool call the model made is answered, whatever happened — a provider rejects the
     next request when one is left dangling, so swallowing a failure here would end the
     conversation rather than the call.
+
+    Two things refuse a call: the retrieval budget being spent, and the attempt ceiling being
+    reached. The second only ever bites a model whose calls keep failing, which is exactly the
+    case the first one no longer catches.
     """
-    call_id = str(call.get("id") or f"call-{spent + 1}")
+    call_id = str(call.get("id") or f"call-{attempted + 1}")
     name = str(call.get("name") or "")
-    if spent >= context.max_tool_calls:
-        return ToolMessage(content=BUDGET_REFUSED, tool_call_id=call_id, name=name), ()
+    if retrieved >= context.max_tool_calls or attempted >= ceiling:
+        return _not_run(BUDGET_REFUSED, call_id=call_id, name=name)
 
     tool = context.tools.get(name)
     if tool is None:
         logger.warning("The model asked for an unbound tool: %s", name)
-        content = UNKNOWN_TOOL.format(tool=name)
-        return ToolMessage(content=content, tool_call_id=call_id, name=name), ()
+        return _not_run(UNKNOWN_TOOL.format(tool=name), call_id=call_id, name=name)
 
     try:
         message = await tool.ainvoke(dict(call))
     except Exception as exc:
         logger.warning("Tool %s failed: %s", name, type(exc).__name__)
         content = TOOL_FAILED.format(tool=name, error=type(exc).__name__)
-        return ToolMessage(content=content, tool_call_id=call_id, name=name), ()
+        return _not_run(content, call_id=call_id, name=name)
 
     if not isinstance(message, ToolMessage):
         # `ainvoke` with a tool call returns a `ToolMessage`; anything else is a tool that
         # broke the contract, and the loop still owes the model an answer.
         content = TOOL_FAILED.format(tool=name, error=type(message).__name__)
-        return ToolMessage(content=content, tool_call_id=call_id, name=name), ()
-    return message, _hits_of(message)
+        return _not_run(content, call_id=call_id, name=name)
+    return ToolOutcome(message, _hits_of(message), ran=True)
 
 
 def _hits_of(message: ToolMessage) -> tuple[RagHit, ...]:

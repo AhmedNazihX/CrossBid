@@ -402,7 +402,8 @@ async def write_dev_settings(
     if runner is not None:
         runner.invalidate_graph()
     logger.info(
-        "app_settings row replaced from the developer panel; overriding: %s",
+        "app_settings row replaced from the developer panel; overriding: %s. Applied in this "
+        "process; any other API process applies it at its next start (ADR-0059)",
         ", ".join(sorted(stored.model_dump(exclude_none=True))) or "nothing",
     )
     return _settings_response(applied, base)

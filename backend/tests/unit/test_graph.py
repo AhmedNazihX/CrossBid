@@ -32,6 +32,7 @@ from crossbid.agent.graph import (
     StageError,
     build_graph,
     fan_out_checks,
+    graph_version,
     initial_state,
     stage,
 )
@@ -1105,3 +1106,42 @@ def test_the_module_describes_the_workflow_versus_agentic_split() -> None:
     assert "deterministic workflow" in graph_module.__doc__
     assert "check_reqs" in graph_module.__doc__
     assert "interrupt" in graph_module.__doc__
+
+
+# ------------------------------------------------------------------- the shape fingerprint
+
+
+class Shaped:
+    """Just the node names, which is all `graph_version` reads."""
+
+    def __init__(self, *names: str) -> None:
+        self.nodes = dict.fromkeys(names)
+
+
+def test_two_graphs_with_the_same_nodes_have_the_same_version() -> None:
+    """Order must not matter: the same graph built twice has to stamp the same thing."""
+    assert graph_version(Shaped("a", "b")) == graph_version(Shaped("b", "a"))
+
+
+def test_renaming_a_node_changes_the_version() -> None:
+    """M14's trigger. A checkpoint stops at a node by name."""
+    assert graph_version(Shaped("parse_docs")) != graph_version(Shaped("parse_documents"))
+
+
+def test_removing_a_node_changes_the_version() -> None:
+    assert graph_version(Shaped("a", "b")) != graph_version(Shaped("a"))
+
+
+def test_the_version_is_short_enough_to_read_in_a_log_line() -> None:
+    version = graph_version(Shaped("a"))
+
+    assert len(version) == 12
+    assert version.isalnum()
+
+
+def test_the_real_graph_stamps_a_version(offline_settings: Settings) -> None:
+    """Built, not asserted against a literal: a pinned digest would have to be re-typed on
+    every legitimate graph change, which is the maintenance a derived fingerprint avoids."""
+    graph = build_graph(offline_settings, FakeDatabase(), parse_docs=parse_node())  # type: ignore[arg-type]
+
+    assert graph_version(graph) == graph_version(Shaped(*graph.nodes))

@@ -381,6 +381,91 @@ async def test_spending_the_budget_is_said_out_loud_in_the_closing_ask() -> None
     assert check_loop_module.BUDGET_SPENT_ASK in joined(model.verdict_prompts[0])
 
 
+async def test_a_failed_tool_call_does_not_cost_a_retrieval() -> None:
+    """M17. The budget is four *retrievals*, not four attempts.
+
+    One flaky embeddings call used to cost a quarter of a requirement's evidence, and four
+    malformed calls left it with none — a requirement answered `unsupported` because the
+    index blinked, not because the bidder lacked the paper.
+    """
+    # Arrange -- the first call raises, the next two succeed
+    tool, seen = rag_tool(RuntimeError("the index blinked"), rag_result(hit()))
+    model = ScriptedModel(
+        [search_call("a"), search_call("b"), search_call("c")], verdict(evidence=())
+    )
+
+    # Act
+    await check_requirement(
+        requirement(),
+        check_context(model, tools={"company_rag_search": tool}, max_tool_calls=2),
+    )
+
+    # Assert -- the failure is answered but not charged, so two retrievals still happen
+    assert seen == ["a", "b", "c"]
+
+
+async def test_a_call_for_a_tool_that_is_not_bound_does_not_cost_a_retrieval() -> None:
+    """An invented tool name never reached an index, so it cannot have spent a search."""
+    # Arrange
+    tool, seen = rag_tool(rag_result(hit()))
+    model = ScriptedModel(
+        [calls(("invented_tool", {})), search_call("a")],
+        verdict(evidence=()),
+    )
+
+    # Act
+    await check_requirement(
+        requirement(),
+        check_context(model, tools={"company_rag_search": tool}, max_tool_calls=1),
+    )
+
+    # Assert
+    assert seen == ["a"]
+
+
+async def test_a_model_that_only_ever_fails_is_stopped_by_the_attempt_ceiling() -> None:
+    """The budget can no longer end a runaway loop on its own, so something else must.
+
+    Without a ceiling, a model whose every call raises would search for ever: each failure
+    refills the retrieval budget it did not spend, and every turn costs money.
+    """
+    # Arrange -- a tool that always raises, and a model that always calls it
+    tool, seen = rag_tool(RuntimeError("the index blinked"))
+    model = ScriptedModel([search_call()], verdict(evidence=()))
+
+    # Act
+    await check_requirement(
+        requirement(),
+        check_context(model, tools={"company_rag_search": tool}, max_tool_calls=2),
+    )
+
+    # Assert
+    assert len(seen) == 2 * check_loop_module.ATTEMPTS_PER_RETRIEVAL
+
+
+async def test_the_numbering_the_model_cites_still_counts_every_call() -> None:
+    """`EvidenceRef.search` is an index into tool-call order, failures included.
+
+    Two counters, and this is the one that must not change: a citation of search 2 has to
+    resolve to the second call the model made, whatever became of the first.
+    """
+    # Arrange -- call 1 fails, call 2 returns the passage the model then cites
+    tool, _ = rag_tool(RuntimeError("the index blinked"), rag_result(hit()))
+    model = ScriptedModel(
+        [search_call("a"), search_call("b")],
+        verdict(evidence=((2, 1),)),
+    )
+
+    # Act
+    row = await check_requirement(
+        requirement(),
+        check_context(model, tools={"company_rag_search": tool}, max_tool_calls=2),
+    )
+
+    # Assert
+    assert [cited.quote for cited in row.evidence] == [QUOTE]
+
+
 async def test_a_model_that_answers_at_once_spends_nothing() -> None:
     # Arrange
     model = ScriptedModel([answers()], verdict(evidence=()))

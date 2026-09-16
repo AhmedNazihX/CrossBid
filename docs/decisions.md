@@ -5634,3 +5634,86 @@ catch them drifting, and the tree would come out dirty with nothing failing.
 test at all: the repository's 100 % coverage claim was 99.96 % and had been since. Five tests
 close it, and the floor is worth running as `--cov-fail-under=100` rather than trusting the
 number in a heading.
+
+## ADR-0079 — Four medium findings in the backend, and the one that is only half closed
+
+**Date:** 2026-09-16 · **Stories:** S3.1.1, S3.3.1, S4.6.2, S2.2.2 · **Status:** accepted
+
+Four audit findings that share nothing but a layer, recorded together because each is a
+paragraph rather than a design.
+
+### M14 — a checkpoint is started over, not continued, when the graph has changed shape
+
+Startup resume decided only whether a checkpoint *existed*. A checkpoint stops at a node **by
+name**, so a deploy that renamed or removed one made `ainvoke(None)` raise; the bid was marked
+`failed`, which is terminal and unreachable by every recovery path the product has, with a
+message naming no cause. Every bid in flight died silently on any deploy that touched the
+graph.
+
+Every run now stamps `graph_version` — a short hash of the sorted node names — into its config
+metadata, which LangGraph writes through to the checkpoint. A resume compares it and starts
+from the row on a mismatch. **Derived, not hand-bumped**: a constant somebody has to remember
+to raise is a constant that will be forgotten on exactly the deploy this exists for. A change
+to a node's *body* is not a shape change and deliberately does not show up.
+
+An **unstamped** checkpoint — every checkpoint written before this — is treated as a mismatch.
+The safe reading of "its shape cannot be checked" is "its shape may not match". Starting over
+costs a run; being unrecoverable costs the bid. `BidGraph` grew `nodes` to say that the runner
+now reads the shape, rather than the runner reaching past its own protocol for it.
+
+### M17 — the tool budget counts retrievals, and attempts have a ceiling of their own
+
+Every tool call counted against `max_tool_calls_per_requirement`, refusals and failures
+included, deliberately, to keep `EvidenceRef.search` aligned with tool-call order. The cost
+was that one flaky embeddings call spent a quarter of a requirement's evidence and four
+malformed calls left it with none — a row answered `unsupported` because the index blinked
+rather than because the bidder lacked the paper.
+
+Two counters. `len(searches)` is still the numbering and still counts every call, because that
+is what a citation indexes into. `retrieved` is the budget and counts only calls that reached
+a tool and returned. The budget can then no longer stop a model whose every call fails, so
+`ATTEMPTS_PER_RETRIEVAL` does — derived from the budget for the same reason as above. The
+`UNKNOWN_TOOL` message, which told the model the call had been charged, no longer says so,
+because it is no longer true.
+
+### M19 — the tenant guard tests a predicate, not a placeholder
+
+`TENANT_PREDICATE` was `"%(company_id)s"`. Three parametrized tests asserted it appeared
+somewhere in each of the biggest read models' statements, which a statement reading
+`where title = %(company_id)s` satisfies. The constant is now
+`"company_id = %(company_id)s"`, and `binds_the_company` names the **three** ways a statement
+can be bound to one tenant and no more: the predicate; an insert that writes `company_id` into
+the row it creates; and `companies`, the one table whose tenant column is its own primary key.
+Stating the exceptions is the point — the weak form existed because two of them do not fit the
+predicate, and the response was to weaken the rule rather than to name them.
+
+### M25 — the developer panel's swap is per process, and now says so
+
+`PUT /dev/settings` writes the row to Postgres and swaps `app.state.settings` in the process
+that served the request. A second API process keeps its old settings until it next starts.
+ADR-0059 reasoned carefully about a panel that says "applied" meaning it, but only within one
+process.
+
+**Documented rather than fixed, deliberately.** Crossbid deploys as one container; this is the
+same bound `rate_limit.py` accepts for the same reason, and the two API processes `db.py`
+sizes the pool for are a local Compose-plus-host pair, not a scaled deployment. Making a save
+reach every process needs a re-read on some clock, and putting a database round trip on the
+request path to serve a configuration one developer changes by hand is a real cost for an
+imaginary deployment. The log line now names the scope, so two processes are distinguishable
+in a log.
+
+### M13 — half closed, and this says which half
+
+Done: `GET /bids/{id}` reads the bid **once**. It read the row to choose between 200 and 404
+and then read it again to assemble the response, on a route polled every two seconds for the
+length of a run; nothing can happen between the two reads that the second would reveal. The
+review and start paths still re-read, because for them the row has genuinely moved. And the
+document list, which had **no limit at all**, is bounded at 500 — a query whose cost grew with
+how long an account had been used.
+
+Not done, and not attempted: **cursor pagination on the two list routes, and a
+modified-since short-circuit on the poll.** Both change the OpenAPI contract, so both need the
+generated client and the browser with them, and the second needs a concept the API does not
+have yet. Until then, both list caps at least stop being *silent*: reaching one logs that the
+answer is truncated and that the fix is a cursor rather than a larger number. A bound nobody
+is told about is the next bug.

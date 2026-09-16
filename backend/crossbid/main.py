@@ -283,8 +283,20 @@ def settings_provider(app: FastAPI) -> SettingsProvider:
 
 
 def replace_app_settings(app: FastAPI, settings: Settings) -> None:
-    """Swap the settings requests and new runs see. The one writer of `app.state.settings`
-    after startup, so that "who changes the configuration at run time" has one answer."""
+    """Swap the settings requests and new runs see, **in this process**.
+
+    The one writer of `app.state.settings` after startup, so that "who changes the
+    configuration at run time" has one answer.
+
+    *This process* is the whole of the scope and it is deliberate (M25, ADR-0059). The row is
+    stored in Postgres and read at startup, so a second API process picks the change up when
+    it next starts — not when the panel is saved. Crossbid deploys as one container and this
+    is the same bound `rate_limit.py` accepts for the same reason; the two API processes
+    `db.py` sizes the pool for are a *local* Compose-plus-host pair, not a scaled deployment.
+    Making a save reach every process needs a re-read on some clock, and putting a database
+    round trip on the request path to serve a configuration one developer changes by hand
+    would be a real cost for an imaginary deployment.
+    """
     app.state.settings = settings
 
 

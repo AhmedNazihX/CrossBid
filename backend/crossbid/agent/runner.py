@@ -65,14 +65,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final, Protocol
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command, StateSnapshot
 
-from crossbid.agent.graph import StageError, build_graph, initial_state
+from crossbid.agent.graph import (
+    GRAPH_VERSION_METADATA_KEY,
+    StageError,
+    build_graph,
+    graph_version,
+    initial_state,
+)
 from crossbid.agent.state import BidState
 from crossbid.db import Database
 from crossbid.models.review import ReviewSubmission
@@ -112,6 +118,11 @@ class RunnerError(RuntimeError):
 
 class BidGraph(Protocol):
     """The slice of a compiled graph the runner uses; `build_graph`'s result satisfies it."""
+
+    @property
+    def nodes(self) -> Mapping[str, Any]:
+        """The node names, which are what a checkpoint stops at. See `graph_version` (M14)."""
+        ...
 
     async def ainvoke(self, input: Any, config: RunnableConfig | None = None) -> Any: ...  # noqa: A002 -- LangGraph's own parameter name
 
@@ -273,7 +284,12 @@ class BidRunner:
 
     async def _run(self, bid: BidRow, *, resume: bool) -> None:
         """One run, start to park (or crash). Never raises except on cancellation."""
-        config = bid_run_config(bid.id, thread_id=bid.thread_id, run_name=RUN_NAME)
+        config = bid_run_config(
+            bid.id,
+            thread_id=bid.thread_id,
+            run_name=RUN_NAME,
+            metadata=self._shape_stamp(),
+        )
         started = self._clock()
         outcome = "parked"
         try:
@@ -305,18 +321,46 @@ class BidRunner:
         # operator most wants to see.
         await self._report_cost(bid)
 
+    def _shape_stamp(self) -> dict[str, str]:
+        """This graph's shape, for the run's metadata. Empty when there is nothing to stamp."""
+        version = graph_version(self.graph)
+        return {} if version is None else {GRAPH_VERSION_METADATA_KEY: version}
+
     async def _input_for(
         self, bid: BidRow, config: RunnableConfig, *, resume: bool
     ) -> BidState | None:
-        """`None` continues from the checkpoint; a full state starts over. See point 3."""
+        """`None` continues from the checkpoint; a full state starts over. See point 3.
+
+        **A checkpoint this graph did not write is started over rather than continued** (M14).
+        A checkpoint stops at a node by name, so a deploy that renames or removes one used to
+        make `ainvoke(None)` raise: the bid was marked `failed`, which is terminal and
+        unreachable by every recovery path the product has, with a message naming no cause.
+        Every bid in flight died silently on a deploy that touched the graph.
+
+        An *unstamped* checkpoint is treated the same way. Every checkpoint written before
+        this change has no stamp, and the safe reading of "its shape cannot be checked" is
+        "its shape may not match". Starting over costs a run; being unrecoverable costs the
+        bid.
+        """
         if not resume:
             return initial_state(bid)
         snapshot = await self.graph.aget_state(config)
-        if snapshot.created_at is not None:
-            logger.info("Bid %s: resuming from checkpoint, next=%s", bid.id, snapshot.next)
-            return None
-        logger.info("Bid %s: no checkpoint yet; starting from the row", bid.id)
-        return initial_state(bid)
+        if snapshot.created_at is None:
+            logger.info("Bid %s: no checkpoint yet; starting from the row", bid.id)
+            return initial_state(bid)
+        stamped = (snapshot.metadata or {}).get(GRAPH_VERSION_METADATA_KEY)
+        expected = graph_version(self.graph)
+        if stamped != expected:
+            logger.warning(
+                "Bid %s: the checkpoint was written by a graph of another shape (%s, this is "
+                "%s); starting from the row rather than failing the bid",
+                bid.id,
+                stamped or "unstamped",
+                expected or "unstamped",
+            )
+            return initial_state(bid)
+        logger.info("Bid %s: resuming from checkpoint, next=%s", bid.id, snapshot.next)
+        return None
 
     async def _release_claim(self, bid: BidRow, reason: str) -> None:
         """A failed review goes back to `awaiting_review`, not to `failed`.

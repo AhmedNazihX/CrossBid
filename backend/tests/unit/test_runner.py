@@ -492,6 +492,74 @@ async def test_resume_without_a_checkpoint_starts_from_the_row(
     assert failures.calls == []
 
 
+async def test_a_checkpoint_from_a_differently_shaped_graph_is_started_over(
+    offline_settings: Settings,
+    failures: FailureRecorder,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """M14. A deploy that renames a node used to kill every bid in flight, terminally.
+
+    Startup resume decided only whether a checkpoint existed. If the graph no longer had the
+    node the checkpoint stops at, `ainvoke(None)` raised, the bid was marked `failed` — which
+    is terminal by design — and the message named no cause. The bidder's pack was gone and
+    nothing said why. Starting over costs a run; being unrecoverable costs the bid.
+    """
+    # Arrange -- a checkpoint written by the graph as it is today
+    saver = MemorySaver()
+    bid = bid_row()
+    before = runner_for(
+        graph_over(offline_settings, saver, RecordingProjection(), extract=crashing)
+    )
+    await before.start(bid)
+    failures.calls.clear()
+
+    # Act -- "after the deploy": the same thread, a graph of another shape
+    monkeypatch.setattr(runner_module, "graph_version", lambda graph: "a-different-shape")
+    projection = RecordingProjection()
+    after = runner_for(graph_over(offline_settings, saver, projection))
+    with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
+        await after.resume(bid_row(bid.id, status=BidStatus.EXTRACTING))
+
+    # Assert -- the run started from the row and reached the interrupt; nothing failed
+    assert projection.statuses[0] is BidStatus.PARSING
+    assert projection.statuses[-1] is BidStatus.AWAITING_REVIEW
+    assert failures.calls == []
+    assert any(
+        "was written by a graph of another shape" in r.getMessage() for r in caplog.records
+    )
+
+
+async def test_a_checkpoint_written_before_the_stamp_existed_is_started_over(
+    offline_settings: Settings,
+    failures: FailureRecorder,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unstamped checkpoint is one whose shape cannot be checked, and the safe reading of
+    "cannot be checked" is "may not match"."""
+    # Arrange -- a run stamped with nothing at all, as every checkpoint was before M14
+    saver = MemorySaver()
+    bid = bid_row()
+    monkeypatch.setattr(runner_module, "graph_version", lambda graph: None)
+    before = runner_for(
+        graph_over(offline_settings, saver, RecordingProjection(), extract=crashing)
+    )
+    await before.start(bid)
+    failures.calls.clear()
+
+    # Act
+    monkeypatch.setattr(runner_module, "graph_version", lambda graph: "todays-shape")
+    projection = RecordingProjection()
+    after = runner_for(graph_over(offline_settings, saver, projection))
+    with caplog.at_level(logging.INFO, logger="crossbid.agent.runner"):
+        await after.resume(bid_row(bid.id, status=BidStatus.EXTRACTING))
+
+    # Assert
+    assert projection.statuses[0] is BidStatus.PARSING
+    assert failures.calls == []
+
+
 # ---------------------------------------------------------------------------- shutdown
 
 
@@ -904,6 +972,10 @@ async def test_a_review_is_traced_apart_from_the_run_that_parked(
         async def ainvoke(self, payload: Any, config: Any = None) -> Any:
             configs.append(config)
             return await self._inner.ainvoke(payload, config)
+
+        @property
+        def nodes(self) -> Any:
+            return self._inner.nodes
 
         async def aget_state(self, config: Any) -> Any:
             return await self._inner.aget_state(config)

@@ -9,6 +9,7 @@ scripts imitate, because the row readers exist to translate exactly that.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections import deque
 from collections.abc import AsyncIterator, Sequence
@@ -19,6 +20,7 @@ from typing import Any
 import pytest
 from psycopg.types.json import Jsonb
 
+from crossbid.ingestion import embeddings
 from crossbid.models.ecertis_criteria import CRITERION_IDS
 from crossbid.models.matrix import (
     EcertisEvidence,
@@ -40,7 +42,7 @@ from crossbid.models.requirement import (
 )
 from crossbid.models.tender import BidStatus, DocumentKind
 from crossbid.models.verdict import Decision
-from crossbid.readmodel import bids, matrix, requirements
+from crossbid.readmodel import bids, feedback, matrix, requirements
 from crossbid.readmodel.bids import (
     MAX_BIDS_LISTED,
     UNFINISHED_STATUSES,
@@ -81,7 +83,36 @@ pytestmark = pytest.mark.anyio
 COMPANY_ID = uuid.uuid4()
 BID_ID = uuid.uuid4()
 NOW = datetime(2026, 9, 11, 12, 0, tzinfo=UTC)
-TENANT_PREDICATE = "%(company_id)s"
+TENANT_PREDICATE = "company_id = %(company_id)s"
+"""The predicate, not the placeholder.
+
+This constant used to be `"%(company_id)s"` alone, which is a far weaker claim than the tests
+below say they are making: a statement reading `where title = %(company_id)s` satisfied every
+one of them (audit finding M19). The full form still matches a table-qualified predicate —
+`b.company_id = %(company_id)s` contains it — so nothing genuinely scoped stops being
+asserted. `test_the_predicate_is_the_one_the_other_read_models_export` keeps it from drifting
+from the two modules that already spell it out."""
+
+COMPANY_KEY_PREDICATE = "id = %(company_id)s"
+"""`companies` is the one table whose tenant column is its own primary key, so
+`SELECT_COMPANY_LANGUAGE` binds `id` rather than `company_id`. Reading one company's row by
+its id is scoped by construction; there is no second company it could return."""
+
+
+def binds_the_company(statement: str) -> bool:
+    """Whether `statement` can only ever touch one tenant. There are three ways, and no more.
+
+    Stating them as a predicate rather than as "the placeholder appears somewhere" is the
+    whole of M19: the weak form credited any statement that mentioned the parameter at all,
+    including one comparing it to the wrong column.
+    """
+    if TENANT_PREDICATE in statement:
+        return True
+    if statement.lstrip().lower().startswith("insert"):
+        # An insert has no `where`: it is bound by writing the tenant into the row it
+        # creates, which is only true if `company_id` is among the columns *and* bound.
+        return "company_id" in statement and "%(company_id)s" in statement
+    return "from companies" in statement.lower() and COMPANY_KEY_PREDICATE in statement
 
 
 # ----------------------------------------------------------------------- fake connection
@@ -238,18 +269,32 @@ def requirement(**overrides: Any) -> Requirement:
 
 @pytest.mark.parametrize("statement", bids.SCOPED_STATEMENTS)
 def test_every_scoped_bid_statement_binds_the_company(statement: str) -> None:
-    """The API connects with `BYPASSRLS`; this predicate is the only tenant boundary."""
-    assert TENANT_PREDICATE in statement
+    """The API connects with `BYPASSRLS`; this binding is the only tenant boundary."""
+    assert binds_the_company(statement)
 
 
 @pytest.mark.parametrize("statement", requirements.SCOPED_STATEMENTS)
 def test_every_requirement_statement_binds_the_company(statement: str) -> None:
-    assert TENANT_PREDICATE in statement
+    assert binds_the_company(statement)
 
 
 @pytest.mark.parametrize("statement", matrix.SCOPED_STATEMENTS)
 def test_every_matrix_statement_binds_the_company(statement: str) -> None:
-    assert TENANT_PREDICATE in statement
+    assert binds_the_company(statement)
+
+
+def test_comparing_the_tenant_to_the_wrong_column_does_not_count_as_scoped() -> None:
+    """M19 as a test: the guard used to pass on exactly this statement."""
+    assert not binds_the_company("select * from bids where title = %(company_id)s")
+
+
+def test_an_insert_that_does_not_write_the_tenant_does_not_count_as_scoped() -> None:
+    assert not binds_the_company("insert into bids (id, title) values (%(id)s, %(title)s)")
+
+
+def test_the_predicate_is_the_one_the_other_read_models_export() -> None:
+    """Three copies of one string; a typo in this file must not weaken three guards."""
+    assert TENANT_PREDICATE == embeddings.TENANT_PREDICATE == feedback.TENANT_PARAMETER
 
 
 def test_the_startup_query_is_the_one_deliberately_unscoped_statement() -> None:
@@ -259,7 +304,7 @@ def test_the_startup_query_is_the_one_deliberately_unscoped_statement() -> None:
         name
         for name, value in vars(bids).items()
         if name.isupper() and isinstance(value, str) and "select" in value.lower()
-        if TENANT_PREDICATE not in value
+        if not binds_the_company(value)
     ]
     assert unscoped == ["SELECT_UNFINISHED_BIDS"]
     assert bids.SELECT_UNFINISHED_BIDS not in bids.SCOPED_STATEMENTS
@@ -339,6 +384,33 @@ async def test_list_bids_is_bounded() -> None:
 
     assert len(rows) == 2
     assert db.params() == {"company_id": str(COMPANY_ID), "limit": MAX_BIDS_LISTED}
+
+
+async def test_a_full_page_of_bids_says_so_rather_than_truncating_quietly(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """M13. The dashboard silently showed the newest 200 and no part of the answer said so."""
+    # Arrange
+    db = FakeDatabase(Scripted([bid_record(id=uuid.uuid4()) for _ in range(MAX_BIDS_LISTED)]))
+
+    # Act
+    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.bids"):
+        rows = await list_bids(db, company_id=str(COMPANY_ID))
+
+    # Assert
+    assert len(rows) == MAX_BIDS_LISTED
+    assert "truncated" in caplog.text
+
+
+async def test_a_list_of_bids_short_of_the_limit_says_nothing(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    db = FakeDatabase(Scripted([bid_record()]))
+
+    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.bids"):
+        await list_bids(db, company_id=str(COMPANY_ID))
+
+    assert caplog.text == ""
 
 
 async def test_unfinished_bids_asks_for_exactly_the_running_statuses() -> None:

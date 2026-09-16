@@ -14,6 +14,7 @@ next to the column it constrains, so the two lists are compared by reading the S
 from __future__ import annotations
 
 import inspect
+import logging
 import re
 import uuid
 from collections.abc import Mapping, Sequence
@@ -35,6 +36,7 @@ from crossbid.readmodel.documents import (
     MARK_FAILED_SQL,
     MARK_PARSED_SQL,
     MARK_STATUS_SQL,
+    MAX_DOCUMENTS_LISTED,
     SCOPED_STATEMENTS,
     SELECT_DOCUMENT_SQL,
     SET_FLAGGED_CHUNKS_SQL,
@@ -408,7 +410,7 @@ async def test_list_returns_every_row_in_the_order_the_database_gave() -> None:
 
     # Assert
     assert source.only.sql == LIST_DOCUMENTS_SQL
-    assert source.only.params == {"company_id": COMPANY_ID}
+    assert source.only.params == {"company_id": COMPANY_ID, "limit": MAX_DOCUMENTS_LISTED}
     assert [record.id for record in records] == [second, DOCUMENT_ID]
     assert "order by created_at desc" in LIST_DOCUMENTS_SQL
 
@@ -547,3 +549,33 @@ def test_the_interrupted_reason_is_in_the_closed_failure_vocabulary() -> None:
     from crossbid.ingestion.pipeline import FAILURE_REASONS
 
     assert INTERRUPTED_REASON in FAILURE_REASONS
+
+
+@pytest.mark.anyio
+async def test_a_full_page_of_documents_says_so_rather_than_truncating_quietly(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """M13. The query had no limit at all; a bound nobody is told about is the next bug."""
+    # Arrange
+    rows = [document_row(id=uuid.uuid4()) for _ in range(MAX_DOCUMENTS_LISTED)]
+    model, _ = read_model(rows)
+
+    # Act
+    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.documents"):
+        listed = await model.list(company_id=COMPANY_ID)
+
+    # Assert
+    assert len(listed) == MAX_DOCUMENTS_LISTED
+    assert "truncated" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_a_list_short_of_the_limit_says_nothing(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    model, _ = read_model([document_row()])
+
+    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.documents"):
+        await model.list(company_id=COMPANY_ID)
+
+    assert caplog.text == ""

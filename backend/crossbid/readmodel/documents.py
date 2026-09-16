@@ -219,12 +219,22 @@ from documents
 where id = %(document_id)s and company_id = %(company_id)s
 """
 
+MAX_DOCUMENTS_LISTED: Final = 500
+"""The most rows one company's document list answers with (M13).
+
+It had no limit at all, which is a query whose cost is a function of how long the account has
+been used: a bidder who has run twenty packs is asking for six hundred rows on a page that
+shows the newest few. 500 is roughly eighteen DE packs, so no honest account meets it, and it
+is not silent when one does — `list` logs the truncation, which is the difference between a
+bound and a bug."""
+
 LIST_DOCUMENTS_SQL: Final[LiteralString] = """
 select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
 from documents
 where company_id = %(company_id)s
 order by created_at desc, id
+limit %(limit)s
 """
 
 SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
@@ -352,10 +362,20 @@ class DocumentsReadModel:
         return None if row is None else _record(row)
 
     async def list(self, *, company_id: uuid.UUID) -> tuple[DocumentRecord, ...]:
-        """Every document of one company, newest first."""
+        """One company's documents, newest first, at most `MAX_DOCUMENTS_LISTED`."""
         async with self._source.connection() as connection:
-            cursor = await connection.execute(LIST_DOCUMENTS_SQL, {"company_id": company_id})
+            cursor = await connection.execute(
+                LIST_DOCUMENTS_SQL,
+                {"company_id": company_id, "limit": MAX_DOCUMENTS_LISTED},
+            )
             rows = await cursor.fetchall()
+        if len(rows) == MAX_DOCUMENTS_LISTED:
+            logger.warning(
+                "Company %s has at least %d documents; the list is truncated and needs a "
+                "cursor rather than a larger limit",
+                company_id,
+                MAX_DOCUMENTS_LISTED,
+            )
         return tuple(_record(row) for row in rows)
 
     async def _advance(

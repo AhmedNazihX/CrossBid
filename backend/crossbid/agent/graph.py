@@ -54,6 +54,7 @@ reported as a crash.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from collections.abc import Awaitable, Mapping, Sequence
 from typing import Any, Final, Optional, Protocol
@@ -541,6 +542,36 @@ def build_graph(
     builder.add_edge(APPLY_REVIEW, FINALIZE)
     builder.add_edge(FINALIZE, END)
     return builder.compile(checkpointer=saver)
+
+
+class GraphShape(Protocol):
+    """What `graph_version` needs, which is the node names and nothing else."""
+
+    @property
+    def nodes(self) -> Mapping[str, Any]: ...
+
+
+GRAPH_VERSION_METADATA_KEY: Final = "graph_version"
+"""Where `graph_version` is stamped in a run's config metadata, and read back off a
+checkpoint. `bid_run_config` copies the mapping it is given into `metadata`, and LangGraph
+writes that through to `CheckpointMetadata`, so a snapshot can say which graph wrote it."""
+
+
+def graph_version(graph: GraphShape) -> str:
+    """A short fingerprint of the graph's shape: its node names, sorted.
+
+    Stamped on every run so a resume can tell whether the checkpoint it is about to continue
+    was written by *this* graph (M14). A checkpoint stops at a node by name; rename or remove
+    one and `ainvoke(None)` raises, the bid is marked `failed` — terminal by design — and the
+    message names no cause.
+
+    **Derived, not hand-bumped.** A constant somebody has to remember to raise is a constant
+    that will be forgotten on exactly the deploy this exists for. Node names are what the
+    checkpoint is keyed on, so they are what is hashed; a change to a node's *body* is not a
+    shape change and deliberately does not show up here.
+    """
+    shape = "\x1f".join(sorted(graph.nodes))
+    return hashlib.sha256(shape.encode()).hexdigest()[:12]
 
 
 def initial_state(bid: BidRow) -> BidState:

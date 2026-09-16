@@ -434,10 +434,16 @@ async def get_bid(
     company: CompanyContext = Depends(current_company),
     db: Database = Depends(get_database),
 ) -> BidResponse:
-    """One bid of the calling company with its requirements so far. Another's id is 404."""
-    if await fetch_bid(db, company_id=company.company_id, bid_id=str(bid_id)) is None:
+    """One bid of the calling company with its requirements so far. Another's id is 404.
+
+    The row read for the 404 is the row the response is assembled from (M13). This route is
+    polled every two seconds for the life of a run, and it used to fetch the same bid twice
+    on each of those calls — the second read could only ever return what the first did.
+    """
+    bid = await fetch_bid(db, company_id=company.company_id, bid_id=str(bid_id))
+    if bid is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
-    return await _bid_response(db, company_id=company.company_id, bid_id=str(bid_id))
+    return await _bid_response(db, company_id=company.company_id, bid_id=str(bid_id), bid=bid)
 
 
 @router.get("", response_model=BidListResponse, summary="List the company's bids")
@@ -453,14 +459,21 @@ async def list_company_bids(
 # ------------------------------------------------------------------------------ helpers
 
 
-async def _bid_response(db: Database, *, company_id: str, bid_id: str) -> BidResponse:
+async def _bid_response(
+    db: Database, *, company_id: str, bid_id: str, bid: BidRow | None = None
+) -> BidResponse:
     """The polling shape, read from the four projections and never from a checkpoint.
 
-    Re-reads the bid rather than taking the caller's copy: after a review the row has moved
-    on, and answering with the one fetched before the resume would show the reviewer the
-    state they were trying to leave.
+    **Re-reads the bid unless the caller passes one it knows is current.** After a review the
+    row has moved on, and answering with the copy fetched before the resume would show the
+    reviewer the state they were trying to leave — so the review and start paths pass
+    nothing and get a fresh read. `GET /bids/{id}` has just read the row to decide between
+    200 and 404, and nothing can have happened in between that a second identical query would
+    reveal, so it passes what it holds (M13). That read happens every two seconds per open
+    workspace, for the length of a run.
     """
-    bid = await fetch_bid(db, company_id=company_id, bid_id=bid_id)
+    if bid is None:
+        bid = await fetch_bid(db, company_id=company_id, bid_id=bid_id)
     if bid is None:  # pragma: no cover -- the caller has just read the row
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
     return BidResponse.assemble(

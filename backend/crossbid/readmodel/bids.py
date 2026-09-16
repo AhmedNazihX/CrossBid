@@ -22,6 +22,7 @@ another bid, say); the router names the problem.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
@@ -36,6 +37,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from crossbid.models.tender import BidStatus, BidSummary, DocumentKind
 from crossbid.models.verdict import Decision
 from crossbid.readmodel.documents import DocumentStatus
+
+logger = logging.getLogger(__name__)
 
 THREAD_ID_PREFIX: Final = "bid:"
 """The LangGraph thread a bid runs on is `bid:{id}`; chat (F3.5) will be `bid:{id}:chat`."""
@@ -453,13 +456,25 @@ async def fetch_bid(db: ConnectionSource, *, company_id: str, bid_id: str) -> Bi
 
 
 async def list_bids(db: ConnectionSource, *, company_id: str) -> list[BidRow]:
-    """This company's bids, newest first, at most `MAX_BIDS_LISTED`."""
+    """This company's bids, newest first, at most `MAX_BIDS_LISTED`.
+
+    The cap is not silent any more (M13): reaching it means the dashboard is showing a
+    truncated list with nothing in the response saying so, and the answer to that is a cursor
+    rather than a bigger number. The log line is what tells anyone the day has come.
+    """
     async with db.connection() as conn:
         records = await (
             await conn.execute(
                 SELECT_BIDS, {"company_id": company_id, "limit": MAX_BIDS_LISTED}
             )
         ).fetchall()
+    if len(records) == MAX_BIDS_LISTED:
+        logger.warning(
+            "Company %s has at least %d bids; the dashboard list is truncated and needs a "
+            "cursor rather than a larger limit",
+            company_id,
+            MAX_BIDS_LISTED,
+        )
     return [_bid_row(record) for record in records]
 
 

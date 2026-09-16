@@ -127,6 +127,7 @@ class InMemoryReadModel:
         self.claimed: list[str] = []
         self.attached: list[tuple[str, list[str]]] = []
         self.failed: list[tuple[str, str]] = []
+        self.bid_reads: list[str] = []
 
     def add_document(self, owner: str, row: BidDocumentRow) -> BidDocumentRow:
         self.documents[row.id] = (owner, row)
@@ -208,6 +209,7 @@ class InMemoryReadModel:
         )
 
     async def fetch_bid(self, db: Any, *, company_id: str, bid_id: str) -> BidRow | None:
+        self.bid_reads.append(bid_id)
         row = self.bids.get(bid_id)
         return row if row is not None and row.company_id == company_id else None
 
@@ -566,6 +568,39 @@ def test_get_bid_returns_the_polling_shape(
     ]
     assert body["created_at"] == "2026-09-11T12:00:00Z"
     assert set(body) == set(BidResponse.model_fields)
+
+
+def test_polling_a_bid_reads_its_row_once(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """M13. This route is polled every two seconds for the length of a run.
+
+    It read the bid to choose between 200 and 404 and then read it again to assemble the
+    response, and nothing can have happened between the two that a second identical query
+    would reveal. The review path still re-reads on purpose — the row has genuinely moved by
+    then — and its own test is what holds it to that.
+    """
+    # Arrange
+    bid = read_model.add_bid(status=BidStatus.AWAITING_REVIEW)
+    read_model.bid_reads.clear()
+
+    # Act
+    response = client.get(f"/bids/{bid.id}", headers=headers())
+
+    # Assert
+    assert response.status_code == 200
+    assert read_model.bid_reads == [bid.id]
+
+
+def test_a_missing_bid_is_still_one_read_and_a_404(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    read_model.bid_reads.clear()
+
+    response = client.get(f"/bids/{uuid.uuid4()}", headers=headers())
+
+    assert response.status_code == 404
+    assert len(read_model.bid_reads) == 1
 
 
 def test_get_bid_carries_the_agents_verdict_once_it_has_been_scored(
