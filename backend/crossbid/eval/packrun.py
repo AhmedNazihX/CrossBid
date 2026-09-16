@@ -51,7 +51,14 @@ from typing import Any, Final
 
 from langgraph.checkpoint.memory import MemorySaver
 
-from crossbid.agent.graph import AWAIT_REVIEW, BidNode, build_graph, initial_state
+from crossbid.agent.graph import (
+    AWAIT_REVIEW,
+    BidNode,
+    ReadModelProjection,
+    RunProjection,
+    build_graph,
+    initial_state,
+)
 from crossbid.agent.nodes.parse_docs import DocumentParser
 from crossbid.agent.nodes.score_verdict import VerdictScorer
 from crossbid.agent.state import ExtractionProblem
@@ -140,15 +147,22 @@ class PackRun:
 
 
 class RecordingProjection:
-    """The read model, replaced by a list. Satisfies `graph.RunProjection`.
+    """The read model, replaced by a list — and optionally *also* the read model.
 
-    A pack run has no Postgres, and the rows it is worth paying for are the requirements —
-    which reach this object by the same call the real projection would have written them
-    with, so a run that extracted nothing produces an empty list here rather than looking
-    like a success.
+    A pack run with no Postgres has nowhere to write, and the rows it is worth paying for are
+    the requirements: they reach this object by the same call the real projection would have
+    written them with, so a run that extracted nothing produces an empty list rather than
+    looking like a success.
+
+    **`delegate` is what makes a paid run visible in the app.** Given one, every write is
+    recorded *and* passed on, so the bid a run produced can be opened in the browser instead
+    of existing only as a number in a terminal. That is the difference between a screenshot of
+    the product and a screenshot of a fixture, and it costs nothing extra: the run has already
+    been paid for.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, delegate: RunProjection | None = None) -> None:
+        self._delegate = delegate
         self.statuses: list[BidStatus] = []
         self.problems: list[ExtractionProblem] = []
         self.rows: list[Requirement] = []
@@ -157,20 +171,32 @@ class RecordingProjection:
 
     async def set_status(self, *, company_id: str, bid_id: str, status: BidStatus) -> None:
         self.statuses.append(status)
+        if self._delegate is not None:
+            await self._delegate.set_status(company_id=company_id, bid_id=bid_id, status=status)
 
     async def set_problems(
         self, *, company_id: str, bid_id: str, problems: Sequence[ExtractionProblem]
     ) -> None:
         self.problems = list(problems)
+        if self._delegate is not None:
+            await self._delegate.set_problems(
+                company_id=company_id, bid_id=bid_id, problems=problems
+            )
 
     async def write_requirements(self, *, company_id: str, rows: Sequence[Requirement]) -> int:
         self.rows.extend(rows)
+        if self._delegate is not None:
+            await self._delegate.write_requirements(company_id=company_id, rows=rows)
         return len(rows)
 
     async def write_matrix_rows(
         self, *, company_id: str, bid_id: str, rows: Sequence[MatrixRow]
     ) -> int:
         self.matrix_rows = list(rows)
+        if self._delegate is not None:
+            await self._delegate.write_matrix_rows(
+                company_id=company_id, bid_id=bid_id, rows=rows
+            )
         return len(rows)
 
     async def set_verdict(self, *, company_id: str, bid_id: str, verdict: Verdict) -> None:
@@ -182,6 +208,10 @@ class RecordingProjection:
         nothing scores it.
         """
         self.verdicts.append(verdict)
+        if self._delegate is not None:
+            await self._delegate.set_verdict(
+                company_id=company_id, bid_id=bid_id, verdict=verdict
+            )
 
     # The two writes below belong to review, which a pack run never reaches: the graph stops
     # at `await_review` and nothing resumes it. They are implemented because `RunProjection`
@@ -393,7 +423,9 @@ async def run_pack(
             f"{pack.fixture_dir}: no documents to run — is the fixture checked out?"
         )
 
-    projection = RecordingProjection()
+    projection = RecordingProjection(
+        delegate=ReadModelProjection(database) if database is not None else None
+    )
     sink = RecordingUsageSink()
     # With a database the run is the whole product: `plan_checks` reads the bidder's country,
     # `check_reqs` runs its per-requirement ReAct loop against the indexed corpora, and

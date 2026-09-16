@@ -6,6 +6,7 @@ node_modules/
 # Playwright's own output (npm run test:e2e): a generated HTML report, traces, screenshots.
 test-results/
 test-results-guide/
+test-results-live/
 playwright-report/
 blob-report/
 .playwright/

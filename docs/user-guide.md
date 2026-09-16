@@ -7,11 +7,15 @@ Crossbid is **advisory**. It never submits anything, every cell of the matrix ca
 or is marked as unsupported, and a person confirms or overrides every verdict before it is
 final. Nothing in this guide changes that.
 
-> **About the screenshots.** The images below are the real interface, driven by
+> **About the screenshots.** Seven of the eight images below are the real interface driven by
 > `npm run guide:shots` against typed fixture data — so anyone can regenerate them with no
 > database, no API key and no money, and a renamed field breaks the capture rather than leaving
-> a stale picture in this file. Where an image comes from a **live run** against real services
-> it says so underneath.
+> a stale picture in this file.
+>
+> **One is a live capture**: the eCertis card in Example 2. That one is a claim about the
+> outside world — that a French buyer's criterion resolves, through the EU's own register, to
+> the German document a German bidder would produce — and a fixture asserting it would be a
+> picture of our own belief. It is marked where it appears.
 
 ---
 
@@ -150,6 +154,15 @@ Three things change, and nothing else does.
   which is worse than mapping you to none — so where there is no DUME, there is no automatic
   cross-border mapping, and the requirements are still extracted, cited and checked as usual.
 
+![A French criterion resolved to German evidence](user-guide/img/08-ecertis-live.png)
+
+  *This one is a live capture, not a fixture.* The French buyer asked for
+  *Chiffre(s) d'affaires annuel général*; eCertis answers that in Germany the criterion is
+  evidenced by a `Bescheinigung über Jahresabschluss`, the `Amtliches Verzeichnis AVPQ`, the
+  `Präqualifikationsverzeichnis VOB` and others — and names who issues them. Measured on
+  2026-09-16: **30 of 143 requirements carried a DUME criterion id and 29 resolved**
+  (`backend/tests/fixtures/bids/fr.cross-border.json`).
+
   **Upload the `DUME_acheteur.xml` alongside the PDFs.** Without it the tender documents alone
   carry no criterion ids — Crossbid will not infer one, because a wrong criterion id is worse
   than none — and the cross-border evidence mapping stays dark.
@@ -212,6 +225,13 @@ minutes.
   instructions before anything is indexed, and a flagged passage is withheld from retrieval
   while its pages are still fully extracted — so an attacker cannot delete the requirement they
   least want checked.
+- **The same tender can come back with a different verdict.** Three runs of the French
+  fixture, same company and same settings, returned *conditional*, *no-go*, *conditional*. The
+  difference was one row out of about 145: a certification requirement the agent called
+  unsupported on one run and partially supported on the others, and one unsupported mandatory
+  row is the whole distance between the two verdicts. Treat a verdict as a prompt to read the
+  blocking rows, never as a number to quote. The eCertis lookups did **not** vary — that path
+  has no model in it.
 - **The agent can be wrong, and the design assumes it.** Requirement recall is measured and
   published in [`backend/evaluations/REPORT.md`](../backend/evaluations/REPORT.md): on the
   German test tender it finds 83 % of the requirements a human labelled. That is why a person

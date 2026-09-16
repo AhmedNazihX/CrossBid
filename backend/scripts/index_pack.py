@@ -228,7 +228,10 @@ async def _index_company_evidence(
     try:
         written = 0
         for path in sorted((COMPANY_PACK_DIR / "documents").glob("*.pdf")):
-            document_id = uuid.uuid5(EVAL_NAMESPACE, f"evidence:{path.name}")
+            # Scoped by company: `documents.id` is the primary key across every tenant, and
+            # each pack's company gets its own copy of the same ten files. Keyed on the
+            # filename alone they collide the moment a second pack is indexed.
+            document_id = uuid.uuid5(EVAL_NAMESPACE, f"evidence:{company_id}:{path.name}")
             upload = Upload(
                 filename=path.name,
                 content_type="application/pdf",

@@ -5429,3 +5429,57 @@ its worked example. It reads better that way. It was not done: that passage was 
 evidence (ADR-0021), extraction recall has a noise floor of about four points across runs, and a
 single $1.68 run cannot separate a prompt improvement from noise. Reordering measured prompt
 text on an unmeasured hunch is how a result already paid for gets lost.
+
+---
+
+## ADR-0075 — The cross-border card is captured live, and the verdict is not stable across runs
+
+**Date:** 2026-09-16 · **Stories:** S7.4, S3.4.1, S1.1.1 · **Status:** accepted
+
+**One of the guide's eight images is taken from live services.** The other seven show the
+interface doing something, and fixture data shows that faithfully while staying free and
+reproducible (ADR-0072). This one is a claim about the outside world — that a French buyer's
+ESPD criterion resolves, through the EU's own register, to the German document a German bidder
+would produce — and a fixture asserting that would be a picture of our own belief.
+
+Getting it required the run to be **visible in the browser**, so `RecordingProjection` gained a
+`delegate`: given one, every write is recorded *and* passed to the real read model, and the bid
+a paid run produced can be opened instead of existing only as numbers in a terminal. It costs
+nothing extra — the run has already been paid for.
+
+Measured on the FR pack with the ten evidence documents indexed: **30 of 143 requirements
+carried a DUME criterion id and 29 resolved.** The captured card reads *"eCertis · General
+yearly turnover. In Germany this criterion is evidenced by Bescheinigung über Jahresabschluss
+…, Amtliches Verzeichnis AVPQ, Präqualifikationsverzeichnis VOB …"* with the issuing bodies
+named. That is the wedge, working, against the real register.
+
+**The finding that came free with it: the verdict is not stable across runs.** Three runs of
+the same pack, the same company, the same models, `temperature: 0.0`:
+
+| run | requirements | supported | unsupported | decision |
+|---|---|---|---|---|
+| 1 | 143 | 2 | 0 | **conditional** |
+| 2 | 148 | 1 | 1 | **no_go** |
+| 3 | 147 | 1 | 0 | **conditional** |
+
+Run 2 differed by **one row out of ~145** — a TOGAF/Archimate certification requirement the
+loop called `unsupported` rather than `partially_supported` — and that single row is a blocking
+gap, which is the whole distance between "conditional" and "no-go". The scorer is behaving
+exactly as designed (ADR-0024: one unsupported mandatory row blocks); what varies is the
+per-requirement checking loop's judgement on a marginal row, and extraction varies too, by a
+few requirements per run.
+
+**This is not a defect to fix, and it is not nothing.** It is the strongest argument the
+project has for its own central design choice: the agent is advisory, a human confirms every
+verdict, and no bid is ever submitted on the agent's say-so. A system whose headline
+recommendation can turn on one row of a hundred and forty-five is a system that must not be
+the last word — and this one never is.
+
+What it does mean is that **a single run is not evidence about a tender**. The user guide says
+so, `REPORT.md`'s recall figures already carry their run-to-run spread, and anyone quoting a
+verdict from one run should say which run.
+
+eCertis resolution was **identical across all three** (30 rows, 29 resolved). The structured
+path — a criterion id read out of a published DUME, looked up in a cached register — has no
+model in it and does not vary. That contrast is worth keeping in view: the deterministic half
+of this product is deterministic.

@@ -10,6 +10,7 @@
 # playwright (npm run test:e2e): reports, traces, screenshots
 /test-results/
 /test-results-guide/
+/test-results-live/
 /playwright-report/
 /blob-report/
 /.playwright/

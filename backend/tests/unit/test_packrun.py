@@ -282,3 +282,34 @@ async def test_the_notice_pdf_at_the_pack_root_is_part_of_the_run(tmp_path: Path
     kinds = {row.name: row.kind for row in rows}
     assert kinds["614251-2026.notice.de.pdf"] is DocumentKind.TENDER_NOTICE
     assert sum(kind is DocumentKind.TENDER_DOCUMENT for kind in kinds.values()) == 1
+
+
+@pytest.mark.anyio
+async def test_a_delegate_receives_every_write_the_recorder_keeps() -> None:
+    """The tee that makes a paid run visible in the browser.
+
+    Without it a full run exists only as numbers in a terminal, and the screenshot in the user
+    guide would have to come from a fixture instead of from the run that was paid for. Each
+    write has to reach both sides: a delegate that gets the verdict but not the matrix rows
+    would render a bid whose banner and table disagree.
+    """
+    written = RecordingProjection()
+    recorder = RecordingProjection(delegate=written)  # type: ignore[arg-type]
+    row = requirement()
+    decision = verdict()
+
+    await recorder.set_status(company_id="c", bid_id="b", status=BidStatus.EXTRACTING)
+    await recorder.set_problems(company_id="c", bid_id="b", problems=[])
+    await recorder.write_requirements(company_id="c", rows=[row])
+    await recorder.write_matrix_rows(company_id="c", bid_id="b", rows=[])
+    await recorder.set_verdict(company_id="c", bid_id="b", verdict=decision)
+
+    assert written.statuses == [BidStatus.EXTRACTING]
+    assert written.problems == []
+    assert written.rows == [row]
+    assert written.matrix_rows == []
+    assert written.verdicts == [decision]
+    # And the recorder still holds its own copy: the run's result does not depend on the
+    # delegate having worked.
+    assert recorder.rows == [row]
+    assert recorder.verdicts == [decision]

@@ -1,0 +1,1423 @@
+{
+  "pack": "fr",
+  "company": "Beispiel IT Services GmbH",
+  "staff_fte": 25.0,
+  "staff_fte_relevant": 21.5,
+  "turnover": [
+    {
+      "year": 2023,
+      "amount": 3420000.0
+    },
+    {
+      "year": 2024,
+      "amount": 3985000.0
+    },
+    {
+      "year": 2025,
+      "amount": 4310000.0
+    }
+  ],
+  "requirements": 147,
+  "matrix_rows": 147,
+  "row_statuses": {
+    "not_applicable": 3,
+    "partially_supported": 143,
+    "supported": 1
+  },
+  "calls": 81,
+  "cost_usd": 0.312898665,
+  "elapsed_seconds": 181.84940708405338,
+  "decision": "conditional",
+  "mandatory_supported": 1,
+  "mandatory_total": 135,
+  "ecertis": [
+    {
+      "criterion_id": "499efc97-2ac1-4af2-9e84-323c2ca67747",
+      "criterion_name": "General yearly turnover",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Bescheinigung über Jahresabschluss (z.B. Umsätze, Bilanzen, Bilanzauszüge, Gewinn- und Verlustrechnung)",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Angaben zum Umsatz in den letzten drei abgeschlossenen Geschäftsjahren"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "Wirtschaftsprüfer und Steuerberater"
+      ]
+    },
+    {
+      "criterion_id": "d726bac9-e153-4e75-bfca-c5385587766d",
+      "criterion_name": "Certificates by independent bodies about quality assurance standards",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Bescheinigungen unabhängiger Stellen oder Institute für Qualitätsicherung (z.B. DIN, ISO)",
+        "Qualitätssicherungsverfahren (Automatische Übersetzung)"
+      ],
+      "issuers": [
+        "Zuständige unabhängige Stelle für Qualitätssicherung",
+        "diverse"
+      ]
+    },
+    {
+      "criterion_id": "47112079-6fec-47a3-988f-e561668c3aef",
+      "criterion_name": "Money laundering or terrorist financing",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "a261a395-ed17-4939-9c75-b9ff1109ca6e",
+      "criterion_name": "Breaching of obligations in the fields of social law",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Unbedenklichkeitsbescheinigung der Berufsgenossenschaft",
+        "Unbedenklichkeitsbescheinigung über die Zahlung von Sozialversicherungsbeiträgen",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständige Berufsgenossenschaft",
+        "zuständige Sozialversicherungsträger (Kranken/Rentenversicherung)"
+      ]
+    },
+    {
+      "criterion_id": "daffa2a9-9f8f-4568-8be8-7b8bf306d096",
+      "criterion_name": "Analogous situation like bankruptcy under national law",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt",
+        "Auskunft des zuständigen Insolvenzgerichts"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständiges Insolvenzgericht"
+      ]
+    },
+    {
+      "criterion_id": "b1b5ac18-f393-4280-9659-1367943c1a2e",
+      "criterion_name": "Conflict of interest due to its participation in the procurement procedure",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": []
+    },
+    {
+      "criterion_id": "e4d37adc-08cd-4f4d-a8d8-32b62b0a1f46",
+      "criterion_name": "Financial ratio",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Bescheinigung über Jahresabschluss (z.B. Umsätze, Bilanzen, Bilanzauszüge, Gewinn- und Verlustrechnung)"
+      ],
+      "issuers": [
+        "Wirtschaftsprüfer und Steuerberater"
+      ]
+    },
+    {
+      "criterion_id": "005eb9ed-1347-4ca3-bb29-9bc0db64e1ab",
+      "criterion_name": "Participation in a criminal organisation",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "d789d01a-fe03-4ccd-9898-73f9cfa080d1",
+      "criterion_name": "Child labour and other forms of trafficking in human beings",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "a34b70d6-c43d-4726-9a88-8e2b438424bf",
+      "criterion_name": "Breaching of obligations in the fields of labour law",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Erlaubnis zur Arbeitnehmerüberlassung",
+        "Erlaubnis zur Arbeitnehmerübergabe (Automatische Übersetzung)",
+        "Auszug aus dem Gewerbezentralregister",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesagentur für Arbeit",
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "8fda202a-0c37-41bb-9d7d-de3f49edbfcb",
+      "criterion_name": "Assets being administered by liquidator",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt",
+        "Auskunft des zuständigen Insolvenzgerichts"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständiges Insolvenzgericht"
+      ]
+    },
+    {
+      "criterion_id": "61874050-5130-4f1c-a174-720939c7b483",
+      "criterion_name": "Direct or indirect involvement in the preparation of this procurement procedure",
+      "country": "de",
+      "found": false,
+      "evidence_names": [],
+      "issuers": []
+    },
+    {
+      "criterion_id": "7604bd40-4462-4086-8763-a50da51a869c",
+      "criterion_name": "Professional risk indemnity insurance",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Bescheinigung der Berufs- oder Betriebshaftplichtversicherung",
+        "Amtliches Verzeichnis AVPQ",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Versicherungsberatung (Automatische Übersetzung)"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Zuständige Versicherungsgesellschaft"
+      ]
+    },
+    {
+      "criterion_id": "c27b7c4e-c837-4529-b867-ed55ce639db5",
+      "criterion_name": "Corruption",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "b61bbeb7-690e-4a40-bc68-d6d4ecfaa3d4",
+      "criterion_name": "Payment of taxes",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Bescheinigung in Steuersachen",
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Freistellungsbescheinigung (Automatische Übersetzung)",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständiges Finanzamt"
+      ]
+    },
+    {
+      "criterion_id": "d3732c09-7d62-4edc-a172-241da6636e7c",
+      "criterion_name": "Bankruptcy",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt",
+        "Auskunft des zuständigen Insolvenzgerichts"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständiges Insolvenzgericht"
+      ]
+    },
+    {
+      "criterion_id": "166536e2-77f7-455c-b018-70582474e4f6",
+      "criterion_name": "Business activities are suspended",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt",
+        "Auskunft des zuständigen Insolvenzgerichts"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständiges Insolvenzgericht"
+      ]
+    },
+    {
+      "criterion_id": "3293e92b-7f3e-42f1-bee6-a7641bb04251",
+      "criterion_name": "Early termination, damages or other comparable sanctions",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "1f49b3f0-d50f-43f6-8b30-4bafab108b9b",
+      "criterion_name": "Average annual manpower",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Angaben zur durchschnittlichen Anzahl der Beschäftigten und der Führungskräfte in den letzten drei abgeschlossenen Geschäftsjahren"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "297d2323-3ede-424e-94bc-a91561e6f320",
+      "criterion_name": "Fraud",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "7d85e333-bbab-49c0-be8d-c36d71a72f5e",
+      "criterion_name": "Payment of social security contributions",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Unbedenklichkeitsbescheinigung der Berufsgenossenschaft",
+        "Unbedenklichkeitsbescheinigung über die Zahlung von Sozialversicherungsbeiträgen",
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständige Berufsgenossenschaft",
+        "zuständige Sozialversicherungsträger (Kranken/Rentenversicherung)"
+      ]
+    },
+    {
+      "criterion_id": "396f288a-e267-4c20-851a-ed4f7498f137",
+      "criterion_name": "Insolvency",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Insolvency bzw. Liquidation (Automatische Übersetzung)",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt",
+        "Auskunft des zuständigen Insolvenzgerichts"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständiges Insolvenzgericht"
+      ]
+    },
+    {
+      "criterion_id": "514d3fde-1e3e-4dcd-b02a-9f984d5bbda3",
+      "criterion_name": "Guilty of grave professional misconduct",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Gewerbezentralregister",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "696a75b2-6107-428f-8b74-82affb67e184",
+      "criterion_name": "Guilty of misrepresentation, withheld information, unable to provide required documents and obtained confidential information of this procedure",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "5e506c16-26ab-4e32-bb78-b27f87dc0565",
+      "criterion_name": "For service contracts: performance of services of the specified type",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Referenzliste über wesentliche, in den letzten drei abgeschlossenen Geschäftsjahren erbrachten Leistungen",
+        "Amtliches Verzeichnis AVPQ",
+        "Berliner Unternehmer- und Lieferantenverzeichnis"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin"
+      ]
+    },
+    {
+      "criterion_id": "d486fb70-86b3-4e75-97f2-0d71b5697c7d",
+      "criterion_name": "Terrorist offences or offences linked to terrorist activities",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Bundeszentralregister / Führungszeugnis",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "a80ddb62-d25b-4e4e-ae22-3968460dc0a9",
+      "criterion_name": "Breaching of obligations in the fields of environmental law",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "68918c7a-f5bc-4a1a-a62f-ad8983600d48",
+      "criterion_name": "Arrangement with creditors",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt",
+        "Auskunft des zuständigen Insolvenzgerichts"
+      ],
+      "issuers": [
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)",
+        "zuständiges Insolvenzgericht"
+      ]
+    },
+    {
+      "criterion_id": "56d13e3d-76e8-4f23-8af6-13e60a2ee356",
+      "criterion_name": "Agreements with other economic operators aimed at distorting competition",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Auszug aus dem Gewerbezentralregister",
+        "Amtliches Verzeichnis AVPQ",
+        "Präqualifikationsverzeichnis VOB",
+        "Berliner Unternehmer- und Lieferantenverzeichnis",
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": [
+        "Bundesamt für Justiz",
+        "Industrie- und Handelskammern",
+        "Senatsverwaltung für Stadtentwicklung und Wohnen Berlin",
+        "Verein für die Präqualifikation von Bauunternehmen e.V. (Automatische Übersetzung)"
+      ]
+    },
+    {
+      "criterion_id": "63adb07d-db1b-4ef0-a14e-a99785cf8cf6",
+      "criterion_name": "Purely national exclusion grounds",
+      "country": "de",
+      "found": true,
+      "evidence_names": [
+        "Erklärung, dass kein zwingender oder fakultativer Ausschlussgrund vorliegt"
+      ],
+      "issuers": []
+    }
+  ],
+  "gaps": [
+    {
+      "severity": "open_item",
+      "summary": "Chiffre(s) d’affaires annuel général",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Détaillez les ratios requis par l’acheteur dans les documents de la consultation",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Le montant couvert par l’assurance contre les risques professionnels que vous avez souscrit est le suivant:",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Les effectifs moyens annuels de l’opérateur économique pour les trois dernières années s’établissaient comme suit:",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Décrivez des principaux services fournis antérieurement",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Serez-vous en mesure de produire des certificats établis par des organismes indépendants, attestant qu’il se conforme aux normes d’assurance de la qualité requises, y compris en c…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous fait l’objet d’une condamnation prononcée par jugement définitif il y a moins de 5 ans pour ce motif ou faîtes-vous encore l'objet d'une peine d'exclusion des marchés pu…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous fait l’objet d’une condamnation prononcée par jugement définitif il y a moins de 5 ans pour ce motif ou faîtes-vous encore l'objet d'une peine d'exclusion des marchés pu…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous fait l’objet d’une condamnation prononcée par jugement définitif il y a moins de 5 ans pour ce motif ou faîtes-vous encore l'objet d'une peine d'exclusion des marchés pu…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous fait l’objet d’une condamnation prononcée par jugement définitif il y a moins de 5 ans pour ce motif ou faîtes-vous encore l'objet d'une peine d'exclusion des marchés pu…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous fait l’objet d’une condamnation prononcée par jugement définitif il y a moins de 5 ans pour ce motif ou faîtes-vous encore l'objet d'une peine d'exclusion des marchés pu…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous fait l’objet d’une condamnation prononcée par jugement définitif il y a moins de 5 ans pour ce motif ou faîtes-vous encore l'objet d'une peine d'exclusion des marchés pu…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous manqué à vos obligations relatives aux déclarations et aux paiements d'impôts et taxes ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous manqué à  vos obligations relatives aux déclarations et aux paiements de cotisations de sécurité sociale ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L’opérateur économique a-t-il, à sa connaissance, manqué à ses obligations dans le domaine du droit environnemental?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L’opérateur économique a-t-il, à sa connaissance, manqué à ses obligations dans le domaine du droit social ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L’opérateur économique a-t-il, à sa connaissance, manqué à ses obligations dans le domaine du droit du travail ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L'opérateur économique est-il en faillite personnelle ou fait-il l'objet d'une interdiction de gérer ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L'opérateur économique fait-il l'objet d'une procédure d'insolvabilité ou de liquidation ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L'opérateur économique a-t-il fait l'objet d'une procédure amiable, au sens des articles L. 611-1 à 16 du code de commerce, lui accordant des délais de paiement ou des remises de…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L'opérateur économique se trouve dans toute situation analogue résultant d'une procédure de même nature existant dans les législations et réglementations nationales ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Les biens de l'opérateur économique sont-ils administrés par un liquidateur ou placés sous administration judiciaire ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L'opérateur économique se trouve-t-il en état de cessation d'activités ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L’opérateur économique est-il coupable d'une faute professionnelle grave ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Avez-vous conclu des accords avec d’autres opérateurs économiques en vue de fausser la concurrence?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L'opérateur économique a-t-il connaissance d'un conflit d'intérêt créé par sa participation à la procédure de passation de marché ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L'opérateur économique, ou une entreprise qui lui est liée, a-t-il/elle conseillé l'acheteur, ou été autrement associé(e) à la préparation de la procédure de passation de marché ?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L’opérateur économique a-t-il fait l’objet d’une résiliation d’un marché public antérieur, d’un marché antérieur passé avec une entité adjudicatrice ou d’une concession antérieure…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "L’opérateur économique s’est-il trouvé dans l’une des situations suivantes:<br/>\na) il s’est rendu coupable de fausses déclarations en fournissant les renseignements exigés pour l…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Les motifs d’exclusion purement nationaux qui sont précisés dans l’avis pertinent ou dans les documents de marché s’appliquent-ils?",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Wahl einer Bietergemeinschaft mit gemeinsamer Haftung muss der bevollmächtigte Vertreter gesamtschuldnerisch haften.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der bevollmächtigte Vertreter muss bei Abgabe des Angebots benannt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bewerber müssen die Vergabeunterlagen elektronisch unter https://www.marchespublics. gouv.fr abrufen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Jeder Bewerber, der nicht mindestens 5 von 10 Punkten und damit nicht das erwartete Kapazitätsniveau erreicht, wird vom Verfahren ausgeschlossen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bewerber müssen ihr Angebot ausschließlich elektronisch über https://www.marches-publics.gouv.fr einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Angebote oder Teilnahmeanträge dürfen nur auf Französisch eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein elektronischer Katalog ist nicht zulässig.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Nebenangebote sind nicht zulässig.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Angebote müssen spätestens am 09.10.2026 um 16:00:00 Uhr (UTC+02:00, osteuropäische Zeit / mitteleuropäische Sommerzeit) eingehen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss 4 Monate gültig bleiben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Angebote müssen spätestens am 09.10.2026 um 16:00 Uhr eingereicht werden; diese Frist ist zwingend.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Angebot muss ab dem Ablauf der Einreichungsfrist vier (4) Monate lang gültig bleiben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bieter dürfen keine Varianten auf eigene Initiative anbieten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bieter dürfen in ihrem Angebot keinen Vorbehalt gegenüber der verbindlichen Sozial- und Integrationsklausel erklären.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber muss ein vollständiges Dossier mit den nachstehend genannten Unterlagen einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alle Unterlagen, die das Angebot bilden oder begleiten, müssen auf Französisch verfasst sein oder, wenn sie von einer ausländischen Behörde stammen, übersetzt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sämtliche Kommunikation und der Austausch sowie die Angebotsabgabe müssen ausschließlich elektronisch über die staatliche Beschaffungsplattform PLACE erfolgen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bewerber müssen in ihrem Angebot die E-Mail-Adresse(n) angeben, die das Ministerium für jeden Austausch zu diesem Vergabeverfahren verwenden kann.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Unternehmen darf nicht als bevollmächtigter Vertreter mehrerer Bietergemeinschaften auftreten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Zusammensetzung der Bietergemeinschaft darf zwischen dem Einreichungstermin für Bewerbungen und der Vertragsunterzeichnung nicht geändert werden, vorbehaltlich der Regelungen…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Tritt der Bewerber als temporäre Bietergemeinschaft auf, muss jedes Mitglied die nachstehend genannten Unterlagen und Dokumente einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Stützt sich der Bewerber auf die Kapazitäten anderer Wirtschaftsteilnehmer, muss er für jeden dieser Teilnehmer dieselben verlangten Unterlagen und Angaben sowie eine schriftliche…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Zugang zu diesem elektronischen Informationssystem oder digitalen Speicherbereich muss kostenlos sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein nicht in Frankreich niedergelassener Bewerber muss gleichwertige Bescheinigungen und Zertifikate seines Herkunftslands oder, falls diese nicht verfügbar sind, je nach Land ein…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein ausgefülltes DUME-Formular muss eingereicht werden, wenn dieser Bewerbungsmodus gewählt wird.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei der Standardbewerbung muss ein ausgefülltes Bewerbungsschreiben mittels Formular DC1 eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei der Standardbewerbung muss eine ausgefüllte Bewerbererklärung mittels Formular DC2 eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei der Standardbewerbung muss ein Referenzdossier eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei der Standardbewerbung muss eine Zertifizierung oder ein internes Qualitätsverfahren eingereicht bzw. nachgewiesen werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei der Standardbewerbung muss eine Darstellung der personellen Ressourcen eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das DUME-Formular muss ausgefüllt eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die Standardbewerbung ist das Formular DC1 zu verwenden und ordnungsgemäß auszufüllen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die Standardbewerbung ist das Formular DC2 zu verwenden und als Ergänzung zum DC1 ordnungsgemäß auszufüllen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer gemeinsamen Bewerbung muss für jedes Mitglied der Bietergemeinschaft ein DC2-Formular beigefügt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber muss alle Informationen vorlegen, die seine Kompetenz im Bereich des Auftragsgegenstands belegen; die folgende Liste ist nicht abschließend.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Referenzdossier muss für jeden aufgeführten Auftrag die nachfolgenden Angaben enthalten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz müssen der Zuschlags- bzw. Mitteilungstermin und die Laufzeit des Auftrags oder Vertrags angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz muss der Gegenstand des Auftrags oder Vertrags angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz muss eine Beschreibung der erbrachten Leistungen angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz muss der Auftragswert oder quantitative Angaben für die gesamte Vertragslaufzeit angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jede Referenz müssen die Kunden mit Namen und Anschrift sowie die Kontaktdaten ansprechbarer Personen angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bewerber muss seinen Gesamtjahresumsatz für das letzte verfügbare Geschäftsjahr angeben.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wird eine Untervergabe erklärt, muss der Bewerber seinem Angebot eine namentliche Liste der Unterauftragnehmer beifügen, denen er bestimmte Leistungen übertragen will.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Untervergabenachweis bzw. das Formular DC4 muss für jeden Unterauftragnehmer von den nachstehend genannten Unterlagen begleitet werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für jeden Unterauftragnehmer muss die Vollmacht beigefügt werden, die den Unterzeichner zur Verpflichtung des Unterauftragnehmers berechtigt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei gerichtlicher Sanierung oder einem gleichwertigen ausländischen Verfahren muss für jeden Unterauftragnehmer eine Kopie des bzw. der Urteile beigefügt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Anhang 1 zur Verpflichtungserklärung, der als Einheitspreisverzeichnis (BPU) gilt, muss ausgefüllt eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Einheitspreisverzeichnis muss unter Verwendung der den Vergabeunterlagen beigefügten Vorlage erstellt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss zwingend sämtliche Zeilen ausfüllen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter darf die Struktur des BPU nicht ändern.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Alle Preise müssen mit zwei Nachkommastellen angegeben und gerundet werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der ausgefüllte geschätzte Mengen- und Preisnachweis (DQE) muss eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein datiertes technisches Konzept mit den nachfolgenden Abschnitten muss eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das technische Konzept muss die Profile der für die Auftragsausführung vorgesehenen Mitarbeitenden enthalten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die vorgesehenen Mitarbeitenden müssen Erfahrungsjahre und Erfahrungsbereiche angegeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die vorgesehenen Mitarbeitenden müssen Zertifizierungen angegeben werden, insbesondere zu TOGAF und Archimate oder zur Informationssystemmodellierung für Unternehmensarchitekt…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Ministerium wünscht, dass die Bewerber Mitarbeitende mit mehr als 10 Jahren Erfahrung anbieten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das technische Konzept muss die Vorgehensweise zur Aufgabenausführung, die Methodik und allgemeine Projektorganisation sowie den vom Bewerber eingesetzten Qualitätsmanagementplan-…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das technische Konzept muss die technischen Werkzeuge beschreiben, die das Unternehmen bei der Leistungserbringung einsetzen oder dem Ministerium bereitstellen will.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das technische Konzept muss Angaben zur Umweltqualität des Angebots enthalten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Falls zutreffend, muss die ausgefüllte Untervergabenerklärung oder das Formular DC4 eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bieter, die nicht mindestens 5/10 Punkten erreichen, was dem erwarteten Leistungsfähigkeitsniveau entspricht, werden ausgeschlossen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Jahresumsatz ohne Steuern von mehr als 1.950.000 EUR wird mit 3/3 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Jahresumsatz ohne Steuern von höchstens 1.950.000 EUR und mindestens 1.460.000 EUR wird mit 2/3 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein Jahresumsatz ohne Steuern von weniger als 1.460.000 EUR oder ein nicht angegebener Umsatz wird mit 0/3 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mehr als 6 und höchstens 12 Beschäftigte des Bieters, die im Gegenstand der Ausschreibung tätig sind, werden mit 2/3 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Höchstens 6 Beschäftigte des Bieters, die im Gegenstand der Ausschreibung tätig sind, oder nicht angegebene Beschäftigtenzahlen werden mit 0/3 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Mindestens 4 datierte und bezifferte Referenzen aus den letzten drei Jahren für vergleichbare Leistungen werden mit 2/2 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "2 oder 3 datierte und bezifferte Referenzen aus den letzten drei Jahren für vergleichbare Leistungen werden mit 1/2 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Weniger als 2 oder nicht angegebene datierte und bezifferte Referenzen aus den letzten drei Jahren für vergleichbare Leistungen werden mit 0/2 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein zertifizierter Qualitätsprozess oder ein unternehmenseigener Qualitätsprozess wird mit 2/2 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Kein Qualitätsprozess oder ein nicht angegebener Qualitätsprozess wird mit 0/2 Punkten bewertet.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Bieter müssen ihr Angebot ausschließlich elektronisch über die angegebene Website einreichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die in diesem Artikel angegebene Übermittlungsart für Angebote ist verbindlich.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ein auf andere Weise übermitteltes Angebot wird nicht bei der Angebotsprüfung berücksichtigt und wegen Verstoßes gegen die Vergabeunterlagen als unregelmäßig behandelt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Falls diese Angaben aktualisiert werden müssen, muss der Bieter sie bei INSEE berichtigen lassen, sofern es sich um ein französisches Unternehmen handelt, oder sie bei einem auslä…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer zweiten Einreichung ersetzt diese die erste für das betreffende Los. Daher ist ein neues vollständiges Angebot und kein Nachtrag einzureichen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das elektronische Angebot muss aus gezippten PDF-Dokumenten bestehen; ausgenommen sind Finanzanhänge, die im Format .xls oder .xlsx einzureichen sind.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter darf in seiner Antwort keinen aktiven Code verwenden, etwa ausführbare Formate, Makros, ActiveX, Applets oder Skripte.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter muss vor dem Zusammenstellen seines Angebots sicherstellen, dass die übermittelten Dateien keine Viren enthalten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Sämtliche Unterlagen müssen vor dem Ende der Angebotsfrist auf der Plattform eingegangen sein.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Jedes Angebot, dessen Upload auf den Server nicht bis zum vorgeschriebenen Zeitpunkt abgeschlossen ist, gilt als verspätet eingegangen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Eine Sicherungskopie muss in einem versiegelten Umschlag mit dem lesbaren Vermerk „NE PAS OUVRIR PAR LE COURRIER GENERAL“ sowie „MEN-SG-AOO-26023 – CONSEIL ARCHITECTURE SI – COPIE…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Sicherungskopie muss per Einschreiben versandt oder gegen Empfangsbestätigung persönlich an die angegebene Adresse übergeben werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Der Bieter, dem der Auftrag erteilt werden soll, muss innerhalb der in der Aufforderung des Ministeriums genannten angemessenen Frist und nach deren Vorgaben die nachstehend aufge…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist eine höchstens 6 Monate alte Bescheinigung der zuständigen Sozialschutzstelle über die Abgabe der Sozialerklärungen und die Zahlung der Sozialversicherungsbeiträge vorzuleg…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist eine von der zuständigen Steuerverwaltung ausgestellte Bescheinigung über die Abgabe der Steuererklärungen und die entsprechenden Zahlungen für Einkommensteuer, Körperschaf…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die von INSEE vergebene eindeutige Identifikationsnummer SIREN ist vorzulegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist eine Namensliste der beschäftigten ausländischen Arbeitnehmer mit Arbeitserlaubnispflicht vorzulegen; für jeden Arbeitnehmer sind Einstellungsdatum, Staatsangehörigkeit sow…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einem außerhalb Frankreichs ansässigen vorgesehenen Auftragnehmer, der entsandte Arbeitnehmer einsetzt, ist die Empfangsbestätigung der über den Online-Dienst „SIPSI“ abgegebe…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einem außerhalb Frankreichs ansässigen vorgesehenen Auftragnehmer, der entsandte Arbeitnehmer einsetzt, ist eine Eigenerklärung vorzulegen, dass der Vertragspartner gegebenenf…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Jeder Arbeitgeber mit mindestens 50 Beschäftigten muss das Protokoll der letzten Sitzung des Sozial- und Wirtschaftsausschusses vorlegen, die der Prüfung des Berichts und des Prog…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Im Fall eines gerichtlichen Sanierungsverfahrens sind Kopien des oder der ergangenen Urteile vorzulegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist eine gültige Versicherungsbescheinigung vorzulegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Es ist ein Original-Bankverbindungsnachweis (RIB) vorzulegen, dessen Kontoinhaberbezeichnung mit derjenigen in der Verpflichtungserklärung übereinstimmt.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die Verpflichtungserklärung muss vollständig ausgefüllt und unterzeichnet vorgelegt werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Wenn der vorgesehene Auftragnehmer eine von einem Bevollmächtigten vertretene Bietergemeinschaft ist, ist eine unterzeichnete Vollmacht vorzulegen, welche die Befugnis des Bevollm…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Gegebenenfalls ist die Unterauftragnehmererklärung vollständig ausgefüllt, datiert und unterzeichnet vorzulegen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Gegebenenfalls ist der DSGVO-Anhang vorzulegen, in dem Artikel 3.6 a) mit den Bewertungsangaben zum Land der Datenübermittlung ausgefüllt ist.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Unterzeichnungspflichtige Unterlagen müssen datiert und von einer Person unterzeichnet werden, die das Unternehmen rechtswirksam verpflichten darf. Andernfalls ist dem Angebot ein…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Diese Unterlagen müssen elektronisch über die staatliche Beschaffungsplattform PLACE unter „www.marches-publics.gouv.fr“ eingereicht werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die elektronische Signatur muss auf einem qualifizierten Zertifikat beruhen, das der eIDAS-Verordnung (EU) Nr. 910/2014 vom 23. Juli 2014 entspricht.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zulässig ist eine fortgeschrittene elektronische Signatur mit qualifiziertem Zertifikat (Niveau 3).",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Zulässig ist eine qualifizierte elektronische Signatur (Niveau 4).",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Das Signaturzertifikat der unterzeichnenden Person muss mindestens das empfohlene Sicherheitsniveau erfüllen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei Einreichung eines signierten Dokuments muss die unterzeichnende Person kostenlos die Bedienungsanleitung und alle zur Prüfung der Gültigkeit der elektronischen Signatur erford…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Unabhängig vom verwendeten Werkzeug darf dieses das signierte Dokument weder verändern noch dessen Integrität beeinträchtigen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Für die Signatur sind die Formate XAdES, CAdES oder PAdES gemäß den Artikeln 1 und 2 des Durchführungsbeschlusses (EU) Nr. 2015/1506 der Kommission vom 8. September 2015 zu verwen…",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer komprimierten Datei muss jedes Dokument, für das eine Signatur erforderlich ist, unabhängig vom Format separat signiert werden.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Eine eingescannte handschriftliche Unterschrift gilt nicht als Original und kann die elektronische Signatur nicht ersetzen.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Die unterzeichnende Person muss befugt sein, das Unternehmen rechtsverbindlich zu verpflichten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Ist die unterzeichnende Person ein Einzelbewerber, muss die Person unterzeichnen, die befugt ist, das Unternehmen rechtsverbindlich zu verpflichten.",
+      "required": null,
+      "actual": null
+    },
+    {
+      "severity": "open_item",
+      "summary": "Bei einer Bietergemeinschaft müssen entweder alle Mitglieder unterzeichnen oder der Bevollmächtigte muss die erforderlichen Vollmachten zur Vertretung der anderen Mitglieder nachw…",
+      "required": null,
+      "actual": null
+    }
+  ]
+}

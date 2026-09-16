@@ -96,6 +96,14 @@ async def _main(argv: Sequence[str] | None = None) -> int:
         f"{run.calls} calls, ${run.cost_usd:.4f}, {run.elapsed_seconds:.0f}s"
     )
     print("  rows: " + (", ".join(f"{k}={v}" for k, v in sorted(statuses.items())) or "none"))
+    resolved = [r for r in run.matrix_rows if r.ecertis_evidence is not None]
+    found = [r for r in resolved if r.ecertis_evidence and r.ecertis_evidence.found]
+    print(f"  eCertis: {len(resolved)} row(s) carried a criterion id, {len(found)} resolved")
+    for row in found[:3]:
+        evidence = row.ecertis_evidence
+        assert evidence is not None
+        names = "; ".join(evidence.evidence_names[:2]) or "(no evidence named)"
+        print(f"    {evidence.criterion_name[:60]} -> [{evidence.country}] {names[:90]}")
     if not run.verdicts:
         print("  no verdict was scored", file=sys.stderr)
         return 1
@@ -131,6 +139,23 @@ async def _main(argv: Sequence[str] | None = None) -> int:
                     "decision": verdict.decision.value,
                     "mandatory_supported": verdict.mandatory_supported,
                     "mandatory_total": verdict.mandatory_total,
+                    # The cross-border wedge, and the only place a run records it: a row
+                    # whose requirement carried a DUME criterion id gets the national evidence
+                    # its own country accepts for that criterion. A run with none either had
+                    # no published DUME or never reached the lookup, and the two look alike
+                    # from the verdict alone.
+                    "ecertis": [
+                        {
+                            "criterion_id": row.ecertis_evidence.criterion_id,
+                            "criterion_name": row.ecertis_evidence.criterion_name,
+                            "country": row.ecertis_evidence.country,
+                            "found": row.ecertis_evidence.found,
+                            "evidence_names": list(row.ecertis_evidence.evidence_names),
+                            "issuers": list(row.ecertis_evidence.issuers),
+                        }
+                        for row in run.matrix_rows
+                        if row.ecertis_evidence is not None
+                    ],
                     "gaps": [
                         {
                             "severity": gap.severity.value,
