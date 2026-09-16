@@ -307,18 +307,38 @@ class EmbeddedChunk(BaseModel):
     embedding: tuple[float, ...]
 
 
+class Embedder(Protocol):
+    """`EmbeddingsClient` by shape: the one thing a caller needs to turn text into vectors.
+
+    Declared here, beside the client it describes, because `embed_chunks` is typed on it and
+    both real callers hold a seam rather than the concrete class. It used to be declared twice
+    — once in `ingestion/pipeline.py` and once in `ingestion/tender_index.py`, the second
+    saying "exactly as `ingestion/pipeline.py` declares it", which is a comment doing a type
+    system's job (D6).
+    """
+
+    async def embed_texts(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]: ...
+
+
 async def embed_chunks(
-    client: EmbeddingsClient, chunks: Sequence[Chunk]
+    embedder: Embedder, chunks: Sequence[Chunk]
 ) -> tuple[EmbeddedChunk, ...]:
     """The bridge from `chunker` to the store: chunks in, chunk-vector pairs out.
 
     `strict=True` is the assertion, not a decoration — if the client ever returned a
     different number of vectors than there were chunks, silently pairing the shorter of
     the two is the bug this whole module is arranged to prevent.
+
+    **Typed on `Embedder`, not on `EmbeddingsClient`** (D6). It called itself "the bridge"
+    while having no production caller at all: the two real bridges, `pipeline._embed` and
+    `tender_index._embed`, each reimplemented these three lines because a seam declared as a
+    protocol could not call a function typed on the concrete class. Both said so in their
+    docstrings. One character of variance in a `zip(..., strict=True)` copied three times is
+    the kind of thing that stays correct until it does not.
     """
     if not chunks:
         return ()
-    vectors = await client.embed_texts([chunk.text for chunk in chunks])
+    vectors = await embedder.embed_texts([chunk.text for chunk in chunks])
     return tuple(
         EmbeddedChunk(chunk=chunk, embedding=vector)
         for chunk, vector in zip(chunks, vectors, strict=True)

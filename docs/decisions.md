@@ -5840,3 +5840,59 @@ it cannot be reached that way: `EspdCriterion.id` is a Literal over the 56 canon
 and the German overlay carries all 56. It exists because those are two separately cached
 files, and a refreshed `criteria.json` that adds a criterion before the overlay is rebuilt is
 exactly the drift it catches.
+
+## ADR-0083 — Five docstrings that described callers who were not there
+
+**Date:** 2026-09-16 · **Stories:** S2.2.1, S3.1.1, S4.6.2 · **Status:** accepted
+
+Audit finding D6. Each is small, and each was a place where the code said something untrue
+about itself — which is the class of defect this whole audit exists to find, so *fix* was the
+right answer rather than *soften the sentence*.
+
+**`embed_chunks` called itself "the bridge from `chunker` to the store" and had no production
+caller.** Both real bridges, `pipeline._embed` and `tender_index._embed`, reimplemented its
+three lines, and both said so in their own docstrings: it was typed on the concrete
+`EmbeddingsClient` and they hold a seam declared as a protocol. On top of that the protocol
+itself existed twice, the second copy commented *"exactly as `ingestion/pipeline.py` declares
+it"* — a comment doing a type system's job.
+
+`Embedder` now lives in `embeddings.py` beside the client it describes, `embed_chunks` is
+typed on it, `pipeline.ClosingEmbedder` extends it with `aclose`, and both bridges call the
+bridge. Three copies of a `zip(..., strict=True)` became one. That assertion is the thing this
+module is arranged to protect — a vector count differing from the chunk count must raise
+rather than silently pair the shorter of the two and give every later chunk somebody else's
+meaning — and it was the thing being copied.
+
+**`ReviewUpdate` and `LifecycleUpdate` described nodes annotated with something else.**
+`_request_review` returns exactly `{"review": …}` and was annotated `BidUpdate`; it is now
+annotated with the shape it returns. The stage wrapper really does merge `status` into every
+node's update — `state.py` is right about that — but it did so through a bare literal while
+the type describing the merge was imported nowhere. It now writes through `LifecycleUpdate`,
+so the declared shape constrains the merge instead of narrating it.
+
+**`APP_SETTINGS_ROW_ID` was read by nobody**, while claiming to exist so that "the two
+statements below and the error messages that quote it cannot disagree about which row they
+mean" — and both statements hard-code `1`, as they must: psycopg types `execute` on
+`LiteralString`, so a constant cannot be interpolated into one. Deleted. The table's check
+constraint admits one id and `where id = 1` says so without help.
+
+**`runner.running` has no production reader**, and the module docstring listed it beside
+`shutdown()` as one of the registry's reasons to exist. The registry's reason is `shutdown()`;
+`running` is how the suite asserts what is in flight. The docstring now says that.
+
+**One of the neighbouring finding's two claims was wrong** (L20). `account-block.tsx` cites
+`ui_kits/app/Shell.jsx` for "a 32 px stone-200 circle of initials, a 14 px medium line, a
+12 px muted line under it", and the audit called that a citation to a file containing no
+account block. It is there, at the foot of `Shell.jsx`'s sidebar, and every number matches.
+The citation was left alone. `nav-item.tsx`'s was genuinely wrong and is corrected: the icon
+tile is a **blue-500 glyph on blue-100** in the kit and in the code, not an "ink glyph on
+stone-100".
+
+**M16 is deliberately still open, and `HANDOVER.md` says why.** Retrieval has no relevance
+threshold, and the number cannot be guessed: a *correct* cross-language hit sits at cosine
+distance 0.603, so a threshold below that breaks the cross-border wedge invisibly — the row
+simply returns `unsupported`. Setting one also changes what `REPORT.md`'s retrieval metrics
+describe. The handover carries the four steps, starting with the measurement nobody has taken:
+record the distances the retrieval eval already retrieves, and read where relevant and
+irrelevant separate. If they do not separate, that is the answer too, and it belongs in a
+record rather than in a constant.

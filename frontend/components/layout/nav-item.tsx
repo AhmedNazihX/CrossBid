@@ -16,8 +16,8 @@ interface NavItemLinkProps {
 
 /**
  * NavItem — `components/app/NavItem.jsx`: a 44 px row with a 32 px icon tile (10 px radius,
- * ink glyph on stone-100; the solid tone is the orange tile with a white glyph), a 15 px
- * medium label and an optional trailing chevron. The current entry sits on a white card with
+ * a blue-500 glyph on blue-100; the solid tone is the orange tile with a white glyph), a
+ * 15 px medium label and an optional trailing chevron. The current entry sits on a white card with
  * a 1 px border and `--shadow-[var(--shadow-active-nav)]`; hover is `--surface-hover`.
  *
  * `aria-current="page"` is what a screen reader announces; the white card is the sighted

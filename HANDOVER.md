@@ -109,6 +109,38 @@ three — the structured path has no model in it.
   happened to this document.
 - Nothing is committed. The working tree carries the whole increment.
 
+### One audit finding is blocked on a measurement, not on work (M16)
+
+**Retrieval has no relevance threshold**, so "nothing found" is nearly unreachable: the vector
+queries order by distance and limit, with no distance predicate anywhere, and a hit list is
+empty only when the corpus is. The "retrieving nothing is an answer" guard argued at length in
+`ingestion/embeddings.py` and in its decision record therefore protects almost nothing —
+asking the chat agent "hello" retrieves five irrelevant passages and the model is asked for
+prose anyway.
+
+**It is deliberately still open, because the number cannot be guessed.** The one datapoint the
+repository holds is that a *correct* cross-language hit — a French query returning the German
+`Zertifikat_ISO_IEC_27001_2022.pdf` — sits at cosine distance **0.603** (CLAUDE.md, measured
+2026-09-14). A threshold set below that silently breaks the cross-border retrieval the whole
+wedge rests on, and it would do it invisibly: the row would simply come back `unsupported`.
+Setting one also changes what `evaluations/REPORT.md`'s four retrieval metrics describe, so
+the committed figures would stop being about the shipped configuration until all three
+languages were re-run.
+
+**What to do when a database and an un-capped key are available**, in order:
+
+1. Record the distances. `scripts/run_retrieval_eval.py` already retrieves the passages it
+   scores; have it write each hit's distance beside the passage. That is the missing
+   measurement and it costs one run of something that has to be run anyway.
+2. Read the distribution: the distances of hits the answer key calls relevant, against those
+   of hits it does not. The threshold is where those two separate, if they separate.
+3. Only then add `max_search_distance` to `settings.default.yaml` and the `<=>` predicate to
+   `COMPANY_SEARCH_SQL` and `TENDER_SEARCH_SQL`, and make `found` mean "above the threshold".
+4. Re-run DE, FR and EN so `REPORT.md` describes what ships.
+
+If the distributions overlap, that is the answer too, and it belongs in a decision record
+rather than in a constant.
+
 ### Traps this session hit, so they do not cost time again
 
 - **An exported `OPENROUTER_API_KEY` beats `.env`.** pydantic-settings ranks environment

@@ -7,10 +7,11 @@ second process would only queue on the same lock. Three properties are what the 
 for and what this module exists to hold.
 
 **1. No task is fire-and-forget.** Every run is held in `BidRunner`'s registry until it
-finishes, so `shutdown()` can cancel what is in flight and wait for it, and so `running`
-can say which bids are being worked on. A bare `create_task` whose reference is dropped can
-be garbage-collected mid-run and its exception lost with it; that is the failure mode the
-registry prevents.
+finishes, so `shutdown()` can cancel what is in flight and wait for it. A bare `create_task`
+whose reference is dropped can be garbage-collected mid-run and its exception lost with it;
+that is the failure mode the registry prevents. `running` reads the same registry, and
+nothing in production calls it — it is how the suite asserts what is in flight, and saying
+so beats listing it as a second reason the registry exists (D6).
 
 **2. A crash is recorded where the bidder will look.** An exception out of the graph is
 logged with its traceback and written to the read model as `failed` with a

@@ -74,8 +74,10 @@ from crossbid.ingestion.embeddings import (
     ChunkVectorStore,
     ConnectionSource,
     EmbeddedChunk,
+    Embedder,
     EmbeddingsClient,
     EmbeddingsError,
+    embed_chunks,
 )
 from crossbid.ingestion.espd import EspdParseError, EspdRequest, parse_espd_request
 from crossbid.ingestion.guarding import partition_by_guard, review_flagged
@@ -165,11 +167,12 @@ class Chunking(Protocol):
     def chunk(self, document: ParsedDocument) -> tuple[Chunk, ...]: ...
 
 
-class Embedder(Protocol):
-    """`ingestion.embeddings.EmbeddingsClient`, by shape. `aclose` because the client owns an
-    HTTP connection pool and the pipeline is the last to use it in a background task."""
+class ClosingEmbedder(Embedder, Protocol):
+    """`Embedder` plus `aclose`: the client owns an HTTP connection pool and the pipeline is
+    the last to use it in a background task.
 
-    async def embed_texts(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]: ...
+    Extends the protocol `embeddings.py` declares rather than restating it, so
+    `embed_chunks` can be called with one (D6) and the two halves cannot drift."""
 
     async def aclose(self) -> None: ...
 
@@ -242,7 +245,7 @@ class DocumentPipeline:
         store: DocumentStore,
         parser: Parser,
         chunker: Chunking,
-        embedder: Embedder,
+        embedder: ClosingEmbedder,
         chunk_writer: ChunkWriter,
         records: DocumentRecords,
         confirm: InjectionConfirmer,
@@ -449,19 +452,10 @@ class DocumentPipeline:
         await self._chunk_writer.insert_company_chunks(
             company_id=record.company_id,
             document_id=record.id,
-            chunks=await self._embed(kept),
+            chunks=await embed_chunks(self._embedder, kept),
         )
         return await self._records.mark_embedded(
             company_id=record.company_id, document_id=record.id
-        )
-
-    async def _embed(self, chunks: Sequence[Chunk]) -> tuple[EmbeddedChunk, ...]:
-        """`strict=True` is the assertion: a vector count that differs from the chunk count
-        must fail here, not pair the shorter of the two (see `embeddings.embed_chunks`)."""
-        vectors = await self._embedder.embed_texts([chunk.text for chunk in chunks])
-        return tuple(
-            EmbeddedChunk(chunk=chunk, embedding=vector)
-            for chunk, vector in zip(chunks, vectors, strict=True)
         )
 
 

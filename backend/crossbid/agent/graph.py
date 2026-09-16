@@ -76,7 +76,12 @@ from crossbid.agent.nodes.extract_reqs import build_extract_reqs
 from crossbid.agent.nodes.parse_docs import build_parse_docs
 from crossbid.agent.nodes.review import build_apply_review, finalize
 from crossbid.agent.nodes.score_verdict import build_score_verdict
-from crossbid.agent.state import BidState, ExtractionProblem
+from crossbid.agent.state import (
+    BidState,
+    ExtractionProblem,
+    LifecycleUpdate,
+    ReviewUpdate,
+)
 from crossbid.db import Database
 from crossbid.models.matrix import MatrixRow
 from crossbid.models.requirement import Requirement
@@ -309,7 +314,11 @@ def stage(
             raise  # `interrupt()` and friends: LangGraph's control flow, not a failure.
         except Exception as exc:
             raise StageError(status, exc) from exc
-        return {**update, "status": status}
+        # Through `LifecycleUpdate` rather than a bare literal: the type says "the one key
+        # this wrapper adds to every node's update", and until D6 nothing imported it, so it
+        # described the merge without constraining it.
+        lifecycle: LifecycleUpdate = {"status": status}
+        return {**update, **lifecycle}
 
     run.__name__ = f"{status.value}_stage"
     return run
@@ -396,7 +405,7 @@ async def _project_review(
 async def _request_review(
     state: BidState,
     config: Optional[RunnableConfig] = None,  # noqa: UP045
-) -> BidUpdate:
+) -> ReviewUpdate:
     """The interrupt node's body. Parks the run; returns only once a human resumes it.
 
     `interrupt()` returns whatever `Command(resume=...)` carried, so the reviewer's

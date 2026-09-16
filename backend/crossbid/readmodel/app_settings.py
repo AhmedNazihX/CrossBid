@@ -46,10 +46,6 @@ from psycopg.types.json import Jsonb
 from crossbid.readmodel.bids import ConnectionSource
 from crossbid.settings import AppSettingsRow
 
-APP_SETTINGS_ROW_ID: Final = 1
-"""The one id the table's check constraint admits. Named so the two statements below and the
-error messages that quote it cannot disagree about which row they mean."""
-
 # ------------------------------------------------------------------------- statements
 
 SELECT_APP_SETTINGS: Final[LiteralString] = """

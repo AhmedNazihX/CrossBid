@@ -45,7 +45,7 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from crossbid.ingestion.chunker import Chunk
-from crossbid.ingestion.embeddings import EmbeddedChunk
+from crossbid.ingestion.embeddings import EmbeddedChunk, Embedder, embed_chunks
 from crossbid.ingestion.guarding import partition_by_guard, review_flagged
 from crossbid.ingestion.injection_review import InjectionConfirmer
 from crossbid.ingestion.parser import ParsedDocument
@@ -71,12 +71,6 @@ class TenderChunkWriter(Protocol):
         document_id: uuid.UUID,
         chunks: Sequence[EmbeddedChunk],
     ) -> int: ...
-
-
-class Embedder(Protocol):
-    """`EmbeddingsClient` by shape, exactly as `ingestion/pipeline.py` declares it."""
-
-    async def embed_texts(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]: ...
 
 
 class TenderIndexer(Protocol):
@@ -127,7 +121,7 @@ class ChunkingTenderIndexer:
             company_id=company_id,
             bid_id=bid_id,
             document_id=document_id,
-            chunks=await self._embed(kept),
+            chunks=await embed_chunks(self._embedder, kept),
         )
         logger.info(
             "bid %s document %s indexed: %d passage(s) retrievable, %d withheld",
@@ -137,18 +131,3 @@ class ChunkingTenderIndexer:
             len(withheld),
         )
         return written
-
-    async def _embed(self, chunks: Sequence[Chunk]) -> tuple[EmbeddedChunk, ...]:
-        """Chunks paired with their vectors, or a failure rather than a short pairing.
-
-        The same three lines as `pipeline._embed`, and duplicated for the same reason it is:
-        `embeddings.embed_chunks` is typed on the concrete `EmbeddingsClient`, so a seam
-        declared as a protocol cannot call it. `strict=True` is the assertion — a vector
-        count that differs from the chunk count must raise here rather than silently pair
-        the shorter of the two and give every later chunk somebody else's meaning.
-        """
-        vectors = await self._embedder.embed_texts([chunk.text for chunk in chunks])
-        return tuple(
-            EmbeddedChunk(chunk=chunk, embedding=vector)
-            for chunk, vector in zip(chunks, vectors, strict=True)
-        )
