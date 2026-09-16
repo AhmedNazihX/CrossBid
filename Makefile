@@ -16,6 +16,7 @@ COMPOSE  := docker compose --env-file .env -f infra/docker-compose.yml
 
 .PHONY: help dev dev-api dev-web up down logs install test test-live lint lint-backend \
         lint-frontend format deps deps-check migrate seed-dev seed-demo demo-pack adversarial-pack eval \
+        eval-db eval-db-stop eval-index eval-retrieval \
         build clean require-env
 
 help: ## Show this help
@@ -107,10 +108,35 @@ demo-pack: ## Rebuild the synthetic demo-company document pack (S6.3)
 adversarial-pack: ## Rebuild the adversarial fixtures the injection guard is tested against (S6.5)
 	cd $(BACKEND) && uv run python scripts/build_adversarial_pack.py
 
-eval: ## Run the evaluation suite and write evaluations/REPORT.md
-	@test -f $(BACKEND)/scripts/run_eval.py \
-	  || { echo "Not built yet: the evaluation suite lands with story S7.1."; exit 1; }
+eval: ## Assemble backend/evaluations/REPORT.md from the saved measurements. Offline, free
 	cd $(BACKEND) && uv run python scripts/run_eval.py
+
+EVAL_DB_NAME ?= crossbid-eval-db
+EVAL_DB_PORT ?= 55432
+EVAL_DB_URL  ?= postgresql://crossbid:crossbid@localhost:$(EVAL_DB_PORT)/crossbid_eval
+
+eval-db: ## Start a throwaway pgvector for the retrieval eval and apply the migrations
+	@docker rm -f $(EVAL_DB_NAME) >/dev/null 2>&1 || true
+	docker run -d --name $(EVAL_DB_NAME) \
+	  -e POSTGRES_USER=crossbid -e POSTGRES_PASSWORD=crossbid -e POSTGRES_DB=crossbid_eval \
+	  -p $(EVAL_DB_PORT):5432 pgvector/pgvector:pg16 >/dev/null
+	@printf 'waiting for postgres'; \
+	  for i in $$(seq 1 60); do \
+	    docker exec $(EVAL_DB_NAME) pg_isready -U crossbid -d crossbid_eval >/dev/null 2>&1 \
+	      && { echo ' ready'; break; }; \
+	    printf '.'; sleep 1; \
+	  done
+	cd $(BACKEND) && DATABASE_URL=$(EVAL_DB_URL) uv run python scripts/migrate.py
+
+eval-db-stop: ## Remove the throwaway eval database
+	docker rm -f $(EVAL_DB_NAME)
+
+eval-index: ## Index the three golden packs into the throwaway (costs ~1 cent of embeddings)
+	cd $(BACKEND) && DATABASE_URL=$(EVAL_DB_URL) uv run python scripts/index_pack.py de fr en
+
+eval-retrieval: ## Ask the retrieval key and score it with ragas (costs money)
+	cd $(BACKEND) && DATABASE_URL=$(EVAL_DB_URL) uv run python scripts/run_retrieval_eval.py de fr en
+	cd $(BACKEND) && uv run python scripts/score_retrieval.py de fr en
 
 # ---------------------------------------------------------------- build
 
