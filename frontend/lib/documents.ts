@@ -180,6 +180,18 @@ export function validateUploadFile(
   return undefined
 }
 
+/**
+ * Whether a document can be deleted at all (ADR-0088).
+ *
+ * The one definition. The rule is the API's — it answers 409 for a document a bid has
+ * claimed, because that run's requirements cite its pages — and the screen mirrors it so a
+ * bidder is never offered a control whose only outcome is a refusal. It lived in three places
+ * for about an hour, and a mutation test proved that two of them were never exercised.
+ */
+export function isDeletable(document: DocumentResponse): boolean {
+  return document.bid_id === null
+}
+
 /** Every document of the company, newest first. */
 export async function listDocuments(
   signal?: AbortSignal
@@ -219,6 +231,21 @@ export function getDocumentUrl(
   signal?: AbortSignal
 ): Promise<DocumentUrlResponse> {
   return apiRequest('get', '/documents/{document_id}/url', {
+    path: { document_id: documentId },
+    signal,
+  })
+}
+
+/**
+ * Deletes a document and the file behind it. Resolves on the API's 204.
+ *
+ * Throws `ApiError` with `status === 409` when a bid has already claimed the document:
+ * its pages are cited by that run's requirements, so the server keeps it and says why.
+ * A 404 means the id is unknown or belongs to another company — the same answer either
+ * way, by design.
+ */
+export function deleteDocument(documentId: string, signal?: AbortSignal): Promise<void> {
+  return apiRequest('delete', '/documents/{document_id}', {
     path: { document_id: documentId },
     signal,
   })

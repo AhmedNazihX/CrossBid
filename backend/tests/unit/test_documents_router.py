@@ -43,10 +43,12 @@ from crossbid.main import create_app
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentsReadModel, DocumentStatus, ReadModelError
 from crossbid.routers.documents import (
+    DOCUMENT_IN_USE_DETAIL,
     EMPTY_FILE_DETAIL,
     MAX_UPLOAD_BYTES,
     NO_FILENAME_DETAIL,
     NO_SUCH_DOCUMENT_DETAIL,
+    NOT_DELETED_DETAIL,
     NOT_ESPD_CONTENT_DETAIL,
     NOT_PDF_CONTENT_DETAIL,
     NOT_PDF_SUFFIX_DETAIL,
@@ -809,3 +811,147 @@ def test_a_client_that_declares_a_plausible_xml_type_is_accepted(
 ) -> None:
     """The root element decides, the same way the magic bytes decide for a PDF."""
     assert post_espd(api, content_type=content_type).status_code == 202
+
+
+# ------------------------------------------------------------------- deleting a document
+
+
+class FakeDeletingStore:
+    """`CompanyDocumentStore.remove` by shape: records the call, answers or raises."""
+
+    def __init__(self, *, error: Exception | None = None) -> None:
+        self.error = error
+        self.removed: list[dict[str, str]] = []
+
+    def remove(self, *, company_id: str, key: str) -> None:
+        self.removed.append({"company_id": company_id, "key": key})
+        if self.error is not None:
+            raise self.error
+
+
+@pytest.fixture
+def deleting() -> FakeDeletingStore:
+    return FakeDeletingStore()
+
+
+@pytest.fixture
+def delete_api(
+    offline_settings: Settings, pipeline: Harness, deleting: FakeDeletingStore
+) -> Iterator[TestClient]:
+    """The router with a fake store that records removals beside the fake pipeline."""
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+        get_document_store: lambda: deleting,
+    }
+    with TestClient(build_app(offline_settings, overrides)) as client:
+        yield client
+
+
+def attach_to_a_bid(pipeline: Harness, document_id: str) -> None:
+    """Put the row where `POST /bids` puts it: claimed by a run, so its pages are cited."""
+    key = uuid.UUID(document_id)
+    pipeline.records.rows[key] = pipeline.records.rows[key].model_copy(
+        update={"bid_id": uuid.uuid4()}
+    )
+
+
+def test_deleting_a_document_no_bid_has_claimed_removes_the_row_and_the_file(
+    delete_api: TestClient, pipeline: Harness, deleting: FakeDeletingStore
+) -> None:
+    # Arrange
+    document_id = post_pdf(delete_api).json()["id"]
+    record = pipeline.records.rows[uuid.UUID(document_id)]
+
+    # Act
+    response = delete_api.delete(f"/documents/{document_id}", headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 204
+    assert response.content == b""
+    assert uuid.UUID(document_id) not in pipeline.records.rows
+    assert deleting.removed == [{"company_id": COMPANY, "key": record.storage_path}]
+    assert delete_api.get(f"/documents/{document_id}", headers=AS_COMPANY).status_code == 404
+
+
+def test_deleting_a_document_a_bid_has_claimed_is_refused_and_keeps_it(
+    delete_api: TestClient, pipeline: Harness, deleting: FakeDeletingStore
+) -> None:
+    # Arrange
+    document_id = post_pdf(delete_api).json()["id"]
+    attach_to_a_bid(pipeline, document_id)
+
+    # Act
+    response = delete_api.delete(f"/documents/{document_id}", headers=AS_COMPANY)
+
+    # Assert
+    assert response.status_code == 409
+    assert response.json() == {"detail": DOCUMENT_IN_USE_DETAIL}
+    assert uuid.UUID(document_id) in pipeline.records.rows
+    assert deleting.removed == []
+
+
+def test_another_company_deleting_the_id_gets_404_and_the_row_survives(
+    delete_api: TestClient, pipeline: Harness, deleting: FakeDeletingStore
+) -> None:
+    # Arrange
+    document_id = post_pdf(delete_api).json()["id"]
+
+    # Act
+    response = delete_api.delete(f"/documents/{document_id}", headers=AS_OTHER_COMPANY)
+
+    # Assert
+    assert response.status_code == 404
+    assert response.json() == {"detail": NO_SUCH_DOCUMENT_DETAIL}
+    assert uuid.UUID(document_id) in pipeline.records.rows
+    assert deleting.removed == []
+
+
+def test_deleting_an_unknown_id_is_the_same_404(delete_api: TestClient) -> None:
+    response = delete_api.delete(f"/documents/{uuid.uuid4()}", headers=AS_COMPANY)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": NO_SUCH_DOCUMENT_DETAIL}
+
+
+def test_a_file_storage_has_already_lost_still_deletes_the_row(
+    offline_settings: Settings, pipeline: Harness
+) -> None:
+    # Arrange -- the blob is gone; the row must not be stranded because of it.
+    gone = FakeDeletingStore(error=ObjectNotFoundError("no such object"))
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+        get_document_store: lambda: gone,
+    }
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        document_id = post_pdf(api).json()["id"]
+
+        # Act
+        response = api.delete(f"/documents/{document_id}", headers=AS_COMPANY)
+
+        # Assert
+        assert response.status_code == 204
+        assert uuid.UUID(document_id) not in pipeline.records.rows
+
+
+def test_a_storage_failure_leaves_the_row_in_place_rather_than_stranding_the_file(
+    offline_settings: Settings, pipeline: Harness
+) -> None:
+    # Arrange
+    broken = FakeDeletingStore(error=StorageError("storage is down"))
+    overrides: Overrides = {
+        get_pipeline: lambda: pipeline.pipeline,
+        get_document_records: lambda: pipeline.records,
+        get_document_store: lambda: broken,
+    }
+    with TestClient(build_app(offline_settings, overrides)) as api:
+        document_id = post_pdf(api).json()["id"]
+
+        # Act
+        response = api.delete(f"/documents/{document_id}", headers=AS_COMPANY)
+
+        # Assert
+        assert response.status_code == 502
+        assert response.json() == {"detail": NOT_DELETED_DETAIL}
+        assert uuid.UUID(document_id) in pipeline.records.rows

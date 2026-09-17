@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Tag } from '@/components/ui/tag'
 import { Td, Tr } from '@/components/ui/data-table'
 import { describeApiError } from '@/lib/api-client'
 import {
   getDocument,
   hasPages,
+  isDeletable,
   isDocumentSettled,
   type DocumentResponse,
 } from '@/lib/documents'
@@ -23,6 +26,10 @@ export interface DocumentRowProps {
   readonly document: DocumentResponse
   /** Called with each new state the poll returns, and the state it replaced. */
   readonly onChange: (next: DocumentResponse, previous: DocumentResponse) => void
+  /** Whether this row is ticked for deletion. */
+  readonly isSelected: boolean
+  /** Ticking or unticking the row; a document a bid has claimed cannot be ticked at all. */
+  readonly onSelectedChange: (document: DocumentResponse, isSelected: boolean) => void
 }
 
 /**
@@ -34,7 +41,12 @@ export interface DocumentRowProps {
  * twenty ready documents and one fresh upload makes exactly one request every two seconds.
  * The parent hears about every change so the list and the live region stay truthful.
  */
-export function DocumentRow({ document, onChange }: DocumentRowProps) {
+export function DocumentRow({
+  document,
+  onChange,
+  isSelected,
+  onSelectedChange,
+}: DocumentRowProps) {
   const fetchLatest = useCallback(
     (signal: AbortSignal) => getDocument(document.id, signal),
     [document.id]
@@ -61,11 +73,24 @@ export function DocumentRow({ document, onChange }: DocumentRowProps) {
 
   return (
     <Tr>
+      <Td className="w-px pr-0">
+        <SelectDocument
+          document={value}
+          isSelected={isSelected}
+          onSelectedChange={onSelectedChange}
+        />
+      </Td>
       <th
         scope="row"
         className="min-w-[220px] max-w-[20rem] px-5 py-3.5 text-left align-middle font-medium [overflow-wrap:anywhere]"
       >
-        {value.name}
+        <span className="block">{value.name}</span>
+        {!isDeletable(value) && (
+          <Tag className="mt-1.5" title={IN_A_BID_EXPLANATION}>
+            In a bid — cannot be deleted
+            <span className="sr-only">. {IN_A_BID_EXPLANATION}</span>
+          </Tag>
+        )}
       </th>
       <Td className="text-text-secondary">{DOCUMENT_KIND_LABELS[value.kind].label}</Td>
       <Td className="max-w-[22rem]">
@@ -154,5 +179,53 @@ function UnreadPages({
       {document.unread_page_count}
       <span className="sr-only"> unread: {pageList}</span>
     </span>
+  )
+}
+
+/**
+ * Why a document a bid has claimed cannot be ticked: the API refuses to delete it with a 409,
+ * because that run's requirements cite its pages. A checkbox that can only lead to a refusal
+ * is worse than no checkbox, so the box is disabled and the row says what is true instead.
+ */
+const IN_A_BID_EXPLANATION =
+  'This document belongs to a bid, and that bid cites its pages. Delete the bid to remove it.'
+
+/**
+ * The row's tick box, and the whole of the row's part in deleting.
+ *
+ * It lives in the FIRST column on purpose. The table scrolls horizontally when the window is
+ * narrower than its content, and the delete control used to be the last column: at 1100 px
+ * it sat 106 px past the right edge, reachable only by scrolling the table sideways with
+ * nothing on screen to say it was there. Leading the row means the control is visible before
+ * anything can be clipped, and the button that acts on the selection sits above the table,
+ * outside the scrolling box entirely.
+ *
+ * The label names the document rather than reading "Select": on a twenty-nine row pack,
+ * twenty-nine controls called "Select" are one control to anyone using a screen reader.
+ */
+function SelectDocument({
+  document,
+  isSelected,
+  onSelectedChange,
+}: {
+  document: DocumentResponse
+  isSelected: boolean
+  onSelectedChange: (document: DocumentResponse, isSelected: boolean) => void
+}) {
+  const isClaimed = !isDeletable(document)
+  return (
+    <Checkbox
+      checked={isSelected}
+      disabled={isClaimed}
+      title={isClaimed ? IN_A_BID_EXPLANATION : undefined}
+      onChange={(event) => onSelectedChange(document, event.target.checked)}
+      label={
+        <span className="sr-only">
+          {isClaimed
+            ? `${document.name} — in a bid, cannot be deleted`
+            : `Select ${document.name}`}
+        </span>
+      }
+    />
   )
 }

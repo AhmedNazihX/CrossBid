@@ -66,6 +66,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.auth import CompanyContext, current_company
@@ -137,6 +138,11 @@ XML_TOO_LARGE_DETAIL: Final = (
 EMPTY_FILE_DETAIL: Final = "The uploaded file is empty."
 TOO_LARGE_DETAIL: Final = f"The file is larger than {MAX_UPLOAD_MEGABYTES} MB."
 NO_SUCH_DOCUMENT_DETAIL: Final = "No such document."
+DOCUMENT_IN_USE_DETAIL: Final = (
+    "This document is part of a bid that has already been started, and the requirements in "
+    "that bid cite its pages. Delete the bid to remove it."
+)
+NOT_DELETED_DETAIL: Final = "The document could not be deleted right now. Try again."
 STORAGE_NOT_CONFIGURED_DETAIL: Final = (
     "Document storage is not configured on this server, so uploads are unavailable."
 )
@@ -357,6 +363,48 @@ async def get_document_url(
         logger.error("document %s could not be signed: %s", document_id, exc)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=URL_NOT_SIGNED_DETAIL) from exc
     return DocumentUrlResponse(url=signed.url, expires_at=signed.expires_at)
+
+
+@router.delete(
+    "/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an uploaded document",
+)
+async def delete_document(
+    document_id: uuid.UUID,
+    company: CompanyContext = Depends(current_company),
+    records: DocumentsReadModel = Depends(get_document_records),
+    store: CompanyDocumentStore = Depends(get_document_store),
+) -> Response:
+    """Remove a document the bidder uploaded, and the file behind it.
+
+    **Only while no bid has claimed it.** A tender's documents belong to the run that cites
+    them, so once `POST /bids` has attached one, deleting it would leave requirements
+    pointing at a page nobody can open; that is a 409 naming the bid, not a silent refusal.
+    Another company's id and an unknown id are the same 404 the rest of this router answers.
+
+    The file goes first and the row second. A file Storage has already lost is not an error
+    -- the row would otherwise be stranded behind a blob that is not there -- but a Storage
+    that *refuses* leaves the row in place, because a document still listed can be deleted
+    again while a file with no row can be reached by nothing.
+    """
+    record = await records.get(company_id=_company_uuid(company), document_id=document_id)
+    if record is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_DOCUMENT_DETAIL)
+    if record.bid_id is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=DOCUMENT_IN_USE_DETAIL)
+    try:
+        # The Storage client is synchronous; keep the request loop free while it deletes.
+        await asyncio.to_thread(
+            store.remove, company_id=company.company_id, key=record.storage_path
+        )
+    except ObjectNotFoundError:
+        logger.info("document %s had no file in Storage; deleting the row anyway", document_id)
+    except StorageError as exc:
+        logger.error("document %s could not be deleted: %s", document_id, exc)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=NOT_DELETED_DETAIL) from exc
+    await records.delete(company_id=_company_uuid(company), document_id=document_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("", response_model=DocumentListResponse, summary="List the company's documents")

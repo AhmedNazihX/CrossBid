@@ -770,6 +770,13 @@ class InMemoryRecords:
         found = self.rows.get(document_id)
         return found if found is not None and found.company_id == company_id else None
 
+    async def delete(self, *, company_id: uuid.UUID, document_id: uuid.UUID) -> bool:
+        found = self.rows.get(document_id)
+        if found is None or found.company_id != company_id or found.bid_id is not None:
+            return False
+        del self.rows[document_id]
+        return True
+
     async def list(self, *, company_id: uuid.UUID) -> tuple[DocumentRecord, ...]:
         own = [record for record in self.rows.values() if record.company_id == company_id]
         return tuple(sorted(own, key=lambda record: record.created_at, reverse=True))

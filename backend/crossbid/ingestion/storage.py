@@ -122,7 +122,7 @@ class SignedUrl:
 
 
 class StorageBucket(Protocol):
-    """The two calls this module makes on a bucket, so the client is injectable.
+    """The three calls this module makes on a bucket, so the client is injectable.
 
     A Protocol rather than the concrete `SyncBucketProxy`: tests pass a fake, and the
     plan's "nothing is Supabase-specific except the JWKS URL and the Storage client" stays
@@ -135,6 +135,8 @@ class StorageBucket(Protocol):
     ) -> object: ...
 
     def create_signed_url(self, path: str, expires_in: int) -> Mapping[str, Any]: ...
+
+    def remove(self, paths: list[str]) -> object: ...
 
 
 class _BucketSource(Protocol):
@@ -241,6 +243,27 @@ class CompanyDocumentStore:
             expires_in=self._ttl_seconds,
             expires_at=self._clock() + timedelta(seconds=self._ttl_seconds),
         )
+
+    def remove(self, *, company_id: str, key: str) -> None:
+        """Delete a key that belongs to `company_id`. Deleting twice is not an error.
+
+        Raises `ObjectNotFoundError` when the key is not one this company could have, so a
+        caller cannot delete across the tenant boundary by guessing a path, and
+        `StorageError` when Storage refuses for any other reason -- the caller keeps the row
+        in that case, because a row without its file is invisible and a file without its row
+        is unreachable, and the second is the cheaper of the two to repair.
+
+        **Storage answers 200 for a key it does not hold**, so "already gone" arrives here as
+        success rather than as the 404 `signed_url` has to translate. That is the behaviour
+        the router relies on to stay idempotent.
+        """
+        own = _own_key(company_id, key)
+        try:
+            self._bucket.remove([own])
+        except StorageException as exc:
+            if isinstance(exc, StorageApiError) and str(exc.status) == str(NOT_FOUND_STATUS):
+                raise ObjectNotFoundError("no such document for this company") from exc
+            raise StorageError("the document could not be deleted") from exc
 
 
 def storage_bucket(

@@ -68,7 +68,21 @@ export interface paths {
         get: operations["get_document_documents__document_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete an uploaded document
+         * @description Remove a document the bidder uploaded, and the file behind it.
+         *
+         *     **Only while no bid has claimed it.** A tender's documents belong to the run that cites
+         *     them, so once `POST /bids` has attached one, deleting it would leave requirements
+         *     pointing at a page nobody can open; that is a 409 naming the bid, not a silent refusal.
+         *     Another company's id and an unknown id are the same 404 the rest of this router answers.
+         *
+         *     The file goes first and the row second. A file Storage has already lost is not an error
+         *     -- the row would otherwise be stranded behind a blob that is not there -- but a Storage
+         *     that *refuses* leaves the row in place, because a document still listed can be deleted
+         *     again while a file with no row can be reached by nothing.
+         */
+        delete: operations["delete_document_documents__document_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -168,6 +182,10 @@ export interface paths {
         /**
          * Poll one bid
          * @description One bid of the calling company with its requirements so far. Another's id is 404.
+         *
+         *     The row read for the 404 is the row the response is assembled from (M13). This route is
+         *     polled every two seconds for the life of a run, and it used to fetch the same bid twice
+         *     on each of those calls — the second read could only ever return what the first did.
          */
         get: operations["get_bid_bids__bid_id__get"];
         put?: never;
@@ -1997,6 +2015,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DocumentResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

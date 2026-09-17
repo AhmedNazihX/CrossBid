@@ -47,13 +47,29 @@ const STILL_READING = documentFixture({
 
 describe('DocumentsTable — withheld passages', () => {
   test('has a column for them', () => {
-    render(<DocumentsTable documents={[READ_IN_FULL]} onDocumentChange={vi.fn()} />)
+    render(
+      <DocumentsTable
+        documents={[READ_IN_FULL]}
+        onDocumentChange={vi.fn()}
+        selectedIds={new Set()}
+        onSelectedChange={vi.fn()}
+        onSelectAll={vi.fn()}
+      />
+    )
 
     expect(screen.getByRole('columnheader', { name: 'Withheld' })).toBeInTheDocument()
   })
 
   test('a ready document with withheld passages says how many, in words not colour', () => {
-    render(<DocumentsTable documents={[THREE_WITHHELD]} onDocumentChange={vi.fn()} />)
+    render(
+      <DocumentsTable
+        documents={[THREE_WITHHELD]}
+        onDocumentChange={vi.fn()}
+        selectedIds={new Set()}
+        onSelectedChange={vi.fn()}
+        onSelectAll={vi.fn()}
+      />
+    )
 
     const row = screen.getByRole('row', { name: /Bewerbungsbedingungen\.pdf/ })
 
@@ -61,14 +77,28 @@ describe('DocumentsTable — withheld passages', () => {
   })
 
   test('one passage is singular', () => {
-    render(<DocumentsTable documents={[ONE_WITHHELD]} onDocumentChange={vi.fn()} />)
+    render(
+      <DocumentsTable
+        documents={[ONE_WITHHELD]}
+        onDocumentChange={vi.fn()}
+        selectedIds={new Set()}
+        onSelectedChange={vi.fn()}
+        onSelectAll={vi.fn()}
+      />
+    )
 
     expect(screen.getByText('1 passage withheld')).toBeInTheDocument()
   })
 
   test('a ready document with none reads 0, and one still being read reads a dash', () => {
     render(
-      <DocumentsTable documents={[READ_IN_FULL, STILL_READING]} onDocumentChange={vi.fn()} />
+      <DocumentsTable
+        documents={[READ_IN_FULL, STILL_READING]}
+        onDocumentChange={vi.fn()}
+        selectedIds={new Set()}
+        onSelectedChange={vi.fn()}
+        onSelectAll={vi.fn()}
+      />
     )
 
     const ready = screen.getByRole('row', { name: /Leistungsbeschreibung\.pdf/ })
@@ -76,13 +106,25 @@ describe('DocumentsTable — withheld passages', () => {
     const readyCells = within(ready).getAllByRole('cell')
     const readingCells = within(reading).getAllByRole('cell')
 
-    // The last cell is the new column; the one before it is Unread pages.
-    expect(readyCells[readyCells.length - 1]).toHaveTextContent(/^0$/)
-    expect(readingCells[readingCells.length - 1]).toHaveTextContent(/^—$/)
+    // Withheld is the sixth cell — the selection box, Type, Status, Pages, Unread pages,
+    // Withheld. (The name is a rowheader, not a cell.) Indexing from the end read the wrong
+    // column twice while the trailing action column came and went, so it is counted from the
+    // front now.
+    const WITHHELD = 5
+    expect(readyCells[WITHHELD]).toHaveTextContent(/^0$/)
+    expect(readingCells[WITHHELD]).toHaveTextContent(/^—$/)
   })
 
   test('the badge explains what withheld means, for a reader as well as a pointer', () => {
-    render(<DocumentsTable documents={[THREE_WITHHELD]} onDocumentChange={vi.fn()} />)
+    render(
+      <DocumentsTable
+        documents={[THREE_WITHHELD]}
+        onDocumentChange={vi.fn()}
+        selectedIds={new Set()}
+        onSelectedChange={vi.fn()}
+        onSelectAll={vi.fn()}
+      />
+    )
 
     const badge = screen.getByText('3 passages withheld')
 

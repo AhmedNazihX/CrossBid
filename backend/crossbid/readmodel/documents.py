@@ -219,6 +219,21 @@ from documents
 where id = %(document_id)s and company_id = %(company_id)s
 """
 
+DELETE_DOCUMENT_SQL: Final[LiteralString] = """
+delete from documents
+where id = %(document_id)s and company_id = %(company_id)s and bid_id is null
+returning id
+"""
+"""Scoped by company *and* by `bid_id is null`, so the statement itself is the guarantee.
+
+The router refuses an attached document with a 409 before it gets here, which is what gives
+the bidder a sentence to act on. This clause is the same rule written where a race cannot get
+around it: a bid started between the router's read and this write finds no row to delete, the
+delete reports nothing deleted, and the file stays with the run that cites it.
+
+`company_chunks` and `tender_chunks` cascade on `documents (id)` (migration 0001), so the
+document's text leaves the corpus with it and no orphaned embedding can be retrieved after."""
+
 MAX_DOCUMENTS_LISTED: Final = 500
 """The most rows one company's document list answers with (M13).
 
@@ -360,6 +375,17 @@ class DocumentsReadModel:
             SELECT_DOCUMENT_SQL, {"document_id": document_id, "company_id": company_id}
         )
         return None if row is None else _record(row)
+
+    async def delete(self, *, company_id: uuid.UUID, document_id: uuid.UUID) -> bool:
+        """Delete one unattached document. `False` when there was nothing to delete.
+
+        `False` covers three cases the caller has already told apart: an unknown id, another
+        company's id, and a document a bid has claimed since the caller looked.
+        """
+        row = await self._fetch_one(
+            DELETE_DOCUMENT_SQL, {"document_id": document_id, "company_id": company_id}
+        )
+        return row is not None
 
     async def list(self, *, company_id: uuid.UUID) -> tuple[DocumentRecord, ...]:
         """One company's documents, newest first, at most `MAX_DOCUMENTS_LISTED`."""

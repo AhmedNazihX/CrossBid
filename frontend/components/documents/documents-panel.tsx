@@ -15,6 +15,7 @@ import {
   type DocumentResponse,
 } from '@/lib/documents'
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from './document-labels'
+import { DeleteSelected } from './delete-selected'
 import { DocumentsTable } from './documents-table'
 import { UploadForm } from './upload-form'
 
@@ -77,6 +78,7 @@ export function DocumentsPanel({
   const [documents, setDocuments] = useState<readonly DocumentResponse[]>([])
   const [loadState, setLoadState] = useState<LoadState>({ phase: 'loading' })
   const [announcement, setAnnouncement] = useState('')
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
 
   useEffect(() => {
     const controller = new AbortController()
@@ -112,6 +114,39 @@ export function DocumentsPanel({
     []
   )
 
+  const handleSelectedChange = useCallback(
+    (document: DocumentResponse, isSelected: boolean) => {
+      setSelectedIds((current) => {
+        const next = new Set(current)
+        if (isSelected) next.add(document.id)
+        else next.delete(document.id)
+        return next
+      })
+    },
+    []
+  )
+
+  // The table decides which documents are selectable and hands them over; storing them is
+  // all this does. Deciding it here as well is what let a broken rule pass its own test.
+  const handleSelectAll = useCallback((documents: readonly DocumentResponse[]) => {
+    setSelectedIds(new Set(documents.map((d) => d.id)))
+  }, [])
+
+  // The API has already answered 204 for each of these before this runs, so the list drops
+  // them rather than re-fetching: a GET here would race the delete's own read-after-write and
+  // could put a row back for one poll. Refusals never reach here — the toolbar reports those
+  // itself, and their rows stay exactly where they are.
+  const handleDeleted = useCallback((deleted: readonly DocumentResponse[]) => {
+    const goneIds = new Set(deleted.map((d) => d.id))
+    setDocuments((current) => current.filter((d) => !goneIds.has(d.id)))
+    setSelectedIds((current) => new Set([...current].filter((id) => !goneIds.has(id))))
+    setAnnouncement(
+      deleted.length === 1
+        ? `${deleted[0].name} deleted.`
+        : `${deleted.length} documents deleted.`
+    )
+  }, [])
+
   // Memoised because the effect below keys on it: a fresh object every render would tell
   // the parent every render, the parent's `setState` would render this panel again, and the
   // two would chase each other for ever.
@@ -143,6 +178,11 @@ export function DocumentsPanel({
         listState={listState}
         emptyState={emptyStateFor(defaultKind)}
         onChange={handleDocumentChange}
+        selectedIds={selectedIds}
+        onSelectedChange={handleSelectedChange}
+        onSelectAll={handleSelectAll}
+        onDeleted={handleDeleted}
+        selected={documents.filter((d) => selectedIds.has(d.id))}
       />
     </div>
   )
@@ -171,10 +211,20 @@ function DocumentsSection({
   listState,
   emptyState,
   onChange,
+  selectedIds,
+  onSelectedChange,
+  onSelectAll,
+  onDeleted,
+  selected,
 }: {
   readonly listState: DocumentListState
   readonly emptyState: EmptyStateProps
   readonly onChange: (next: DocumentResponse, previous: DocumentResponse) => void
+  readonly selectedIds: ReadonlySet<string>
+  readonly onSelectedChange: (document: DocumentResponse, isSelected: boolean) => void
+  readonly onSelectAll: (documents: readonly DocumentResponse[]) => void
+  readonly onDeleted: (deleted: readonly DocumentResponse[]) => void
+  readonly selected: readonly DocumentResponse[]
 }) {
   if (listState.phase === 'failed') {
     return (
@@ -193,7 +243,18 @@ function DocumentsSection({
   if (listState.documents.length === 0) {
     return <EmptyState {...emptyState} />
   }
-  return <DocumentsTable documents={listState.documents} onDocumentChange={onChange} />
+  return (
+    <div className="flex flex-col gap-3">
+      <DeleteSelected selected={selected} onDeleted={onDeleted} />
+      <DocumentsTable
+        documents={listState.documents}
+        onDocumentChange={onChange}
+        selectedIds={selectedIds}
+        onSelectedChange={onSelectedChange}
+        onSelectAll={onSelectAll}
+      />
+    </div>
+  )
 }
 
 /**

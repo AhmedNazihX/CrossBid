@@ -6056,3 +6056,97 @@ board at all; the user asked.
 
 Three tests pin it: the EU default, a US account overriding it, and no key writing no endpoint
 at all — because with nothing to export, naming a host is noise.
+
+## ADR-0088 — A document can be deleted until a bid claims it, and not after
+
+**Date:** 2026-09-17 · **Stories:** S2.2.3, S4.2.2 · **Status:** accepted
+
+A bidder could upload a document and never remove it. Wrong file, superseded certificate, a
+pack uploaded twice — all of it stayed, in the list, in the corpus, and in Storage. The user
+asked for a delete.
+
+**The rule is `bid_id is null`, and the schema already said so.** `DocumentKind`'s own
+docstring has always read "a tender's documents belong to one bid and are deleted with it",
+and `documents.bid_id` is null exactly until `POST /bids` attaches a file to a run. That is
+the line: before a run claims it, a document is the bidder's own upload and deleting it costs
+nothing; after, its pages are cited by that run's requirements, and deleting it would leave a
+matrix row pointing at a page nobody can open. `DELETE /documents/{id}` answers **409** in
+that case, naming the bid, rather than deleting and leaving the citation dangling.
+
+**The rule is written twice on purpose, and the second one is the guarantee.** The router
+reads the row and refuses, which is what gives the bidder a sentence to act on. The statement
+itself then carries `and bid_id is null`, so a bid started in the gap between that read and
+the write finds no row to delete. The router's check is the message; the SQL is the rule.
+
+**Order: the file first, the row second.** A file Storage has already lost is not an error —
+the row would otherwise be stranded behind a blob that is not there — but a Storage that
+*refuses* leaves the row in place and answers 502. Of the two ways to be inconsistent, a
+document still listed can be deleted again, while a file with no row can be reached by
+nothing. `company_chunks` and `tender_chunks` cascade on `documents (id)` (migration 0001), so
+the text leaves the corpus with the row and no orphaned embedding can be retrieved afterwards.
+
+**The screen does not offer what the API would refuse.** `DocumentResponse` already carried
+`bid_id`, so the row renders "In a bid" instead of a control whose only outcome is a 409. On
+the test company this is visible as 29 of 39 rows: the DE pack, claimed by its run.
+
+**Deleting is irreversible, so it is asked twice** — an inline "Delete?  Yes / Cancel" in the
+row rather than `window.confirm`, which is unstyled and untestable, and rather than a modal,
+which this repository has no primitive for. Every control names its file: "Delete" alone is
+the same accessible name on all twenty-nine rows of a DE pack, which is no name at all.
+
+Verified the way ADR-0063 requires. Six backend tests and six frontend tests, each measured
+failing with the fix reverted: the 409 guard removed (the refusal test fails), the storage
+failure swallowed (the row-survives test fails), the file never removed (two fail), the
+confirm step removed (four fail), the control shown for a claimed document (one fails), the
+server's sentence swallowed (one fails), and the accessible name reduced to "Delete" (five
+fail). Then exercised against the live Frankfurt database through the browser, on a throwaway
+upload, and used immediately afterwards to clear three duplicate uploads — three 204s.
+
+## ADR-0089 — The delete control was in the one column a narrow window hides
+
+**Date:** 2026-09-17 · **Stories:** S4.2.2 · **Status:** accepted · **Amends:** ADR-0088
+
+ADR-0088 shipped deletion as a per-row control in a new last column, verified in a browser at
+1440 px, and reported as working. The user could not delete anything.
+
+**`DataTable` scrolls horizontally when its content is wider than the window, and the delete
+control was the last column.** Measured on the company page at a 1100 px window: the table
+overflowed its box by 106 px and the control's right edge sat at 1109 px against a visible
+area ending at 1003 — off-screen, reachable only by dragging the table sideways, with nothing
+on the page to say it was there. At 1440 px it is visible, which is exactly why testing at one
+width proved nothing. **A control's reachability is a function of the viewport, and a viewport
+is a test parameter.**
+
+**The fix and the user's own request turned out to be the same change.** They asked to choose
+several documents and delete them together. So: a tick box leads each row — the *first*
+column, before anything can be clipped — and the action moves above the table, outside the
+scrolling box entirely, where it also carries the count. Bulk delete is one `DELETE` per
+document, in the order shown, with refusals reported per document: a 409 names the bid that
+claimed the file, and a bulk action that collapsed that into "something went wrong" would
+leave a row that silently refuses to go.
+
+**A rule written three times, two of which were never run.** `bid_id === null` decides what
+can be deleted, and it ended up in the row, the table and the panel. A mutation that inverted
+it — `isDeletable` returning `true` for everything — left the select-all test passing, because
+the test's harness applied its own copy of the filter and never reached the component's. The
+test was measuring itself. There is now one `isDeletable` in `lib/documents.ts`, the table
+decides and hands the chosen documents to its caller, and the panel stores what it is given;
+inverting the rule now fails two tests. This is ADR-0064's rule (a rule duplicated across a
+boundary needs an owner) meeting ADR-0063's (a test that cannot fail is not evidence), and it
+is the second time in two days that a green test hid an unexercised path.
+
+**The refusal is said on the row, not only on hover.** A disabled tick box is a dead end to a
+sighted user who never hovers it: the `title` and the screen-reader text were there from the
+start and neither is visible. Each claimed row now carries a `Tag` reading *In a bid — cannot
+be deleted* beneath the filename — `Tag` rather than `Badge` because the design system
+reserves badges for statuses and this is a fact about the file. The reason itself is stated
+once, in the table footer beside the existing explanations of *Unread pages* and *Withheld*,
+because repeating a two-line rationale on thirty-nine rows is noise rather than help; the full
+sentence stays on the tag for a pointer and a screen reader. On the test company this reads as
+39 rows marked and 10 still deletable.
+
+Verified at 1100 px, the width that broke it: the select-all box and every row box sit inside
+the visible area with the table still clipped by 48 px. Then two throwaway uploads were ticked
+and deleted together against the live Frankfurt database — 51 rows to 49, "2 documents
+deleted" announced, selection cleared, no refusals, and the ten company evidence documents,
+ten company chunks and three bids untouched.
