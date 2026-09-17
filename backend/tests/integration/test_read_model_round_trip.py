@@ -23,13 +23,19 @@ locally. With no `DATABASE_URL` it skips rather than fails.
 
 from __future__ import annotations
 
+import importlib.util
+import sys
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
+from typing import Any
 
 import pytest
 
 from crossbid.db import Database
+from crossbid.ingestion.chunker import Chunk
+from crossbid.ingestion.embeddings import ChunkVectorStore, EmbeddedChunk
 from crossbid.models import DocumentKind
 from crossbid.models.company import CompanyProfile
 from crossbid.models.matrix import MatrixRow, RowStatus
@@ -445,3 +451,105 @@ async def test_the_keyset_pages_a_list_whose_rows_share_a_timestamp(db: Database
     assert paged == expected
     assert len(set(paged)) == len(paged), "a row served twice is the offset bug this replaced"
     assert third.next_cursor is None, "the last page says it is the last"
+
+
+VECTOR_DIMENSIONS = 1536
+"""`settings.default.yaml`'s `embed_dimensions` — what the `vector(1536)` column takes."""
+
+
+def _backfill_module() -> Any:
+    """`scripts/index_existing_bids.py` as a module, loaded by path.
+
+    The same way `test_recall_script.py` reaches its script: `scripts/` is not a package, and
+    making it one to satisfy an import would change what ships to satisfy a test.
+    """
+    path = Path(__file__).resolve().parents[2] / "scripts" / "index_existing_bids.py"
+    spec = importlib.util.spec_from_file_location("index_existing_bids", path)
+    assert spec is not None and spec.loader is not None, path
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["index_existing_bids"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@skip_without_database
+async def test_the_backfill_selects_exactly_the_bids_with_no_corpus(db: Database) -> None:
+    """The query behind `scripts/index_existing_bids.py`, executed (2026-09-17).
+
+    It exists because a bid analysed before `a55d14b` has documents, a full matrix and no
+    `tender_chunks` row, so every retrieval over it is empty for ever (ADR-0098). The script
+    that repairs those bids is only as good as this selection: too wide and it re-embeds
+    corpora that are already there and charges a company for them, too narrow and the bid a
+    bidder is complaining about is not in the list.
+
+    Only a database can answer it. The predicate is a `not exists` correlated on `bid_id` and
+    a `kind = any(...)` over an array parameter — neither of which the offline fake parses,
+    both of which are the whole behaviour.
+    """
+    backfill = _backfill_module()
+    company_id = str(uuid.uuid4())
+    companies = CompaniesReadModel(db)
+    await companies.create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    records = DocumentsReadModel(db)
+
+    async def bid_with_document(*, kind: DocumentKind, notice: str) -> tuple[str, uuid.UUID]:
+        bid = await create_bid(
+            db,
+            company_id=company_id,
+            notice_number=notice,
+            title="Netztechnik",
+            source_language="de",
+            bidder_language="de",
+        )
+        document_id = uuid.uuid4()
+        await records.insert(
+            company_id=uuid.UUID(company_id),
+            document_id=document_id,
+            kind=kind,
+            name=f"{notice}.pdf",
+            storage_path=f"{company_id}/{document_id}/{notice}.pdf",
+        )
+        await records.mark_ready(company_id=uuid.UUID(company_id), document_id=document_id)
+        await attach_documents(
+            db, company_id=company_id, bid_id=bid.id, document_ids=[str(document_id)]
+        )
+        return bid.id, document_id
+
+    unindexed, _ = await bid_with_document(
+        kind=DocumentKind.TENDER_DOCUMENT, notice="614251-2026"
+    )
+    indexed, indexed_document = await bid_with_document(
+        kind=DocumentKind.TENDER_DOCUMENT, notice="614252-2026"
+    )
+    espd_only, _ = await bid_with_document(
+        kind=DocumentKind.TENDER_ESPD_REQUEST, notice="614253-2026"
+    )
+    # One chunk is all it takes to be "indexed": the question is existence, not completeness.
+    await ChunkVectorStore(db).insert_tender_chunks(
+        company_id=uuid.UUID(company_id),
+        bid_id=uuid.UUID(indexed),
+        document_id=indexed_document,
+        chunks=[
+            EmbeddedChunk(
+                chunk=Chunk(
+                    document_id=str(indexed_document),
+                    index=0,
+                    pages=(1,),
+                    text="Mindestumsatz 3 Mio EUR",
+                    token_count=6,
+                ),
+                embedding=tuple([0.0] * VECTOR_DIMENSIONS),
+            )
+        ],
+    )
+
+    selected = {bid.bid_id for bid in await backfill.unindexed_bids(db, bid_id=None)}
+
+    assert unindexed in selected, "a bid with documents and no chunks is the whole point"
+    assert indexed not in selected, "re-embedding a corpus that exists would charge for nothing"
+    assert espd_only not in selected, "a DUME is XML: parse_docs skips it, so there is no work"
+    assert {bid.bid_id for bid in await backfill.unindexed_bids(db, bid_id=unindexed)} == {
+        unindexed
+    }

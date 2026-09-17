@@ -6732,3 +6732,49 @@ distinction it used to deny, with its scenario and its other claim intact.
 `e2e` cannot reach this; it is pinned by seven unit tests across `test_rag_tools.py` and
 `test_chat_graph.py`, and the behaviour was measured reverting to the single sentence, which
 fails three of them.
+
+## ADR-0099 — The missing step is backfilled, not the whole run
+
+**Date:** 2026-09-17 · **Follows:** ADR-0098 · **Status:** accepted
+
+ADR-0098 found the cause: bids analysed before `a55d14b` (2026-09-15 10:06) have documents, a
+complete matrix and no `tender_chunks`, so every retrieval over them is empty for ever. That
+left the question of what to do about the bids that already exist.
+
+**Re-running them was the obvious answer and it is the wrong one.** A re-run spends the
+extraction model, a ReAct loop per requirement, a verdict — about $1.74 and four minutes on
+the DE pack when it was last measured — and it *discards a review a person has already done*.
+The reviewer's confirmations and overrides are the most expensive thing in the row, and the
+bid whose chat was broken had 144 of them. Re-running to fix retrieval would cost a human's
+afternoon to repair a machine's omission.
+
+`scripts/index_existing_bids.py` runs the one step that was missing — parse, chunk, scan,
+embed, write — and reads nothing else. The matrix, the verdict, the reviewer's decisions and
+the run's history are not touched. Embeddings are the only spend: a 25-page pack is a fraction
+of a cent, against $1.74 for the re-run it replaces.
+
+**Whose key pays is not a detail.** `settings_for_company`, exactly as an upload or a run
+would (ADR-0091), and a company with no key saved is printed and skipped rather than charged
+to the application key. A backfill is precisely the place where "just use the operator key, it
+is only a script" would be tempting, and it is the same mistake in a smaller coat: one
+account's documents embedded on another account's credit.
+
+**Dry run by default, and the dry run is free.** It lists the bids and stops — no Storage
+fetch, no embedding, no write. `--apply` is the only thing that spends. Running it twice is
+safe and costs nothing the second time: `ChunkingTenderIndexer` replaces a document's rows
+before inserting, and a bid that now has chunks no longer appears in the selection at all.
+
+**The selection is a `database`-marked test, and it earned that immediately.** The query is a
+`not exists` correlated on `bid_id` plus `kind = any(...)` over an array parameter — neither
+of which the offline fake parses. The first version named `bids.notice_number`, a column that
+does not exist; the real column is `ted_publication_number`, and it is nullable, so the script
+prints the title for a bid started by hand. Postgres said so in a second. Nothing offline
+would have, and the script would have failed on the operator's first run against the bid they
+were trying to repair — which is exactly the shape H17 was raised about.
+
+Both halves of the predicate were then measured failing: without the `not exists` the already
+indexed bid is selected and a company is charged to rebuild a corpus it has, and without the
+kind filter a DUME-only bid is listed as work when `parse_docs` skips XML before it parses
+anything.
+
+`make index-existing` lists; `make index-existing APPLY=1` writes.
