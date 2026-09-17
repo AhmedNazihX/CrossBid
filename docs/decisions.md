@@ -6198,3 +6198,53 @@ started *before* the fix, which the port had quietly kept alive.
 
 The provider's own advice — *add your own key* — is the argument for per-company BYOK
 (S5.4–S5.6), which this session takes up next.
+
+## ADR-0091 — Every company runs on its own key, or it does not run
+
+**Date:** 2026-09-17 · **Stories:** S5.4, S5.5, S4.6.4 · **Status:** accepted ·
+**Reverses:** the "embeddings always use the app's OpenRouter route" line in `CLAUDE.md`
+
+One application key paid for everything: extraction, checking, chat, embeddings, every
+company. The bill landed on whoever owned `OPENROUTER_API_KEY`, and a cap reached on it
+stopped every account at once. Two sessions of this project were spent on exactly that —
+ADR-0087's `…e3db` at $25 of $25, and ADR-0090's *"add your own key to accumulate your rate
+limit"*, which is OpenRouter telling us the answer in its own error message.
+
+**A company's work runs on that company's key.** `provider_keys` has held the shape since
+migration 0001 and this is what finally writes to it: Fernet ciphertext in `encrypted_key`,
+four characters in `key_hint`, and `APP_ENCRYPTION_KEY` never near Postgres, so a database
+dump yields four characters and a date.
+
+**Three decisions taken with the user, each of which could have gone the other way.**
+
+*Embeddings move too.* The old rule kept them on the application key because ingestion happens
+at upload time, before any bid. Keeping it would have left the maintainer paying for every
+company's corpus — cents per pack, but the wrong cents. So a company with no key cannot upload
+either, and the profile screen says so.
+
+*No key is a refusal, not a fallback.* S5.5 as written promised to "fall back safely so a
+broken key never blocks a deadline". That story is rewritten: falling back to the application
+key is the precise behaviour this work exists to remove, and a bid that silently bills someone
+else is worse than a bid that does not start. **402 Payment Required** — the caller is who
+they say they are and nothing conflicts; what is missing is the means to pay.
+
+*Direct OpenAI and Anthropic keys are refused rather than stored.* Every slug in
+`settings.default.yaml` is an OpenRouter slug, so such a key would have nothing to call. The
+`Provider` enum and the table's check constraint keep the room; verification says no today
+rather than accepting a key that would never be used.
+
+**`Settings` is the carrier, which is why this touched no call site.** `chat_model(role,
+settings)` and `EmbeddingsClient(settings)` are called from eleven places between them.
+Swapping `env.openrouter_api_key` on a frozen copy at the boundary reaches all of them, so the
+change is three dependencies and a runner, not eleven edits. The runner caches a graph **per
+company** rather than one graph, because a graph holds its models and a model holds a key.
+
+**What the application key still does:** operator tooling — `make eval`, the judge, the
+scripts, the startup slug probe. Nobody's bid, nobody's bill but the maintainer's.
+
+Verified live, not asserted: a saved key answers a question in 604 characters; the key removed
+answers **402** with the sentence naming the company profile; the key restored answers 3/3.
+The stored bytes begin `gAAAAA` — a Fernet token — and do not contain the key. Thirty-three
+tests across crypto, the read model, verification and enforcement, each measured failing with
+its fix reverted, including the one that matters most: making the resolver fall back to the
+application key fails two.

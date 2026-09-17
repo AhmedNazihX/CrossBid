@@ -66,7 +66,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final, Protocol
 
@@ -81,6 +81,7 @@ from crossbid.agent.graph import (
     initial_state,
 )
 from crossbid.agent.state import BidState
+from crossbid.company_keys import NoProviderKeyError, settings_for_company
 from crossbid.db import ConnectionSource, Database
 from crossbid.models.review import ReviewSubmission
 from crossbid.readmodel.bids import (
@@ -131,6 +132,14 @@ class BidGraph(Protocol):
 
 GraphFactory = Callable[[], BidGraph]
 
+CompanyGraphFactory = Callable[[str], Awaitable[BidGraph]]
+"""A graph built for one company, because the models in it hold that company's key (S5.4).
+
+Asynchronous because the key is a row: it is read and unsealed per company, and a graph
+cannot be built before it is known. `build_runner` supplies the production one; a runner
+without it falls back to the single shared graph, which is what the unit tests want and what
+production never uses."""
+
 
 @dataclass(frozen=True, slots=True)
 class RunBudget:
@@ -160,6 +169,10 @@ def failure_reason_of(exc: BaseException) -> str:
     """The sentence stored on the bid. A `StageError` already names its stage."""
     if isinstance(exc, StageError):
         return str(exc)
+    if isinstance(exc, NoProviderKeyError):
+        # Already a sentence written for the bidder, and the one failure they can fix
+        # themselves in under a minute.
+        return str(exc)
     return f"run failed: {type(exc).__name__}"
 
 
@@ -171,11 +184,14 @@ class BidRunner:
         graph_factory: GraphFactory,
         db: ConnectionSource,
         *,
+        company_graph_factory: CompanyGraphFactory | None = None,
         budget: RunBudget = RunBudget(),
         clock: Clock = time.monotonic,
     ) -> None:
         self._graph_factory = graph_factory
+        self._company_graph_factory = company_graph_factory
         self._graph: BidGraph | None = None
+        self._company_graphs: dict[str, BidGraph] = {}
         self._db = db
         self._budget = budget
         self._clock = clock
@@ -191,6 +207,25 @@ class BidRunner:
             self._graph = self._graph_factory()
         return self._graph
 
+    async def graph_for(self, company_id: str) -> BidGraph:
+        """The graph whose models hold `company_id`'s key (S5.4, S5.5).
+
+        Cached per company: a graph is wiring, but the key it carries is a row, and reading
+        it on every run would be a statement per bid for a value that changes when a bidder
+        edits their profile -- which is exactly when `invalidate_graph` is called.
+
+        A runner built without a company factory answers with the single shared graph. That
+        is the unit tests' runner; `build_runner` always supplies the factory, so no bid in
+        production is ever run on the application key.
+        """
+        if self._company_graph_factory is None:
+            return self.graph
+        cached = self._company_graphs.get(company_id)
+        if cached is None:
+            cached = await self._company_graph_factory(company_id)
+            self._company_graphs[company_id] = cached
+        return cached
+
     def invalidate_graph(self) -> None:
         """Drop the cached graph so the next run is built from the current settings.
 
@@ -200,6 +235,7 @@ class BidRunner:
         surface a Storage misconfiguration; the next `start` is, exactly as at boot.
         """
         self._graph = None
+        self._company_graphs.clear()
 
     @property
     def budget(self) -> RunBudget:
@@ -297,8 +333,9 @@ class BidRunner:
             # pack could hold a worker for the better part of an hour while the bidder
             # watched a status that never moved. `asyncio.timeout` re-raises a cancellation
             # that was not its own, so `shutdown()` still reads as a cancellation below.
+            graph = await self.graph_for(bid.company_id)
             async with asyncio.timeout(self._budget.seconds):
-                await self.graph.ainvoke(payload, config)
+                await graph.ainvoke(payload, config)
         except TimeoutError:
             outcome = "timed out"
             reason = OVER_BUDGET_TEMPLATE.format(seconds=self._budget.seconds)
@@ -452,9 +489,21 @@ def build_runner(db: Database, current_settings: SettingsProvider) -> BidRunner:
     `invalidate_graph()` sees what the developer panel stored (point 4). The budget is
     read once because nothing in `AppSettingsRow` can change it.
     """
+
+    async def company_graph(company_id: str) -> BidGraph:
+        """`build_graph`, on the key belonging to the company whose bid this is.
+
+        `NoProviderKeyError` travels: `_run` turns it into the bid's `failure_reason`, so a
+        key removed between starting a bid and resuming it after a restart fails that bid
+        with a sentence rather than charging the run to the application key.
+        """
+        settings = await settings_for_company(db, current_settings(), company_id=company_id)
+        return build_graph(settings, db)
+
     return BidRunner(
         lambda: build_graph(current_settings(), db),
         db,
+        company_graph_factory=company_graph,
         budget=RunBudget.from_settings(current_settings()),
     )
 

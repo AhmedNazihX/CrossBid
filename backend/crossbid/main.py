@@ -217,6 +217,7 @@ def _routers() -> list[APIRouter]:
     from crossbid.routers.dev import router as dev_router
     from crossbid.routers.documents import router as documents_router
     from crossbid.routers.feedback import router as feedback_router
+    from crossbid.routers.provider_keys import router as provider_keys_router
     from crossbid.routers.tenders import router as tenders_router
 
     # Appended, never inserted: a new router at the front would renumber every generated
@@ -229,6 +230,7 @@ def _routers() -> list[APIRouter]:
         tenders_router,
         feedback_router,
         chat_router,
+        provider_keys_router,
     ]
 
 

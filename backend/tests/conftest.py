@@ -161,7 +161,10 @@ def parsed_fixture_pdf(pdf: Path) -> ParsedDocument:
 
 # Distinctive so that a leak into a repr, a dump or an exception is unmistakable.
 FAKE_OPENROUTER_KEY = "sk-or-v1-LEAKED-OPENROUTER-KEY"
-FAKE_ENCRYPTION_KEY = "LEAKED-FERNET-ENCRYPTION-KEY="
+# A real Fernet key (32 url-safe base64 bytes) that still reads as a canary: it decodes
+# to b"LEAKED-FERNET-ENCRYPTION-KEY-32b". It has to be genuinely valid since S5.4, because
+# the offline tests now seal and open provider keys with it.
+FAKE_ENCRYPTION_KEY = "TEVBS0VELUZFUk5FVC1FTkNSWVBUSU9OLUtFWS0zMmI="
 FAKE_PASSWORD = "LEAKED-DATABASE-PASSWORD"
 
 GOOD_DSN = f"postgresql://crossbid:{FAKE_PASSWORD}@localhost:5432/crossbid"

@@ -26,6 +26,7 @@ from pydantic import SecretStr
 from starlette.datastructures import Headers, UploadFile
 
 from crossbid.auth import DEV_COMPANY_HEADER
+from crossbid.company_keys import get_company_settings
 from crossbid.deps import get_database
 from crossbid.ingestion.parser import ParserError
 from crossbid.ingestion.pipeline import UNREADABLE_REASON, DocumentPipeline
@@ -461,9 +462,14 @@ class _Bytes:
 
 def test_uploads_are_503_when_storage_is_not_configured(offline_settings: Settings) -> None:
     """`offline_settings` has no Supabase wiring; the detail names the problem, not the vars."""
-    # Arrange -- the real `get_pipeline`, a fake pool behind `get_database`
+    # Arrange -- the real `get_pipeline`, a fake pool behind `get_database`. The company
+    # key resolution is stubbed: this test is about Storage being unwired, and without the
+    # stub it would answer 402 for the missing key before ever reaching that.
     source = FakeConnectionSource()
-    overrides: Overrides = {get_database: lambda: source}
+    overrides: Overrides = {
+        get_database: lambda: source,
+        get_company_settings: lambda: offline_settings,
+    }
 
     # Act
     with TestClient(build_app(offline_settings, overrides)) as api:

@@ -44,8 +44,9 @@ from crossbid.agent.chat_graph import (
     run_chat_turn,
 )
 from crossbid.auth import CompanyContext, current_company
+from crossbid.company_keys import get_company_settings
 from crossbid.db import Database
-from crossbid.deps import get_app_settings, get_database
+from crossbid.deps import get_database
 from crossbid.models.review import MAX_COMMENT_CHARS, ChatTurn
 from crossbid.rate_limit import RATE_LIMITED_RESPONSES, chat_question_limit
 from crossbid.readmodel.bids import fetch_bid
@@ -107,7 +108,7 @@ async def ask_about_bid(
     body: ChatQuestion,
     company: CompanyContext = Depends(current_company),
     db: Database = Depends(get_database),
-    settings: Settings = Depends(get_app_settings),
+    settings: Settings = Depends(get_company_settings),
 ) -> ChatTurn:
     """Answer one question about this bid, with a document and a page behind every claim.
 

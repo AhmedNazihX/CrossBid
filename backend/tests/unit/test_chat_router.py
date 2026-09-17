@@ -26,6 +26,7 @@ from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import MemorySaver
 
 from crossbid.auth import DEV_COMPANY_HEADER
+from crossbid.company_keys import get_company_settings
 from crossbid.deps import get_app_settings, get_database
 from crossbid.models.review import MAX_COMMENT_CHARS, ChatRole, ChatTurn, Citation
 from crossbid.readmodel.bids import BidRow
@@ -127,6 +128,10 @@ def build_api(settings: Settings, db: object) -> TestClient:
     app.include_router(router)
     app.dependency_overrides[get_database] = lambda: db
     app.dependency_overrides[get_app_settings] = lambda: settings
+    # The chat agent runs on the asking company's own key (S5.4). These tests are about
+    # what the agent answers, not about whose key paid for it, so the resolution is
+    # stubbed here; `test_provider_key_enforcement.py` is where the refusal is proved.
+    app.dependency_overrides[get_company_settings] = lambda: settings
     return TestClient(app)
 
 

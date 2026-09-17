@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { ProfileForm } from '@/components/company/profile-form'
+import { ProviderKeyCard } from '@/components/company/provider-key-card'
 import { DocumentsPanel } from '@/components/documents/documents-panel'
 import { PageHeader } from '@/components/layout/page-header'
 
@@ -17,8 +18,12 @@ export const metadata: Metadata = {
  * here. The documents are the evidence those checks cite, and uploading them before there
  * is a company to hang them on is not possible.
  *
- * A server component on purpose: both panels below are the client boundaries, so the
- * header and metadata render without JavaScript.
+ * The provider key sits between them because it gates both: without it, a document cannot
+ * be embedded and a bid cannot be run, and the API answers 402 rather than billing the work
+ * to a shared key (S5.4).
+ *
+ * A server component on purpose: the panels below are the client boundaries, so the header
+ * and metadata render without JavaScript.
  */
 export default function CompanyPage() {
   return (
@@ -29,6 +34,7 @@ export default function CompanyPage() {
       />
       <div className="flex flex-col gap-10">
         <ProfileForm />
+        <ProviderKeyCard />
         <DocumentsPanel />
       </div>
     </>

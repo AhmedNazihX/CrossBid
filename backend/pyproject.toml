@@ -27,6 +27,9 @@ dependencies = [
     # auth: verifying Supabase's ES256 magic-link tokens against its JWKS (S0.3.1). Already
     # in the tree as a dependency of supabase-auth; declared here because we import it.
     "pyjwt[crypto]>=2.10",
+    # bring-your-own-key at rest (S5.4): Fernet for `provider_keys.encrypted_key`.
+    # Already in the tree under pyjwt[crypto] and supabase; declared because we import it.
+    "cryptography>=43",
     # observability
     "langsmith>=0.1",
 ]

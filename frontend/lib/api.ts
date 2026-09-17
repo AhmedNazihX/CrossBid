@@ -386,6 +386,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/me/provider-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What key is saved
+         * @description The hint and the dates. Never the key — there is no route that returns it.
+         */
+        get: operations["read_provider_key_companies_me_provider_key_get"];
+        /**
+         * Save this company's provider key
+         * @description Verify the key with the provider, then store it sealed. A refused key is not stored.
+         */
+        put: operations["save_provider_key_companies_me_provider_key_put"];
+        post?: never;
+        /**
+         * Remove this company's provider key
+         * @description Removing the key stops this company's bids and uploads until another one is saved.
+         */
+        delete: operations["delete_provider_key_companies_me_provider_key_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1426,6 +1454,35 @@ export interface components {
          */
         Provider: "openrouter" | "openai" | "anthropic";
         /**
+         * ProviderKeyResponse
+         * @description What a bidder may see of their own key.
+         */
+        ProviderKeyResponse: {
+            /** @description Which provider this key is for */
+            provider: components["schemas"]["Provider"];
+            /**
+             * Key Hint
+             * @description The last four characters, so the bidder knows which key
+             */
+            key_hint: string;
+            /**
+             * Verified At
+             * @description When the provider last confirmed the key; null if it was never checked
+             */
+            verified_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When the key was saved
+             */
+            created_at: string;
+            /**
+             * Label
+             * @description The provider's own name for the key, as it reported on verification
+             */
+            label?: string | null;
+        };
+        /**
          * Rating
          * @description A thumb, in the values the column already stores: `check (rating in (-1, 1))`.
          *
@@ -1579,6 +1636,22 @@ export interface components {
          * @enum {string}
          */
         RowStatus: "supported" | "partially_supported" | "unsupported" | "not_applicable";
+        /**
+         * SaveProviderKeyRequest
+         * @description The key itself, write-only: no route ever sends it back.
+         */
+        SaveProviderKeyRequest: {
+            /**
+             * @description Which provider the key is for. Only `openrouter` can be used today: every model this app is configured with is an OpenRouter slug.
+             * @default openrouter
+             */
+            provider: components["schemas"]["Provider"];
+            /**
+             * Provider Key
+             * @description The API key, sent once. It is sealed before it reaches the database.
+             */
+            provider_key: string;
+        };
         /**
          * StartBidRequest
          * @description What it takes to start a bid: the notice, the tender's language, and the pack.
@@ -2536,6 +2609,99 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    read_provider_key_companies_me_provider_key_get: {
+        parameters: {
+            query?: {
+                provider?: components["schemas"]["Provider"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderKeyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_provider_key_companies_me_provider_key_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveProviderKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderKeyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_provider_key_companies_me_provider_key_delete: {
+        parameters: {
+            query?: {
+                provider?: components["schemas"]["Provider"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

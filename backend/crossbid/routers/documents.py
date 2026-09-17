@@ -70,6 +70,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from crossbid.auth import CompanyContext, current_company
+from crossbid.company_keys import get_company_settings
 from crossbid.db import Database
 from crossbid.deps import get_app_settings, get_database
 from crossbid.ingestion.espd import EspdParseError, parse_espd_request
@@ -252,12 +253,17 @@ def get_document_store(
 
 
 def get_pipeline(
-    settings: Settings = Depends(get_app_settings),
+    settings: Settings = Depends(get_company_settings),
     db: Database = Depends(get_database),
     records: DocumentsReadModel = Depends(get_document_records),
     store: CompanyDocumentStore = Depends(get_document_store),
 ) -> DocumentPipeline:
     """The production wiring, which `ingestion.pipeline.build_pipeline` owns.
+
+    **On the company's own key (S5.4).** Embedding an upload is the company's spend like
+    any other, so `get_company_settings` supplies the key and a company without one is
+    refused with 402 before a single chunk is embedded, rather than quietly billed to the
+    application key.
 
     Built per request because the embeddings client owns an HTTP pool that the background
     task must be able to close. The factory is shared with S2.4.3's demo seed so that a
