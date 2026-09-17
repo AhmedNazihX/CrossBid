@@ -5280,7 +5280,14 @@ be re-scored rather than compared across judges.
 A user guide's characteristic failure is a screenshot that quietly stopped being true. This
 repository already had four of them — `01-start-bid.png` and friends, loose at the repository
 root, dated 2026-09-14, taken before Increment 4 changed the screens they show. Nothing
-referenced them and nothing could have told you they had gone stale.
+referenced them and nothing could have told you they had gone stale. **They were deleted on
+2026-09-17** (audit finding L15): the guide's generated images cover all four of those screens
+— company profile, start a bid, matrix, verdict — and are a command away from being true
+again, which is the whole argument above. Git history keeps them, so a clone is no smaller;
+what changes is that a fresh checkout no longer opens on four pictures of screens that have
+moved on. `docs/demo/`, which the finding also named, is not in the repository at all: its one
+file is a gitignored `.DS_Store`, so the empty directory exists on one machine and nowhere
+else.
 
 So the guide's images are **generated**: `npm run guide:shots` drives the real Next app through
 the same fake API the Playwright suite uses (`e2e/support/fake-api.ts`), writes seven PNGs into
