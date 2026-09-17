@@ -6590,3 +6590,83 @@ It is a browser test and not jsdom, unlike L2's, because the phone layout is cho
 query in `workspace-state.ts` (`state.isDesktop`) and the two layouts are separate components
 since ADR-0086 — a name added to one is not a name added to the other, and only a real
 viewport picks between them.
+
+## ADR-0097 — The reveal keeps its place in the hero and stops being its largest object
+
+**Date:** 2026-09-17 · **Audit finding:** L4 · **Status:** accepted ·
+**Amends:** ADR-0014's recorded deviation, not the canvas itself
+
+`BrandReveal` is the one element on the landing page with no artboard behind it — added on the
+user's instruction after the canvas was confirmed, and recorded as a deviation at the time. The
+finding is what that deviation cost, and measuring it gave a cleaner answer than the card did.
+
+**248 px was the entire difference between the page and the artboard.** At 1440x900,
+`Landing.dc.html` puts the product mock at **y=638**; the app put it at **y=886**. Every other
+element of the hero — the pill, the headline, the actions — matched the artboard to the pixel,
+and 248 px is exactly the band (216) plus its margin (32). So this was not a page that had
+drifted: it was a page carrying one extra object, and the object had pushed the mock off the
+screen. **Fourteen pixels of it were visible.** The element that shows what the product *does*
+sat below the fold, under a clip that shows what it is *called*.
+
+**The band is now 96 px, and the mock clears the fold by 134 px** (y=766). Two consequences,
+both deliberate and both losses worth naming: the crop window fixes the aspect ratio, so at
+96 px the band is **373 px wide** rather than 840, and the mark therefore reads *under* the
+headline's 678 px rather than over it. The old width's docstring argued for the opposite — "a
+little larger, which is the point of it" — and that argument is now void, not merely outgrown.
+The reveal is no longer the largest thing in the hero. It was chosen over dropping the band
+(which would have landed the page exactly on the artboard) and over keeping it (recorded, like
+M25, as declined-with-evidence): the user's call, made against three measured layouts.
+
+**Height became the knob and width is derived.** `BAND_MAX_HEIGHT` with
+`BAND_MAX_WIDTH = round(height x 16·cropW / 9·cropH)` beside it, rather than the other way
+round. The two were never independent — the crop window fixes the ratio — and the fold is
+denominated in height, so the free variable should be the one the budget is written in. Setting
+the width and discovering the height is how 216 px arrived without anyone choosing it.
+
+Nothing else in the component moved: the played window, the hold frame, the `multiply` blend
+and the brightness lift, the ring mask's fractional stops, the reduced-motion path and the
+autoplay-refusal fallback are all untouched. The mask scales because its stops were always
+fractions of the video's own box — ~42 px of fade now instead of ~95 px — which is the property
+that made this a one-constant change rather than a re-derivation. `sizes` on the fallback
+lockup follows the new width, so Next serves 373 px and not 840 px of PNG.
+
+**How this is pinned.** `e2e/landing.spec.ts` measures **how much of the mock is on screen** at
+the artboard's own 1440x900, not the band's height. The height is a means: a later change to
+the pill, to the headline's wrapping or to the hero's padding can spend the same budget again,
+and a test pinned to `96` would not notice. Measured failing with the component reverted, at
+the shipped 14 px.
+
+### The regression this caused, reported from the running page
+
+Shrinking the band put a **grey rectangle with hard edges across the pill**. The user saw it;
+nothing here did.
+
+The cause was in the mask, and it had been wrong all along. `radial-gradient(ellipse 80% 66%)`
+has radii *larger than the box it masks*: measured from the centre of a box whose half-width is
+50 %, a radius of 80 % puts the transparent stop well outside the element, so at the video's own
+left and right edges the mask still stood at about **0.59 alpha**, and at top and bottom about
+0.36. The clip was being cut off by the element's edge rather than faded out by the mask —
+precisely what the comment above it said the mask existed to prevent. It was invisible only
+because the video was then 1200 x 675 and its four edges fell outside the hero's content
+entirely. Shrinking the band brought all four into view at once.
+
+**Two linear gradients now, one per axis, intersected.** A radial gradient shares its stops
+between the axes, and the axes need different fades: the mark reaches ±35 % horizontally but
+only ±16 % vertically, while vertical is the crowded direction — the pill's underside sits 28 px
+above the band. So the vertical fade runs entirely inside that gap (transparent by 26 %, opaque
+by 34 %) and the horizontal one has room to be gentle. Every stop is a fraction of the video's
+own box, so this holds at any size the band is given — which is what the single ellipse only
+appeared to do.
+
+**The pill is also `relative z-10` now**, which is what the user asked for. It is belt and
+braces rather than the fix: an absolutely positioned element paints above in-flow content
+whatever the DOM order, so the clip was free to paint over the pill and the mask is what stops
+it. With both, it could not matter if the mask were wrong again.
+
+Pinned by a second test in the same file, asserting the computed mask reaches transparent inside
+its own box, and measured failing with the original ellipse restored. Two drafts of it were
+wrong before that: the first split the computed value on every comma and read
+`" linear-gradient(to right"` as a whole gradient — it failed, for the wrong reason; the second
+asserted `mask-composite: intersect`, which Chrome computes as `source-in, source-in` because
+the `-webkit-` spelling wins and the value is per layer. A test that fails against a page that
+works is the same defect as one that passes against a page that does not.

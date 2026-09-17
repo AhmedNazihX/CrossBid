@@ -52,8 +52,8 @@ import Image from 'next/image'
  * But the clip's concentric rings run the **full height of the source frame** (measured
  * 0.000–1.000 from 1.5 s to 4.0 s, i.e. the source already clips them at its own edges), so
  * a hard crop sliced them with a straight edge mid-animation. Opening the band to fit them
- * would make it 537 px tall instead of 216 and drop the mark to ~595 px, under the
- * headline's 678 px. Instead the video overflows the band and a radial mask fades it out:
+ * would make it 2.7 times taller than the mark itself needs, on a page whose fold was already
+ * the finding (L4). Instead the video overflows the band and a radial mask fades it out:
  * the rings dissolve into the canvas rather than ending at a line, the layout box stays the
  * size of the mark, and nothing below it moves. The hero section's own `overflow-hidden`
  * contains the horizontal spill, so no viewport gains a scrollbar.
@@ -117,13 +117,31 @@ const CROP_WIDTH = CROP_RIGHT - CROP_LEFT
 const CROP_HEIGHT = CROP_BOTTOM - CROP_TOP
 
 /**
- * How wide the band is allowed to get. At this width the mark lands near 748 px against the
- * headline's widest line at 678 px — a little larger, which is the point of it.
+ * How much of the fold the band may spend — finding L4 of the 2026-09-15 audit.
+ *
+ * **Height is the knob and width follows from it**, because the crop window fixes the aspect
+ * ratio: the two cannot be chosen separately, and height is what the fold is denominated in.
+ * At 96 px the band is 373 px wide.
+ *
+ * It was 216 px tall and 840 px wide, sized so the mark landed near 748 px against the
+ * headline's widest line at 678 px — a little larger, which was then the point of it. Measured
+ * at the artboard's own 1440x900 that cost 248 px with the margin, and **248 px was the entire
+ * difference between this page and `Landing.dc.html`**: the artboard puts the product mock at
+ * y=638, the app put it at y=886, and every other element of the hero matched to the pixel.
+ * Fourteen pixels of the mock were on screen — the one element that shows what the product
+ * does sat below the fold, under a clip that shows what it is called.
+ *
+ * So the reveal keeps its place in the hero and stops being its largest object: the mark now
+ * reads under the headline rather than over it, and the mock clears the fold by 134 px.
+ * `e2e/landing.spec.ts` measures the mock and not this number — a later change to the pill or
+ * to the headline's wrapping can spend the same budget again, and that is what would notice.
  */
-const BAND_MAX_WIDTH = 840
+const BAND_MAX_HEIGHT = 96
 
 /** 16 : 9 reduced to the kept window, so the band's own box has the right shape. */
 const BAND_ASPECT = `${(16 * CROP_WIDTH).toFixed(3)} / ${(9 * CROP_HEIGHT).toFixed(3)}`
+/** Derived, never chosen: the crop window fixes the ratio, so only one of the two is free. */
+const BAND_MAX_WIDTH = Math.round((BAND_MAX_HEIGHT * (16 * CROP_WIDTH)) / (9 * CROP_HEIGHT))
 /**
  * The video is this much larger than the band, and pulled back by the part cropped off.
  * Both axes are given explicitly rather than leaving one to `auto`: the two agree with
@@ -141,16 +159,33 @@ const VIDEO_TOP = `${(-100 * (CROP_TOP / CROP_HEIGHT)).toFixed(3)}%`
 const GROUND_TO_WHITE = 255 / 250
 
 /**
- * The mask that dissolves the overflowing rings.
+ * The mask that dissolves the overflowing rings — one gradient per axis, intersected.
  *
- * Stops are in the *video's* own box, not the band's: the band occupies its middle 34–66 %
- * vertically (the crop window), so the mask is fully opaque across exactly that span and
- * fades over the 14 % either side — about 95 px at the rendered size, which lands the rings
- * at nothing before they reach the pill or the headline. Horizontally it holds to 80 %,
- * since the frame has more dead margin on the sides than the rings need.
+ * Stops are in the *video's* own box, not the band's: the band is its middle 15–85 %
+ * horizontally and 34–66 % vertically (the crop window), so the mask is fully opaque across
+ * exactly that span and fades to nothing before each of the video's own edges.
+ *
+ * **It used to be one `ellipse 80% 66%`, and that ellipse was larger than the box it masked.**
+ * Radii of 80 % and 66 % from the centre reach transparent well outside a box whose half-width
+ * is 50 %, so at the video's left and right edges the mask still stood at about 0.59 alpha and
+ * at its top and bottom about 0.36. The clip was cut off by the element's edge rather than
+ * faded out by the mask — a rectangle with hard sides. That was invisible while the band was
+ * 840 px wide, because the video was then 1200 x 675 and its edges fell outside the hero's
+ * content entirely. Shrinking the band to 96 px (L4, ADR-0097) brought all four edges into
+ * view at once and the rectangle landed on the pill. Found by the user on the running page.
+ *
+ * Two linear gradients rather than one ellipse because **the axes need different fades and a
+ * radial gradient's stops are shared**: the mark reaches ±35 % horizontally but only ±16 %
+ * vertically, while the vertical direction is the crowded one — the pill's underside sits
+ * 28 px above the band. So the vertical fade runs entirely inside that gap (transparent by
+ * 26 %, opaque by 34 %) and the horizontal one has room to be gentle. Every stop is a
+ * fraction, so this holds at whatever size the band is given.
  */
-const RING_FADE =
-  'radial-gradient(ellipse 80% 66% at 50% 50%, #000 40%, rgba(0,0,0,0.45) 70%, transparent 100%)'
+const RING_FADE_VERTICAL =
+  'linear-gradient(to bottom, transparent 26%, #000 34%, #000 66%, transparent 74%)'
+const RING_FADE_HORIZONTAL =
+  'linear-gradient(to right, transparent 4%, #000 15%, #000 85%, transparent 96%)'
+const RING_FADE = `${RING_FADE_VERTICAL}, ${RING_FADE_HORIZONTAL}`
 
 /** `HTMLMediaElement.HAVE_METADATA`, named so the `readyState` check reads as English. */
 const HAVE_METADATA = 1
@@ -304,7 +339,7 @@ export function BrandReveal() {
         src={LOCKUP_SRC}
         alt=""
         fill
-        sizes="840px"
+        sizes="373px"
         priority
         className={`object-contain px-[5.5%] transition-opacity duration-300 ${
           prefersReducedMotion === true || hasFallenBack ? 'opacity-100' : 'opacity-0'
@@ -338,6 +373,10 @@ export function BrandReveal() {
             // read as dissolving into the page rather than as a cropped rectangle.
             maskImage: RING_FADE,
             WebkitMaskImage: RING_FADE,
+            // Intersected, so a pixel survives only where *both* axes keep it. Layered
+            // without this they would union, and the union of two bands is a cross.
+            maskComposite: 'intersect',
+            WebkitMaskComposite: 'source-in',
           }}
           className={`absolute max-w-none transition-opacity duration-300 ${
             hasStarted ? 'opacity-100' : 'opacity-0'

@@ -26,7 +26,12 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(var(--cb-stone-200)_1px,transparent_1px),linear-gradient(90deg,var(--cb-stone-200)_1px,transparent_1px)] bg-[size:72px_72px] opacity-35 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_20%,#000_30%,transparent_100%)]"
       />
       <div className="relative mx-auto w-full max-w-[var(--marketing-max)]">
-        <p className="mb-7 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-border-default bg-surface-card py-1.5 pr-3 pl-2 text-[13px] font-medium leading-[1.3] text-text-secondary sm:leading-none">
+        {/* `relative z-10`: the reveal's video is absolutely positioned and overflows its band
+            by design, and a positioned element paints above in-flow content whatever the DOM
+            order — so without this the clip is free to paint over the pill, which is what it
+            did when the band shrank (ADR-0097). The mask no longer lets it reach this far;
+            this makes it so it could not matter if it did. */}
+        <p className="relative z-10 mb-7 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-border-default bg-surface-card py-1.5 pr-3 pl-2 text-[13px] font-medium leading-[1.3] text-text-secondary sm:leading-none">
           <span className="rounded-[var(--radius-pill)] bg-surface-accent px-2 py-[3px] text-xs font-semibold leading-[1.2] text-white">
             New
           </span>
