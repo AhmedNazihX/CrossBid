@@ -35,14 +35,12 @@ from crossbid.db import ConnectionSource
 from crossbid.models.tender import BidStatus, BidSummary, DocumentKind
 from crossbid.models.verdict import Decision
 from crossbid.readmodel.documents import DocumentStatus
+from crossbid.readmodel.pagination import Page, PageCursor
 
 logger = logging.getLogger(__name__)
 
 THREAD_ID_PREFIX: Final = "bid:"
 """The LangGraph thread a bid runs on is `bid:{id}`; chat (F3.5) will be `bid:{id}:chat`."""
-
-MAX_BIDS_LISTED: Final = 200
-"""The dashboard never pages, so the list query is bounded here rather than unbounded."""
 
 UNFINISHED_STATUSES: Final = frozenset(
     {
@@ -240,11 +238,27 @@ select {_BID_COLUMNS}, {_OPEN_ITEMS}
 from bids b
 join companies c on c.id = b.company_id
 where b.company_id = %(company_id)s
-order by b.created_at desc
+order by b.created_at desc, b.id desc
 limit %(limit)s
 """  # noqa: S608 -- module literals only
-"""The dashboard's query, and the only one that carries `open_items`: `SELECT_BID` answers a
-workspace that already holds every row and can count them itself."""
+"""The dashboard's first page, and the only query that carries `open_items`: `SELECT_BID`
+answers a workspace that already holds every row and can count them itself.
+
+`b.id desc` joins the ordering at M13, so the tie-break between two bids started in the same
+microsecond runs the same way as the cursor comparison below."""
+
+SELECT_BIDS_AFTER: Final[LiteralString] = f"""
+select {_BID_COLUMNS}, {_OPEN_ITEMS}
+from bids b
+join companies c on c.id = b.company_id
+where b.company_id = %(company_id)s
+  and (b.created_at, b.id) < (%(after_created_at)s, %(after_id)s)
+order by b.created_at desc, b.id desc
+limit %(limit)s
+"""  # noqa: S608 -- module literals only
+"""Every dashboard page after the first (M13). The predicate names the last row the caller
+saw, so a bid started between two requests changes what is above the boundary and nothing
+about where the boundary is — which an `offset` cannot say."""
 
 SELECT_UNFINISHED_BIDS: Final[LiteralString] = f"""
 select {_BID_COLUMNS}
@@ -370,6 +384,7 @@ where company_id = %(company_id)s and id = any(%(document_ids)s) and bid_id is n
 """
 
 SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
+    SELECT_BIDS_AFTER,
     INSERT_BID,
     SELECT_BID,
     SELECT_BIDS,
@@ -443,27 +458,41 @@ async def fetch_bid(db: ConnectionSource, *, company_id: str, bid_id: str) -> Bi
     return None if record is None else _bid_row(record)
 
 
-async def list_bids(db: ConnectionSource, *, company_id: str) -> list[BidRow]:
-    """This company's bids, newest first, at most `MAX_BIDS_LISTED`.
+async def list_bids(
+    db: ConnectionSource, *, company_id: str, limit: int, after: PageCursor | None = None
+) -> Page[BidRow]:
+    """One page of this company's bids, newest first (M13).
 
-    The cap is not silent any more (M13): reaching it means the dashboard is showing a
-    truncated list with nothing in the response saying so, and the answer to that is a cursor
-    rather than a bigger number. The log line is what tells anyone the day has come.
+    The silent cap this replaced is the finding: the dashboard truncated at 200 with nothing
+    in the response saying so, and the constant's own docstring named a cursor as the answer.
+    `limit + 1` rows are asked for so `Page.of` can tell a full page from a last one.
     """
+    if after is None:
+        statement: LiteralString = SELECT_BIDS
+        params: dict[str, object] = {"company_id": company_id, "limit": limit + 1}
+    else:
+        statement = SELECT_BIDS_AFTER
+        params = {
+            "company_id": company_id,
+            "after_created_at": after.created_at,
+            "after_id": after.row_id,
+            "limit": limit + 1,
+        }
     async with db.connection() as conn:
-        records = await (
-            await conn.execute(
-                SELECT_BIDS, {"company_id": company_id, "limit": MAX_BIDS_LISTED}
-            )
-        ).fetchall()
-    if len(records) == MAX_BIDS_LISTED:
-        logger.warning(
-            "Company %s has at least %d bids; the dashboard list is truncated and needs a "
-            "cursor rather than a larger limit",
-            company_id,
-            MAX_BIDS_LISTED,
-        )
-    return [_bid_row(record) for record in records]
+        records = await (await conn.execute(statement, params)).fetchall()
+    return Page.of([_bid_row(record) for record in records], limit=limit, key=_cursor_key)
+
+
+def _cursor_key(row: BidRow) -> tuple[datetime, uuid.UUID]:
+    """Where a page boundary sits, from the row that ends it.
+
+    `created_at` is optional on `BidRow` because a bid can be constructed before the column is
+    read; `SELECT_BIDS` always selects it, so `None` here means the query and the model have
+    drifted apart. Loud rather than a cursor that silently points nowhere.
+    """
+    if row.created_at is None:  # pragma: no cover -- SELECT_BIDS always reads the column
+        raise BidReadModelError(f"Bid {row.id} was listed without created_at; no cursor.")
+    return row.created_at, uuid.UUID(row.id)
 
 
 async def unfinished_bids(db: ConnectionSource) -> list[BidRow]:

@@ -33,7 +33,11 @@ export interface paths {
         };
         /**
          * List the company's documents
-         * @description Every document of the calling company, newest first.
+         * @description One page of the calling company's documents, newest first (M13).
+         *
+         *     The list was unbounded, then bounded and silently truncated. It is now paged: follow
+         *     `next_cursor` for the rest. A cursor this API did not issue is a 422 rather than a page
+         *     from somewhere unintended — see `readmodel/pagination.py`.
          */
         get: operations["list_documents_documents_get"];
         put?: never;
@@ -121,7 +125,10 @@ export interface paths {
         };
         /**
          * List the company's bids
-         * @description Every bid of the calling company, newest first, from the read model only.
+         * @description One page of the calling company's bids, newest first, from the read model only (M13).
+         *
+         *     The dashboard truncated at 200 with nothing in the response saying so. Follow
+         *     `next_cursor` for the rest; a cursor this API did not issue is a 422.
          */
         get: operations["list_company_bids_bids_get"];
         put?: never;
@@ -183,9 +190,13 @@ export interface paths {
          * Poll one bid
          * @description One bid of the calling company with its requirements so far. Another's id is 404.
          *
-         *     The row read for the 404 is the row the response is assembled from (M13). This route is
-         *     polled every two seconds for the life of a run, and it used to fetch the same bid twice
-         *     on each of those calls — the second read could only ever return what the first did.
+         *     **Two things this route does for M13, both because of how often it is called.** The row
+         *     read for the 404 is the row the response is assembled from — it used to fetch the same bid
+         *     twice on each call, and the second read could only ever return what the first did. And the
+         *     answer carries an `ETag`: a browser that echoes it as `If-None-Match` gets **304** with no
+         *     body while nothing has moved, instead of 284 requirements and 284 matrix rows every two
+         *     seconds for the length of a run. `crossbid/routers/conditional.py` says why the tag is
+         *     over the body rather than over the projections' timestamps.
          */
         get: operations["get_bid_bids__bid_id__get"];
         put?: never;
@@ -502,14 +513,19 @@ export interface components {
         };
         /**
          * BidListResponse
-         * @description The calling company's bids, newest first.
+         * @description One page of the calling company's bids, newest first.
          */
         BidListResponse: {
             /**
              * Bids
-             * @description Newest first, at most 200
+             * @description Newest first
              */
             bids: components["schemas"]["BidSummary"][];
+            /**
+             * Next Cursor
+             * @description Pass as `cursor` for the next page. `null` means this is the last page — which is not the same as a full one, so read this rather than counting rows.
+             */
+            next_cursor?: string | null;
         };
         /**
          * BidResponse
@@ -1024,7 +1040,7 @@ export interface components {
         DocumentKind: "company_evidence" | "tender_document" | "tender_notice" | "tender_espd_request";
         /**
          * DocumentListResponse
-         * @description Every document of the calling company, newest first.
+         * @description One page of the calling company's documents, newest first.
          */
         DocumentListResponse: {
             /**
@@ -1032,6 +1048,11 @@ export interface components {
              * @description Newest first
              */
             documents: components["schemas"]["DocumentResponse"][];
+            /**
+             * Next Cursor
+             * @description Pass as `cursor` for the next page. `null` means this is the last page — which is not the same as a full one, so read this rather than counting rows.
+             */
+            next_cursor?: string | null;
         };
         /**
          * DocumentResponse
@@ -2009,7 +2030,12 @@ export interface operations {
     };
     list_documents_documents_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Rows on this page, 1 to 200. Omitted, 50. */
+                limit?: number | null;
+                /** @description The `next_cursor` of the previous page. Omitted, the first page. Opaque: its shape is not part of the contract and a cursor from anywhere else is refused. */
+                cursor?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2023,6 +2049,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2162,7 +2197,12 @@ export interface operations {
     };
     list_company_bids_bids_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Rows on this page, 1 to 200. Omitted, 50. */
+                limit?: number | null;
+                /** @description The `next_cursor` of the previous page. Omitted, the first page. Opaque: its shape is not part of the contract and a cursor from anywhere else is refused. */
+                cursor?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2176,6 +2216,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BidListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2260,7 +2309,9 @@ export interface operations {
     get_bid_bids__bid_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-None-Match"?: string | null;
+            };
             path: {
                 bid_id: string;
             };
@@ -2276,6 +2327,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BidResponse"];
                 };
+            };
+            /** @description Unchanged since the `ETag` the caller sent */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

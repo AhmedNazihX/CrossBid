@@ -14,7 +14,6 @@ next to the column it constrains, so the two lists are compared by reading the S
 from __future__ import annotations
 
 import inspect
-import logging
 import re
 import uuid
 from collections.abc import Mapping, Sequence
@@ -32,11 +31,11 @@ from crossbid.readmodel.documents import (
     FAIL_INTERRUPTED_DOCUMENTS_SQL,
     INSERT_DOCUMENT_SQL,
     INTERRUPTED_REASON,
+    LIST_DOCUMENTS_AFTER_SQL,
     LIST_DOCUMENTS_SQL,
     MARK_FAILED_SQL,
     MARK_PARSED_SQL,
     MARK_STATUS_SQL,
-    MAX_DOCUMENTS_LISTED,
     SCOPED_STATEMENTS,
     SELECT_DOCUMENT_SQL,
     SET_FLAGGED_CHUNKS_SQL,
@@ -47,6 +46,7 @@ from crossbid.readmodel.documents import (
     ReadModelError,
     fail_interrupted_documents,
 )
+from crossbid.readmodel.pagination import PageCursor
 from tests.conftest import FakeConnectionSource
 
 COMPANY_ID = uuid.UUID("11111111-1111-4111-8111-111111111111")
@@ -120,7 +120,8 @@ def test_the_insert_binds_the_tenant_into_the_row_it_creates() -> None:
 
 @pytest.mark.parametrize("sql", SCOPED_STATEMENTS, ids=lambda sql: sql.split()[0])
 def test_every_statement_returns_the_full_record_column_list(sql: str) -> None:
-    """Six copies of the column list, so a test keeps them identical rather than an f-string."""
+    """Seven copies of the column list, so a test keeps them identical rather than an
+    f-string. `LIST_DOCUMENTS_AFTER_SQL` joined them at M13."""
     assert DOCUMENT_COLUMNS in _one_line(sql)
 
 
@@ -129,7 +130,7 @@ def test_the_column_list_names_exactly_the_record_fields() -> None:
     assert columns == list(DocumentRecord.model_fields)
 
 
-def test_the_statements_are_the_seven_the_module_defines() -> None:
+def test_the_statements_are_the_eight_the_module_defines() -> None:
     assert SCOPED_STATEMENTS == (
         INSERT_DOCUMENT_SQL,
         MARK_PARSED_SQL,
@@ -138,6 +139,7 @@ def test_the_statements_are_the_seven_the_module_defines() -> None:
         MARK_FAILED_SQL,
         SELECT_DOCUMENT_SQL,
         LIST_DOCUMENTS_SQL,
+        LIST_DOCUMENTS_AFTER_SQL,
     )
 
 
@@ -406,19 +408,71 @@ async def test_list_returns_every_row_in_the_order_the_database_gave() -> None:
     model, source = read_model([document_row(id=second, status="ready"), document_row()])
 
     # Act
-    records = await model.list(company_id=COMPANY_ID)
+    page = await model.list(company_id=COMPANY_ID, limit=10)
 
     # Assert
     assert source.only.sql == LIST_DOCUMENTS_SQL
-    assert source.only.params == {"company_id": COMPANY_ID, "limit": MAX_DOCUMENTS_LISTED}
-    assert [record.id for record in records] == [second, DOCUMENT_ID]
+    assert [record.id for record in page.items] == [second, DOCUMENT_ID]
     assert "order by created_at desc" in LIST_DOCUMENTS_SQL
 
 
 @pytest.mark.anyio
-async def test_list_with_no_documents_is_empty() -> None:
+async def test_the_query_asks_for_one_row_more_than_the_page_holds() -> None:
+    """M13. The extra row is how `Page.of` tells a full page from the last one, without a
+    second `count(*)` over a table an upload is writing to."""
+    model, source = read_model([])
+
+    await model.list(company_id=COMPANY_ID, limit=10)
+
+    assert source.only.params == {"company_id": COMPANY_ID, "limit": 11}
+
+
+@pytest.mark.anyio
+async def test_a_page_after_a_cursor_binds_the_row_it_names() -> None:
+    """M13. The predicate names the last row the caller saw, so a document uploaded between
+    two requests cannot shift the boundary the way an `offset` would."""
+    # Arrange
+    model, source = read_model([])
+    after = PageCursor(created_at=FIXED_NOW, row_id=DOCUMENT_ID)
+
+    # Act
+    await model.list(company_id=COMPANY_ID, limit=10, after=after)
+
+    # Assert
+    assert source.only.sql == LIST_DOCUMENTS_AFTER_SQL
+    assert source.only.params == {
+        "company_id": COMPANY_ID,
+        "after_created_at": FIXED_NOW,
+        "after_id": DOCUMENT_ID,
+        "limit": 11,
+    }
+    assert "(created_at, id) < (%(after_created_at)s, %(after_id)s)" in LIST_DOCUMENTS_AFTER_SQL
+
+
+@pytest.mark.anyio
+async def test_a_full_page_carries_a_cursor_and_does_not_serve_the_extra_row() -> None:
+    """M13, and the boundary the obvious version gets wrong: the `limit + 1`-th row exists to
+    answer "is there more" and must never reach the caller."""
+    # Arrange
+    ids = [uuid.uuid4() for _ in range(3)]
+    model, _ = read_model([document_row(id=row_id) for row_id in ids])
+
+    # Act
+    page = await model.list(company_id=COMPANY_ID, limit=2)
+
+    # Assert
+    assert [record.id for record in page.items] == ids[:2]
+    assert page.next_cursor is not None
+
+
+@pytest.mark.anyio
+async def test_list_with_no_documents_is_an_empty_last_page() -> None:
     model, _source = read_model([])
-    assert await model.list(company_id=COMPANY_ID) == ()
+
+    page = await model.list(company_id=COMPANY_ID, limit=10)
+
+    assert page.items == ()
+    assert page.next_cursor is None
 
 
 @pytest.mark.anyio
@@ -549,33 +603,3 @@ def test_the_interrupted_reason_is_in_the_closed_failure_vocabulary() -> None:
     from crossbid.ingestion.pipeline import FAILURE_REASONS
 
     assert INTERRUPTED_REASON in FAILURE_REASONS
-
-
-@pytest.mark.anyio
-async def test_a_full_page_of_documents_says_so_rather_than_truncating_quietly(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """M13. The query had no limit at all; a bound nobody is told about is the next bug."""
-    # Arrange
-    rows = [document_row(id=uuid.uuid4()) for _ in range(MAX_DOCUMENTS_LISTED)]
-    model, _ = read_model(rows)
-
-    # Act
-    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.documents"):
-        listed = await model.list(company_id=COMPANY_ID)
-
-    # Assert
-    assert len(listed) == MAX_DOCUMENTS_LISTED
-    assert "truncated" in caplog.text
-
-
-@pytest.mark.anyio
-async def test_a_list_short_of_the_limit_says_nothing(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    model, _ = read_model([document_row()])
-
-    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.documents"):
-        await model.list(company_id=COMPANY_ID)
-
-    assert caplog.text == ""

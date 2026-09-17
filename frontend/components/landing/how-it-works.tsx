@@ -10,6 +10,12 @@ import { Lead, MarketingEyebrow, SectionTitle, Wrap } from './section-primitives
  * the soft orange with the accent glyph — the fifth on ink with a white glyph — the mono
  * step number, a 17 px title and 14 px / 1.55 text. Five columns at `lg`, two at `sm`,
  * one on the phone.
+ *
+ * The body text wraps mid-word. At `lg` a card is about 210 px wide and step 3 names
+ * `Unbedenklichkeitsbescheinigung`, which is wider than that: with the default
+ * `overflow-wrap: normal` the browser will not break inside a word, so it painted 48 px
+ * outside the card's border and over its neighbour. The cross-border wedge is why the word is
+ * here at all, so the layout has to hold it rather than the copy avoiding it.
  */
 interface Step {
   readonly title: string
@@ -76,7 +82,9 @@ export function HowItWorks() {
                 <h3 className="mb-2 text-lg font-semibold leading-[1.2] tracking-[-0.02em]">
                   {step.title}
                 </h3>
-                <p className="text-base leading-[1.55] text-text-secondary">{step.text}</p>
+                <p className="text-base leading-[1.55] text-text-secondary [overflow-wrap:anywhere]">
+                  {step.text}
+                </p>
               </li>
             )
           })}

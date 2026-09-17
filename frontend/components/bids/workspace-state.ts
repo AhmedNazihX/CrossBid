@@ -24,7 +24,8 @@ import type { Citation } from '@/components/matrix/citation'
 import type { RowReview } from '@/components/matrix/row-review-controls'
 import type { SourceDocument, SourceSelection } from '@/components/pdf/source-panel'
 import type { MatrixRow } from '@/lib/bids'
-import { getBid, isAwaitingReview, isBidSettled, type BidResponse } from '@/lib/bids'
+import { getBidConditional, isAwaitingReview, isBidSettled, type BidResponse } from '@/lib/bids'
+import type { Conditional } from '@/lib/conditional-get'
 import { listDocuments } from '@/lib/documents'
 import { plural } from '@/lib/format'
 import { SHELL_MEDIA_QUERY, useMediaQuery } from '@/lib/use-media-query'
@@ -59,6 +60,8 @@ export const PHONE_TABS: readonly { value: PhoneTab; label: string }[] = [
  * A failure costs the attach control and nothing else: the reviewer can still change a
  * status and give a reason, so the list stays empty and the panel says so.
  */
+const ATTACHABLE_DOCUMENTS = 200
+
 function useAttachableDocuments(isEnabled: boolean): readonly AttachableDocument[] {
   const [documents, setDocuments] = useState<readonly AttachableDocument[]>([])
   useEffect(() => {
@@ -66,10 +69,13 @@ function useAttachableDocuments(isEnabled: boolean): readonly AttachableDocument
       return
     }
     const controller = new AbortController()
-    listDocuments(controller.signal)
-      .then((all) =>
+    // One explicit page at the API's ceiling (M13). This is a picker inside a row editor,
+    // not a list to browse: it has nowhere to put a "Load more", and asking for the maximum
+    // is what the old unbounded query effectively did for every honest account.
+    listDocuments({ limit: ATTACHABLE_DOCUMENTS, signal: controller.signal })
+      .then((page) =>
         setDocuments(
-          all
+          page.documents
             .filter((d) => d.kind === 'company_evidence' && d.status === 'ready')
             .map((d) => ({ id: d.id, name: d.name }))
         )
@@ -187,8 +193,23 @@ export interface WorkspaceState {
  * below explains the line it sits on and travelled with it.
  */
 export function useWorkspaceState(initial: BidResponse): WorkspaceState {
+  /**
+   * What the last poll returned, with the `ETag` it came with (M13).
+   *
+   * A ref rather than state: it is read and written by the poll, never rendered, and a
+   * module-level cache would outlive this workspace and leak between two bids in two tabs.
+   * Echoing the tag turns an unchanged tick into a 304 with no body, where the body is every
+   * requirement and every matrix row — 284 of each on the DE pack, every two seconds.
+   */
+  const held = useRef<Conditional<BidResponse> | undefined>(undefined)
   const fetchLatest = useCallback(
-    (signal: AbortSignal) => getBid(initial.id, signal),
+    async (signal: AbortSignal) => {
+      const next = await getBidConditional(initial.id, held.current, signal)
+      held.current = next
+      // Unchanged, and `next.value` is the very object the last tick returned — so the
+      // `useState` below sees no change and nothing re-renders.
+      return next.value
+    },
     [initial.id]
   )
   const { value: polled, error: pollError } = usePolling({

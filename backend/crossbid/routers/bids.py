@@ -30,9 +30,11 @@ import logging
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Final
+from typing import Annotated, Final
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from crossbid.agent.runner import BidRunner, RunnerError, build_runner
@@ -65,6 +67,12 @@ from crossbid.readmodel.bids import (
 from crossbid.readmodel.documents import DocumentStatus
 from crossbid.readmodel.matrix import fetch_matrix_rows
 from crossbid.readmodel.requirements import fetch_requirements
+from crossbid.routers.conditional import etag_for, is_unchanged
+from crossbid.routers.paging import (
+    PAGE_CURSOR_DESCRIPTION,
+    PAGE_LIMIT_DESCRIPTION,
+    page_request,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -275,11 +283,18 @@ class BidResponse(BaseModel):
 
 
 class BidListResponse(BaseModel):
-    """The calling company's bids, newest first."""
+    """One page of the calling company's bids, newest first."""
 
     model_config = ConfigDict(frozen=True)
 
-    bids: list[BidSummary] = Field(description="Newest first, at most 200")
+    bids: list[BidSummary] = Field(description="Newest first")
+    next_cursor: str | None = Field(
+        default=None,
+        description=(
+            "Pass as `cursor` for the next page. `null` means this is the last page — which "
+            "is not the same as a full one, so read this rather than counting rows."
+        ),
+    )
 
 
 # ------------------------------------------------------------------------- dependencies
@@ -428,32 +443,59 @@ async def submit_review(
     return await _bid_response(db, company_id=company_id, bid_id=bid.id)
 
 
-@router.get("/{bid_id}", response_model=BidResponse, summary="Poll one bid")
+@router.get(
+    "/{bid_id}",
+    response_model=BidResponse,
+    summary="Poll one bid",
+    responses={304: {"description": "Unchanged since the `ETag` the caller sent"}},
+)
 async def get_bid(
     bid_id: uuid.UUID,
+    if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
     company: CompanyContext = Depends(current_company),
     db: Database = Depends(get_database),
-) -> BidResponse:
+) -> BidResponse | Response:
     """One bid of the calling company with its requirements so far. Another's id is 404.
 
-    The row read for the 404 is the row the response is assembled from (M13). This route is
-    polled every two seconds for the life of a run, and it used to fetch the same bid twice
-    on each of those calls — the second read could only ever return what the first did.
+    **Two things this route does for M13, both because of how often it is called.** The row
+    read for the 404 is the row the response is assembled from — it used to fetch the same bid
+    twice on each call, and the second read could only ever return what the first did. And the
+    answer carries an `ETag`: a browser that echoes it as `If-None-Match` gets **304** with no
+    body while nothing has moved, instead of 284 requirements and 284 matrix rows every two
+    seconds for the length of a run. `crossbid/routers/conditional.py` says why the tag is
+    over the body rather than over the projections' timestamps.
     """
     bid = await fetch_bid(db, company_id=company.company_id, bid_id=str(bid_id))
     if bid is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
-    return await _bid_response(db, company_id=company.company_id, bid_id=str(bid_id), bid=bid)
+    payload = await _bid_response(
+        db, company_id=company.company_id, bid_id=str(bid_id), bid=bid
+    )
+    tag = etag_for(payload)
+    if is_unchanged(if_none_match=if_none_match, current=tag):
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={"ETag": tag})
+    return JSONResponse(content=jsonable_encoder(payload), headers={"ETag": tag})
 
 
 @router.get("", response_model=BidListResponse, summary="List the company's bids")
 async def list_company_bids(
+    limit: Annotated[int | None, Query(description=PAGE_LIMIT_DESCRIPTION)] = None,
+    cursor: Annotated[str | None, Query(description=PAGE_CURSOR_DESCRIPTION)] = None,
     company: CompanyContext = Depends(current_company),
     db: Database = Depends(get_database),
 ) -> BidListResponse:
-    """Every bid of the calling company, newest first, from the read model only."""
-    rows = await list_bids(db, company_id=company.company_id)
-    return BidListResponse(bids=[row.summary() for row in rows])
+    """One page of the calling company's bids, newest first, from the read model only (M13).
+
+    The dashboard truncated at 200 with nothing in the response saying so. Follow
+    `next_cursor` for the rest; a cursor this API did not issue is a 422.
+    """
+    asked = page_request(limit=limit, cursor=cursor)
+    page = await list_bids(
+        db, company_id=company.company_id, limit=asked.limit, after=asked.after
+    )
+    return BidListResponse(
+        bids=[row.summary() for row in page.items], next_cursor=page.next_cursor
+    )
 
 
 # ------------------------------------------------------------------------------ helpers

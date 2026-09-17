@@ -192,12 +192,25 @@ export function isDeletable(document: DocumentResponse): boolean {
   return document.bid_id === null
 }
 
-/** Every document of the company, newest first. */
+/** One page of the company's documents, newest first, with where to continue (M13). */
 export async function listDocuments(
-  signal?: AbortSignal
-): Promise<readonly DocumentResponse[]> {
-  const response = await apiRequest('get', '/documents', { signal })
-  return response.documents
+  options: { limit?: number; cursor?: string; signal?: AbortSignal } = {}
+): Promise<DocumentPage> {
+  const { limit, cursor, signal } = options
+  const response = await apiRequest('get', '/documents', {
+    query: {
+      ...(limit === undefined ? {} : { limit }),
+      ...(cursor === undefined ? {} : { cursor }),
+    },
+    signal,
+  })
+  return { documents: response.documents, nextCursor: response.next_cursor ?? undefined }
+}
+
+/** One page of documents and the cursor that follows it, `undefined` when this is the last. */
+export interface DocumentPage {
+  readonly documents: readonly DocumentResponse[]
+  readonly nextCursor: string | undefined
 }
 
 /** One document's current state — the call the poll repeats. */

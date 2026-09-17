@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { EmptyState, type EmptyStateProps } from '@/components/common/empty-state'
+import { LoadMore } from '@/components/common/load-more'
 import { Card } from '@/components/ui/card'
 import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
@@ -79,12 +80,16 @@ export function DocumentsPanel({
   const [loadState, setLoadState] = useState<LoadState>({ phase: 'loading' })
   const [announcement, setAnnouncement] = useState('')
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [moreMessage, setMoreMessage] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     const controller = new AbortController()
-    listDocuments(controller.signal)
-      .then((found) => {
-        setDocuments(found)
+    listDocuments({ signal: controller.signal })
+      .then((page) => {
+        setDocuments(page.documents)
+        setNextCursor(page.nextCursor)
         setLoadState({ phase: 'loaded' })
       })
       .catch((cause: unknown) => {
@@ -94,6 +99,27 @@ export function DocumentsPanel({
       })
     return () => controller.abort()
   }, [])
+
+  /**
+   * The next page, appended (M13). The panel keeps its own list rather than using
+   * `usePagedList`, because an upload prepends to it and a delete removes from it — the rows
+   * on this screen are not only what was fetched.
+   */
+  const loadMore = useCallback(() => {
+    if (nextCursor === undefined || isLoadingMore) return
+    setIsLoadingMore(true)
+    setMoreMessage(undefined)
+    listDocuments({ cursor: nextCursor })
+      .then((page) => {
+        setDocuments((held) => {
+          const known = new Set(held.map((d) => d.id))
+          return [...held, ...page.documents.filter((d) => !known.has(d.id))]
+        })
+        setNextCursor(page.nextCursor)
+      })
+      .catch((cause: unknown) => setMoreMessage(describeApiError(cause)))
+      .finally(() => setIsLoadingMore(false))
+  }, [nextCursor, isLoadingMore])
 
   // A refusal propagates as the `ApiError` it is: the form reads its status and
   // `Retry-After` to time a 429 (audit M12), and until 2026-09-16 this wrapped it in a plain
@@ -183,6 +209,13 @@ export function DocumentsPanel({
         onSelectAll={handleSelectAll}
         onDeleted={handleDeleted}
         selected={documents.filter((d) => selectedIds.has(d.id))}
+      />
+      <LoadMore
+        hasMore={nextCursor !== undefined && listState.phase === 'loaded'}
+        isLoadingMore={isLoadingMore}
+        message={moreMessage}
+        onLoadMore={loadMore}
+        noun="documents"
       />
     </div>
   )

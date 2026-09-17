@@ -185,13 +185,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=[origin],
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", DEV_COMPANY_HEADER],
+        # `If-None-Match` is not a CORS-safelisted *request* header, so it needs naming here
+        # as well as in `expose_headers` below — the browser sends one and reads the other,
+        # and only having half of the pair makes the conditional poll silently unconditional.
+        allow_headers=["Authorization", "Content-Type", "If-None-Match", DEV_COMPANY_HEADER],
         allow_credentials=True,
         # `Retry-After` is not on the CORS safelist, so without this the browser at :3000
         # cannot read it off a 429 from :8000 and the ask panel falls back to the sentence
-        # in `detail` instead of a clock time (S4.6.1, ADR-0058). Response headers only:
-        # nothing here widens what a request may send.
-        expose_headers=["Retry-After"],
+        # in `detail` instead of a clock time (S4.6.1, ADR-0058). `ETag` is not on it either,
+        # and without it the workspace cannot echo the tag back as `If-None-Match`, so every
+        # poll of a run would keep resending the whole matrix (M13, ADR-0093). Response
+        # headers only: nothing here widens what a request may send.
+        expose_headers=["Retry-After", "ETag"],
     )
 
     @app.get("/health", response_model=Health, tags=["meta"])

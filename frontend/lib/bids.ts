@@ -6,7 +6,8 @@
  * compiling here.
  */
 import type { components } from './api'
-import { apiRequest } from './api-client'
+import { conditionalGet, type Conditional } from './conditional-get'
+import { apiConditionalGet, apiRequest } from './api-client'
 
 export type BidResponse = components['schemas']['BidResponse']
 export type BidStatus = components['schemas']['BidStatus']
@@ -48,10 +49,45 @@ export function getBid(bidId: string, signal?: AbortSignal): Promise<BidResponse
   return apiRequest('get', '/bids/{bid_id}', { path: { bid_id: bidId }, signal })
 }
 
-/** Every bid of the company, newest first. */
-export async function listBids(signal?: AbortSignal): Promise<readonly BidSummary[]> {
-  const response = await apiRequest('get', '/bids', { signal })
-  return response.bids
+/**
+ * The same call, conditional on what the caller already holds (M13).
+ *
+ * The poll repeats this every two seconds for the length of a run, and the answer carries
+ * every requirement and every matrix row. Passing back the `ETag` that came with the last one
+ * turns an unchanged tick into a 304 with no body, and returns the identical object, so the
+ * workspace does not re-render either.
+ */
+export function getBidConditional(
+  bidId: string,
+  held: Conditional<BidResponse> | undefined,
+  signal?: AbortSignal
+): Promise<Conditional<BidResponse>> {
+  return conditionalGet(
+    (ifNoneMatch) =>
+      apiConditionalGet('/bids/{bid_id}', { path: { bid_id: bidId }, ifNoneMatch, signal }),
+    held
+  )
+}
+
+/** One page of the company's bids, newest first, with where to continue (M13). */
+export async function listBids(
+  options: { limit?: number; cursor?: string; signal?: AbortSignal } = {}
+): Promise<BidPage> {
+  const { limit, cursor, signal } = options
+  const response = await apiRequest('get', '/bids', {
+    query: {
+      ...(limit === undefined ? {} : { limit }),
+      ...(cursor === undefined ? {} : { cursor }),
+    },
+    signal,
+  })
+  return { bids: response.bids, nextCursor: response.next_cursor ?? undefined }
+}
+
+/** One page of bids and the cursor that follows it, or `undefined` when this is the last. */
+export interface BidPage {
+  readonly bids: readonly BidSummary[]
+  readonly nextCursor: string | undefined
 }
 
 /** Starts a bid and resolves with the 202 body (`status: "queued"`). */

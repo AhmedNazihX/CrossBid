@@ -1,21 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import Link from 'next/link'
 
 import { EmptyState } from '@/components/common/empty-state'
+import { LoadMore } from '@/components/common/load-more'
 import { Badge } from '@/components/ui/badge'
 import { DataTable, Td, Th, Tr } from '@/components/ui/data-table'
 import { Notice } from '@/components/ui/notice'
-import { describeApiError } from '@/lib/api-client'
-import { listBids, type BidSummary } from '@/lib/bids'
+import { listBids } from '@/lib/bids'
 import { formatDateTime, formatLanguage, plural } from '@/lib/format'
+import { usePagedList } from '@/lib/use-paged-list'
 import { BID_STATUS_LABELS } from './bid-status'
-
-type ListState =
-  | { readonly phase: 'loading' }
-  | { readonly phase: 'failed'; readonly message: string }
-  | { readonly phase: 'loaded'; readonly bids: readonly BidSummary[] }
 
 /**
  * The tenders table — the "Next 30 days" table shape of `Dashboard.dc.html` over
@@ -28,19 +24,11 @@ type ListState =
  * two screens harder to tell apart.
  */
 export function BidsTable() {
-  const [state, setState] = useState<ListState>({ phase: 'loading' })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    listBids(controller.signal)
-      .then((bids) => setState({ phase: 'loaded', bids }))
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ phase: 'failed', message: describeApiError(cause) })
-        }
-      })
-    return () => controller.abort()
+  const fetchPage = useCallback(async (cursor: string | undefined, signal: AbortSignal) => {
+    const page = await listBids({ cursor, signal })
+    return { items: page.bids, nextCursor: page.nextCursor }
   }, [])
+  const state = usePagedList(fetchPage)
 
   if (state.phase === 'loading') {
     return (
@@ -56,7 +44,7 @@ export function BidsTable() {
       </Notice>
     )
   }
-  if (state.bids.length === 0) {
+  if (state.items.length === 0) {
     return (
       <EmptyState
         title="No tenders yet"
@@ -72,47 +60,57 @@ export function BidsTable() {
     )
   }
   return (
-    <DataTable
-      caption="Your tenders, newest first."
-      footer={`${plural(state.bids.length, 'tender')} · every bid opens its workspace`}
-    >
-      <thead>
-        <tr>
-          <Th>Tender</Th>
-          <Th>Phase</Th>
-          <Th>Updated</Th>
-        </tr>
-      </thead>
-      <tbody>
-        {state.bids.map((bid) => {
-          const status = BID_STATUS_LABELS[bid.status]
-          return (
-            <Tr key={bid.id} className="hover:bg-surface-sunken">
-              <Td className="min-w-[240px]">
-                <div className="flex flex-col gap-[3px]">
-                  <Link
-                    href={`/bids/${encodeURIComponent(bid.id)}`}
-                    className="font-medium [overflow-wrap:anywhere]"
-                  >
-                    {bid.title}
-                  </Link>
-                  <span className="[font:var(--type-mono)] text-text-muted">
-                    {bid.ted_publication_number ?? '—'} · {formatLanguage(bid.source_language)}
-                  </span>
-                </div>
-              </Td>
-              <Td>
-                <Badge tone={status.tone} pill={false}>
-                  {status.label}
-                </Badge>
-              </Td>
-              <Td className="whitespace-nowrap text-text-secondary">
-                {formatDateTime(bid.updated_at)}
-              </Td>
-            </Tr>
-          )
-        })}
-      </tbody>
-    </DataTable>
+    <>
+      <DataTable
+        caption="Your tenders, newest first."
+        footer={`${plural(state.items.length, 'tender')} · every bid opens its workspace`}
+      >
+        <thead>
+          <tr>
+            <Th>Tender</Th>
+            <Th>Phase</Th>
+            <Th>Updated</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {state.items.map((bid) => {
+            const status = BID_STATUS_LABELS[bid.status]
+            return (
+              <Tr key={bid.id} className="hover:bg-surface-sunken">
+                <Td className="min-w-[240px]">
+                  <div className="flex flex-col gap-[3px]">
+                    <Link
+                      href={`/bids/${encodeURIComponent(bid.id)}`}
+                      className="font-medium [overflow-wrap:anywhere]"
+                    >
+                      {bid.title}
+                    </Link>
+                    <span className="[font:var(--type-mono)] text-text-muted">
+                      {bid.ted_publication_number ?? '—'} ·{' '}
+                      {formatLanguage(bid.source_language)}
+                    </span>
+                  </div>
+                </Td>
+                <Td>
+                  <Badge tone={status.tone} pill={false}>
+                    {status.label}
+                  </Badge>
+                </Td>
+                <Td className="whitespace-nowrap text-text-secondary">
+                  {formatDateTime(bid.updated_at)}
+                </Td>
+              </Tr>
+            )
+          })}
+        </tbody>
+      </DataTable>
+      <LoadMore
+        hasMore={state.hasMore}
+        isLoadingMore={state.isLoadingMore}
+        message={state.message}
+        onLoadMore={state.loadMore}
+        noun="tenders"
+      />
+    </>
   )
 }

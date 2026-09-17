@@ -48,6 +48,11 @@ export interface FakeResponse {
   /** A raw body instead, e.g. the page a signed document URL opens; `contentType` names it. */
   readonly body?: string
   readonly contentType?: string
+  /**
+   * Response headers beyond the CORS ones — `ETag` for the conditional poll (M13). Merged
+   * over `CORS_HEADERS`, so a test cannot accidentally drop the origin allowance.
+   */
+  readonly headers?: Readonly<Record<string, string>>
 }
 
 /** No answer at all: the request fails at the transport (`abort`), or never settles (`hang`). */
@@ -63,6 +68,12 @@ export interface RecordedRequest {
   readonly path: string
   /** The body as text — JSON or multipart — or `undefined` when the request carried none. */
   readonly body: string | undefined
+  /**
+   * The request's headers, lower-cased by the browser. Recorded so a test can assert on
+   * `if-none-match`: a poll that quietly stops sending it still works, and the saving simply
+   * never happens (M13).
+   */
+  readonly headers: Readonly<Record<string, string>>
 }
 
 export type Responder = (request: RecordedRequest, match: RegExpMatchArray) => FakeAnswer
@@ -84,6 +95,10 @@ const CORS_HEADERS: Readonly<Record<string, string>> = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   'access-control-allow-headers': '*',
+  // The real API names `Retry-After` and `ETag` here (ADR-0058, ADR-0093). Without the
+  // latter the browser cannot read the tag off the answer, and the conditional poll goes
+  // silently unconditional — which is exactly the defect a test here has to be able to see.
+  'access-control-expose-headers': 'Retry-After, ETag',
 }
 
 function escapeForRegExp(literal: string): string {
@@ -169,6 +184,7 @@ export class FakeApi {
       method: request.method(),
       path: `${url.pathname}${url.search}`,
       body: request.postDataBuffer()?.toString('utf8'),
+      headers: request.headers(),
     }
     if (url.origin !== this.apiOrigin) {
       this.unstubbed = [
@@ -190,14 +206,15 @@ export class FakeApi {
       if (answer.failure === 'abort') await route.abort('failed')
       return
     }
+    const headers = { ...CORS_HEADERS, ...answer.headers }
     await route.fulfill(
       answer.body === undefined
-        ? { status: answer.status, json: answer.json, headers: CORS_HEADERS }
+        ? { status: answer.status, json: answer.json, headers }
         : {
             status: answer.status,
             body: answer.body,
             contentType: answer.contentType,
-            headers: CORS_HEADERS,
+            headers,
           }
     )
   }

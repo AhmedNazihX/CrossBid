@@ -35,7 +35,10 @@ import { describeFieldErrors, fieldErrorsFrom } from './field-errors'
 const DEFAULT_API_BASE_URL = 'http://localhost:8000'
 
 /** `ApiError.status` when the request never reached the API (DNS, CORS, offline, abort). */
-export const TRANSPORT_ERROR_STATUS = 0
+export /** A 304 carries no body by definition, so it never reaches `readBody` (M13). */
+const NOT_MODIFIED = 304
+
+const TRANSPORT_ERROR_STATUS = 0
 
 /** The S0.3.1 dev-bridge header; must match `crossbid.auth.DEV_COMPANY_HEADER`. */
 export const DEV_COMPANY_HEADER = 'X-Dev-Company'
@@ -273,6 +276,53 @@ export async function apiRequest<M extends HttpMethod, P extends PathFor<M>>(
   // need a schema library the project has not adopted; instead the generated types are
   // regenerated from the live schema and CI fails when they drift (S0.1.4).
   return body as ResponseBody<P, M>
+}
+
+/**
+ * Calls one GET operation conditionally, and reports the status and headers as well as the
+ * body (audit finding M13).
+ *
+ * `apiRequest` returns the body alone, which is the right shape for every other call and the
+ * wrong one here: a conditional poll has to read the `ETag` off the answer and tell a 304
+ * from a 200 with no content. This is the same request machinery with the envelope left on,
+ * so there is one `fetch`, one error shape and one place the dev-company header is added.
+ *
+ * A 304 is a success, not a refusal, so it is returned rather than thrown; every other
+ * non-2xx still raises `ApiError`.
+ */
+export async function apiConditionalGet<P extends PathFor<'get'>>(
+  pathTemplate: P,
+  options: RequestOptions<P, 'get'> & { ifNoneMatch?: string } = {}
+): Promise<{ status: number; body: unknown; headers: Headers }> {
+  const url = buildUrl(pathTemplate, options.path, options.query)
+  const headers: Record<string, string> = buildHeaders(options, false)
+  if (options.ifNoneMatch !== undefined) {
+    headers['If-None-Match'] = options.ifNoneMatch
+  }
+
+  const response = await sendRequest(url, {
+    method: 'GET',
+    headers,
+    signal: options.signal,
+    credentials: 'omit',
+  })
+
+  if (response.status === NOT_MODIFIED) {
+    return { status: response.status, body: undefined, headers: response.headers }
+  }
+
+  const body = await readBody(response, 'GET', url)
+  if (!response.ok) {
+    throw new ApiError({
+      status: response.status,
+      statusText: response.statusText,
+      method: 'GET',
+      url,
+      body,
+      headers: response.headers,
+    })
+  }
+  return { status: response.status, body, headers: response.headers }
 }
 
 async function sendRequest(url: string, init: RequestInit): Promise<Response> {

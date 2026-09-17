@@ -1,25 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 
 import { EmptyState } from '@/components/common/empty-state'
 import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
-import { describeApiError } from '@/lib/api-client'
-import { listBids, type BidSummary } from '@/lib/bids'
+import { listBids } from '@/lib/bids'
+import { usePagedList } from '@/lib/use-paged-list'
 import { DashboardMetrics } from './dashboard-metrics'
 import { DashboardTendersTable } from './dashboard-tenders-table'
 
-type ListState =
-  | { readonly phase: 'loading' }
-  | { readonly phase: 'failed'; readonly message: string }
-  | {
-      readonly phase: 'loaded'
-      readonly bids: readonly BidSummary[]
-      /** When the list was read, so every countdown on the screen is measured from one instant. */
-      readonly loadedAt: Date
-    }
+/**
+ * One explicit page, at the API's ceiling (M13).
+ *
+ * The dashboard is a summary with its own "View all tenders" link, so it does not offer
+ * "Load more": its metrics are computed over what it holds, and a count that changes
+ * depending on how many times someone pressed a button is not a metric. Asking for the
+ * maximum page is what the 200-row silent cap used to do — the difference is that the number
+ * is now in the request, and `next_cursor` says when it was not enough.
+ */
+const DASHBOARD_BIDS = 200
 
 /**
  * The dashboard's body (story S4.4.1) — the "Key metrics" row and the tenders table of
@@ -34,19 +35,16 @@ type ListState =
  * minute, and the instant belongs to the data anyway.
  */
 export function DashboardOverview() {
-  const [state, setState] = useState<ListState>({ phase: 'loading' })
+  const fetchPage = useCallback(async (cursor: string | undefined, signal: AbortSignal) => {
+    const page = await listBids({ cursor, limit: DASHBOARD_BIDS, signal })
+    return { items: page.bids, nextCursor: page.nextCursor }
+  }, [])
+  const state = usePagedList(fetchPage)
+  const [loadedAt, setLoadedAt] = useState<Date | undefined>(undefined)
 
   useEffect(() => {
-    const controller = new AbortController()
-    listBids(controller.signal)
-      .then((bids) => setState({ phase: 'loaded', bids, loadedAt: new Date() }))
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ phase: 'failed', message: describeApiError(cause) })
-        }
-      })
-    return () => controller.abort()
-  }, [])
+    if (state.phase === 'loaded' && loadedAt === undefined) setLoadedAt(new Date())
+  }, [state.phase, loadedAt])
 
   if (state.phase === 'loading') {
     return (
@@ -62,7 +60,7 @@ export function DashboardOverview() {
       </Notice>
     )
   }
-  if (state.bids.length === 0) {
+  if (state.items.length === 0) {
     return (
       <EmptyState
         title="No bids yet"
@@ -81,12 +79,12 @@ export function DashboardOverview() {
   return (
     <div className="flex flex-col">
       <SectionHeading title="Key metrics" />
-      <DashboardMetrics bids={state.bids} />
+      <DashboardMetrics bids={state.items} />
       <SectionHeading
         title="Tenders by deadline"
         link={{ href: '/bids', label: 'View all tenders' }}
       />
-      <DashboardTendersTable bids={state.bids} now={state.loadedAt} />
+      <DashboardTendersTable bids={state.items} now={loadedAt ?? new Date()} />
     </div>
   )
 }

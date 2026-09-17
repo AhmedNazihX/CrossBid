@@ -1,22 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import Link from 'next/link'
 
 import { EmptyState } from '@/components/common/empty-state'
+import { LoadMore } from '@/components/common/load-more'
 import { Badge } from '@/components/ui/badge'
 import { DataTable, Td, Th, Tr } from '@/components/ui/data-table'
 import { Notice } from '@/components/ui/notice'
 import { VerdictChip } from '@/components/ui/verdict-chip'
-import { describeApiError } from '@/lib/api-client'
-import { listBids, type BidSummary } from '@/lib/bids'
+import { listBids } from '@/lib/bids'
 import { formatDateTime, formatLanguage, plural } from '@/lib/format'
+import { usePagedList } from '@/lib/use-paged-list'
 import { BID_STATUS_LABELS } from './bid-status'
-
-type ListState =
-  | { readonly phase: 'loading' }
-  | { readonly phase: 'failed'; readonly message: string }
-  | { readonly phase: 'loaded'; readonly bids: readonly BidSummary[] }
 
 /**
  * The sidebar's Verdicts entry (story S4.5.3), on the table shape of `Dashboard.dc.html`.
@@ -28,19 +24,11 @@ type ListState =
  * waiting review gets missed.
  */
 export function VerdictsList() {
-  const [state, setState] = useState<ListState>({ phase: 'loading' })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    listBids(controller.signal)
-      .then((bids) => setState({ phase: 'loaded', bids }))
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ phase: 'failed', message: describeApiError(cause) })
-        }
-      })
-    return () => controller.abort()
+  const fetchPage = useCallback(async (cursor: string | undefined, signal: AbortSignal) => {
+    const page = await listBids({ cursor, signal })
+    return { items: page.bids, nextCursor: page.nextCursor }
   }, [])
+  const state = usePagedList(fetchPage)
 
   if (state.phase === 'loading') {
     return (
@@ -57,12 +45,12 @@ export function VerdictsList() {
     )
   }
 
-  const awaiting = state.bids.filter((bid) => bid.status === 'awaiting_review')
-  const decided = state.bids.filter(
+  const awaiting = state.items.filter((bid) => bid.status === 'awaiting_review')
+  const decided = state.items.filter(
     (bid) => bid.decision !== null && bid.decision !== undefined
   )
   const listed = [...awaiting, ...decided.filter((bid) => bid.status !== 'awaiting_review')]
-  const running = state.bids.length - listed.length
+  const running = state.items.length - listed.length
 
   if (listed.length === 0) {
     return (
@@ -81,63 +69,73 @@ export function VerdictsList() {
   }
 
   return (
-    <DataTable
-      caption="Verdicts waiting for your confirmation, then the ones you have decided."
-      footer={
-        running > 0
-          ? `${plural(listed.length, 'verdict')} · ${plural(running, 'bid')} still running`
-          : `${plural(listed.length, 'verdict')} · every row opens its workspace`
-      }
-    >
-      <thead>
-        <tr>
-          <Th>Tender</Th>
-          <Th>Verdict</Th>
-          <Th>Phase</Th>
-          <Th>Updated</Th>
-        </tr>
-      </thead>
-      <tbody>
-        {listed.map((bid) => {
-          const status = BID_STATUS_LABELS[bid.status]
-          return (
-            <Tr key={bid.id} className="hover:bg-surface-sunken">
-              <Td className="min-w-[240px]">
-                <div className="flex flex-col gap-[3px]">
-                  <Link
-                    href={`/bids/${encodeURIComponent(bid.id)}`}
-                    className="font-medium [overflow-wrap:anywhere]"
-                  >
-                    {bid.title}
-                  </Link>
-                  <span className="[font:var(--type-mono)] text-text-muted">
-                    {bid.ted_publication_number ?? '—'} · {formatLanguage(bid.source_language)}
-                  </span>
-                </div>
-              </Td>
-              <Td>
-                {bid.decision === null || bid.decision === undefined ? (
-                  <span className="text-text-muted">Not decided</span>
-                ) : (
-                  <VerdictChip
-                    verdict={bid.decision}
-                    size="sm"
-                    confirmed={bid.status === 'complete'}
-                  />
-                )}
-              </Td>
-              <Td>
-                <Badge tone={status.tone} pill={false}>
-                  {status.label}
-                </Badge>
-              </Td>
-              <Td className="whitespace-nowrap text-text-secondary">
-                {formatDateTime(bid.updated_at)}
-              </Td>
-            </Tr>
-          )
-        })}
-      </tbody>
-    </DataTable>
+    <>
+      <DataTable
+        caption="Verdicts waiting for your confirmation, then the ones you have decided."
+        footer={
+          running > 0
+            ? `${plural(listed.length, 'verdict')} · ${plural(running, 'bid')} still running`
+            : `${plural(listed.length, 'verdict')} · every row opens its workspace`
+        }
+      >
+        <thead>
+          <tr>
+            <Th>Tender</Th>
+            <Th>Verdict</Th>
+            <Th>Phase</Th>
+            <Th>Updated</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {listed.map((bid) => {
+            const status = BID_STATUS_LABELS[bid.status]
+            return (
+              <Tr key={bid.id} className="hover:bg-surface-sunken">
+                <Td className="min-w-[240px]">
+                  <div className="flex flex-col gap-[3px]">
+                    <Link
+                      href={`/bids/${encodeURIComponent(bid.id)}`}
+                      className="font-medium [overflow-wrap:anywhere]"
+                    >
+                      {bid.title}
+                    </Link>
+                    <span className="[font:var(--type-mono)] text-text-muted">
+                      {bid.ted_publication_number ?? '—'} ·{' '}
+                      {formatLanguage(bid.source_language)}
+                    </span>
+                  </div>
+                </Td>
+                <Td>
+                  {bid.decision === null || bid.decision === undefined ? (
+                    <span className="text-text-muted">Not decided</span>
+                  ) : (
+                    <VerdictChip
+                      verdict={bid.decision}
+                      size="sm"
+                      confirmed={bid.status === 'complete'}
+                    />
+                  )}
+                </Td>
+                <Td>
+                  <Badge tone={status.tone} pill={false}>
+                    {status.label}
+                  </Badge>
+                </Td>
+                <Td className="whitespace-nowrap text-text-secondary">
+                  {formatDateTime(bid.updated_at)}
+                </Td>
+              </Tr>
+            )
+          })}
+        </tbody>
+      </DataTable>
+      <LoadMore
+        hasMore={state.hasMore}
+        isLoadingMore={state.isLoadingMore}
+        message={state.message}
+        onLoadMore={state.loadMore}
+        noun="verdicts"
+      />
+    </>
   )
 }

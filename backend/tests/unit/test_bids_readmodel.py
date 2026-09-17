@@ -9,7 +9,6 @@ scripts imitate, because the row readers exist to translate exactly that.
 
 from __future__ import annotations
 
-import logging
 import uuid
 from collections import deque
 from collections.abc import AsyncIterator, Sequence
@@ -44,7 +43,7 @@ from crossbid.models.tender import BidStatus, DocumentKind
 from crossbid.models.verdict import Decision
 from crossbid.readmodel import bids, feedback, matrix, requirements
 from crossbid.readmodel.bids import (
-    MAX_BIDS_LISTED,
+    SELECT_BIDS_AFTER,
     UNFINISHED_STATUSES,
     BidDocumentRow,
     BidNotFoundError,
@@ -76,6 +75,7 @@ from crossbid.readmodel.matrix import (
     write_matrix_rows,
     write_reviewed_rows,
 )
+from crossbid.readmodel.pagination import PageCursor
 from crossbid.readmodel.requirements import fetch_requirements, write_requirements
 
 pytestmark = pytest.mark.anyio
@@ -377,40 +377,49 @@ async def test_fetch_bid_translates_psycopg_types_and_answers_none_when_absent()
     assert missing is None
 
 
-async def test_list_bids_is_bounded() -> None:
+async def test_list_bids_asks_for_one_row_more_than_the_page_holds() -> None:
+    """M13. The extra row is how `Page.of` tells a full page from the last one."""
     db = FakeDatabase(Scripted([bid_record(), bid_record(id=uuid.uuid4())]))
 
-    rows = await list_bids(db, company_id=str(COMPANY_ID))
+    page = await list_bids(db, company_id=str(COMPANY_ID), limit=10)
 
-    assert len(rows) == 2
-    assert db.params() == {"company_id": str(COMPANY_ID), "limit": MAX_BIDS_LISTED}
+    assert len(page.items) == 2
+    assert page.next_cursor is None
+    assert db.params() == {"company_id": str(COMPANY_ID), "limit": 11}
 
 
-async def test_a_full_page_of_bids_says_so_rather_than_truncating_quietly(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """M13. The dashboard silently showed the newest 200 and no part of the answer said so."""
+async def test_a_page_of_bids_after_a_cursor_binds_the_row_it_names() -> None:
+    """M13. The dashboard truncated at 200 with nothing in the answer saying so. The cursor
+    names the last row the caller saw, so a bid started in between moves nothing."""
     # Arrange
-    db = FakeDatabase(Scripted([bid_record(id=uuid.uuid4()) for _ in range(MAX_BIDS_LISTED)]))
+    db = FakeDatabase(Scripted([]))
+    after = PageCursor(created_at=NOW, row_id=BID_ID)
 
     # Act
-    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.bids"):
-        rows = await list_bids(db, company_id=str(COMPANY_ID))
+    await list_bids(db, company_id=str(COMPANY_ID), limit=10, after=after)
 
     # Assert
-    assert len(rows) == MAX_BIDS_LISTED
-    assert "truncated" in caplog.text
+    assert db.params() == {
+        "company_id": str(COMPANY_ID),
+        "after_created_at": NOW,
+        "after_id": BID_ID,
+        "limit": 11,
+    }
+    assert "(b.created_at, b.id) < (%(after_created_at)s, %(after_id)s)" in SELECT_BIDS_AFTER
 
 
-async def test_a_list_of_bids_short_of_the_limit_says_nothing(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    db = FakeDatabase(Scripted([bid_record()]))
+async def test_a_full_page_of_bids_carries_a_cursor_and_withholds_the_extra_row() -> None:
+    """M13. The `limit + 1`-th row answers "is there more" and is never served."""
+    # Arrange
+    ids = [uuid.uuid4() for _ in range(3)]
+    db = FakeDatabase(Scripted([bid_record(id=row_id) for row_id in ids]))
 
-    with caplog.at_level(logging.WARNING, logger="crossbid.readmodel.bids"):
-        await list_bids(db, company_id=str(COMPANY_ID))
+    # Act
+    page = await list_bids(db, company_id=str(COMPANY_ID), limit=2)
 
-    assert caplog.text == ""
+    # Assert
+    assert [row.id for row in page.items] == [str(row_id) for row_id in ids[:2]]
+    assert page.next_cursor is not None
 
 
 async def test_unfinished_bids_asks_for_exactly_the_running_statuses() -> None:
@@ -1211,7 +1220,7 @@ async def test_a_listed_bid_carries_its_buyer_deadline_and_open_items() -> None:
     )
 
     # Act
-    [row] = await list_bids(db, company_id=str(COMPANY_ID))
+    [row] = (await list_bids(db, company_id=str(COMPANY_ID), limit=10)).items
     summary = row.summary()
 
     # Assert

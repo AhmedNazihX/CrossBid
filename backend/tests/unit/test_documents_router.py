@@ -961,3 +961,103 @@ def test_a_storage_failure_leaves_the_row_in_place_rather_than_stranding_the_fil
         assert response.status_code == 502
         assert response.json() == {"detail": NOT_DELETED_DETAIL}
         assert uuid.UUID(document_id) in pipeline.records.rows
+
+
+# ------------------------------------------------------------------- M13: paging
+
+
+def test_the_document_list_pages_and_hands_back_a_cursor(api: TestClient) -> None:
+    """M13. The list had no limit at all, then a silent 500-row cap."""
+    # Arrange
+    for name in ("eins.pdf", "zwei.pdf", "drei.pdf"):
+        post_pdf(api, filename=name)
+
+    # Act
+    page = api.get("/documents", params={"limit": 2}, headers=AS_COMPANY).json()
+
+    # Assert
+    assert [document["name"] for document in page["documents"]] == ["drei.pdf", "zwei.pdf"]
+    assert page["next_cursor"] is not None
+
+
+def test_following_the_cursor_gives_the_rest_and_never_repeats_a_row(api: TestClient) -> None:
+    # Arrange
+    names = ("eins.pdf", "zwei.pdf", "drei.pdf", "vier.pdf", "fuenf.pdf")
+    for name in names:
+        post_pdf(api, filename=name)
+
+    # Act
+    seen: list[str] = []
+    cursor: str | None = None
+    for _ in range(3):
+        params = {"limit": 2} | ({"cursor": cursor} if cursor else {})
+        page = api.get("/documents", params=params, headers=AS_COMPANY).json()
+        seen.extend(document["name"] for document in page["documents"])
+        cursor = page["next_cursor"]
+
+    # Assert
+    assert sorted(seen) == sorted(names)
+    assert cursor is None
+
+
+def test_an_upload_between_two_pages_does_not_shift_the_boundary(api: TestClient) -> None:
+    """The reason this is a cursor and not an offset — and on `documents` the insert at the
+    head is the bidder's own next upload, so it happens on the screen they are looking at."""
+    # Arrange
+    for name in ("eins.pdf", "zwei.pdf", "drei.pdf", "vier.pdf"):
+        post_pdf(api, filename=name)
+    first = api.get("/documents", params={"limit": 2}, headers=AS_COMPANY).json()
+
+    # Act
+    post_pdf(api, filename="neu.pdf")
+    second = api.get(
+        "/documents", params={"limit": 2, "cursor": first["next_cursor"]}, headers=AS_COMPANY
+    ).json()
+
+    # Assert
+    page_one = {document["id"] for document in first["documents"]}
+    page_two = {document["id"] for document in second["documents"]}
+    assert page_one & page_two == set()
+    assert len(page_two) == 2
+
+
+def test_a_cursor_this_api_did_not_issue_is_422_and_is_not_echoed(api: TestClient) -> None:
+    # Act
+    response = api.get(
+        "/documents", params={"cursor": "<script>alert(1)</script>"}, headers=AS_COMPANY
+    )
+
+    # Assert
+    assert response.status_code == 422
+    assert "script" not in response.text
+
+
+def test_a_document_limit_past_the_ceiling_is_refused(api: TestClient) -> None:
+    assert api.get("/documents", params={"limit": 5000}, headers=AS_COMPANY).status_code == 422
+
+
+def test_a_page_of_documents_holds_only_the_calling_company_s_rows(api: TestClient) -> None:
+    """The cursor must not become a way around the tenant scope: the predicate sits beside
+    `company_id`, never instead of it. Both pages are asked for while another company's
+    document sits between them in insertion order."""
+    # Arrange
+    post_pdf(api, filename="meins-eins.pdf")
+    api.post(
+        "/documents",
+        files=pdf_part(filename="fremd.pdf"),
+        data={"kind": "company_evidence"},
+        headers=AS_OTHER_COMPANY,
+    )
+    post_pdf(api, filename="meins-zwei.pdf")
+    first = api.get("/documents", params={"limit": 1}, headers=AS_COMPANY).json()
+
+    # Act
+    after = api.get(
+        "/documents",
+        params={"limit": 50, "cursor": first["next_cursor"]},
+        headers=AS_COMPANY,
+    ).json()
+
+    # Assert
+    assert [document["name"] for document in first["documents"]] == ["meins-zwei.pdf"]
+    assert [document["name"] for document in after["documents"]] == ["meins-eins.pdf"]

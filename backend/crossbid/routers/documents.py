@@ -54,7 +54,7 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime
-from typing import Final
+from typing import Annotated, Final
 
 from fastapi import (
     APIRouter,
@@ -63,6 +63,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     UploadFile,
     status,
 )
@@ -87,6 +88,11 @@ from crossbid.ingestion.storage import (
 from crossbid.models import DocumentKind
 from crossbid.rate_limit import RATE_LIMITED_RESPONSES, document_upload_limit
 from crossbid.readmodel.documents import DocumentRecord, DocumentsReadModel, DocumentStatus
+from crossbid.routers.paging import (
+    PAGE_CURSOR_DESCRIPTION,
+    PAGE_LIMIT_DESCRIPTION,
+    page_request,
+)
 from crossbid.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -211,11 +217,18 @@ class DocumentResponse(BaseModel):
 
 
 class DocumentListResponse(BaseModel):
-    """Every document of the calling company, newest first."""
+    """One page of the calling company's documents, newest first."""
 
     model_config = ConfigDict(frozen=True)
 
     documents: list[DocumentResponse] = Field(description="Newest first")
+    next_cursor: str | None = Field(
+        default=None,
+        description=(
+            "Pass as `cursor` for the next page. `null` means this is the last page — which "
+            "is not the same as a full one, so read this rather than counting rows."
+        ),
+    )
 
 
 class DocumentUrlResponse(BaseModel):
@@ -415,12 +428,25 @@ async def delete_document(
 
 @router.get("", response_model=DocumentListResponse, summary="List the company's documents")
 async def list_documents(
+    limit: Annotated[int | None, Query(description=PAGE_LIMIT_DESCRIPTION)] = None,
+    cursor: Annotated[str | None, Query(description=PAGE_CURSOR_DESCRIPTION)] = None,
     company: CompanyContext = Depends(current_company),
     records: DocumentsReadModel = Depends(get_document_records),
 ) -> DocumentListResponse:
-    """Every document of the calling company, newest first."""
-    found = await records.list(company_id=_company_uuid(company))
-    return DocumentListResponse(documents=[DocumentResponse.from_record(r) for r in found])
+    """One page of the calling company's documents, newest first (M13).
+
+    The list was unbounded, then bounded and silently truncated. It is now paged: follow
+    `next_cursor` for the rest. A cursor this API did not issue is a 422 rather than a page
+    from somewhere unintended — see `readmodel/pagination.py`.
+    """
+    asked = page_request(limit=limit, cursor=cursor)
+    page = await records.list(
+        company_id=_company_uuid(company), limit=asked.limit, after=asked.after
+    )
+    return DocumentListResponse(
+        documents=[DocumentResponse.from_record(r) for r in page.items],
+        next_cursor=page.next_cursor,
+    )
 
 
 # ------------------------------------------------------------------------------ helpers

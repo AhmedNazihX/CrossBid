@@ -71,6 +71,7 @@ from crossbid.models.requirement import (
 )
 from crossbid.readmodel.companies import profile_document
 from crossbid.readmodel.documents import DocumentRecord, DocumentStatus, ReadModelError
+from crossbid.readmodel.pagination import Page, PageCursor
 from crossbid.reference import ecertis_client
 from crossbid.settings import Settings, load_settings
 from crossbid.tools.rag import RagHit, RagSearchResult
@@ -780,9 +781,28 @@ class InMemoryRecords:
         del self.rows[document_id]
         return True
 
-    async def list(self, *, company_id: uuid.UUID) -> tuple[DocumentRecord, ...]:
-        own = [record for record in self.rows.values() if record.company_id == company_id]
-        return tuple(sorted(own, key=lambda record: record.created_at, reverse=True))
+    async def list(
+        self, *, company_id: uuid.UUID, limit: int, after: PageCursor | None = None
+    ) -> Page[DocumentRecord]:
+        """The real read model's page (M13), ordered and sliced the way Postgres would.
+
+        The fake pages for real rather than ignoring the arguments: a route that forgot to
+        pass the cursor on would otherwise pass its tests and serve page one forever.
+        """
+        own = sorted(
+            (record for record in self.rows.values() if record.company_id == company_id),
+            key=lambda record: (record.created_at, record.id),
+            reverse=True,
+        )
+        if after is not None:
+            own = [
+                record
+                for record in own
+                if (record.created_at, record.id) < (after.created_at, after.row_id)
+            ]
+        return Page.of(
+            own[: limit + 1], limit=limit, key=lambda record: (record.created_at, record.id)
+        )
 
     def _advance(
         self,

@@ -53,6 +53,7 @@ from psycopg.rows import DictRow
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from crossbid.models import DocumentKind
+from crossbid.readmodel.pagination import Page, PageCursor
 
 logger = logging.getLogger(__name__)
 
@@ -234,23 +235,36 @@ delete reports nothing deleted, and the file stays with the run that cites it.
 `company_chunks` and `tender_chunks` cascade on `documents (id)` (migration 0001), so the
 document's text leaves the corpus with it and no orphaned embedding can be retrieved after."""
 
-MAX_DOCUMENTS_LISTED: Final = 500
-"""The most rows one company's document list answers with (M13).
-
-It had no limit at all, which is a query whose cost is a function of how long the account has
-been used: a bidder who has run twenty packs is asking for six hundred rows on a page that
-shows the newest few. 500 is roughly eighteen DE packs, so no honest account meets it, and it
-is not silent when one does — `list` logs the truncation, which is the difference between a
-bound and a bug."""
-
 LIST_DOCUMENTS_SQL: Final[LiteralString] = """
 select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
 from documents
 where company_id = %(company_id)s
-order by created_at desc, id
+order by created_at desc, id desc
 limit %(limit)s
 """
+"""The first page (M13). It had no limit at all, which is a query whose cost is a function of
+how long the account has been used: a bidder who has run twenty packs asked for six hundred
+rows on a page that shows the newest few.
+
+`id desc` rather than the `id` it used to end with, so the tie-break runs the same way as the
+`(created_at, id) <` comparison below. It only ever reorders rows that share a microsecond,
+and it is what makes the cursor exact rather than nearly right."""
+
+LIST_DOCUMENTS_AFTER_SQL: Final[LiteralString] = """
+select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
+pages, unread_pages, flagged_chunks, created_at, updated_at
+from documents
+where company_id = %(company_id)s
+  and (created_at, id) < (%(after_created_at)s, %(after_id)s)
+order by created_at desc, id desc
+limit %(limit)s
+"""
+"""Every page after the first. Written out in full rather than assembled from the one above,
+for the reason the module docstring gives: a `LiteralString` is what keeps a statement from
+being built at run time, and an f-string would forfeit it. The row comparison is a single
+tuple test, which Postgres answers from the `(company_id, created_at, id)` ordering rather
+than by scanning to an offset."""
 
 SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     INSERT_DOCUMENT_SQL,
@@ -260,6 +274,7 @@ SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     MARK_FAILED_SQL,
     SELECT_DOCUMENT_SQL,
     LIST_DOCUMENTS_SQL,
+    LIST_DOCUMENTS_AFTER_SQL,
 )
 """Every statement in the module. The test asserts each one binds `company_id`."""
 
@@ -387,22 +402,24 @@ class DocumentsReadModel:
         )
         return row is not None
 
-    async def list(self, *, company_id: uuid.UUID) -> tuple[DocumentRecord, ...]:
-        """One company's documents, newest first, at most `MAX_DOCUMENTS_LISTED`."""
+    async def list(
+        self, *, company_id: uuid.UUID, limit: int, after: PageCursor | None = None
+    ) -> Page[DocumentRecord]:
+        """One page of this company's documents, newest first (M13).
+
+        `limit + 1` rows are asked for and at most `limit` are served: the extra row is how
+        `Page.of` learns there is another page without a second `count(*)` over a table an
+        upload is writing to.
+        """
+        statement, params = _page_query(company_id=company_id, limit=limit, after=after)
         async with self._source.connection() as connection:
-            cursor = await connection.execute(
-                LIST_DOCUMENTS_SQL,
-                {"company_id": company_id, "limit": MAX_DOCUMENTS_LISTED},
-            )
+            cursor = await connection.execute(statement, params)
             rows = await cursor.fetchall()
-        if len(rows) == MAX_DOCUMENTS_LISTED:
-            logger.warning(
-                "Company %s has at least %d documents; the list is truncated and needs a "
-                "cursor rather than a larger limit",
-                company_id,
-                MAX_DOCUMENTS_LISTED,
-            )
-        return tuple(_record(row) for row in rows)
+        return Page.of(
+            [_record(row) for row in rows],
+            limit=limit,
+            key=lambda record: (record.created_at, record.id),
+        )
 
     async def _advance(
         self, company_id: uuid.UUID, document_id: uuid.UUID, status: DocumentStatus
@@ -471,6 +488,24 @@ async def fail_interrupted_documents(
             "marked %d document(s) failed: a restart interrupted them mid-pipeline", swept
         )
     return swept
+
+
+def _page_query(
+    *, company_id: uuid.UUID, limit: int, after: PageCursor | None
+) -> tuple[LiteralString, dict[str, object]]:
+    """The statement and parameters for one page, first or subsequent.
+
+    Two constants rather than one assembled string: see `LIST_DOCUMENTS_AFTER_SQL`. The
+    `limit + 1` lives here so both call sites cannot disagree about it.
+    """
+    if after is None:
+        return LIST_DOCUMENTS_SQL, {"company_id": company_id, "limit": limit + 1}
+    return LIST_DOCUMENTS_AFTER_SQL, {
+        "company_id": company_id,
+        "after_created_at": after.created_at,
+        "after_id": after.row_id,
+        "limit": limit + 1,
+    }
 
 
 def _require(

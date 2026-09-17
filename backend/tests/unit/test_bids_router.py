@@ -39,6 +39,7 @@ from crossbid.models.tender import BidStatus, DocumentKind
 from crossbid.models.verdict import Decision, Gap, GapSeverity, Verdict
 from crossbid.readmodel.bids import BidDocumentRow, BidRow, BidStateError, thread_id_of
 from crossbid.readmodel.documents import DocumentStatus
+from crossbid.readmodel.pagination import Page, PageCursor
 from crossbid.routers import bids as bids_router
 from crossbid.routers.bids import (
     NO_SUCH_BID_DETAIL,
@@ -213,8 +214,18 @@ class InMemoryReadModel:
         row = self.bids.get(bid_id)
         return row if row is not None and row.company_id == company_id else None
 
-    async def list_bids(self, db: Any, *, company_id: str) -> list[BidRow]:
-        return [row for row in self.bids.values() if row.company_id == company_id]
+    async def list_bids(
+        self, db: Any, *, company_id: str, limit: int, after: PageCursor | None = None
+    ) -> Page[BidRow]:
+        """Pages for real (M13), so a route that dropped the cursor would fail here."""
+        own = sorted(
+            (row for row in self.bids.values() if row.company_id == company_id),
+            key=_page_key,
+            reverse=True,
+        )
+        if after is not None:
+            own = [row for row in own if _page_key(row) < (after.created_at, after.row_id)]
+        return Page.of(own[: limit + 1], limit=limit, key=_page_key)
 
     async def fetch_requirements(
         self, db: Any, *, company_id: str, bid_id: str
@@ -267,6 +278,12 @@ class FakeRunner:
         self.reviewed.append((bid, review))
         if self.on_review is not None:
             self.on_review(bid)
+
+
+def _page_key(row: BidRow) -> tuple[datetime, uuid.UUID]:
+    """Where a page boundary sits — the same pair `readmodel.bids` orders and compares on."""
+    assert row.created_at is not None
+    return row.created_at, uuid.UUID(row.id)
 
 
 class FakeDatabase:
@@ -1360,3 +1377,163 @@ def test_a_notice_number_that_is_not_one_is_refused_before_anything_is_started(
     )
     assert read_model.bids == {}
     assert runner.started == []
+
+
+# ---------------------------------------------------------------- M13: paging and 304
+
+
+def test_the_bid_list_pages_and_hands_back_a_cursor(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """M13. The dashboard truncated at 200 with nothing in the answer saying so."""
+    # Arrange
+    for minute in range(3):
+        read_model.add_bid(created_at=NOW - timedelta(minutes=minute))
+
+    # Act
+    first = client.get("/bids", params={"limit": 2}, headers=headers()).json()
+
+    # Assert
+    assert len(first["bids"]) == 2
+    assert first["next_cursor"] is not None
+
+
+def test_following_the_cursor_gives_the_rest_and_never_repeats_a_row(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """The property an `offset` does not have. Every page is disjoint and together they are
+    the whole list, even though the second request is a separate query."""
+    # Arrange
+    for minute in range(5):
+        read_model.add_bid(created_at=NOW - timedelta(minutes=minute))
+
+    # Act
+    seen: list[str] = []
+    cursor: str | None = None
+    for _ in range(3):
+        params = {"limit": 2} | ({"cursor": cursor} if cursor else {})
+        page = client.get("/bids", params=params, headers=headers()).json()
+        seen.extend(row["id"] for row in page["bids"])
+        cursor = page["next_cursor"]
+
+    # Assert
+    assert len(seen) == 5
+    assert len(set(seen)) == 5
+    assert cursor is None
+
+
+def test_a_bid_started_between_two_pages_does_not_shift_the_boundary(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """The reason this is a cursor. Under `offset 2` the new row at the head pushes everything
+    down one, so page two repeats the row that was third and never serves the fourth."""
+    # Arrange
+    for minute in range(1, 5):
+        read_model.add_bid(created_at=NOW - timedelta(minutes=minute))
+    first = client.get("/bids", params={"limit": 2}, headers=headers()).json()
+
+    # Act: a bid started while the bidder reads page one.
+    read_model.add_bid(created_at=NOW)
+    second = client.get(
+        "/bids", params={"limit": 2, "cursor": first["next_cursor"]}, headers=headers()
+    ).json()
+
+    # Assert
+    page_one = {row["id"] for row in first["bids"]}
+    page_two = {row["id"] for row in second["bids"]}
+    assert page_one & page_two == set()
+    assert len(page_two) == 2
+
+
+def test_a_cursor_this_api_did_not_issue_is_422_and_is_not_echoed(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """It arrives on a query string and its refusal is rendered on a screen."""
+    # Act
+    response = client.get(
+        "/bids", params={"cursor": "<script>alert(1)</script>"}, headers=headers()
+    )
+
+    # Assert
+    assert response.status_code == 422
+    assert "script" not in response.text
+
+
+def test_a_limit_past_the_ceiling_is_refused_rather_than_silently_clamped(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """Clamping would answer 50 rows to a request for 5 000 and say nothing, which is the
+    silent truncation this finding is about wearing a different hat."""
+    assert client.get("/bids", params={"limit": 5000}, headers=headers()).status_code == 422
+
+
+def test_polling_a_bid_carries_an_etag(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    # Arrange
+    bid = read_model.add_bid()
+
+    # Act
+    response = client.get(f"/bids/{bid.id}", headers=headers())
+
+    # Assert
+    assert response.headers["ETag"].startswith('W/"')
+
+
+def test_an_unchanged_poll_is_304_with_no_body(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """M13. This route is polled every two seconds for the length of a run and answers with
+    every requirement and every matrix row; most of those answers are identical."""
+    # Arrange
+    bid = read_model.add_bid()
+    first = client.get(f"/bids/{bid.id}", headers=headers())
+
+    # Act
+    again = client.get(
+        f"/bids/{bid.id}", headers=headers() | {"If-None-Match": first.headers["ETag"]}
+    )
+
+    # Assert
+    assert again.status_code == 304
+    assert again.content == b""
+    assert again.headers["ETag"] == first.headers["ETag"]
+
+
+def test_a_poll_after_the_matrix_moved_gets_a_body_and_a_new_etag(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """The write a reviewer is waiting for. `matrix_rows` has no `updated_at` and is upserted
+    in place, so a tag built from timestamps would go on saying nothing had happened."""
+    # Arrange
+    bid = read_model.add_bid()
+    first = client.get(f"/bids/{bid.id}", headers=headers())
+    rows = [requirement(bid.id)]
+    read_model.requirements[bid.id] = rows
+    read_model.matrix_rows[bid.id] = [
+        MatrixRow(
+            id=str(uuid.uuid4()),
+            requirement_id=rows[0].id,
+            status=RowStatus.UNSUPPORTED,
+            agent_rationale="Kein Nachweis im Bestand gefunden.",
+        )
+    ]
+
+    # Act
+    again = client.get(
+        f"/bids/{bid.id}", headers=headers() | {"If-None-Match": first.headers["ETag"]}
+    )
+
+    # Assert
+    assert again.status_code == 200
+    assert again.headers["ETag"] != first.headers["ETag"]
+    assert again.json()["matrix_rows"] != []
+
+
+def test_a_first_poll_holding_nothing_gets_a_body(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """A workspace that has just opened sends no `If-None-Match` and must not get a 304."""
+    bid = read_model.add_bid()
+
+    assert client.get(f"/bids/{bid.id}", headers=headers()).status_code == 200

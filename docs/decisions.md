@@ -6322,3 +6322,74 @@ this shipped. Each test was measured failing with the fix reverted. The first dr
 contrast test **passed against the defect** — Chrome keeps resolving `outline-color` while
 `outline-style` is `none`, so the helper read a healthy ratio off a ring that was not there.
 ADR-0063 for the second time; `paintedFocusRing` now reports 1:1 when nothing is drawn.
+
+## ADR-0093 — Lists page with a cursor; the poll asks conditionally
+
+**Date:** 2026-09-17 · **Audit finding:** M13 · **Status:** accepted ·
+**Completes:** the half of M13 left open in `027a119`
+
+Three things were wrong and the first was already fixed. `GET /bids/{id}` read the bid twice
+per poll (closed in `caef415`). `GET /documents` had no limit at all and `GET /bids`
+truncated at 200 — both silently. And the poll resent every requirement and every matrix row
+every two seconds whether or not anything had moved.
+
+**A keyset cursor, not an offset.** Both lists are newest-first and both grow *at the head*:
+on `documents` the insert is the bidder's own next upload, on the screen they are looking at.
+Under `offset 50` that insert shifts every row down one, so page two repeats the row that was
+50 and never serves the one that was 51. The boundary here is the row the caller last saw —
+`(created_at, id)`, compared as one tuple Postgres answers from the ordering — so an insert
+changes what is above the boundary and nothing about where it is. Both `order by` clauses
+gained `id desc` where one ended in a bare `id`, so the tie-break runs the same way as the
+comparison; it only ever reorders rows sharing a microsecond.
+
+**The cursor is opaque, and a bad one is a 422.** Not secrecy — the caller knows their own
+timestamps. It is that a cursor reading as `2026-09-17T10:30:15Z|<uuid>` invites a caller to
+build one, and from then on the read model's ordering is public API. The refusal never quotes
+the cursor back: it arrives on a query string and its message is rendered on a screen.
+
+**A limit past the ceiling is refused, not clamped.** Clamping answers a request for 5 000
+rows with 50 and says nothing — the same silent truncation this finding is about, wearing a
+different hat. `MAX_DOCUMENTS_LISTED` (500) and `MAX_BIDS_LISTED` (200) are gone; both
+docstrings had already named a cursor as their replacement. `DEFAULT_PAGE_SIZE` is 50 and
+`MAX_PAGE_SIZE` 200, and both are in the contract.
+
+**Two screens page and two ask for one explicit page.** The bids table, the verdicts list and
+the documents panel offer *Load more*, which appears only while `next_cursor` is present — a
+full page is not evidence of another one, which is why the API returns the field rather than
+letting the browser count rows. The dashboard and the row editor's attachment picker ask for
+one page at the ceiling instead: the dashboard's metrics are computed over what it holds, and
+a count that changes with how many times someone pressed a button is not a metric. That is
+what the 200-row silent cap did; the difference is that the number is now in the request.
+
+**The poll is conditional, and the tag is over the body.** The route sends a weak `ETag`;
+the browser echoes it as `If-None-Match`; an unchanged poll is a **304** with no body. The
+cheaper design — a tag from `max(updated_at)` and a row count per projection, letting the
+route answer before reading the three tables — **does not work here, and checking that was
+the one real surprise.** `requirements` and `matrix_rows` have no `updated_at` column, and
+`UPSERT_MATRIX_ROW` edits in place, so a row whose status the agent or a reviewer just
+changed keeps the `created_at` it was inserted with and the count beside it does not move. A
+tag built from those would keep answering "unchanged" across exactly the writes a reviewer is
+waiting to see. Hashing the assembled body cannot be wrong that way. **So the reads are not
+saved, only the serialisation and the transfer** — which is what the card names ("resent on
+every two-second poll"). Saving the reads too needs `updated_at` on both projections: a
+migration, two write paths and their round-trip tests, and its own card.
+
+**Half a CORS pair is silent.** `If-None-Match` is not a CORS-safelisted *request* header and
+`ETag` is not a safelisted *response* one, so both `allow_headers` and `expose_headers` needed
+the addition. With either missing, every screen still works perfectly and the saving simply
+never happens — which is why the browser tests assert on the wire (`api.requests`) and not on
+what is rendered.
+
+**A 304 returns the identical object.** React compares by identity, so handing back a fresh
+object with equal contents re-renders the whole workspace every two seconds — most of the cost
+the 304 exists to remove. The held pair lives in a ref inside `useWorkspaceState`, not a
+module-level cache: a module cache would outlive the workspace, leak between two bids in two
+tabs, and be invisible to a test.
+
+**How this is pinned.** 34 backend tests, 18 browser unit tests and 5 Playwright journeys,
+each measured failing with its fix reverted. Two of them could not fail when first written,
+and both were rebuilt: the conditional-poll journey waited only for a second request, which
+is still unconditional because the workspace's *first* load holds no tag; and the "no Load
+more on a last page" journey asserted a button's absence, so it passed against a build with
+no `LoadMore` component in it at all. That is ADR-0063 for the third and fourth time — an
+assertion of absence is not evidence unless the same test also sees the thing present.
