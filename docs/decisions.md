@@ -6536,3 +6536,50 @@ the complaint clears as you type asserted only that the message was *absent* aft
 which passed against the build that never showed a message at all. It now sees the message
 present before it asserts it is gone. That is the same shape as the two found closing M13,
 and the reason the RED run happens before the fix and not after it.
+
+## ADR-0096 — A tab's id is derived from its panel's, because the caller owns that one
+
+**Date:** 2026-09-17 · **Audit finding:** L3 · **Status:** accepted
+
+`Tabs` gave each tab an `id` built from a prefix it made privately with `useId`, and exported
+`tabId(prefix, value)` to compose it. The prefix never left the component, so the helper could
+not be called from outside and nothing imported it. The consequence is the finding: the seven
+panels of the two workspace layouts carried `role="tabpanel"` and an `id`, and **nothing
+pointing back at the tab that controls them**. A screen reader entering a panel announced "tab
+panel" and stopped — which section had just been opened was precisely the thing not said, on
+a screen whose sections are Matrix, Source, Ask and Verdict.
+
+**The id now comes from the panel, not from a private prefix.** `tabId(panelId)` returns
+`` `${panelId}-tab` ``, and `Tabs` uses it for the tab's own `id`. The caller already owns the
+panel's id and already passes it in as `panelId` — that was true before this change — so the
+tab's id is now something the caller can name without a new prop, a context, a ref or a
+callback ref. `useId` is gone from the component, and the exported helper has a caller at
+last: three panels in `desktop-workspace.tsx` and four in `phone-workspace.tsx` say
+`aria-labelledby={tabId(sidePanelId('source'))}`.
+
+**The alternative the card offered was `aria-label` on each panel, and it is the wrong one
+here** — though not everywhere. A label would restate the tab's text in a second place, and
+the two would drift the first time a tab is renamed; `aria-labelledby` cannot, because it
+reads the tab. Where it *is* right is where the kit already used it:
+`components/matrix/requirement-list.tsx` has one panel serving all of its tabs, so there is no
+single tab to point at, and it names itself. That panel was never part of this finding.
+
+**Each layout got a one-line id function** (`sidePanelId`, `phonePanelId`) rather than a
+template literal repeated at the tablist and again at each panel. The failure mode this closes
+is specific: `aria-labelledby` pointing at an id that does not exist is not an error anywhere —
+not in the browser, not in `tsc`, not in ESLint — it simply produces an empty name, which is
+the defect being fixed here wearing a different hat. One spelling, used twice, cannot do that.
+
+**How this is pinned.** `e2e/tab-panels.spec.ts`, one journey per layout, each walking every
+tab and asking for the panel *by the name it should now have*. Both were measured failing with
+the three source files reverted.
+
+It asks Playwright for the accessible name rather than checking that the attribute is present,
+and that is the point: the attribute being present is what a dangling `aria-labelledby` also
+looks like. The name is computed by the browser from the live tree, so a panel whose label
+points nowhere fails here exactly as a panel with no label at all does.
+
+It is a browser test and not jsdom, unlike L2's, because the phone layout is chosen by a media
+query in `workspace-state.ts` (`state.isDesktop`) and the two layouts are separate components
+since ADR-0086 — a name added to one is not a name added to the other, and only a real
+viewport picks between them.

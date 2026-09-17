@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icons'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Notice } from '@/components/ui/notice'
-import { Tabs } from '@/components/ui/tabs'
+import { tabId, Tabs } from '@/components/ui/tabs'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
@@ -28,6 +28,9 @@ import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
 import { VerdictPanel } from './verdict-panel'
 import type { SideTab, WorkspaceState } from './workspace-state'
+
+/** One namespace for the right-hand column: the panel's id, and the tab's derived from it. */
+const sidePanelId = (value: SideTab): string => `side-panel-${value}`
 
 export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) {
   const {
@@ -225,24 +228,39 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
             onChange={setSideTab}
             fullWidth
             aria-label="Workspace panels"
-            panelId={(value) => `side-panel-${value}`}
+            panelId={sidePanelId}
           />
           {/* All three stay mounted and are hidden, not unmounted: the PDF keeps its page, a
               half-typed question survives a look at the source, and a half-written override
               reason survives a look at the page it is about. The phone unmounts Source to
               spare an iframe on a small device; a laptop has the memory. */}
-          <div id="side-panel-source" role="tabpanel" hidden={sideTab !== 'source'}>
+          <div
+            id={sidePanelId('source')}
+            role="tabpanel"
+            aria-labelledby={tabId(sidePanelId('source'))}
+            hidden={sideTab !== 'source'}
+          >
             <SourcePanel
               documents={sourceDocuments}
               selection={selection}
               onSelect={handleSelect}
             />
           </div>
-          <div id="side-panel-ask" role="tabpanel" hidden={sideTab !== 'ask'}>
+          <div
+            id={sidePanelId('ask')}
+            role="tabpanel"
+            aria-labelledby={tabId(sidePanelId('ask'))}
+            hidden={sideTab !== 'ask'}
+          >
             {askPanel('panel')}
           </div>
           {bid.verdict !== null && (
-            <div id="side-panel-verdict" role="tabpanel" hidden={sideTab !== 'verdict'}>
+            <div
+              id={sidePanelId('verdict')}
+              role="tabpanel"
+              aria-labelledby={tabId(sidePanelId('verdict'))}
+              hidden={sideTab !== 'verdict'}
+            >
               <div id="verdict" className="scroll-mt-4">
                 {verdictPanel}
               </div>

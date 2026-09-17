@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useRef, type KeyboardEvent } from 'react'
+import { useRef, type KeyboardEvent } from 'react'
 import { cn } from 'cn'
 
 /**
@@ -34,13 +34,27 @@ export interface TabsProps<V extends string> {
   readonly fullWidth?: boolean
   /** Accessible name of the tablist, e.g. "Workspace sections". */
   readonly 'aria-label': string
-  /** Returns the `id` of the panel a tab controls; the caller renders that panel. */
+  /**
+   * Returns the `id` of the panel a tab controls; the caller renders that panel, and names
+   * it back with `aria-labelledby={tabId(panelId(value))}`.
+   */
   readonly panelId: (value: V) => string
   readonly className?: string
 }
 
-export function tabId(prefix: string, value: string): string {
-  return `${prefix}-tab-${value}`
+/**
+ * The `id` of the tab that controls `panelId` — derived from the panel's own id rather than
+ * from a prefix this component makes privately.
+ *
+ * That is the whole of L3. It used to read `tabId(prefix, value)` where `prefix` was a
+ * `useId()` inside `Tabs`, so the ids existed and **no caller could name one**: seven panels
+ * across the two workspace layouts carried `role="tabpanel"` and pointed at nothing, and a
+ * screen reader entering one announced "tab panel" and stopped. Keying off `panelId`, which
+ * the caller already owns and already passes in, needs no new prop and no shared secret, and
+ * a panel that renames itself cannot drift from its tab.
+ */
+export function tabId(panelId: string): string {
+  return `${panelId}-tab`
 }
 
 export function Tabs<V extends string>({
@@ -54,7 +68,6 @@ export function Tabs<V extends string>({
   className,
   ...rest
 }: TabsProps<V>) {
-  const prefix = useId()
   const listRef = useRef<HTMLDivElement>(null)
 
   function focusTab(index: number) {
@@ -103,7 +116,7 @@ export function Tabs<V extends string>({
             key={item.value}
             type="button"
             role="tab"
-            id={tabId(prefix, item.value)}
+            id={tabId(panelId(item.value))}
             aria-selected={isSelected}
             aria-controls={panelId(item.value)}
             tabIndex={isSelected ? 0 : -1}

@@ -15,13 +15,16 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
-import { Tabs } from '@/components/ui/tabs'
+import { tabId, Tabs } from '@/components/ui/tabs'
 import { describeApiError } from '@/lib/api-client'
 import { formatLanguagePair, plural } from '@/lib/format'
 import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
 import { VerdictPanel } from './verdict-panel'
-import { PHONE_TABS, type WorkspaceState } from './workspace-state'
+import { PHONE_TABS, type PhoneTab, type WorkspaceState } from './workspace-state'
+
+/** One namespace for the phone's sections: the panel's id, and the tab's derived from it. */
+const phonePanelId = (value: PhoneTab): string => `phone-panel-${value}`
 
 export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
   const {
@@ -109,7 +112,7 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
           size="lg"
           fullWidth
           aria-label="Workspace sections"
-          panelId={(value) => `phone-panel-${value}`}
+          panelId={phonePanelId}
         />
         {hasRows ? (
           <MatrixSummary
@@ -129,7 +132,12 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
       </div>
       {liveRegion}
       <div className="flex flex-1 flex-col gap-2.5 px-4 py-3">
-        <div id="phone-panel-matrix" role="tabpanel" hidden={phoneTab !== 'matrix'}>
+        <div
+          id={phonePanelId('matrix')}
+          role="tabpanel"
+          aria-labelledby={tabId(phonePanelId('matrix'))}
+          hidden={phoneTab !== 'matrix'}
+        >
           <RequirementCards
             requirements={bid.requirements}
             rowsByRequirement={rowsByRequirement}
@@ -142,7 +150,12 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
             review={review}
           />
         </div>
-        <div id="phone-panel-source" role="tabpanel" hidden={phoneTab !== 'source'}>
+        <div
+          id={phonePanelId('source')}
+          role="tabpanel"
+          aria-labelledby={tabId(phonePanelId('source'))}
+          hidden={phoneTab !== 'source'}
+        >
           {phoneTab === 'source' && (
             <SourcePanel
               documents={sourceDocuments}
@@ -152,12 +165,22 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
             />
           )}
         </div>
-        <div id="phone-panel-verdict" role="tabpanel" hidden={phoneTab !== 'verdict'}>
+        <div
+          id={phonePanelId('verdict')}
+          role="tabpanel"
+          aria-labelledby={tabId(phonePanelId('verdict'))}
+          hidden={phoneTab !== 'verdict'}
+        >
           {phoneTab === 'verdict' && verdictPanel}
         </div>
         {/* Always mounted, unlike the source tab: there is no iframe to spare, and a
               half-typed question must survive a look at the page it is about. */}
-        <div id="phone-panel-ask" role="tabpanel" hidden={phoneTab !== 'ask'}>
+        <div
+          id={phonePanelId('ask')}
+          role="tabpanel"
+          aria-labelledby={tabId(phonePanelId('ask'))}
+          hidden={phoneTab !== 'ask'}
+        >
           {askPanel('phone')}
         </div>
         {pollError !== undefined && (
