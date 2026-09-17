@@ -210,7 +210,7 @@ _BID_COLUMNS: Final[LiteralString] = """
     b.buyer, b.deadline, b.deadline_utc_offset_minutes,
     b.status, b.failure_reason, b.problems, b.verdict, b.decision, b.created_at,
     b.updated_at,
-    c.language as bidder_language
+    coalesce(b.bidder_language, c.language) as bidder_language
 """
 
 _OPEN_ITEMS: Final[LiteralString] = """
@@ -240,10 +240,17 @@ silenced per statement (as `readmodel/documents.py` does) rather than worked aro
 
 INSERT_BID: Final[LiteralString] = """
 insert into bids (id, company_id, thread_id, ted_publication_number, title, source_language,
-                  buyer, deadline, deadline_utc_offset_minutes, status)
+                  bidder_language, buyer, deadline, deadline_utc_offset_minutes, status)
 values (%(id)s, %(company_id)s, %(thread_id)s, %(notice_number)s, %(title)s,
-        %(source_language)s, %(buyer)s, %(deadline)s, %(deadline_offset)s, %(status)s)
+        %(source_language)s, %(bidder_language)s, %(buyer)s, %(deadline)s, %(deadline_offset)s,
+        %(status)s)
 """
+"""Writes the bidder language **onto the bid**, which it did not until migration 0011.
+
+The argument was taken and dropped, and every read answered with `companies.language` instead —
+so an analysis written in German relabelled itself the moment its company switched to English,
+in the workspace, in the chat preamble and in any resumed run. A bid is a thing that happened;
+the language it happened in is a property of it, not of the account's current preference."""
 
 SELECT_BID: Final[LiteralString] = f"""
 select {_BID_COLUMNS}
@@ -500,6 +507,7 @@ async def create_bid(
                 "notice_number": notice_number,
                 "title": title,
                 "source_language": source_language,
+                "bidder_language": bidder_language,
                 "buyer": buyer,
                 "deadline": deadline,
                 "deadline_offset": deadline_utc_offset_minutes,

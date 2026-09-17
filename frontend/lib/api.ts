@@ -584,7 +584,7 @@ export interface components {
             source_language: string | null;
             /**
              * Bidder Language
-             * @description What requirements are explained in
+             * @description The language this analysis was written in — recorded on the bid when it was started, not read from the company's current setting. A bidder who changes that setting does not change what an existing analysis says. Bids started before 2026-09-18 fall back to the company's language until they are backfilled.
              */
             bidder_language: string;
             /** @description queued → parsing → extracting → checking → scoring → awaiting_review; failed carries failure_reason */

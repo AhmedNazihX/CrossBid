@@ -241,7 +241,14 @@ class BidResponse(BaseModel):
     notice_number: str | None = Field(description="TED publication number")
     title: str = Field(description="What the dashboard calls this bid")
     source_language: str | None = Field(description="The tender's language, BCP 47")
-    bidder_language: str = Field(description="What requirements are explained in")
+    bidder_language: str = Field(
+        description=(
+            "The language this analysis was written in — recorded on the bid when it was "
+            "started, not read from the company's current setting. A bidder who changes that "
+            "setting does not change what an existing analysis says. Bids started before "
+            "2026-09-18 fall back to the company's language until they are backfilled."
+        )
+    )
     status: BidStatus = Field(
         description=(
             "queued → parsing → extracting → checking → scoring → awaiting_review; failed "

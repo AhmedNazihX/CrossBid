@@ -6879,3 +6879,51 @@ by dragging the table sideways. So the browser test measures this one's box agai
 at that same width rather than assuming it, and the row disappears from the loaded pages rather
 than refetching: the pages are keyset cursors (ADR-0093), and asking for "the page after X" once
 X is gone is a question with a worse answer than not drawing the row.
+
+## ADR-0102 — A bid records the language it was analysed in
+
+**Date:** 2026-09-18 · **Reported from the running product** · **Status:** accepted
+
+A bidder analysed a French tender with German as their explanation language, then changed the
+setting to English. Reopening the bid, the matrix column read **"Requirement (explained in
+EN)"** and offered an EN toggle — over German text, because the German text is what the run
+produced and what `requirements.translation` holds.
+
+**`bids` had no `bidder_language` column.** `create_bid` took the argument and dropped it on the
+floor, and `_BID_COLUMNS` read `c.language as bidder_language` from a join on `companies`. So
+the field never meant "the language this analysis was written in"; it meant "the language this
+company prefers right now", and the two agree only until somebody changes the setting.
+
+**It reached further than the label, which is why this is not a UI fix.** `routers/chat.py`
+passes the same field into the chat preamble — ask a question about that bid after the switch
+and the model is instructed to answer in English about a German matrix. `check_reqs` takes it
+from the graph state, so a resumed or re-reviewed run would have written English rationales into
+a German analysis, leaving one bid half in each language. A bid is a thing that happened; the
+language it happened in is a property of it, not of the account's current preference.
+
+Migration 0011 adds the column, `INSERT_BID` writes it, and the read is
+`coalesce(b.bidder_language, c.language)` — so a bid started from now on is authoritative and
+one started before falls back to exactly today's behaviour. No bid gets worse.
+
+**The backfill is the interesting half.** The obvious `update bids set bidder_language =
+companies.language` is wrong in precisely the case that produced the report: it would stamp the
+*new* preference on the analyses the column exists to protect, and make the error permanent and
+unrecoverable — the German bid would become EN for ever, with nothing left to say otherwise.
+
+Nothing in the row data records it either: `requirements` keeps `source_lang` and a
+`translation` with no language of its own, the matrix keeps prose, and detecting a language from
+that prose is a guess dressed as a fact.
+
+**The run's own state does record it.** `BidState.bidder_language` is what `extract_reqs`
+translated into and what `check_reqs` argued in, and it is checkpointed on the thread
+`bid:{id}`. `scripts/backfill_bid_languages.py` reads it back through `aget_tuple` — a record,
+not a heuristic. A bid whose checkpoint is gone is **left null** and reads as the company's
+language as before: the honest answer for a bid whose language nothing remembers is to say so,
+not to invent one. Dry run by default; `make backfill-languages APPLY=1` writes.
+
+**One thing this cost, worth writing down.** Regenerating the API client failed because the app
+would not start: `coalesce(b.bidder_language, …)` against a database without migration 0011 is
+`UndefinedColumn` at startup, from `resume_unfinished_runs`. That is the 2026-09-16 incident
+again, where a missing 0008 made every bid fetch 500 — **this migration must be applied before
+this code runs**, and an API pointed at an unmigrated database now fails loudly at boot rather
+than on the first request.

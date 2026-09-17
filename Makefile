@@ -121,6 +121,9 @@ EVAL_DB_URL  ?= postgresql://crossbid:crossbid@localhost:$(EVAL_DB_PORT)/crossbi
 index-existing: ## List bids analysed before the tender corpus existed (add APPLY=1 to index them)
 	cd $(BACKEND) && uv run python scripts/index_existing_bids.py $(if $(APPLY),--apply,)
 
+backfill-languages: ## Recover each existing bid's analysis language from its checkpoint (APPLY=1 to write)
+	cd $(BACKEND) && uv run python scripts/backfill_bid_languages.py $(if $(APPLY),--apply,)
+
 eval-db: ## Start a throwaway pgvector for the retrieval eval and apply the migrations
 	@docker rm -f $(EVAL_DB_NAME) >/dev/null 2>&1 || true
 	docker run -d --name $(EVAL_DB_NAME) \

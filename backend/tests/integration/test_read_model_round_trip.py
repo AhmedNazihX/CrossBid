@@ -730,3 +730,49 @@ async def test_a_bid_whose_graph_should_be_running_is_not_deleted(db: Database) 
 
     assert await delete_bid(db, company_id=company_id, bid_id=bid.id) is False
     assert await fetch_bid(db, company_id=company_id, bid_id=bid.id) is not None
+
+
+@skip_without_database
+async def test_a_bid_keeps_the_language_it_was_analysed_in(db: Database) -> None:
+    """Reported from the running product, 2026-09-18.
+
+    `bids` had no `bidder_language` column. `create_bid` took the argument and dropped it, and
+    every read joined `companies` and returned `c.language` under that name — so the field meant
+    "what this company prefers now", not "what this analysis was written in". A bidder analysed
+    a tender with German as their explanation language, switched the setting to English, and the
+    workspace relabelled the column *explained in EN* over German text, with an EN toggle that
+    could only show the German string it had.
+
+    It reached further than the label: `routers/chat.py` feeds the same field to the chat
+    preamble, so a question about that bid told the model to answer in English about a German
+    matrix, and a resumed run would have written English rationales into it.
+    """
+    company_id = str(uuid.uuid4())
+    companies = CompaniesReadModel(db)
+    german = PROFILE.model_copy(update={"language": "de"})
+    await companies.create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=german
+    )
+    bid = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="614280-2026",
+        title="Conseil Architecture SI",
+        source_language="fr",
+        bidder_language="de",
+    )
+    assert bid.bidder_language == "de"
+
+    # The bidder changes their mind about the language they read in.
+    await companies.save(
+        company_id=uuid.UUID(company_id), profile=german.model_copy(update={"language": "en"})
+    )
+
+    reread = await fetch_bid(db, company_id=company_id, bid_id=bid.id)
+
+    assert reread is not None
+    assert reread.bidder_language == "de", (
+        "the analysis is in German; the company's new preference does not rewrite it"
+    )
+    listed = await list_bids(db, company_id=company_id, limit=DEFAULT_PAGE_SIZE)
+    assert [row.bidder_language for row in listed.items] == ["de"], "the list reads it too"
