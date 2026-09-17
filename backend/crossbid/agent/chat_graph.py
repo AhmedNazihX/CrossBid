@@ -42,7 +42,13 @@ That is the safe direction, it is deliberate, and `prompts/chat.md` tells the mo
 
 **3. Retrieving nothing is an answer, and it is ours rather than the model's.** When no tool
 call in this turn found anything — including when the model made no tool call at all — the
-model is not asked for prose. The answer is `NOTHING_FOUND`, fixed, with no citations. A
+model is not asked for prose. The answer is fixed, with no citations, and it is **one of
+three sentences** rather than one for all of them: nothing was searched, a corpus that was
+searched holds nothing at all, or the searches ran over a real corpus and matched nothing.
+Splitting them changed no rule and removed a false claim (2026-09-17). The single sentence
+said "I could not find anything about this in the tender documents" in all three cases —
+so a bid whose documents were never indexed, and a question the model never searched for,
+both blamed papers nobody had read. A
 model invited to write a paragraph after four empty searches writes the most plausible
 paragraph it can, and a plausible paragraph about a tender the bidder is deciding whether to
 spend three weeks on is the failure this whole codebase is arranged against. The cost is
@@ -342,9 +348,40 @@ NOTHING_FOUND: Final = (
     "come from a page I can point you at. Try naming the document, the clause or the figure "
     "you have in mind and I will search again."
 )
-"""Decision 3. English, like every other fixed notice Crossbid writes into a bidder-language
-field (`check_loop.UNCITED_SUPPORT` does the same inside a German rationale): the UI is
-English in v1, and a half-translated surface reads worse than a consistent one."""
+"""Decision 3, for the state it was written for: the searches ran, over documents that are
+there, and matched nothing.
+
+English, like every other fixed notice Crossbid writes into a bidder-language field
+(`check_loop.UNCITED_SUPPORT` does the same inside a German rationale): the UI is English in
+v1, and a half-translated surface reads worse than a consistent one. The two sentences below
+follow it in that."""
+
+NOTHING_INDEXED: Final = (
+    "This bid's documents have not been indexed, so there is nothing for me to search — that "
+    "is why I have no answer, and it is not a statement about what the documents say. Bids "
+    "analysed before 15 September 2026 were parsed and extracted from without a searchable "
+    "copy being kept. Starting the bid again from the same documents will index them."
+)
+"""When a corpus that was searched holds no passage at all.
+
+The sentence exists because of a real evening: a bidder with a complete 144-row matrix on
+screen, every row citing a page of the same PDF, was told by the chat that nothing in the
+tender documents matched any question they asked. Both statements were true and they cannot
+both be about the same thing — extraction reads the parsed text, retrieval reads
+`tender_chunks`, and only the first had ever run for that bid. Naming the cause is the whole
+value: "not indexed" is a thing a bidder can act on in a minute, and "not found" is not."""
+
+NOTHING_SEARCHED: Final = (
+    "I did not look anything up for this question, so I have nothing to answer from — this "
+    "is not a statement about what your documents contain, because none was opened. Ask it "
+    "again, or name the document, the clause or the figure you have in mind."
+)
+"""When the model returned no tool call at all.
+
+Decision 3 is unchanged: no prose is asked for, because a model that answers without
+retrieving is exactly what this graph exists to prevent. What changed is the sentence. The
+old one reported a search of the tender documents that had not happened, which is the same
+kind of untrue-about-itself claim the rest of this codebase refuses."""
 
 UNCITED_ANSWER: Final = (
     "Shown without citations: nothing retrieved for this question backs the answer above, so "
@@ -384,6 +421,12 @@ class Retrieved:
 
     citations: tuple[Citation | None, ...]
     found: bool
+    corpus_empty: bool = False
+    """The scope this call searched holds no indexed passage at all (`RagSearchResult`).
+
+    Distinct from `not found`, which is every way a call can come back with nothing — a
+    refused batch, a failed tool, a matrix with no rows. Only a retrieval tool can report
+    this, and only about the corpus it was bound to."""
 
 
 NOTHING: Final = Retrieved(citations=(), found=False)
@@ -416,6 +459,7 @@ def retrieved_from(message: ToolMessage) -> Retrieved:
         return Retrieved(
             citations=tuple(_citation_of(hit) for hit in artifact.hits),
             found=bool(artifact.hits),
+            corpus_empty=artifact.corpus_empty,
         )
     if isinstance(artifact, MatrixDigest):
         return Retrieved(citations=artifact.citations, found=bool(artifact.lines))
@@ -509,8 +553,19 @@ def deliver(answer: ChatAnswer, ledger: Sequence[Retrieved]) -> ChatTurn:
     )
 
 
-def nothing_found() -> ChatTurn:
-    """The turn a question gets when no search found anything. Decision 3."""
+def nothing_found(ledger: Sequence[Retrieved]) -> ChatTurn:
+    """The turn a question gets when no search found anything, in the words that fit it.
+
+    Three states, tested in order of how much was actually done: nothing was searched at all,
+    something was searched and holds nothing, or the searches were real and matched nothing.
+    A turn that searched two corpora of which one was empty is *not* the empty case — the
+    other corpus answered the question honestly — so the empty sentence is used only when
+    every call that ran found an empty corpus.
+    """
+    if not ledger:
+        return ChatTurn(role=ChatRole.ASSISTANT, content=NOTHING_SEARCHED, citations=())
+    if all(result.corpus_empty for result in ledger):
+        return ChatTurn(role=ChatRole.ASSISTANT, content=NOTHING_INDEXED, citations=())
     return ChatTurn(role=ChatRole.ASSISTANT, content=NOTHING_FOUND, citations=())
 
 
@@ -582,7 +637,7 @@ def build_answer(context: ChatContext) -> ChatNode:
         messages = state["messages"]
         ledger = ledger_of(messages)
         if not any(result.found for result in ledger):
-            turn = nothing_found()
+            turn = nothing_found(ledger)
         else:
             asked = [*context.preamble, *messages, HumanMessage(content=ANSWER_ASK)]
             turn = deliver(await context.answer(asked), ledger)

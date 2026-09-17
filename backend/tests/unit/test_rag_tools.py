@@ -32,8 +32,10 @@ from pydantic import ValidationError
 
 from crossbid.guards.wrap import DATA_BLOCK_BEGIN, DATA_BLOCK_END
 from crossbid.ingestion.embeddings import (
+    COMPANY_CORPUS_SQL,
     COMPANY_SEARCH_SQL,
     DEFAULT_SEARCH_LIMIT,
+    TENDER_CORPUS_SQL,
     TENDER_SEARCH_SQL,
     ChunkMatch,
     EmbeddingsClient,
@@ -525,7 +527,13 @@ async def test_a_truncated_passage_says_so_in_the_rendering(settings: Settings) 
 async def test_no_results_is_an_explicit_answer_and_not_an_empty_block(
     settings: Settings,
 ) -> None:
-    """An empty data block would be a prompt with delimiters around nothing."""
+    """An empty data block would be a prompt with delimiters around nothing.
+
+    The store this fixture builds holds nothing, so the sentence is the empty-corpus one and
+    not "no passages matched" — the wording moved when the two states were told apart, and
+    the claims here did not: no block, the corpus named, and prose rather than silence.
+    `test_render_*` pins each wording against the state that earns it.
+    """
     # Arrange
     tool_context, _ = context(settings, rows=[])
     client, _ = embedder(settings)
@@ -538,7 +546,7 @@ async def test_no_results_is_an_explicit_answer_and_not_an_empty_block(
     assert result.hits == ()
     assert "-----BEGIN" not in content
     assert result.corpus in content
-    assert "No passage" in content
+    assert "nothing has been indexed" in content
 
 
 @pytest.mark.anyio
@@ -587,3 +595,97 @@ def test_the_render_of_a_result_built_by_hand_is_stable() -> None:
     # Assert
     assert "1 passage" in rendered
     assert "the corpus" in rendered
+
+
+# ------------------------------------------------- an empty corpus is not an empty result
+
+
+def test_render_names_an_empty_corpus_as_itself() -> None:
+    """The message a bidder's evening was lost to (2026-09-17).
+
+    A bid run before `a55d14b` has no `tender_chunks` rows at all, and every search of it
+    came back "No passages in this bid's tender pack matched this search" — which blames the
+    documents for not containing the answer when nothing had been indexed to search. The two
+    states need different sentences because they have different causes and different fixes.
+    """
+    empty = RagSearchResult(query=QUERY, corpus="this bid's tender pack", corpus_empty=True)
+
+    rendered = empty.render()
+
+    assert "nothing has been indexed" in rendered
+    assert "matched this search" not in rendered
+
+
+def test_render_still_says_nothing_matched_when_the_corpus_has_content() -> None:
+    """The other half, which is unreachable today and will not stay that way.
+
+    With no distance predicate in the SQL (M16 is open), `order by ... limit n` returns the
+    n nearest rows whatever they are, so zero hits can *only* mean an empty corpus and this
+    branch cannot be reached in production. M16 adds the threshold, and on that day the
+    distinction becomes real. Asserting both now is what stops the empty-corpus sentence
+    being printed over a full corpus later.
+    """
+    searched = RagSearchResult(query=QUERY, corpus="this bid's tender pack", corpus_empty=False)
+
+    rendered = searched.render()
+
+    assert "matched this search" in rendered
+    assert "nothing has been indexed" not in rendered
+
+
+@pytest.mark.anyio
+async def test_an_empty_result_asks_the_store_whether_the_corpus_is_empty(
+    settings: Settings,
+) -> None:
+    # Arrange -- no rows, so the search finds nothing and the probe also answers nothing.
+    tool_context, source = context(settings, rows=[])
+    client, _ = embedder(settings)
+    tool = tender_rag_search.build_tool(tool_context, embedder=client)
+
+    # Act
+    _, result = await call(tool)
+
+    # Assert
+    assert result.corpus_empty is True
+    assert [statement.sql for statement in source.log] == [TENDER_SEARCH_SQL, TENDER_CORPUS_SQL]
+    assert source.log[1].params == {"company_id": COMPANY_ID, "bid_id": BID_ID}
+
+
+@pytest.mark.anyio
+async def test_the_company_corpus_is_asked_the_same_question(settings: Settings) -> None:
+    """The bidder's own side of it: "you have uploaded nothing" is not "nothing matched".
+
+    Same defect, different corpus — a company that has uploaded no evidence would otherwise
+    be told its documents do not mention the thing it was asked about.
+    """
+    # Arrange
+    tool_context, source = context(settings, rows=[])
+    client, _ = embedder(settings)
+    tool = company_rag_search.build_tool(tool_context, embedder=client)
+
+    # Act
+    _, result = await call(tool)
+
+    # Assert
+    assert result.corpus_empty is True
+    assert [statement.sql for statement in source.log] == [
+        COMPANY_SEARCH_SQL,
+        COMPANY_CORPUS_SQL,
+    ]
+    assert source.log[1].params == {"company_id": COMPANY_ID}
+
+
+@pytest.mark.anyio
+async def test_a_result_with_hits_never_asks(settings: Settings) -> None:
+    """The probe is on the empty path only: a search that found something has its answer."""
+    # Arrange
+    tool_context, source = context(settings, rows=[chunk_row()])
+    client, _ = embedder(settings)
+    tool = tender_rag_search.build_tool(tool_context, embedder=client)
+
+    # Act
+    _, result = await call(tool)
+
+    # Assert
+    assert result.corpus_empty is False
+    assert [statement.sql for statement in source.log] == [TENDER_SEARCH_SQL]

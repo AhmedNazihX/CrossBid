@@ -88,10 +88,14 @@ def build_tool(context: ToolContext, *, embedder: EmbeddingsClient | None = None
             company_id=company_id, bid_id=bid_id, embedding=embedding, limit=limit
         )
 
+    async def corpus_is_empty() -> bool:
+        return await store.tender_corpus_is_empty(company_id=company_id, bid_id=bid_id)
+
     return build_rag_tool(
         manifest=MANIFEST,
         args_schema=ARGS_SCHEMA,
         corpus=CORPUS,
         search=search,
+        corpus_is_empty=corpus_is_empty,
         embedder=embeddings_client(context, embedder),
     )

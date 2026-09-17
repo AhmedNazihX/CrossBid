@@ -423,6 +423,36 @@ order by tender_chunks.embedding <=> %(embedding)s
 limit %(limit)s
 """
 
+COMPANY_CORPUS_SQL: Final[LiteralString] = """
+select 1
+from company_chunks
+where company_chunks.company_id = %(company_id)s
+  and company_chunks.embedding is not null
+limit 1
+"""
+
+TENDER_CORPUS_SQL: Final[LiteralString] = """
+select 1
+from tender_chunks
+where tender_chunks.company_id = %(company_id)s
+  and tender_chunks.bid_id = %(bid_id)s
+  and tender_chunks.embedding is not null
+limit 1
+"""
+"""Whether a scope holds anything searchable at all — asked only when a search found nothing.
+
+**Why this is not inferred from the search.** Today it could be: the search statements carry
+no distance predicate, so `order by embedding <=> q limit n` returns the n *nearest* rows
+whatever they are, and zero hits can only mean zero rows. M16 is the open finding that adds a
+threshold, and the day it lands that inference becomes false — an empty result would then mean
+"nothing close enough" and this probe would be the only thing that still knew the difference.
+Writing it as a question rather than as an inference is what keeps the answer true across that
+change.
+
+`select 1 ... limit 1` rather than `count(*)`: the question is existence, and a bid with six
+thousand chunks should not be counted to learn that it has some.
+"""
+
 SEARCH_STATEMENTS: Final[tuple[LiteralString, ...]] = (COMPANY_SEARCH_SQL, TENDER_SEARCH_SQL)
 """Every statement that reads chunks. `test_embeddings.py` asserts each one is scoped."""
 
@@ -521,6 +551,20 @@ class ChunkVectorStore:
             {"company_id": company_id, "bid_id": bid_id},
             embedding=embedding,
             limit=limit,
+        )
+
+    async def company_corpus_is_empty(self, *, company_id: uuid.UUID) -> bool:
+        """Whether this company has any searchable evidence chunk at all."""
+        return not await self._any(COMPANY_CORPUS_SQL, {"company_id": company_id})
+
+    async def tender_corpus_is_empty(self, *, company_id: uuid.UUID, bid_id: uuid.UUID) -> bool:
+        """Whether this bid has any searchable tender chunk at all.
+
+        False for every bid indexed since `a55d14b`; true for every bid run before it, whose
+        documents were parsed and extracted from but never written to `tender_chunks`.
+        """
+        return not await self._any(
+            TENDER_CORPUS_SQL, {"company_id": company_id, "bid_id": bid_id}
         )
 
     async def insert_company_chunks(
@@ -630,6 +674,15 @@ class ChunkVectorStore:
             await cursor.execute(sql, params)
             rows = await cursor.fetchall()
         return tuple(_match(row) for row in rows)
+
+    async def _any(self, sql: LiteralString, scope: Mapping[str, uuid.UUID]) -> bool:
+        """Whether the scope holds one row. The statement's own `limit 1` is the bound."""
+        async with (
+            self._source.connection() as connection,
+            connection.cursor() as cursor,
+        ):
+            await cursor.execute(sql, dict(scope))
+            return await cursor.fetchone() is not None
 
     async def _insert(self, sql: LiteralString, rows: Sequence[Mapping[str, Any]]) -> int:
         """One `executemany` for the whole document, or no connection at all for none."""

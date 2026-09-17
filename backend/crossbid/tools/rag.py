@@ -182,6 +182,20 @@ NO_RESULTS: Final = (
     "the evidence exists elsewhere."
 )
 
+EMPTY_CORPUS: Final = (
+    "No search of {corpus} can return anything: nothing has been indexed for it, so it holds "
+    "no passages at all. This is not an answer about what the documents say — say that they "
+    "are not available to search, and do not conclude anything about their content."
+)
+"""Said when the corpus is empty rather than when the search missed, because the two have
+different causes and opposite meanings to a bidder.
+
+A bid run before `a55d14b` (2026-09-15) has no `tender_chunks` rows: `parse_docs` parsed and
+extracted from its documents but nothing wrote the retrieval corpus. Every search of such a
+bid returned `NO_RESULTS`, which reads as "your tender does not mention this" — so a full
+matrix sat beside a chat that said the documents were silent on everything. The sentence a
+bidder needed was that there was nothing to search."""
+
 RESULTS_HEADER: Final = (
     "{count} {noun} from {corpus}, best first. `score` is cosine similarity, where 1.0 is "
     "identical and 0.0 unrelated:\n{lines}\n"
@@ -206,20 +220,33 @@ class RagSearchResult(BaseModel):
     query: str
     corpus: str = Field(description="The corpus in the words the model was told about it")
     hits: tuple[RagHit, ...] = ()
+    corpus_empty: bool = Field(
+        default=False,
+        description="The scope holds no indexed passage at all, rather than none that matched",
+    )
 
     @classmethod
     def from_matches(
-        cls, *, query: str, corpus: str, matches: Sequence[ChunkMatch]
+        cls,
+        *,
+        query: str,
+        corpus: str,
+        matches: Sequence[ChunkMatch],
+        corpus_empty: bool = False,
     ) -> RagSearchResult:
         """Store order is kept: it is the `order by`, and re-sorting could only lose it."""
         return cls(
-            query=query, corpus=corpus, hits=tuple(RagHit.from_match(m) for m in matches)
+            query=query,
+            corpus=corpus,
+            hits=tuple(RagHit.from_match(m) for m in matches),
+            corpus_empty=corpus_empty,
         )
 
     def render(self) -> str:
         """The tool message the model reads: scores outside the block, passages inside it."""
         if not self.hits:
-            return NO_RESULTS.format(corpus=self.corpus)
+            unfound = EMPTY_CORPUS if self.corpus_empty else NO_RESULTS
+            return unfound.format(corpus=self.corpus)
         lines = "\n".join(
             RESULT_LINE.format(
                 index=index,
@@ -238,6 +265,8 @@ class RagSearchResult(BaseModel):
 
 
 ChunkSearch = Callable[[Sequence[float], int], Awaitable[tuple[ChunkMatch, ...]]]
+CorpusProbe = Callable[[], Awaitable[bool]]
+"""Asked only when a search found nothing: does this scope hold any indexed passage at all?"""
 """One already-scoped search. The tenant ids are closed over before this is built, so the
 only things left to pass are the query vector and how many rows to take."""
 
@@ -249,6 +278,7 @@ def build_rag_tool(
     corpus: str,
     search: ChunkSearch,
     embedder: EmbeddingsClient,
+    corpus_is_empty: CorpusProbe,
 ) -> BaseTool:
     """Embed the query, search within the scope already bound, return text and object.
 
@@ -260,7 +290,12 @@ def build_rag_tool(
     async def run(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> tuple[str, RagSearchResult]:
         embedding = await embedder.embed_query(query)
         matches = await search(embedding, limit)
-        result = RagSearchResult.from_matches(query=query, corpus=corpus, matches=matches)
+        # Only when the search found nothing: a hit is already proof the corpus has content,
+        # and the probe is a second round trip that every successful search would pay for.
+        empty = await corpus_is_empty() if not matches else False
+        result = RagSearchResult.from_matches(
+            query=query, corpus=corpus, matches=matches, corpus_empty=empty
+        )
         return result.render(), result
 
     return StructuredTool.from_function(

@@ -6670,3 +6670,65 @@ wrong before that: the first split the computed value on every comma and read
 asserted `mask-composite: intersect`, which Chrome computes as `source-in, source-in` because
 the `-webkit-` spelling wins and the value is per layer. A test that fails against a page that
 works is the same defect as one that passes against a page that does not.
+
+## ADR-0098 — "Nothing found" was three different facts wearing one sentence
+
+**Date:** 2026-09-17 · **Reported from the running product** · **Status:** accepted ·
+**Refines:** `chat_graph`'s decision 3, which is otherwise unchanged
+
+A bidder asked the chat who the buyer was, what the budget was, and what the run could not
+read. Every question came back with the same paragraph: *"I could not find anything about this
+in the tender documents, in your own documents or in this bid's compliance matrix."* On screen
+beside it sat a complete 144-row matrix, every row citing a page of the same French PDF.
+
+Both statements were true, and they cannot be about the same thing.
+
+**What was actually wrong, and it was not the chat.** `extract_reqs` reads the parsed text of
+a document. `tender_rag_search` reads `tender_chunks`. They are different stores filled by
+different steps, and until `a55d14b` (2026-09-15 10:06) **nothing wrote the second one** — its
+commit message is "write the tender corpus nothing was writing". The bid in question was run
+and reviewed on 2026-09-14 at 11:53, about twenty-two hours earlier. It has no retrieval
+corpus, it never had one, and no question asked of it could ever have been answered. The chat
+was working correctly and saying so in words that blamed the tender.
+
+**The diagnosis rested on a property worth writing down.** The search statements carry no
+distance predicate, so `order by embedding <=> q limit n` returns the n *nearest* rows
+whatever they are. Zero hits therefore could not mean "nothing close enough"; it could only
+mean zero rows. That is what made "the corpus is empty" a deduction rather than a guess — and
+it is exactly the property M16 will remove when it adds a threshold, which is why the fix asks
+the database instead of repeating the inference.
+
+**Three states, three sentences.** `nothing_found` now reads the turn's ledger:
+
+- **nothing was searched** — the model returned no tool call: *"I did not look anything up for
+  this question"*. The old sentence reported a search of documents nobody had opened.
+- **a searched corpus is empty** — `NOTHING_INDEXED` names the cause and the fix: the bid's
+  documents are not indexed, bids analysed before 15 September 2026 have no searchable copy,
+  starting the bid again will index them.
+- **the searches were real and matched nothing** — the original sentence, for the state it was
+  written for.
+
+Only when *every* call found an empty corpus is the second used: a turn that searched two
+corpora of which one had content got an honest answer from the other.
+
+**Decision 3 is unchanged, and that is the point.** The model is still never asked for prose
+when nothing was retrieved — a model invited to write a paragraph after four empty searches
+writes the most plausible one it can. What changed is which fixed sentence is printed. The
+rule was right; one of its three sentences was a claim about papers nobody had read, which is
+the same untrue-about-itself failure the rest of this codebase refuses.
+
+**How the corpus is asked.** `ChunkVectorStore.tender_corpus_is_empty` and
+`company_corpus_is_empty`, `select 1 … limit 1` rather than `count(*)` — the question is
+existence, and a bid with six thousand chunks should not be counted to learn it has some. The
+probe runs **only when a search found nothing**, so no successful search pays for it. Both
+retrieval tools carry it, because a company that has uploaded no evidence deserves the same
+sentence as a bid that was never indexed.
+
+**A test had encoded the old belief**, and it said so out loud: *"'It did not look' and 'it
+looked and found nothing' are the same answer to a bidder."* They are not — they differ in
+what the bidder should do next — and the product proved it. That test now asserts the
+distinction it used to deny, with its scenario and its other claim intact.
+
+`e2e` cannot reach this; it is pinned by seven unit tests across `test_rag_tools.py` and
+`test_chat_graph.py`, and the behaviour was measured reverting to the single sentence, which
+fails three of them.

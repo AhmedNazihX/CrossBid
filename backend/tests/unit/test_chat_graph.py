@@ -53,6 +53,8 @@ from crossbid.agent.chat_graph import (
     MAX_ANSWER_CHARS,
     NO_ANSWER,
     NOTHING_FOUND,
+    NOTHING_INDEXED,
+    NOTHING_SEARCHED,
     TOOL_FAILED,
     UNCITED_ANSWER,
     ChatAnswer,
@@ -294,13 +296,20 @@ async def test_a_question_nothing_answers_says_so_instead_of_guessing() -> None:
 
 
 async def test_a_question_the_model_never_searched_for_is_not_answered_either() -> None:
-    """ "It did not look" and "it looked and found nothing" are the same answer to a bidder:
-    neither produces a claim, because neither produced a passage."""
+    """Neither state produces a claim, because neither produced a passage — but they are not
+    the same answer to a bidder, which is what this test used to say.
+
+    "It did not look" and "it looked and found nothing" differ in what the bidder should do
+    next, and the old single sentence reported a search of the tender documents that had not
+    happened (2026-09-17). Decision 3 is unchanged and visible here: no closing call is made
+    either way.
+    """
     model = ScriptedChat([stop()], answered())
 
     turn = await ask(model)
 
-    assert turn.content == NOTHING_FOUND
+    assert turn.content == NOTHING_SEARCHED
+    assert turn.content != NOTHING_FOUND
     assert model.answers_asked == 0
 
 
@@ -514,7 +523,9 @@ async def test_a_passage_retrieved_on_an_earlier_turn_cannot_be_cited_now() -> N
 
     # Assert
     assert len(first.citations) == 1
-    assert second.content == NOTHING_FOUND, "the earlier turn's passage is not this turn's"
+    # The second turn searches nothing, so it is the did-not-look sentence; the claim here
+    # is unchanged — an earlier turn's passage is not available to this one.
+    assert second.content == NOTHING_SEARCHED, "the earlier turn's passage is not this turn's"
     assert queries == ["Umsatz"]
 
 
@@ -828,3 +839,42 @@ async def test_the_company_corpus_is_citable_too() -> None:
 
     # Assert
     assert turn.citations[0].quote == COMPANY_QUOTE
+
+
+# ------------------------------------------- three ways to find nothing, three sentences
+
+
+def empty_corpus_result(query: str = "Auftraggeber") -> RagSearchResult:
+    """What a search of a bid indexed before `a55d14b` comes back with."""
+    return RagSearchResult(
+        query=query, corpus="this bid's tender pack", hits=(), corpus_empty=True
+    )
+
+
+async def test_an_unindexed_bid_is_named_as_that_rather_than_as_silent_documents() -> None:
+    """Reported from the running product, 2026-09-17.
+
+    A bid run before the tender corpus was being written has no `tender_chunks` rows, so
+    every search of it is empty and every question got "I could not find anything about this
+    in the tender documents" — which reads as *your tender does not mention it*. The bidder
+    had a full 144-row matrix on screen at the time, quoting the same PDF. The sentence they
+    needed was that there was nothing to search.
+    """
+    tool, _ = search_tool(empty_corpus_result())
+    model = ScriptedChat([calls((TENDER_SEARCH, "Auftraggeber")), stop()], answered())
+
+    turn = await ask(model, tools=[tool])
+
+    assert turn.content == NOTHING_INDEXED
+    assert turn.citations == ()
+    assert model.answers_asked == 0, "decision 3 holds: no prose is asked for"
+
+
+async def test_a_searched_corpus_with_content_still_says_nothing_matched() -> None:
+    """The third state, and the one the original sentence was written for."""
+    tool, _ = search_tool(result())
+    model = ScriptedChat([calls((TENDER_SEARCH, "Mindestumsatz")), stop()], answered())
+
+    turn = await ask(model, tools=[tool])
+
+    assert turn.content == NOTHING_FOUND
