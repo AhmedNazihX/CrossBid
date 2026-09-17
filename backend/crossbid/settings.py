@@ -312,6 +312,25 @@ class RuntimeSettings(_Frozen):
         return self
 
 
+EU_HOST: Final = "https://eu.api.smith.langchain.com"
+"""LangSmith's European instance, and this project's default.
+
+**The region is not in the key, and getting it wrong fails silently.** LangSmith runs two
+instances with separate data and separate keys; the `langsmith` client sends to the US one
+unless `LANGSMITH_ENDPOINT` says otherwise. A key issued on the EU instance is **403 there**,
+and because trace export is fire-and-forget nothing raises, nothing logs, and the project
+simply stays empty.
+
+That is exactly what this repository had. `LANGSMITH_ENDPOINT` was set nowhere, so a valid EU
+key would have traced into a 403 for ever — checked against the API on 2026-09-17: US 403, EU
+200 with one project, `crossbid`, `runs=None`. Nothing had ever been recorded.
+
+The default is the EU host because the account is European and the product is EU-only
+(CLAUDE.md), and because a default that is wrong *loudly* is better than one that is wrong
+silently — a US account sets `LANGSMITH_ENDPOINT` and gets its own host, which is a line in
+`.env`, while the old behaviour offered no symptom to chase at all."""
+
+
 class EnvSettings(BaseSettings):
     """Secrets and deployment wiring. Fields for auth and CORS arrive with the stories that
     read them (S0.3.1); unknown variables are ignored, not rejected, because one `.env`
@@ -357,6 +376,9 @@ class EnvSettings(BaseSettings):
     """How long a document's signed URL stays valid. The default is the cap."""
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "crossbid"
+    langsmith_endpoint: str = EU_HOST
+    """Which LangSmith instance the key belongs to. See `EU_HOST`: guessing this wrong is a
+    403 on every trace export, and trace export never raises."""
     developer_emails: str = ""
     """Comma-separated list of the emails `/dev/*` is open to (S0.3.1).
 
@@ -706,6 +728,8 @@ another win, so all four always carry the same answer.
 
 LANGSMITH_API_KEY_ENV_VAR: Final = "LANGSMITH_API_KEY"
 LANGSMITH_PROJECT_ENV_VAR: Final = "LANGSMITH_PROJECT"
+LANGSMITH_ENDPOINT_ENV_VAR: Final = "LANGSMITH_ENDPOINT"
+
 BID_ID_METADATA_KEY: Final = "bid_id"
 
 
@@ -741,6 +765,9 @@ def configure_tracing(
     if key is not None:
         environ[LANGSMITH_API_KEY_ENV_VAR] = key
         environ[LANGSMITH_PROJECT_ENV_VAR] = settings.env.langsmith_project
+        # Written only when there is something to trace: with no key nothing is exported, so
+        # naming a host would be noise. See `EU_HOST` for why this line has to exist at all.
+        environ[LANGSMITH_ENDPOINT_ENV_VAR] = settings.env.langsmith_endpoint
 
     # LangSmith caches environment lookups, so a value read before this call would stick.
     langsmith_utils.get_env_var.cache_clear()  # type: ignore[attr-defined]

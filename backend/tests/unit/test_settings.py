@@ -25,6 +25,7 @@ from pydantic import ValidationError
 from crossbid import settings as settings_module
 from crossbid.settings import (
     CHAT_MODEL_ROLES,
+    EU_HOST,
     MAX_SIGNED_URL_TTL_SECONDS,
     ROW_MODEL_VALIDATOR_FIELD,
     TRACING_FLAG_ENV_VARS,
@@ -1031,6 +1032,59 @@ def test_tracing_is_enabled_when_a_key_is_configured(
     assert environ["LANGSMITH_API_KEY"] == "lsv2-test-key"
     assert environ["LANGSMITH_PROJECT"] == "crossbid-test"
     assert all(environ[name] == "true" for name in TRACING_FLAG_ENV_VARS)
+
+
+def test_an_eu_key_traces_to_the_eu_host_rather_than_langsmiths_us_default(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The region is not in the key, and getting it wrong fails silently.
+
+    LangSmith runs two instances. A key issued on the EU one is **403 on the US API**, which
+    is where `langsmith` sends traces unless `LANGSMITH_ENDPOINT` says otherwise — and trace
+    export is fire-and-forget, so nothing raises, nothing logs, and the project simply stays
+    empty. That is what this repository had: a valid EU key, `LANGSMITH_ENDPOINT` set
+    nowhere, and `runs=None` on the only project (2026-09-17).
+    """
+    # Arrange
+    monkeypatch.setenv("LANGSMITH_API_KEY", "lsv2_pt_test-key")
+    settings = load()
+    environ: dict[str, str] = {}
+
+    # Act
+    configure_tracing(settings, environ=environ)
+
+    # Assert
+    assert environ["LANGSMITH_ENDPOINT"] == EU_HOST
+
+
+def test_the_endpoint_is_configurable_for_a_us_account(
+    valid_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Defaulting to the EU host must not strand an account on the other one."""
+    # Arrange
+    monkeypatch.setenv("LANGSMITH_API_KEY", "lsv2_pt_test-key")
+    monkeypatch.setenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+    settings = load()
+    environ: dict[str, str] = {}
+
+    # Act
+    configure_tracing(settings, environ=environ)
+
+    # Assert
+    assert environ["LANGSMITH_ENDPOINT"] == "https://api.smith.langchain.com"
+
+
+def test_no_key_writes_no_endpoint_either(valid_env: None) -> None:
+    """Nothing is traced, so nothing needs a host; writing one would be noise."""
+    # Arrange -- `valid_env` sets no LANGSMITH_API_KEY
+    settings = load()
+    environ: dict[str, str] = {}
+
+    # Act
+    configure_tracing(settings, environ=environ)
+
+    # Assert
+    assert "LANGSMITH_ENDPOINT" not in environ
 
 
 def test_tracing_stays_silent_without_a_key(

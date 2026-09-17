@@ -6015,3 +6015,44 @@ exist before. Every file is inside the 200–400 line band the style rules ask f
 
 Evidence: 145 Vitest tests and 8 Playwright journeys, green before and after, plus lint,
 typecheck, build and prettier.
+
+## ADR-0087 — LangSmith had never traced anything, and the reason was a hostname
+
+**Date:** 2026-09-17 · **Stories:** S0.3.3 · **Status:** accepted
+
+S0.3.3 is marked complete and `Hard 2 observability` is a **Must** on the graded coverage
+table, pointing at it. Its criterion: *"Given `LANGSMITH_API_KEY`, when a bid runs, then a
+trace appears with `bid_id` metadata."*
+
+**No trace had ever appeared.** Two independent reasons, found on 2026-09-17 by asking
+LangSmith rather than by reading the code:
+
+1. `LANGSMITH_API_KEY` was **empty** in `.env` — the line existed with no value, which
+   `_tracing_key` correctly reads as absent. `configure_tracing` returned `False` and wrote
+   `"false"` to all four flags. Exactly as designed, and exactly as silent as designed.
+2. Once a key was supplied, it still would not have worked. **The key is an EU key and
+   `LANGSMITH_ENDPOINT` was set nowhere**, so the client would have shipped every trace to
+   LangSmith's US host. Measured: US `403`, EU `200`.
+
+**The second one is the defect, and its shape is the point.** LangSmith runs two instances
+with separate data and separate keys, the region is not encoded in the key, and trace export
+is fire-and-forget — so the wrong host raises nothing, logs nothing, and leaves the project
+empty. There is no symptom to chase. `EnvSettings.langsmith_endpoint` now exists, defaulting
+to the EU host because the account is European and the product is EU-only, and
+`configure_tracing` writes it alongside the key. A US account sets one line in `.env`.
+
+**Verified, not asserted.** A traced `RunnableLambda` invoked through the real
+`bid_run_config` — no model, so nothing against the capped OpenRouter key — produced run
+`langsmith-smoke` carrying `bid_id=139882d0-…` in the `crossbid` project at
+`eu.api.smith.langchain.com`. Querying the project afterwards returned **one** run, which is
+also the proof that nothing had ever arrived before.
+
+**Why sixteen auditors missed it.** Every check they could make passes: the code is right, the
+four-flag trap is handled, the `lru_cache` is cleared, `bid_run_config` really does attach
+`bid_id`, and thirteen assertions cover it. The gap was between a unit test and the world, and
+only a live call could see it — the same shape as ADR-0005 (presence in a catalogue is not
+usability) and ADR-0063 (a test that cannot fail is not evidence). It was not on the audit
+board at all; the user asked.
+
+Three tests pin it: the EU default, a US account overriding it, and no key writing no endpoint
+at all — because with nothing to export, naming a host is noise.
