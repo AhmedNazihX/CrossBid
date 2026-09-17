@@ -10,15 +10,32 @@ import { Field } from './field'
  * `--shadow-xs`, 14 px text, 12 px hint; the border turns ink and the box gains the focus
  * ring while typing, red with `error`. The label is a real `<label>` and the hint or error
  * is wired through `aria-describedby`.
+ *
+ * `trailing` is this app's own, and the kit's `Input.d.ts` has no equivalent: it draws a
+ * leading `icon` and nothing on the right. It exists for the sign-in form's show/hide
+ * password control (L2, ADR-0095), which has to sit *inside* the box to read as part of the
+ * field. Composing it outside would have meant a second copy of the box's border, height and
+ * focus treatment, and two copies drift.
  */
 export interface InputProps extends Omit<ComponentProps<'input'>, 'size'> {
   readonly label: string
   readonly hint?: string
   readonly error?: string
   readonly icon?: React.ReactNode
+  /** A control drawn inside the box, after the text. Not in the kit; see the note above. */
+  readonly trailing?: React.ReactNode
 }
 
-export function Input({ label, hint, error, icon, id, className, ...rest }: InputProps) {
+export function Input({
+  label,
+  hint,
+  error,
+  icon,
+  trailing,
+  id,
+  className,
+  ...rest
+}: InputProps) {
   const generatedId = useId()
   const inputId = id ?? generatedId
   const hintId = `${inputId}-hint`
@@ -53,6 +70,7 @@ export function Input({ label, hint, error, icon, id, className, ...rest }: Inpu
           )}
           {...rest}
         />
+        {trailing}
       </span>
     </Field>
   )

@@ -39,11 +39,12 @@
  */
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { AuthCard } from '@/components/auth/auth-card'
 import { useSession } from '@/components/auth/session-provider'
 import { Button } from '@/components/ui/button'
+import { Icon } from '@/components/ui/icons'
 import { Input } from '@/components/ui/input'
 import { Notice } from '@/components/ui/notice'
 import { AUTH_MODE, configurationProblem } from '@/lib/auth-mode'
@@ -61,6 +62,38 @@ export function SignInCard() {
   const [password, setPassword] = useState('')
   const [stage, setStage] = useState<Stage>('form')
   const [error, setError] = useState<string | undefined>(undefined)
+  const [revealed, setRevealed] = useState(false)
+  const [complaint, setComplaint] = useState<Complaint | undefined>(undefined)
+  const emailField = useRef<HTMLInputElement>(null)
+  const passwordField = useRef<HTMLInputElement>(null)
+
+  const busy = stage === 'sending'
+  const registering = method === 'register'
+  // A password is typed on exactly two of the four screens. `reset` and `link` both ask for
+  // an address and mail something to it; neither can be told apart by a password field.
+  const needsPassword = method === 'password' || registering
+  const incomplete = email.trim() === '' || (needsPassword && password === '')
+
+  /**
+   * The first thing wrong with the form, in the order a person fills it in — one message at
+   * a time, because two complaints at once do not say which to fix first.
+   *
+   * This is the browser's `required` and `type="email"` checking, done here because the form
+   * carries `noValidate` and would otherwise do none: the native bubble cannot be styled to
+   * this card, disappears on the next keystroke, and is not what a screen reader reads. What
+   * replaces it is the field's own description, which is read out when focus lands there.
+   */
+  function firstComplaint(): Complaint | undefined {
+    const address = email.trim()
+    if (address === '') return { field: 'email', message: 'Enter your work email.' }
+    if (!EMAIL_SHAPE.test(address)) {
+      return { field: 'email', message: 'That does not look like an email address.' }
+    }
+    if (needsPassword && password === '') {
+      return { field: 'password', message: 'Enter your password.' }
+    }
+    return undefined
+  }
 
   // Already signed in — reaching the login page then means a stale tab or a bookmark, and
   // showing a form that would email a second link is the wrong answer to either.
@@ -70,6 +103,17 @@ export function SignInCard() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const wrong = firstComplaint()
+    if (wrong !== undefined) {
+      setComplaint(wrong)
+      // Focus is the announcement: the field's description now carries the complaint, and a
+      // screen reader reads a description when focus arrives. It also puts the cursor where
+      // the work is, which is the whole of the sighted version.
+      const field = wrong.field === 'email' ? emailField : passwordField
+      field.current?.focus()
+      return
+    }
+    setComplaint(undefined)
     setError(undefined)
     setStage('sending')
     try {
@@ -104,6 +148,10 @@ export function SignInCard() {
     setMethod(chosen)
     setError(undefined)
     setPassword('')
+    setComplaint(undefined)
+    // Revealed is per visit to the field, not a preference: leaving it on would put the next
+    // password on screen before it is typed, and the screen may be in front of someone.
+    setRevealed(false)
   }
 
   if (status === 'disabled') {
@@ -149,13 +197,6 @@ export function SignInCard() {
     )
   }
 
-  const busy = stage === 'sending'
-  const registering = method === 'register'
-  // A password is typed on exactly two of the four screens. `reset` and `link` both ask for
-  // an address and mail something to it; neither can be told apart by a password field.
-  const needsPassword = method === 'password' || registering
-  const incomplete = email.trim() === '' || (needsPassword && password === '')
-
   return (
     <AuthCard>
       <div className="flex flex-col gap-2">
@@ -173,6 +214,7 @@ export function SignInCard() {
 
       <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
         <Input
+          ref={emailField}
           label="Work email"
           type="email"
           name="email"
@@ -180,24 +222,57 @@ export function SignInCard() {
           required
           autoFocus
           placeholder="sabine@example-it.de"
+          error={complaint?.field === 'email' ? complaint.message : undefined}
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value)
+            setComplaint(undefined)
+          }}
           disabled={busy}
         />
         {needsPassword && (
           <Input
+            ref={passwordField}
             label="Password"
-            type="password"
+            type={revealed ? 'text' : 'password'}
             name="password"
             autoComplete={registering ? 'new-password' : 'current-password'}
             hint={registering ? 'Choose one you do not use anywhere else.' : undefined}
+            error={complaint?.field === 'password' ? complaint.message : undefined}
             required
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value)
+              setComplaint(undefined)
+            }}
             disabled={busy}
+            trailing={
+              <button
+                type="button"
+                onClick={() => setRevealed((shown) => !shown)}
+                disabled={busy}
+                // The glyph carries no text, so these two lines are the control's entire
+                // name — with neither, it is announced as "button" and nothing else. They are
+                // not redundant in the same way: `title` is the sentence a mouse hovers, and
+                // `aria-label` wins the name computation, so it cannot be heard twice.
+                aria-label={revealed ? 'Hide password' : 'Show password'}
+                title={revealed ? 'Hide password' : 'Show password'}
+                // 24 px of target in a 40 px box: SC 2.5.8's minimum, which a bare 16 px
+                // glyph would miss.
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-text-muted not-disabled:hover:text-text-primary"
+              >
+                <Icon name={revealed ? 'eyeOff' : 'eye'} size={16} />
+              </button>
+            }
           />
         )}
-        <Button type="submit" fullWidth disabled={busy || incomplete}>
+        {/*
+          `aria-disabled`, not `disabled`. A disabled button is skipped by the tab order and
+          swallows the click, so the incomplete form said nothing at all — no message to read
+          and no control to reach. This one is announced as unavailable, still reachable, and
+          answers a press by naming the field that is empty.
+        */}
+        <Button type="submit" fullWidth disabled={busy} aria-disabled={busy || incomplete}>
           {busy ? BUSY_LABELS[method] : SUBMIT_LABELS[method]}
         </Button>
       </form>
@@ -231,6 +306,19 @@ export function SignInCard() {
     </AuthCard>
   )
 }
+
+interface Complaint {
+  readonly field: 'email' | 'password'
+  readonly message: string
+}
+
+/**
+ * Enough of an address to be worth sending: something, an `@`, something, a dot, something.
+ * Deliberately not an RFC 5322 attempt — the only real test of an address is mail arriving
+ * at it, and a stricter pattern here would refuse valid addresses for a guess. This catches
+ * the typo the browser's own `type="email"` would have caught, which is what was lost.
+ */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const HEADINGS: Readonly<Record<Method, string>> = {
   password: 'Sign in',

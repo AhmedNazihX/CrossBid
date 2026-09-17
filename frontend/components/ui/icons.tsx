@@ -4,6 +4,12 @@ import type { SVGProps } from 'react'
  * The design system's icon set (`ui_kits/app/Icons.jsx`): Lucide shapes as inline SVG,
  * 1.75 stroke, round joins, 18px by default. No icon package — the paths are the kit's.
  * Decorative by default (`aria-hidden`); pass `aria-label` for a standalone glyph.
+ *
+ * `eye` and `eyeOff` are the exception: the kit's set has no glyph for showing a password, so
+ * these two are taken from Lucide directly — the same source every other path here came from,
+ * at the same stroke and box, so they are indistinguishable from the rest in use. Added for
+ * the sign-in form's reveal control (L2, ADR-0095). Anything else the kit does not draw
+ * deserves the same question first: whether the product needs a new glyph, or a word.
  */
 export type IconName = keyof typeof PATHS
 
@@ -14,6 +20,20 @@ const PATHS = {
       <rect width="7" height="7" x="14" y="3" rx="1" />
       <rect width="7" height="7" x="14" y="14" rx="1" />
       <rect width="7" height="7" x="3" y="14" rx="1" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+      <path d="m2 2 20 20" />
     </>
   ),
   file: (

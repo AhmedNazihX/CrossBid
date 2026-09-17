@@ -6457,3 +6457,82 @@ it would have used here.
 and has no form to measure (`components/auth/sign-in-card.tsx`). The token is the same one,
 reached through the same utility, so the measurement holds; it is recorded here because a
 reader of the card will look for the sign-in form in the spec and not find it.
+
+## ADR-0095 — A disabled button says nothing, so the sign-in button is not disabled
+
+**Date:** 2026-09-17 · **Audit finding:** L2 · **Status:** accepted ·
+**Adds to the kit:** a `trailing` slot on `Input`, which `Input.d.ts` does not have
+
+Three defects on one card, all of them a bidder who cannot get in being told nothing.
+
+**The submit button was `disabled` while a field was empty.** That is the one worth the
+record. `disabled` does three things at once, and only the first was wanted: it greys the
+control, it swallows the click, and **it takes the button out of the tab order**. So the
+keyboard user who could not see which field was empty also could not reach the only control
+that might have said. Pressing it did nothing — no message, no sound, no event to hang one
+on. It is now `aria-disabled` with a real `disabled` reserved for `sending`, so the button is
+announced as unavailable, is still reachable, and answers a press by naming the empty field.
+
+**The complaint is carried by the field, and focus is the announcement.** One message at a
+time, in the order the form is filled in, written into that field's own `error` — which
+`Field` already renders and wires through `aria-describedby`. Then focus moves there. A
+screen reader reads a field's description when focus arrives, so the message is spoken
+without a live region, and the cursor lands where the work is, which is the whole of the
+sighted version. Two complaints at once would not say which to fix first.
+
+**`noValidate` stays, and now has something behind it.** The form switched the browser's own
+`required` and `type="email"` checking off and put nothing in its place, so `sabine` was
+submitted as an address. The native bubble is the wrong replacement to go back to: it cannot
+be styled to this card, it vanishes on the next keystroke, and it is not what a screen reader
+reads. `EMAIL_SHAPE` is deliberately loose — something, `@`, something, dot, something. The
+only real test of an address is mail arriving at it, and a stricter pattern refuses valid
+addresses in exchange for a guess; this one catches the typo that was lost.
+
+**The reveal control is an eye, and `icons.tsx` grew two glyphs for it.** It shipped first as
+the word *Show* / *Hide*, on the reasoning that neither the kit's `Icons.jsx` nor the app's
+`icons.tsx` draws an eye and that inventing design-system content to close a Low was the
+larger move. The design owner chose the icon, which settles it: this is a taste call on a
+product surface, and the word was the cautious answer rather than the right one. So `eye` and
+`eyeOff` are added to `icons.tsx` from Lucide — the same source every other path in that file
+came from, at the same 24-box and 1.75 stroke, so they sit in the set rather than beside it —
+and the control is a 24 px target carrying a 16 px glyph, SC 2.5.8's minimum, which a bare
+glyph would have missed.
+
+**What the icon costs, which the word did not.** With no visible text there is nothing to fall
+back on: `aria-label` and `title` are the control's entire name, and with both gone it is
+announced as "button". SC 2.5.3 Label in Name, which the word satisfied for free, no longer
+applies — there is no visible label for the accessible name to have to contain. A test pins
+that the control is named, and it was measured failing with *both* the label and the title
+removed, because with only the `aria-label` gone the `title` still names it. The first draft
+of that test's comment claimed otherwise and the revert run is what corrected it; a comment
+that has not been measured is an assertion like any other.
+
+Revealing is per visit and not a preference — switching method puts the mask back, because a
+remembered "revealed" would put the *next* password on screen before it is typed, in front of
+whoever is behind the person typing.
+
+**The `trailing` slot is this app's, not the kit's.** `components/forms/Input.jsx` draws a
+leading `icon` and nothing on the right. The toggle has to sit *inside* the box to read as
+part of the field rather than as a control next to it, and composing it outside would have
+meant a second copy of the box's border, height, focus treatment and disabled opacity — two
+copies drift, and this repo has the scars. One prop, documented at both ends. This is a
+smaller divergence than ADR-0092's and ADR-0094's: it adds a slot the kit does not fill
+rather than overriding a value the kit does.
+
+**How this is pinned.** `components/auth/sign-in-card.test.tsx`, nine tests. **Eight were
+measured failing with both files reverted**; the ninth is a control that passes either way —
+a complete form still signs in, which is what fails if the new checking over-blocks (ADR-0063
+is about a test that cannot fail, not about a test that cannot pass).
+
+These are jsdom and not browser tests, which is the opposite call from L1's. Every claim here
+is about what an element *is* — its `type`, its accessible description, where focus went,
+whether a call was made — and none is about paint, cascade or layout. It is also the only way
+to reach this screen under test at all: the Playwright server runs
+`NEXT_PUBLIC_AUTH_MODE=dev`, where `/login` renders "this build does not sign people in" and
+has no form, the same obstacle ADR-0094 recorded.
+
+**One of the nine could not have failed, and was caught by running it first.** The test that
+the complaint clears as you type asserted only that the message was *absent* afterwards —
+which passed against the build that never showed a message at all. It now sees the message
+present before it asserts it is gone. That is the same shape as the two found closing M13,
+and the reason the RED run happens before the fix and not after it.
