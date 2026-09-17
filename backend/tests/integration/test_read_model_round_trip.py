@@ -60,6 +60,7 @@ from crossbid.readmodel.companies import CompaniesReadModel
 from crossbid.readmodel.documents import DocumentsReadModel, fail_interrupted_documents
 from crossbid.readmodel.feedback import Rating, fetch_feedback, record_feedback
 from crossbid.readmodel.matrix import fetch_matrix_rows, write_matrix_rows
+from crossbid.readmodel.pagination import DEFAULT_PAGE_SIZE, decode_cursor
 from crossbid.readmodel.requirements import fetch_requirements, write_requirements
 from crossbid.readmodel.usage import DatabaseUsageSink, fetch_usage_by_bid, fetch_usage_by_node
 from crossbid.settings import AppSettingsRow, SettingsError, load_settings
@@ -193,7 +194,9 @@ async def test_a_bid_round_trips_through_every_statement_its_graph_uses(
     assert stored.verdict["decision"] == Decision.CONDITIONAL.value
     assert stored.verdict["mandatory_total"] == 1
     assert await company_language(db, company_id=company_id) == "de"
-    assert [item.id for item in await list_bids(db, company_id=company_id)] == [bid_id]
+    listed = await list_bids(db, company_id=company_id, limit=DEFAULT_PAGE_SIZE)
+    assert [item.id for item in listed.items] == [bid_id]
+    assert listed.next_cursor is None, "one bid is not a full page: nothing comes after it"
 
 
 @skip_without_database
@@ -260,8 +263,9 @@ async def test_a_document_walks_its_status_machine_and_the_sweep_finds_a_strande
     await attach_documents(
         db, company_id=company_id, bid_id=bid_id, document_ids=[str(document_id)]
     )
-    listed = await records.list(company_id=uuid.UUID(company_id))
-    assert [str(item.id) for item in listed] == [str(document_id)]
+    listed = await records.list(company_id=uuid.UUID(company_id), limit=DEFAULT_PAGE_SIZE)
+    assert [str(item.id) for item in listed.items] == [str(document_id)]
+    assert listed.next_cursor is None
     # The sweep parses and runs; a document updated a moment ago is far too young for it.
     assert await fail_interrupted_documents(db, stale_after_seconds=3600.0) >= 0
 
@@ -346,7 +350,7 @@ async def test_one_company_cannot_read_another_companys_rows(db: Database) -> No
 
     # Act / Assert -- every read, with the other company's id.
     assert await fetch_bid(db, company_id=str(theirs), bid_id=my_bid.id) is None
-    assert list(await list_bids(db, company_id=str(theirs))) == []
+    assert (await list_bids(db, company_id=str(theirs), limit=DEFAULT_PAGE_SIZE)).items == ()
     assert list(await fetch_requirements(db, company_id=str(theirs), bid_id=my_bid.id)) == []
     assert list(await fetch_matrix_rows(db, company_id=str(theirs), bid_id=my_bid.id)) == []
     assert list(await fetch_feedback(db, company_id=str(theirs), bid_id=my_bid.id)) == []
@@ -378,3 +382,66 @@ async def test_the_schema_the_migrations_built_is_the_schema_the_models_read(
     assert bid.thread_id == f"bid:{bid_id}"
     assert bid.status is BidStatus.QUEUED
     assert bid.created_at is None or bid.created_at <= now
+
+
+@skip_without_database
+async def test_the_keyset_pages_a_list_whose_rows_share_a_timestamp(db: Database) -> None:
+    """M13's paging, executed rather than inspected (found by CI, 2026-09-17).
+
+    The keyset shipped with unit tests against the fake cursor, which returns whatever rows the
+    test scripted in whatever order it wrote them — so `order by created_at desc, id desc` and
+    the `(created_at, id) < (%(after_created_at)s, %(after_id)s)` predicate had never been
+    parsed by a database, let alone asked to order anything. The same blind spot took CI red
+    here: `list_bids` grew a required `limit`, three tests in this file were not updated, and
+    nothing on a developer's machine runs them (`make test` deselects `database`).
+
+    **The five bids are given one shared `created_at` on purpose.** Written naturally they get
+    five distinct microsecond stamps, and then the whole composite key is decoration: replacing
+    the row comparison with a plain `created_at < %(after_created_at)s` — the classic keyset
+    bug, which drops or repeats every row sharing a timestamp — passes. Measured: it did. With
+    the timestamps tied, the `id` half is the only thing that can carry the boundary, which is
+    the half worth proving and the case a batch insert or a coarse clock produces in
+    production.
+
+    What only Postgres can answer: that `(a, b) < (c, d)` is a *row* comparison and not two
+    `and`s, that `desc` on the pair orders the way the cursor assumes, and that the boundary
+    serves each row exactly once.
+    """
+    company_id = str(uuid.uuid4())
+    companies = CompaniesReadModel(db)
+    await companies.create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    created = [
+        await create_bid(
+            db,
+            company_id=company_id,
+            notice_number=f"61425{index}-2026",
+            title=f"Netztechnik {index}",
+            source_language="de",
+            bidder_language="de",
+        )
+        for index in range(5)
+    ]
+    async with db.connection() as conn:
+        await conn.execute(
+            "update bids set created_at = %(created_at)s where company_id = %(company_id)s",
+            {"created_at": datetime.now(UTC), "company_id": company_id},
+        )
+    # Tied on the timestamp, the newest-first order is the id order and nothing else.
+    expected = sorted((bid.id for bid in created), reverse=True)
+
+    first = await list_bids(db, company_id=company_id, limit=2)
+    assert first.next_cursor is not None, "five bids do not fit in a page of two"
+    second = await list_bids(
+        db, company_id=company_id, limit=2, after=decode_cursor(first.next_cursor)
+    )
+    assert second.next_cursor is not None
+    third = await list_bids(
+        db, company_id=company_id, limit=2, after=decode_cursor(second.next_cursor)
+    )
+
+    paged = [row.id for page in (first, second, third) for row in page.items]
+    assert paged == expected
+    assert len(set(paged)) == len(paged), "a row served twice is the offset bug this replaced"
+    assert third.next_cursor is None, "the last page says it is the last"
