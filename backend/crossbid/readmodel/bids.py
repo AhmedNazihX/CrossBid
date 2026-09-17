@@ -177,6 +177,17 @@ class BidDocumentRow(BaseModel):
     bid_id: str | None
     pages: int
     unread_pages: tuple[int, ...] = ()
+    searchable: bool | None = None
+    """A retrieval tool can reach this document's text — or `None`, meaning nobody asked.
+
+    False for every document of a bid analysed before `a55d14b` (2026-09-15), whose pack was
+    parsed and extracted from without a searchable copy being kept. That is invisible
+    everywhere else, because nothing failed (ADR-0098).
+
+    **The third state is the point.** Only `bid_documents` selects the column; `documents_by_id`
+    does not, and its two callers check ids and nothing else. Defaulting to `False` there would
+    hand a future reader "this document is not searchable" as though it had been looked up,
+    which is the shape of the defect this field exists to surface."""
 
 
 def thread_id_of(bid_id: str) -> str:
@@ -371,11 +382,30 @@ order by name
 """  # noqa: S608 -- module literals only
 
 SELECT_BID_DOCUMENTS: Final[LiteralString] = f"""
-select {_DOCUMENT_COLUMNS}
+select {_DOCUMENT_COLUMNS},
+       exists (
+           select 1
+           from tender_chunks
+           where tender_chunks.document_id = documents.id
+             and tender_chunks.bid_id = documents.bid_id
+             and tender_chunks.embedding is not null
+       ) as searchable
 from documents
 where company_id = %(company_id)s and bid_id = %(bid_id)s
 order by name
 """  # noqa: S608 -- module literals only
+"""The bid's pack, and whether a retrieval tool can reach each document.
+
+**Read with the document rather than by a query of its own.** `GET /bids/{id}` is polled every
+two seconds and ADR-0093 spent real work getting that path down to three reads; this is a
+correlated `exists` on an indexed column inside a select that was already running.
+
+**Only in this statement, not in the shared column list.** Putting it there made
+`_DOCUMENT_COLUMNS` a constant containing the word `select` with no tenant predicate of its
+own, and `test_the_startup_query_is_the_one_deliberately_unscoped_statement` read it as an
+unscoped statement — correctly, since the guard cannot know a fragment from a query. The
+subquery is scoped by the row it correlates to, and that row is scoped by the `where` below.
+"""
 
 ATTACH_DOCUMENTS: Final[LiteralString] = """
 update documents
@@ -785,7 +815,13 @@ def _document_row(record: Mapping[str, Any]) -> BidDocumentRow:
         bid_id=_optional_str(record["bid_id"]),
         pages=int(record["pages"]),
         unread_pages=tuple(int(page) for page in record.get("unread_pages") or ()),
+        searchable=_optional_bool(record.get("searchable")),
     )
+
+
+def _optional_bool(value: object) -> bool | None:
+    """`None` when the statement did not select the column, never a default that reads true."""
+    return None if value is None else bool(value)
 
 
 def _optional_decision(value: object) -> Decision | None:

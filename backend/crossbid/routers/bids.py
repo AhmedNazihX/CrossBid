@@ -193,6 +193,13 @@ class BidDocumentResponse(BaseModel):
     name: str = Field(description="The filename the bidder uploaded")
     pages: int = Field(description="Total pages once parsed")
     unread_pages: list[int] = Field(description="Pages with no text layer, never read")
+    searchable: bool = Field(
+        description=(
+            "Whether Ask can read this document. False when the bid was analysed before its "
+            "documents were being indexed (before 2026-09-15): the matrix is complete and no "
+            "search of the pack can return anything. Re-indexing the bid is what fixes it."
+        )
+    )
 
     @classmethod
     def from_row(cls, row: BidDocumentRow) -> BidDocumentResponse:
@@ -201,7 +208,20 @@ class BidDocumentResponse(BaseModel):
             name=row.name,
             pages=row.pages,
             unread_pages=list(row.unread_pages),
+            searchable=_searchable_of(row),
         )
+
+
+def _searchable_of(row: BidDocumentRow) -> bool:
+    """The document's searchability, refusing to invent it.
+
+    `None` means the statement did not ask, and every row reaching this response comes from
+    `bid_documents`, which does. Rather than default it, this says so: a silent `False` here
+    would put "Ask cannot read this document" on a document nobody checked.
+    """
+    if row.searchable is None:  # pragma: no cover -- bid_documents always selects it
+        raise ValueError(f"document {row.id} was read by a statement that skips `searchable`")
+    return row.searchable
 
 
 class BidResponse(BaseModel):

@@ -21,6 +21,7 @@ import { formatLanguagePair, plural } from '@/lib/format'
 import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
 import { VerdictPanel } from './verdict-panel'
+import { UnsearchablePack } from './unsearchable-pack'
 import { PHONE_TABS, type PhoneTab, type WorkspaceState } from './workspace-state'
 
 /** One namespace for the phone's sections: the panel's id, and the tab's derived from it. */
@@ -105,6 +106,7 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
             {bid.failure_reason}
           </Notice>
         )}
+        <UnsearchablePack documents={bid.documents} />
         <Tabs
           items={PHONE_TABS}
           value={phoneTab}

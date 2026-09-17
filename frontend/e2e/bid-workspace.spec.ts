@@ -35,8 +35,9 @@
  */
 import type { Locator, Page } from '@playwright/test'
 
+import type { FakeApi } from './support/fake-api'
 import { paintedContrast } from './support/contrast'
-import { awaitingReviewBidFixture, BID_ID } from './support/fixtures'
+import { awaitingReviewBidFixture, BID_ID, packDocumentsFixture } from './support/fixtures'
 import { expect, test } from './support/test'
 
 /** WCAG 2.x AA for text that is neither large nor bold: the control is 14 px medium. */
@@ -192,3 +193,69 @@ async function panelOf(page: Page, tab: Locator): Promise<Locator> {
   }
   return page.locator(`[role="tabpanel"][id="${controls}"]`)
 }
+
+test.describe('Bid workspace — a pack Ask cannot read', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  /** The source panel opens the first document, so its two calls need answers here too. */
+  function stubTheSourcePanel(api: FakeApi, apiOrigin: string): void {
+    const sourcePage = `${apiOrigin}/e2e/source-page`
+    api.on('GET', /^\/documents\/[^/]+\/url$/, () => ({
+      status: 200,
+      json: {
+        url: sourcePage,
+        expires_at: new Date(Date.now() + SIGNED_URL_TTL_MS).toISOString(),
+      },
+    }))
+    api.on('GET', '/e2e/source-page', {
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><title>e2e source page</title><p>The PDF viewer would be here.</p>',
+    })
+  }
+
+  /**
+   * The workspace says the pack is not searchable, rather than leaving it to be discovered.
+   *
+   * Reported 2026-09-17: a bid analysed the day before `parse_docs` began writing
+   * `tender_chunks` has a complete matrix and an empty retrieval corpus, so every question put
+   * to Ask came back "I could not find anything about this in the tender documents" — about
+   * documents whose pages the matrix beside it was citing (ADR-0098). Nothing on this screen
+   * said so: *Problems flagged* read 0, and read it correctly, because nothing had failed.
+   */
+  test('a bid whose documents were never indexed says so on the workspace', async ({
+    api,
+    apiOrigin,
+    page,
+  }) => {
+    stubTheSourcePanel(api, apiOrigin)
+    const bid = {
+      ...awaitingReviewBidFixture(),
+      documents: packDocumentsFixture({ searchable: false }),
+    }
+    api.on('GET', `/bids/${BID_ID}`, { status: 200, json: bid })
+    api.on('GET', `/bids/${BID_ID}/feedback`, { status: 200, json: { feedback: [] } })
+    api.on('GET', '/documents', { status: 200, json: { documents: [] } })
+
+    await page.goto(`/bids/${BID_ID}`)
+
+    const notice = page.getByRole('status').filter({ hasText: /ask cannot read/i })
+    await expect(notice).toBeVisible()
+    await expect(notice).toContainText(/matrix/i)
+    // Nothing else on the screen carries the fact: this is what "Problems flagged: 0" hides.
+    await expect(page.getByText('Problems flagged')).toBeVisible()
+  })
+
+  test('a bid whose documents were indexed says nothing', async ({ api, apiOrigin, page }) => {
+    stubTheSourcePanel(api, apiOrigin)
+    const bid = awaitingReviewBidFixture()
+    api.on('GET', `/bids/${BID_ID}`, { status: 200, json: bid })
+    api.on('GET', `/bids/${BID_ID}/feedback`, { status: 200, json: { feedback: [] } })
+    api.on('GET', '/documents', { status: 200, json: { documents: [] } })
+
+    await page.goto(`/bids/${BID_ID}`)
+    await expect(page.getByRole('heading', { level: 1, name: bid.title })).toBeVisible()
+
+    await expect(page.getByText(/ask cannot read/i)).toHaveCount(0)
+  })
+})

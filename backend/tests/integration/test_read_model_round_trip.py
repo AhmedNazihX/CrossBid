@@ -53,6 +53,7 @@ from crossbid.models.verdict import Decision, Verdict
 from crossbid.readmodel.app_settings import fetch_app_settings_row, store_app_settings_row
 from crossbid.readmodel.bids import (
     attach_documents,
+    bid_documents,
     claim_bid_for_review,
     company_language,
     create_bid,
@@ -553,3 +554,69 @@ async def test_the_backfill_selects_exactly_the_bids_with_no_corpus(db: Database
     assert {bid.bid_id for bid in await backfill.unindexed_bids(db, bid_id=unindexed)} == {
         unindexed
     }
+
+
+@skip_without_database
+async def test_a_documents_searchability_is_read_with_the_document(db: Database) -> None:
+    """Whether the workspace can say "this document cannot be searched" (2026-09-17).
+
+    A bid analysed before `a55d14b` has documents and no `tender_chunks`, and nothing on
+    screen said so — the count of problems was zero, because nothing had failed; the step had
+    simply never existed (ADR-0098). The fact is one `exists` away and it is now read *with*
+    the document rather than by a query of its own: `GET /bids/{id}` is polled every two
+    seconds and ADR-0093 spent real work getting that path down to three reads.
+    """
+    company_id = str(uuid.uuid4())
+    companies = CompaniesReadModel(db)
+    await companies.create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    records = DocumentsReadModel(db)
+    bid = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="614260-2026",
+        title="Netztechnik",
+        source_language="de",
+        bidder_language="de",
+    )
+    ids: list[uuid.UUID] = []
+    for name in ("a-indexed.pdf", "b-not-indexed.pdf"):
+        document_id = uuid.uuid4()
+        await records.insert(
+            company_id=uuid.UUID(company_id),
+            document_id=document_id,
+            kind=DocumentKind.TENDER_DOCUMENT,
+            name=name,
+            storage_path=f"{company_id}/{document_id}/{name}",
+        )
+        await records.mark_ready(company_id=uuid.UUID(company_id), document_id=document_id)
+        ids.append(document_id)
+    await attach_documents(
+        db, company_id=company_id, bid_id=bid.id, document_ids=[str(one) for one in ids]
+    )
+    await ChunkVectorStore(db).insert_tender_chunks(
+        company_id=uuid.UUID(company_id),
+        bid_id=uuid.UUID(bid.id),
+        document_id=ids[0],
+        chunks=[
+            EmbeddedChunk(
+                chunk=Chunk(
+                    document_id=str(ids[0]),
+                    index=0,
+                    pages=(1,),
+                    text="Mindestumsatz 3 Mio EUR",
+                    token_count=6,
+                ),
+                embedding=tuple([0.0] * VECTOR_DIMENSIONS),
+            )
+        ],
+    )
+
+    rows = await bid_documents(db, company_id=company_id, bid_id=bid.id)
+
+    # Ordered by name, so the indexed one is first.
+    assert [(row.name, row.searchable) for row in rows] == [
+        ("a-indexed.pdf", True),
+        ("b-not-indexed.pdf", False),
+    ]

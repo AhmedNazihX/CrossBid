@@ -6778,3 +6778,48 @@ kind filter a DUME-only bid is listed as work when `parse_docs` skips XML before
 anything.
 
 `make index-existing` lists; `make index-existing APPLY=1` writes.
+
+## ADR-0100 — A document says whether Ask can read it, on the bid
+
+**Date:** 2026-09-17 · **Follows:** ADR-0098, ADR-0099 · **Status:** accepted
+
+The bid whose chat was blind showed **Problems flagged: 0**, and that was correct — nothing had
+failed, the indexing step had not existed when the bid ran. So the workspace said everything was
+fine, the matrix said everything was fine, and the only surface that knew otherwise was a
+refusal from the agent that blamed the tender documents. A bidder had to ask a question the
+system could not answer in order to discover that it could not answer questions.
+
+`BidDocumentResponse.searchable` is that fact, on the bid, where the bid is.
+
+**It costs no query.** `GET /bids/{id}` is polled every two seconds and ADR-0093 spent real work
+getting that path to three reads, so this is a correlated `exists` inside the select that
+already fetches the pack — one index probe per document, in a round trip that was happening
+anyway. Adding a fourth read to the hot path to answer a question about a rare state would have
+been the wrong trade.
+
+**It is `bool | None` on the row, and the third state is the point.** Only `bid_documents`
+selects the column. `documents_by_id` does not, and its two callers check ids and nothing else.
+Defaulting to `False` there would hand a future reader *"this document is not searchable"* about
+a document nobody looked up — which is the exact shape of the defect this field exists to
+surface. `BidResponse` refuses a `None` rather than resolving it.
+
+**The tenant guard caught the first attempt, and was right to.** The `exists` went into
+`_DOCUMENT_COLUMNS`, the fragment both document statements share — which made a constant
+containing `select` with no tenant predicate of its own, and
+`test_the_startup_query_is_the_one_deliberately_unscoped_statement` failed. The guard cannot
+tell a fragment from a query and should not have to: the subquery now lives in
+`SELECT_BID_DOCUMENTS`, which binds `company_id` in its own `where`, and the shared fragment is
+a column list again.
+
+**On screen it is a `status`, not an `alert`.** The bid is fine, the matrix is fine and the
+reviewer is not being interrupted; this is worth announcing when it appears and not worth taking
+attention away from the row they are reading. It names what is unaffected — the requirements,
+the matrix and the verdict were read from the documents directly — because a bidder seeing
+"cannot read" above a full matrix deserves to be told which of the two to believe. Both layouts
+carry it, since a bid is a bid at either width (ADR-0086).
+
+**Pinned four ways**: the read model's `exists` against real Postgres, four jsdom tests for what
+the notice says in each of its states, and two browser journeys for a bid that has it and a bid
+that does not. The browser pair was measured failing with the notice's guard replaced by
+`return null`. `tsc` caught the e2e fixtures the moment the field became required, which is the
+property `playwright.config.ts` claims for them and it held.

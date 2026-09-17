@@ -85,7 +85,11 @@ def document_row(
     status: DocumentStatus = DocumentStatus.READY,
     bid_id: str | None = None,
     name: str = "Bewerbungsbedingungen.pdf",
+    searchable: bool | None = True,
 ) -> tuple[str, BidDocumentRow]:
+    # `searchable` is set because these rows stand in for `bid_documents`, which selects the
+    # column. `None` is what `documents_by_id` returns, and the response refuses to guess from
+    # it rather than printing "Ask cannot read this" about a document nobody asked about.
     row = BidDocumentRow(
         id=str(uuid.uuid4()),
         name=name,
@@ -95,6 +99,7 @@ def document_row(
         bid_id=bid_id,
         pages=12,
         unread_pages=(3,),
+        searchable=searchable,
     )
     return owner, row
 
@@ -356,7 +361,7 @@ def test_post_bids_answers_202_with_an_id_and_queued(
     assert body["problems"] == []
     assert body["failure_reason"] is None
     assert body["documents"] == [
-        {"id": row.id, "name": row.name, "pages": 12, "unread_pages": [3]}
+        {"id": row.id, "name": row.name, "pages": 12, "unread_pages": [3], "searchable": True}
     ]
     assert read_model.attached == [(bid_id, [row.id])]
     assert [bid.id for bid in runner.started] == [bid_id]
@@ -581,7 +586,13 @@ def test_get_bid_returns_the_polling_shape(
     assert body["matrix_rows"] == [matrix[0].model_dump(mode="json")]
     assert body["problems"] == [problem.model_dump(mode="json")]
     assert body["documents"] == [
-        {"id": document.id, "name": document.name, "pages": 12, "unread_pages": [3]}
+        {
+            "id": document.id,
+            "name": document.name,
+            "pages": 12,
+            "unread_pages": [3],
+            "searchable": True,
+        }
     ]
     assert body["created_at"] == "2026-09-11T12:00:00Z"
     assert set(body) == set(BidResponse.model_fields)

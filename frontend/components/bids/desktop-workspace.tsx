@@ -26,6 +26,7 @@ import { describeApiError } from '@/lib/api-client'
 import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
 import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
+import { UnsearchablePack } from './unsearchable-pack'
 import { VerdictPanel } from './verdict-panel'
 import type { SideTab, WorkspaceState } from './workspace-state'
 
@@ -172,6 +173,7 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
       {bid.verdict !== null && (
         <DecisionLine bid={bid} verdict={bid.verdict} className="mb-5" />
       )}
+      <UnsearchablePack documents={bid.documents} />
       <div className="mb-7 grid gap-4 md:grid-cols-3">
         <MetricCard
           label="Requirements extracted"

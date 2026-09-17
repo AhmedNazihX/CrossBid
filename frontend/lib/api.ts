@@ -510,6 +510,11 @@ export interface components {
              * @description Pages with no text layer, never read
              */
             unread_pages: number[];
+            /**
+             * Searchable
+             * @description Whether Ask can read this document. False when the bid was analysed before its documents were being indexed (before 2026-09-15): the matrix is complete and no search of the pack can return anything. Re-indexing the bid is what fixes it.
+             */
+            searchable: boolean;
         };
         /**
          * BidListResponse

@@ -90,12 +90,18 @@ const DE_PACK_FILES: readonly string[] = [
   'AGB.pdf',
 ]
 
-export function packDocumentsFixture(): readonly BidDocumentResponse[] {
+export function packDocumentsFixture(
+  { searchable }: { readonly searchable: boolean } = { searchable: true }
+): readonly BidDocumentResponse[] {
   return DE_PACK_FILES.map((name, index) => ({
     id: `77777777-7777-4777-8777-${String(index + 1).padStart(12, '0')}`,
     name,
     pages: 4 + index * 3,
     unread_pages: [],
+    // A healthy bid by default: its pack was indexed while it was analysed. `false` is a bid
+    // from before 2026-09-15, whose documents were parsed and never kept (ADR-0098) — the
+    // state the workspace now says out loud instead of leaving Ask to refuse and be blamed.
+    searchable,
   }))
 }
 
