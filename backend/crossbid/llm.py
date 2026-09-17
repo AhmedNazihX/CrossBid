@@ -89,7 +89,40 @@ LANGCHAIN_RETRIES: Final = 0
 """`ChatOpenAI` retries twice of its own accord. Switched off so that `ResilientModel` is
 the only thing retrying and "one retry, then the smaller model" describes what happens."""
 
+
+class LlmError(RuntimeError):
+    """A model could not be built or did not answer. Never carries a key."""
+
+
+class EmptyUpstreamResponseError(LlmError):
+    """The provider answered 200 with a body carrying no `choices`.
+
+    OpenRouter signals a transient upstream refusal -- a rate limit at the model's own
+    provider, most often -- with HTTP 200 and an error-shaped body. `langchain-openai`'s
+    structured-output path then walks `choices`, which is `None`, and the OpenAI SDK raises
+    `TypeError: 'NoneType' object is not iterable` five frames down, carrying no status code
+    and naming no provider. Nothing about it looks like a route failure, so `ResilientModel`
+    used to raise it on the first attempt as if it were a bug in the request, and a question
+    that would have worked on a second try became a 500.
+
+    Measured against the live API on 2026-09-17: three of four chat questions failed this
+    way, with the browser showing "The question could not be answered".
+    """
+
+
+EMPTY_CHOICES_MESSAGE: Final = "'NoneType' object is not iterable"
+"""The whole of the signature. There is nothing else in the exception to match on."""
+
+UPSTREAM_RATE_LIMIT_MESSAGE: Final = "temporarily rate-limited upstream"
+"""The other shape the same condition arrives in: OpenRouter's own JSON, raised through
+langchain as a bare `ValueError` with no status code. Its full text advises "retry
+shortly, or add your own key to accumulate your rate limit", so the provider is saying
+outright that this is transient -- and a refused slug, the `ValueError` that is genuinely
+reproducible, says nothing of the kind."""
+
+
 RETRYABLE: Final[tuple[type[BaseException], ...]] = (
+    EmptyUpstreamResponseError,
     openai.APITimeoutError,
     openai.APIConnectionError,
     openai.RateLimitError,
@@ -103,10 +136,6 @@ connection, a rate limit, a 5xx. Everything else — a refused slug, a malformed
 schema violation — is reproducible, so retrying it would spend the run budget on the same
 answer. A schema violation has its own single re-ask in `check_loop`, one layer up, where
 the corrective message can be written."""
-
-
-class LlmError(RuntimeError):
-    """A model could not be built or did not answer. Never carries a key."""
 
 
 def chat_model(
@@ -204,6 +233,31 @@ class ResilientModel:
         self._primary = primary
         self._fallback = fallback
 
+    @staticmethod
+    async def _attempt(runnable: ModelRunnable, messages: Any) -> Any:
+        """One call, with a 200-and-no-`choices` translated into the route failure it is.
+
+        **Catching `TypeError` is safe here because of where `here` is.** Everything inside
+        this call is langchain and the OpenAI SDK; none of this repository's code runs in it,
+        so a `TypeError` raised out of it is the library meeting a response it cannot read,
+        not a mistake of ours. The message is matched exactly, so any other `TypeError` still
+        travels as the bug it is -- see `EmptyUpstreamResponseError`.
+        """
+        try:
+            return await runnable.ainvoke(messages)
+        except TypeError as exc:
+            if str(exc) != EMPTY_CHOICES_MESSAGE:
+                raise
+            raise EmptyUpstreamResponseError(
+                "the provider answered 200 with no choices, which is a transient refusal"
+            ) from exc
+        except ValueError as exc:
+            if UPSTREAM_RATE_LIMIT_MESSAGE not in str(exc):
+                raise
+            raise EmptyUpstreamResponseError(
+                "the provider is rate-limited upstream, which is a transient refusal"
+            ) from exc
+
     async def ainvoke(self, messages: Any, /) -> Any:
         """The primary's answer, or the retry's, or the fallback's. Raises the last failure.
 
@@ -211,17 +265,17 @@ class ResilientModel:
         recent fact about the call, and the primary's timeout is already in the log.
         """
         try:
-            return await self._primary.ainvoke(messages)
+            return await self._attempt(self._primary, messages)
         except RETRYABLE as first:
             logger.warning("A model call failed (%s); retrying once", type(first).__name__)
         try:
-            return await self._primary.ainvoke(messages)
+            return await self._attempt(self._primary, messages)
         except RETRYABLE as second:
             logger.warning(
                 "The retry failed too (%s); falling back to the smaller model",
                 type(second).__name__,
             )
-        return await self._fallback.ainvoke(messages)
+        return await self._attempt(self._fallback, messages)
 
 
 def resilient(primary: ModelRunnable, fallback: ModelRunnable) -> ResilientModel:

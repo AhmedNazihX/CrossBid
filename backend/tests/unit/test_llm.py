@@ -389,6 +389,91 @@ async def test_a_reproducible_failure_is_raised_at_once_and_never_retried() -> N
     assert (primary.calls, fallback.calls) == (1, 0)
 
 
+# OpenRouter answers a transient upstream refusal with HTTP 200 and a body carrying no
+# `choices` at all. langchain-openai's structured-output path then walks `choices` and the
+# OpenAI SDK raises this, five frames deep, with no status code and nothing naming the
+# provider. Measured against the live API on 2026-09-17: three of four chat questions.
+EMPTY_UPSTREAM = TypeError("'NoneType' object is not iterable")
+
+
+@pytest.mark.anyio
+async def test_a_200_with_no_choices_is_a_route_failure_and_is_retried() -> None:
+    """It is the provider refusing, not a bug in the request: the same call works next time."""
+    # Arrange
+    primary, fallback = ScriptedRunnable(EMPTY_UPSTREAM, "answered"), ScriptedRunnable()
+
+    # Act
+    answer = await resilient(primary, fallback).ainvoke([])
+
+    # Assert
+    assert answer == "answered"
+    assert (primary.calls, fallback.calls) == (2, 0)
+
+
+@pytest.mark.anyio
+async def test_a_200_with_no_choices_twice_reaches_the_fallback() -> None:
+    # Arrange
+    primary = ScriptedRunnable(EMPTY_UPSTREAM, EMPTY_UPSTREAM)
+    fallback = ScriptedRunnable("answered by the spare")
+
+    # Act
+    answer = await resilient(primary, fallback).ainvoke([])
+
+    # Assert
+    assert answer == "answered by the spare"
+    assert (primary.calls, fallback.calls) == (2, 1)
+
+
+# The other shape the same condition arrives in. OpenRouter raises this through langchain as
+# a bare `ValueError` carrying its own JSON, with no status code — and the advice inside it is
+# the reason BYOK exists.
+UPSTREAM_RATE_LIMIT = ValueError(
+    "{'message': 'openai/gpt-5.6-luna is temporarily rate-limited upstream. "
+    "Please retry shortly, or add your own key to accumulate your rate limit'}"
+)
+
+
+@pytest.mark.anyio
+async def test_an_upstream_rate_limit_is_retried_rather_than_raised() -> None:
+    """ "Please retry shortly" is the provider telling us it is retryable."""
+    # Arrange
+    primary, fallback = ScriptedRunnable(UPSTREAM_RATE_LIMIT, "answered"), ScriptedRunnable()
+
+    # Act
+    answer = await resilient(primary, fallback).ainvoke([])
+
+    # Assert
+    assert answer == "answered"
+    assert (primary.calls, fallback.calls) == (2, 0)
+
+
+@pytest.mark.anyio
+async def test_any_other_value_error_is_still_raised_at_once() -> None:
+    """A refused slug is a `ValueError` too, and it answers the same way every time."""
+    # Arrange
+    primary = ScriptedRunnable(ValueError("that model is not available on this account"))
+    fallback = ScriptedRunnable("answered by the spare")
+
+    # Act / Assert
+    with pytest.raises(ValueError, match="not available"):
+        await resilient(primary, fallback).ainvoke([])
+    assert (primary.calls, fallback.calls) == (1, 0)
+
+
+@pytest.mark.anyio
+async def test_any_other_type_error_is_still_a_bug_and_is_raised_at_once() -> None:
+    """The narrowness is the point. Retrying a real `TypeError` would spend two more calls
+    on the same failure, and answering it from the fallback would hide it."""
+    # Arrange
+    primary = ScriptedRunnable(TypeError("unsupported operand type(s) for +: 'int' and 'str'"))
+    fallback = ScriptedRunnable("answered by the spare")
+
+    # Act / Assert
+    with pytest.raises(TypeError, match="unsupported operand"):
+        await resilient(primary, fallback).ainvoke([])
+    assert (primary.calls, fallback.calls) == (1, 0)
+
+
 @pytest.mark.anyio
 async def test_the_fallbacks_own_failure_is_what_surfaces() -> None:
     """It is the most recent fact about the call; the primary's timeout is in the log."""

@@ -6150,3 +6150,51 @@ the visible area with the table still clipped by 48 px. Then two throwaway uploa
 and deleted together against the live Frankfurt database — 51 rows to 49, "2 documents
 deleted" announced, selection cleared, no refusals, and the ten company evidence documents,
 ten company chunks and three bids untouched.
+
+## ADR-0090 — Two transient provider refusals that did not look retryable
+
+**Date:** 2026-09-17 · **Stories:** S3.4.4, S3.5.1 · **Status:** accepted
+
+The user asked a bid "What is this tender about?" and got *"The question could not be
+answered and nothing about the bid has changed."* Measured against the live API: **three of
+four questions failed.**
+
+Two causes, and the second is the interesting one.
+
+**The key, again.** The API process serving the app held the exhausted OpenRouter key — the
+same `…e3db`, hash `25d9a989…`, limit $25, remaining $0 that ADR-0087's session already
+diagnosed. It had been restarted at 16:14 from a shell that still had the stale value
+exported, so `.env` lost again. This is the third time this trap has cost a session, and the
+startup log line proposed after ADR-0087 still does not exist.
+
+**Two provider refusals that `RETRYABLE` did not cover.** `ResilientModel` retries once and
+then falls back, but only for `RETRYABLE` — timeouts, connection errors, `RateLimitError`,
+5xx. OpenRouter signals a transient upstream refusal in two shapes that are none of those:
+
+1. **HTTP 200 with no `choices`.** `langchain-openai`'s structured-output path walks
+   `choices`, which is `None`, and the OpenAI SDK raises `TypeError: 'NoneType' object is not
+   iterable` five frames down — no status code, nothing naming the provider.
+2. **A bare `ValueError`** carrying OpenRouter's own JSON: *"openai/gpt-5.6-luna is
+   temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate
+   your rate limit."* The provider says outright that it is transient, in a type that reads
+   as a programming error.
+
+Both were raised on the first attempt, with no retry and no fallback, so a question that
+would have worked on a second try became a 500. Both are now translated into
+`EmptyUpstreamResponseError`, which is `RETRYABLE`.
+
+**Where the translation happens is the argument for its safety.** It wraps the single call to
+the bound runnable, and nothing in this repository runs inside that call — it is all langchain
+and the OpenAI SDK. A `TypeError` out of it is the library meeting a response it cannot read,
+not a mistake of ours. The matches are narrow for the same reason: the `TypeError` message
+exactly, the `ValueError` on `temporarily rate-limited upstream`, so a refused slug — the
+`ValueError` that really is reproducible — still fails on the first attempt. A mutation that
+widened it to every `ValueError` breaks two older tests, which is the guard working.
+
+**Measured, not asserted.** Six questions in a row against the live API: 6/6 answered with
+citations, against 1/4 before. Five tests, each measured failing with its fix reverted — and
+one measurement thrown away first, because the "after" run had been served by a process
+started *before* the fix, which the port had quietly kept alive.
+
+The provider's own advice — *add your own key* — is the argument for per-company BYOK
+(S5.4–S5.6), which this session takes up next.
