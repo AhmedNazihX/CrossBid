@@ -6823,3 +6823,59 @@ the notice says in each of its states, and two browser journeys for a bid that h
 that does not. The browser pair was measured failing with the notice's guard replaced by
 `return null`. `tsc` caught the e2e fixtures the moment the field became required, which is the
 property `playwright.config.ts` claims for them and it held.
+
+## ADR-0101 — Deleting an analysis keeps the papers and hands back their keys
+
+**Date:** 2026-09-18 · **Story:** a bidder can delete a tender analysis · **Status:** accepted
+
+A bidder can now delete a tender analysis. The interesting part is not the delete; it is
+everything the schema would have deleted with it.
+
+**`documents.bid_id` is `on delete cascade`.** The obvious `delete from bids` therefore takes
+the bidder's own uploaded documents with it — files they can attach to a later bid, whose bytes
+sit in Storage where no cascade can reach, leaving objects with no rows. `delete_bid` detaches
+them first, in the same transaction.
+
+**Detaching is also the unlock, and that symmetry is the feature.** `DELETE_DOCUMENT_SQL`
+refuses any document carrying a `bid_id` — the lock that stops a file being deleted out from
+under a run whose requirements cite its pages. Setting the column null both saves the files from
+the cascade *and* frees them to be deleted, which is exactly what a bidder means by "delete this
+tender": the analysis goes, and the papers it read become theirs to keep or bin.
+
+**What does go with it** is everything that *is* the analysis: requirements, matrix rows, tender
+chunks, reviews and feedback all cascade, and both LangGraph threads — the run's and its chat's
+— are deleted through `adelete_thread`, because those tables are its schema and not ours. That
+delete is attempted last and its failure is logged rather than raised: the rows are already
+gone, and a 500 would report a failure that did not happen.
+
+**The spend stays, by migration 0010.** `llm_usage.bid_id` was `on delete cascade`, so deleting
+a bid lowered the operator console's totals by whatever that bid had cost — money genuinely
+spent on OpenRouter, with no record left on this side of it. It is `set null` now. Deleting a
+tender is a decision about a tender, not about the accounts, and an accounting row should
+outlive the thing it describes. Nothing downstream learns a new state: `bid_id` has always been
+nullable, because the injection review and the startup slug probe spend outside any bid.
+
+**A running bid is refused, not cancelled.** Its task is still inserting requirements and matrix
+rows; deleting underneath would fail those writes on a foreign key part way through a run the
+bidder has paid for. The router answers 409 with a sentence saying to wait, and `DELETE_BID`
+carries the same rule in its `where` so a run that starts between the read and the write finds
+no row — the router's check is for the bidder, the predicate is for the race.
+`DELETABLE_STATUSES` is derived from `UNFINISHED_STATUSES` rather than listed, so a status added
+to one cannot be forgotten in the other.
+
+**On screen it is offered twice and confirmed once.** The confirmation names what *stays* as
+well as what goes, because the asymmetry runs opposite to the fear: a bidder reading "are you
+sure?" would reasonably assume their own files were about to go. The server's 409 is shown in
+the server's words — "wait for it to finish" tells them not to retry, which a generic failure
+would throw away (the same call `sign-in-card.tsx` makes about Supabase's messages).
+
+In the workspace it sits at the foot, behind a rule, away from *Review verdict*: a destructive
+action beside the primary one is a misclick waiting to happen. It leaves for the list once the
+delete lands, because the workspace polls a bid that no longer exists.
+
+In the list it is a last column, which is **the placement `DeleteSelected` was burned by** — the
+documents table's first delete control sat 106 px past the right edge at 1100 px, reachable only
+by dragging the table sideways. So the browser test measures this one's box against the viewport
+at that same width rather than assuming it, and the row disappears from the loaded pages rather
+than refetching: the pages are keyset cursors (ADR-0093), and asking for "the page after X" once
+X is gone is a question with a worse answer than not drawing the row.

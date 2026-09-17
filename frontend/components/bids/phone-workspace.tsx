@@ -16,11 +16,13 @@ import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
 import { tabId, Tabs } from '@/components/ui/tabs'
+import { useRouter } from 'next/navigation'
 import { describeApiError } from '@/lib/api-client'
 import { formatLanguagePair, plural } from '@/lib/format'
 import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
 import { VerdictPanel } from './verdict-panel'
+import { DeleteBid } from './delete-bid'
 import { UnsearchablePack } from './unsearchable-pack'
 import { PHONE_TABS, type PhoneTab, type WorkspaceState } from './workspace-state'
 
@@ -28,6 +30,7 @@ import { PHONE_TABS, type PhoneTab, type WorkspaceState } from './workspace-stat
 const phonePanelId = (value: PhoneTab): string => `phone-panel-${value}`
 
 export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
+  const router = useRouter()
   const {
     bid,
     pollError,
@@ -205,6 +208,15 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
         <p id="review-verdict-note" className="sr-only">
           {reviewNote}
         </p>
+      </div>
+      <div className="mx-4 mb-6 mt-2 border-t border-border-subtle pt-5">
+        {/* At the foot, away from Review verdict: a destructive action beside the primary one
+            is a misclick waiting to happen, and this is not a step in the workflow. */}
+        <DeleteBid
+          bidId={bid.id}
+          title={bid.notice_number ?? bid.title}
+          onDeleted={() => router.replace('/bids')}
+        />
       </div>
     </div>
   )

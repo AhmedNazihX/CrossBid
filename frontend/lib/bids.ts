@@ -96,6 +96,24 @@ export function startBid(body: StartBidRequest): Promise<BidResponse> {
 }
 
 /**
+ * Deletes one tender analysis and everything that *is* the analysis — its requirements, its
+ * matrix, its verdict, its review and the corpus it searched.
+ *
+ * **The documents are kept.** They are the bidder's own uploads, they can be attached to a
+ * later bid, and the server detaches them before the delete rather than letting
+ * `documents.bid_id`'s cascade take them. Detaching is also what releases the lock that stops
+ * an attached document being deleted, so after this the files can be removed from the library
+ * like any other. The spend stays in the cost console too, with the bid's name gone.
+ *
+ * Throws `ApiError` with `status === 409` while the run is still going: its task is writing
+ * rows, and deleting under it would fail those writes part way through work already paid for.
+ * A 404 means the id is unknown or belongs to another company — the same answer either way.
+ */
+export function deleteBid(bidId: string, signal?: AbortSignal): Promise<void> {
+  return apiRequest('delete', '/bids/{bid_id}', { path: { bid_id: bidId }, signal })
+}
+
+/**
  * Submits the review that finishes a bid (story S3.4.2) and resolves with the bid as the
  * review left it — `status: "complete"`, the re-scored verdict, and every row carrying the
  * reviewer's disposition. There is no polling afterwards: the backend runs the resume

@@ -55,6 +55,14 @@ UNFINISHED_STATUSES: Final = frozenset(
 """Statuses that mean "the graph should be running". `AWAITING_REVIEW` is parked, not
 running — a human resumes it (S3.4.2) — and `COMPLETE` and `FAILED` are terminal."""
 
+DELETABLE_STATUSES: Final = frozenset(BidStatus) - UNFINISHED_STATUSES
+"""What a bidder may delete: everything the graph is not in the middle of writing.
+
+Derived rather than listed, so a status added to one set cannot be forgotten in the other. A
+run in flight holds an `asyncio.Task` still inserting requirements and matrix rows, and
+deleting the bid under it would fail those inserts on a foreign key half way through a paid
+run — so the deletable states are the parked one and the two finished ones."""
+
 TENDER_DOCUMENT_KINDS: Final = frozenset(
     {
         DocumentKind.TENDER_DOCUMENT,
@@ -407,6 +415,31 @@ unscoped statement — correctly, since the guard cannot know a fragment from a 
 subquery is scoped by the row it correlates to, and that row is scoped by the `where` below.
 """
 
+DETACH_DOCUMENTS: Final[LiteralString] = """
+update documents
+set bid_id = null
+where company_id = %(company_id)s and bid_id = %(bid_id)s
+"""
+"""Hands the bidder's files back before the bid that held them is deleted.
+
+Two things at once, and the second is easy to miss. `documents.bid_id` is
+`references bids (id) on delete cascade`, so deleting a bid **deletes its documents** — the
+bidder's own uploads, which outlive any one analysis and whose bytes are still in Storage. And
+`DELETE_DOCUMENT_SQL` refuses any document carrying a `bid_id`, which is the lock that stops a
+file being deleted out from under a run that cites it. Setting the column null both saves the
+files and releases that lock, which is the whole of what deleting an analysis should do."""
+
+DELETE_BID: Final[LiteralString] = """
+delete from bids
+where id = %(bid_id)s and company_id = %(company_id)s and status = any(%(statuses)s)
+returning id
+"""
+"""Scoped by company *and* by a status the graph is not writing to.
+
+The router refuses a running bid with a 409 first, which is what gives the bidder a sentence to
+act on. This clause is that rule written where a race cannot get around it: a run that starts
+between the router's read and this write finds no row to delete."""
+
 ATTACH_DOCUMENTS: Final[LiteralString] = """
 update documents
 set bid_id = %(bid_id)s
@@ -430,6 +463,8 @@ SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     SELECT_DOCUMENTS_BY_ID,
     SELECT_BID_DOCUMENTS,
     ATTACH_DOCUMENTS,
+    DETACH_DOCUMENTS,
+    DELETE_BID,
 )
 """Every statement that touches tenant data. A test asserts each carries the predicate."""
 
@@ -748,6 +783,40 @@ async def bid_documents(
             )
         ).fetchall()
     return [_document_row(record) for record in records]
+
+
+async def delete_bid(db: ConnectionSource, *, company_id: str, bid_id: str) -> bool:
+    """Delete one analysis, keep the papers it was made from. `False` when nothing was deleted.
+
+    `False` covers an unknown id, another company's id, and a bid whose graph is still running
+    — all three of which the router tells apart for the bidder before reaching this.
+
+    **The documents are detached first, in the same transaction.** Everything else a bid owns
+    is meant to go with it: requirements, matrix rows, tender chunks, reviews and feedback all
+    cascade, and they *are* the analysis. Its documents are not — they are the bidder's own
+    files, they can be attached to a later bid, and their bytes live in Storage where this
+    statement cannot reach, so the cascade would take the rows and orphan the objects.
+    Detaching also releases the delete lock, which is the other half of what a bidder means.
+
+    Its spend stays as well, by a schema decision rather than one made here: migration 0010
+    made `llm_usage.bid_id` `set null`, so the cost survives with the bid's name gone.
+
+    The checkpoint the run lived in is **not** deleted here — `routers/bids.py` asks LangGraph
+    for that with `adelete_thread`, because those tables are its schema and not ours.
+    """
+    async with db.connection() as conn, conn.transaction():
+        await conn.execute(DETACH_DOCUMENTS, {"company_id": company_id, "bid_id": bid_id})
+        record = await (
+            await conn.execute(
+                DELETE_BID,
+                {
+                    "bid_id": bid_id,
+                    "company_id": company_id,
+                    "statuses": sorted(status.value for status in DELETABLE_STATUSES),
+                },
+            )
+        ).fetchone()
+    return record is not None
 
 
 async def attach_documents(

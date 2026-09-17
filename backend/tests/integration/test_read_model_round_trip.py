@@ -57,6 +57,7 @@ from crossbid.readmodel.bids import (
     claim_bid_for_review,
     company_language,
     create_bid,
+    delete_bid,
     fetch_bid,
     list_bids,
     record_review,
@@ -620,3 +621,112 @@ async def test_a_documents_searchability_is_read_with_the_document(db: Database)
         ("a-indexed.pdf", True),
         ("b-not-indexed.pdf", False),
     ]
+
+
+@skip_without_database
+async def test_deleting_a_bid_frees_its_documents_and_keeps_its_spend(db: Database) -> None:
+    """Deleting a tender analysis, against the cascades that make it dangerous.
+
+    `documents.bid_id references bids (id) on delete cascade`, so the obvious `delete from
+    bids` takes the bidder's uploaded files with it — the files are theirs, they outlive any
+    one analysis, and the whole reason they are locked while a bid holds them is that the bid
+    cites them. Detaching first is what turns the delete into "the analysis goes, the papers
+    stay", and it is also exactly the unlock: `DELETE_DOCUMENT_SQL` requires `bid_id is null`.
+
+    `llm_usage.bid_id` is `set null` since migration 0010 for the opposite reason: money spent
+    is a fact about the account, not about the tender, and a delete that quietly lowered the
+    cost console would be a worse lie than the row it removed.
+    """
+    company_id = str(uuid.uuid4())
+    companies = CompaniesReadModel(db)
+    await companies.create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    bid = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="614270-2026",
+        title="Netztechnik",
+        source_language="de",
+        bidder_language="de",
+    )
+    records = DocumentsReadModel(db)
+    document_id = uuid.uuid4()
+    await records.insert(
+        company_id=uuid.UUID(company_id),
+        document_id=document_id,
+        kind=DocumentKind.TENDER_DOCUMENT,
+        name="rc.pdf",
+        storage_path=f"{company_id}/{document_id}/rc.pdf",
+    )
+    await records.mark_ready(company_id=uuid.UUID(company_id), document_id=document_id)
+    await attach_documents(
+        db, company_id=company_id, bid_id=bid.id, document_ids=[str(document_id)]
+    )
+    await write_requirements(
+        db, company_id=company_id, rows=[requirement_of(bid.id, str(uuid.uuid4()))]
+    )
+    await DatabaseUsageSink(db).record(
+        UsageEvent(
+            company_id=company_id,
+            bid_id=bid.id,
+            node=UsageNode.EXTRACT_REQS,
+            provider=Provider.OPENROUTER,
+            model="openai/gpt-5.6-terra",
+            input_tokens=1_000,
+            output_tokens=200,
+            cost_usd=Decimal("0.004200"),
+        )
+    )
+    # A document a bid holds cannot be deleted: that is the lock this is meant to release.
+    assert (
+        await records.delete(company_id=uuid.UUID(company_id), document_id=document_id) is False
+    )
+    # `create_bid` leaves it `queued`, which is a running state and refused — see the test
+    # below. This is the bid a bidder actually deletes: one whose analysis has finished.
+    await set_bid_status(db, company_id=company_id, bid_id=bid.id, status=BidStatus.COMPLETE)
+
+    deleted = await delete_bid(db, company_id=company_id, bid_id=bid.id)
+
+    assert deleted is True
+    assert await fetch_bid(db, company_id=company_id, bid_id=bid.id) is None
+    assert list(await fetch_requirements(db, company_id=company_id, bid_id=bid.id)) == []
+
+    survivor = await records.get(company_id=uuid.UUID(company_id), document_id=document_id)
+    assert survivor is not None, "the bidder's own file is not the analysis"
+    # Unlocked by the detach, which is the same condition the delete statement tests.
+    assert (
+        await records.delete(company_id=uuid.UUID(company_id), document_id=document_id) is True
+    )
+
+    # The aggregate comes back as a float; what is asserted is that the money is still counted
+    # for this company after the bid it paid for is gone (migration 0010).
+    spend = list(await fetch_usage_by_node(db, company_id=company_id))
+    assert [float(row.cost_usd) for row in spend] == [pytest.approx(0.0042)]
+
+
+@skip_without_database
+async def test_a_bid_whose_graph_should_be_running_is_not_deleted(db: Database) -> None:
+    """The statement refuses it, not only the router.
+
+    The router answers 409 with a sentence, which is what a bidder acts on. This is the same
+    rule where a race cannot get around it: a run that starts between the router's read and
+    this write finds no row to delete, and the bid its task is still writing rows for stays.
+    """
+    company_id = str(uuid.uuid4())
+    companies = CompaniesReadModel(db)
+    await companies.create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    bid = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="614271-2026",
+        title="Netztechnik",
+        source_language="de",
+        bidder_language="de",
+    )
+    await set_bid_status(db, company_id=company_id, bid_id=bid.id, status=BidStatus.CHECKING)
+
+    assert await delete_bid(db, company_id=company_id, bid_id=bid.id) is False
+    assert await fetch_bid(db, company_id=company_id, bid_id=bid.id) is not None

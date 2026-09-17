@@ -37,6 +37,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from crossbid.agent.chat_graph import CHAT_THREAD_SUFFIX
 from crossbid.agent.runner import BidRunner, RunnerError, build_runner
 from crossbid.agent.state import ExtractionProblem
 from crossbid.auth import CompanyContext, current_company
@@ -50,6 +51,7 @@ from crossbid.models.tender import BidStatus, BidSummary
 from crossbid.models.verdict import Decision, Verdict
 from crossbid.rate_limit import RATE_LIMITED_RESPONSES, bid_start_limit
 from crossbid.readmodel.bids import (
+    DELETABLE_STATUSES,
     TENDER_DOCUMENT_KINDS,
     BidDocumentRow,
     BidRow,
@@ -59,10 +61,12 @@ from crossbid.readmodel.bids import (
     claim_bid_for_review,
     company_language,
     create_bid,
+    delete_bid,
     documents_by_id,
     fetch_bid,
     list_bids,
     mark_bid_failed,
+    thread_id_of,
 )
 from crossbid.readmodel.documents import DocumentStatus
 from crossbid.readmodel.matrix import fetch_matrix_rows
@@ -85,6 +89,10 @@ so startup and requests share one task registry either way."""
 
 NO_SUCH_COMPANY_DETAIL: Final = "No such company."
 NO_SUCH_BID_DETAIL: Final = "No such bid."
+BID_STILL_RUNNING_DETAIL: Final = (
+    "This analysis is still running. Wait for it to finish or fail, then delete it — "
+    "deleting it now would stop the run part way through work you have already paid for."
+)
 STORAGE_NOT_CONFIGURED_DETAIL: Final = (
     "Document storage is not configured on this server, so bids cannot be started."
 )
@@ -495,6 +503,57 @@ async def get_bid(
     if is_unchanged(if_none_match=if_none_match, current=tag):
         return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={"ETag": tag})
     return JSONResponse(content=jsonable_encoder(payload), headers={"ETag": tag})
+
+
+@router.delete(
+    "/{bid_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a tender analysis",
+)
+async def delete_bid_analysis(
+    bid_id: uuid.UUID,
+    company: CompanyContext = Depends(current_company),
+    db: Database = Depends(get_database),
+) -> Response:
+    """Delete one analysis. The documents it was made from are kept and unlocked.
+
+    **What goes:** the bid, its requirements, its matrix rows, its reviews, its feedback and
+    its retrieval corpus — everything that *is* the analysis, by cascade — and the LangGraph
+    threads the run and its chat lived on.
+
+    **What stays:** the documents. They are the bidder's own files, they can be attached to a
+    later bid, and their bytes are in Storage. `readmodel.bids.delete_bid` detaches them before
+    the delete, which both saves them from `documents.bid_id`'s cascade and releases the lock
+    that stops an attached document being deleted — so a tender analysis and the papers it read
+    are two things a bidder can throw away separately. The spend stays too (migration 0010).
+
+    **A running bid is a 409**, not a silent refusal: the runner's task is still writing rows,
+    and deleting under it would fail those writes on a foreign key in the middle of a paid run.
+    The statement carries the same rule, so a run that starts between this check and the write
+    finds no row to delete.
+
+    The checkpoints go last and their failure is logged rather than raised. They are LangGraph's
+    tables, deleted through its own `adelete_thread`; a bid whose rows are gone and whose
+    checkpoint is not is stale state nobody can reach, while a 500 here would tell the bidder a
+    delete failed that has already happened.
+    """
+    company_id = company.company_id
+    bid = await fetch_bid(db, company_id=company_id, bid_id=str(bid_id))
+    if bid is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_BID_DETAIL)
+    if bid.status not in DELETABLE_STATUSES:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=BID_STILL_RUNNING_DETAIL)
+    if not await delete_bid(db, company_id=company_id, bid_id=str(bid_id)):
+        # The status changed under us: a resume claimed it between the read and the write.
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=BID_STILL_RUNNING_DETAIL)
+
+    thread = thread_id_of(str(bid_id))
+    for name in (thread, f"{thread}{CHAT_THREAD_SUFFIX}"):
+        try:
+            await db.checkpointer.adelete_thread(name)
+        except Exception:
+            logger.exception("bid %s deleted; its %s checkpoint was not", bid_id, name)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("", response_model=BidListResponse, summary="List the company's bids")

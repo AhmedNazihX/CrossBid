@@ -72,6 +72,7 @@ READ_MODEL_FUNCTIONS = (
     "fetch_matrix_rows",
     "bid_documents",
     "claim_bid_for_review",
+    "delete_bid",
 )
 
 
@@ -134,6 +135,8 @@ class InMemoryReadModel:
         self.attached: list[tuple[str, list[str]]] = []
         self.failed: list[tuple[str, str]] = []
         self.bid_reads: list[str] = []
+        self.deleted: list[str] = []
+        self.delete_returns = True
 
     def add_document(self, owner: str, row: BidDocumentRow) -> BidDocumentRow:
         self.documents[row.id] = (owner, row)
@@ -218,6 +221,21 @@ class InMemoryReadModel:
         self.bid_reads.append(bid_id)
         row = self.bids.get(bid_id)
         return row if row is not None and row.company_id == company_id else None
+
+    async def delete_bid(self, db: Any, *, company_id: str, bid_id: str) -> bool:
+        """Deletes the bid and hands its documents back, as the statement pair does."""
+        row = self.bids.get(bid_id)
+        if row is None or row.company_id != company_id or not self.delete_returns:
+            return False
+        self.deleted.append(bid_id)
+        del self.bids[bid_id]
+        for document_id, (owner, document) in list(self.documents.items()):
+            if document.bid_id == bid_id:
+                self.documents[document_id] = (
+                    owner,
+                    document.model_copy(update={"bid_id": None}),
+                )
+        return True
 
     async def list_bids(
         self, db: Any, *, company_id: str, limit: int, after: PageCursor | None = None
@@ -1548,3 +1566,127 @@ def test_a_first_poll_holding_nothing_gets_a_body(
     bid = read_model.add_bid()
 
     assert client.get(f"/bids/{bid.id}", headers=headers()).status_code == 200
+
+
+# ------------------------------------------------------------------- deleting an analysis
+
+
+class FakeCheckpointer:
+    """Enough of `AsyncPostgresSaver` for the route: which threads it was asked to forget."""
+
+    def __init__(self, *, fails: bool = False) -> None:
+        self.deleted: list[str] = []
+        self._fails = fails
+
+    async def adelete_thread(self, thread_id: str) -> None:
+        if self._fails:
+            raise RuntimeError("the checkpoint tables are not there")
+        self.deleted.append(thread_id)
+
+
+class FakeDatabaseWithCheckpointer(FakeDatabase):
+    def __init__(self, checkpointer: FakeCheckpointer) -> None:
+        self.checkpointer = checkpointer
+
+
+@pytest.fixture
+def checkpointer() -> FakeCheckpointer:
+    return FakeCheckpointer()
+
+
+@pytest.fixture
+def deleting_client(
+    offline_settings: Settings, runner: FakeRunner, checkpointer: FakeCheckpointer
+) -> Iterator[TestClient]:
+    app = FastAPI()
+    app.state.settings = offline_settings
+    app.state.db = None
+    app.include_router(router)
+    app.dependency_overrides[get_database] = lambda: FakeDatabaseWithCheckpointer(checkpointer)
+    app.dependency_overrides[get_bid_runner] = lambda: runner
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+def test_deleting_a_finished_bid_answers_204_and_frees_its_documents(
+    deleting_client: TestClient, read_model: InMemoryReadModel, checkpointer: FakeCheckpointer
+) -> None:
+    """The bidder's own files survive the analysis that read them.
+
+    `documents.bid_id` cascades, so the whole point of the read model detaching first is that
+    the rows are still there afterwards — and, being detached, deletable again.
+    """
+    bid = read_model.add_bid(status=BidStatus.COMPLETE)
+    read_model.add_document(*document_row(bid_id=bid.id))
+
+    response = deleting_client.delete(f"/bids/{bid.id}", headers=headers())
+
+    assert response.status_code == 204, response.text
+    assert read_model.deleted == [bid.id]
+    assert [row.bid_id for _, row in read_model.documents.values()] == [None]
+    assert checkpointer.deleted == [f"bid:{bid.id}", f"bid:{bid.id}:chat"], (
+        "the run's thread and the chat's, or the conversation outlives the bid"
+    )
+
+
+@pytest.mark.parametrize("status_value", [BidStatus.CHECKING, BidStatus.QUEUED])
+def test_deleting_a_running_bid_is_a_409_that_says_why(
+    deleting_client: TestClient, read_model: InMemoryReadModel, status_value: BidStatus
+) -> None:
+    """Its task is still writing rows; deleting under it would fail those writes."""
+    bid = read_model.add_bid(status=status_value)
+
+    response = deleting_client.delete(f"/bids/{bid.id}", headers=headers())
+
+    assert response.status_code == 409, response.text
+    assert "still running" in response.json()["detail"]
+    assert read_model.deleted == []
+
+
+def test_a_bid_that_starts_running_between_the_check_and_the_write_is_also_409(
+    deleting_client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """The statement carries the same rule, and the route believes it over its own read."""
+    bid = read_model.add_bid(status=BidStatus.COMPLETE)
+    read_model.delete_returns = False
+
+    response = deleting_client.delete(f"/bids/{bid.id}", headers=headers())
+
+    assert response.status_code == 409, response.text
+
+
+def test_deleting_another_companys_bid_is_the_same_404_as_an_unknown_one(
+    deleting_client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    bid = read_model.add_bid(status=BidStatus.COMPLETE, company_id=OTHER_COMPANY_ID)
+
+    response = deleting_client.delete(f"/bids/{bid.id}", headers=headers())
+
+    assert response.status_code == 404, response.text
+    assert read_model.deleted == []
+
+
+def test_a_checkpoint_that_will_not_delete_does_not_fail_the_delete(
+    offline_settings: Settings, runner: FakeRunner, read_model: InMemoryReadModel
+) -> None:
+    """The bid is already gone. A 500 here would report a failure that did not happen.
+
+    The rows are deleted and committed before LangGraph is asked to forget the thread, so a
+    checkpoint left behind is state nobody can reach — worth a log line, not worth telling the
+    bidder their delete failed when it did not.
+    """
+    app = FastAPI()
+    app.state.settings = offline_settings
+    app.state.db = None
+    app.include_router(router)
+    app.dependency_overrides[get_database] = lambda: FakeDatabaseWithCheckpointer(
+        FakeCheckpointer(fails=True)
+    )
+    app.dependency_overrides[get_bid_runner] = lambda: runner
+    bid = read_model.add_bid(status=BidStatus.AWAITING_REVIEW)
+
+    with TestClient(app) as client:
+        response = client.delete(f"/bids/{bid.id}", headers=headers())
+
+    assert response.status_code == 204, response.text
+    assert read_model.deleted == [bid.id]

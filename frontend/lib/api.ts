@@ -201,7 +201,31 @@ export interface paths {
         get: operations["get_bid_bids__bid_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a tender analysis
+         * @description Delete one analysis. The documents it was made from are kept and unlocked.
+         *
+         *     **What goes:** the bid, its requirements, its matrix rows, its reviews, its feedback and
+         *     its retrieval corpus — everything that *is* the analysis, by cascade — and the LangGraph
+         *     threads the run and its chat lived on.
+         *
+         *     **What stays:** the documents. They are the bidder's own files, they can be attached to a
+         *     later bid, and their bytes are in Storage. `readmodel.bids.delete_bid` detaches them before
+         *     the delete, which both saves them from `documents.bid_id`'s cascade and releases the lock
+         *     that stops an attached document being deleted — so a tender analysis and the papers it read
+         *     are two things a bidder can throw away separately. The spend stays too (migration 0010).
+         *
+         *     **A running bid is a 409**, not a silent refusal: the runner's task is still writing rows,
+         *     and deleting under it would fail those writes on a foreign key in the middle of a paid run.
+         *     The statement carries the same rule, so a run that starts between this check and the write
+         *     finds no row to delete.
+         *
+         *     The checkpoints go last and their failure is logged rather than raised. They are LangGraph's
+         *     tables, deleted through its own `adelete_thread`; a bid whose rows are gone and whose
+         *     checkpoint is not is stale state nobody can reach, while a 500 here would tell the bidder a
+         *     delete failed that has already happened.
+         */
+        delete: operations["delete_bid_analysis_bids__bid_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2335,6 +2359,35 @@ export interface operations {
             };
             /** @description Unchanged since the `ETag` the caller sent */
             304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_bid_analysis_bids__bid_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

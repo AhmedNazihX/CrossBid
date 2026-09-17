@@ -21,11 +21,13 @@ import { Icon } from '@/components/ui/icons'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Notice } from '@/components/ui/notice'
 import { tabId, Tabs } from '@/components/ui/tabs'
+import { useRouter } from 'next/navigation'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
 import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
+import { DeleteBid } from './delete-bid'
 import { UnsearchablePack } from './unsearchable-pack'
 import { VerdictPanel } from './verdict-panel'
 import type { SideTab, WorkspaceState } from './workspace-state'
@@ -34,6 +36,9 @@ import type { SideTab, WorkspaceState } from './workspace-state'
 const sidePanelId = (value: SideTab): string => `side-panel-${value}`
 
 export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) {
+  // The bid stops existing when it is deleted, and the workspace polls it — so leaving is
+  // part of the delete rather than something the bidder is left to do.
+  const router = useRouter()
   const {
     bid,
     pollError,
@@ -269,6 +274,15 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
             </div>
           )}
         </div>
+      </div>
+      <div className="mt-8 border-t border-border-subtle pt-5">
+        {/* At the foot, away from Review verdict: a destructive action beside the primary one
+            is a misclick waiting to happen, and this is not a step in the workflow. */}
+        <DeleteBid
+          bidId={bid.id}
+          title={bid.notice_number ?? bid.title}
+          onDeleted={() => router.replace('/bids')}
+        />
       </div>
     </>
   )

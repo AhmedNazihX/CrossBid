@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
 
 import { EmptyState } from '@/components/common/empty-state'
@@ -10,6 +10,8 @@ import { DataTable, Td, Th, Tr } from '@/components/ui/data-table'
 import { Notice } from '@/components/ui/notice'
 import { listBids } from '@/lib/bids'
 import { formatDateTime, formatLanguage, plural } from '@/lib/format'
+
+import { DeleteBid } from './delete-bid'
 import { usePagedList } from '@/lib/use-paged-list'
 import { BID_STATUS_LABELS } from './bid-status'
 
@@ -24,11 +26,24 @@ import { BID_STATUS_LABELS } from './bid-status'
  * two screens harder to tell apart.
  */
 export function BidsTable() {
+  /**
+   * Ids deleted in this view, filtered out of the pages already loaded.
+   *
+   * Not a refetch: the pages are keyset cursors (ADR-0093), and re-asking for "the page after
+   * X" once X is gone is a question with a worse answer than simply not drawing the row. The
+   * next navigation reloads the list from the server anyway.
+   */
+  const [deleted, setDeleted] = useState<ReadonlySet<string>>(() => new Set())
   const fetchPage = useCallback(async (cursor: string | undefined, signal: AbortSignal) => {
     const page = await listBids({ cursor, signal })
     return { items: page.bids, nextCursor: page.nextCursor }
   }, [])
   const state = usePagedList(fetchPage)
+  const remove = useCallback(
+    (bidId: string) => setDeleted((gone) => new Set(gone).add(bidId)),
+    []
+  )
+  const items = state.items.filter((bid) => !deleted.has(bid.id))
 
   if (state.phase === 'loading') {
     return (
@@ -44,7 +59,7 @@ export function BidsTable() {
       </Notice>
     )
   }
-  if (state.items.length === 0) {
+  if (items.length === 0) {
     return (
       <EmptyState
         title="No tenders yet"
@@ -63,17 +78,20 @@ export function BidsTable() {
     <>
       <DataTable
         caption="Your tenders, newest first."
-        footer={`${plural(state.items.length, 'tender')} · every bid opens its workspace`}
+        footer={`${plural(items.length, 'tender')} · every bid opens its workspace`}
       >
         <thead>
           <tr>
             <Th>Tender</Th>
             <Th>Phase</Th>
             <Th>Updated</Th>
+            <Th>
+              <span className="sr-only">Actions</span>
+            </Th>
           </tr>
         </thead>
         <tbody>
-          {state.items.map((bid) => {
+          {items.map((bid) => {
             const status = BID_STATUS_LABELS[bid.status]
             return (
               <Tr key={bid.id} className="hover:bg-surface-sunken">
@@ -98,6 +116,13 @@ export function BidsTable() {
                 </Td>
                 <Td className="whitespace-nowrap text-text-secondary">
                   {formatDateTime(bid.updated_at)}
+                </Td>
+                <Td>
+                  <DeleteBid
+                    bidId={bid.id}
+                    title={bid.ted_publication_number ?? bid.title}
+                    onDeleted={() => remove(bid.id)}
+                  />
                 </Td>
               </Tr>
             )
