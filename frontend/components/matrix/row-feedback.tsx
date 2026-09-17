@@ -155,7 +155,7 @@ export function FeedbackControls({
               onChange={(event) => setDraft(event.target.value)}
               aria-describedby={hintId}
               placeholder={placeholder}
-              className="w-full resize-y rounded-md border border-border-default bg-surface-card px-3 py-2 text-base leading-[1.5] text-text-primary shadow-xs outline-none placeholder:text-text-placeholder focus-visible:border-border-focus focus-visible:shadow-[var(--shadow-focus)]"
+              className="w-full resize-y rounded-md border border-border-default bg-surface-card px-3 py-2 text-base leading-[1.5] text-text-primary shadow-xs placeholder:text-text-placeholder focus-visible:border-border-focus focus-visible:shadow-[var(--shadow-focus)]"
             />
           </Field>
           <Button

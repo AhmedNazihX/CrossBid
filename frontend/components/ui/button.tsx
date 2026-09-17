@@ -5,7 +5,8 @@ import * as Slot from '@radix-ui/react-slot'
 /**
  * Button — `components/core/Button.jsx`: five variants, three heights (32/40/48 px),
  * 8 px radius, medium weight, 16 px icon slots, 50 % opacity when disabled. Hover darkens
- * one step; the focus ring is the sheet's `--shadow-[var(--shadow-focus)]`. `asChild` lets a Next `Link`
+ * one step; the focus ring is the sheet's own, drawn by `:focus-visible` in `globals.css` and
+ * inherited rather than declared here (ADR-0092). `asChild` lets a Next `Link`
  * carry the styling, so a navigation action is still an anchor.
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'inverse' | 'danger'

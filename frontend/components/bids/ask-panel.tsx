@@ -140,7 +140,7 @@ export function AskPanel({
         onSubmit={handleSubmit}
         className={cn(
           'rounded-[14px] border border-border-default bg-surface-card px-4 pt-3.5 pb-3 shadow-xs transition-shadow [transition-duration:var(--duration-fast)]',
-          'focus-within:border-border-focus focus-within:shadow-[var(--shadow-focus)]'
+          'focus-within:border-border-focus focus-within:shadow-[var(--shadow-focus)] focus-within:focus-ring'
         )}
       >
         <label htmlFor={fieldId} className="sr-only">

@@ -6248,3 +6248,77 @@ The stored bytes begin `gAAAAA` — a Fernet token — and do not contain the ke
 tests across crypto, the read model, verification and enforcement, each measured failing with
 its fix reverted, including the one that matters most: making the resolver fall back to the
 application key fails two.
+
+## ADR-0092 — The focus ring is an outline, because a shadow can be deleted without an error
+
+**Date:** 2026-09-17 · **Audit finding:** M6 · **Status:** accepted ·
+**Diverges from:** `docs/design/system/readme.md` line 90, deliberately
+
+The sheet drew every focus ring the way the design system does: `:focus-visible { outline:
+none; box-shadow: var(--shadow-focus) }` in `@layer base`, where `--shadow-focus` is
+`0 0 0 3px rgba(17, 17, 17, 0.2)`. Two separate things were wrong with that, and the audit
+only named one of them clearly.
+
+**A `shadow-*` utility deletes the ring, silently.** `@layer base` comes before
+`@layer utilities`, and the cascade settles layers *before* specificity, so a static
+`shadow-xs` on an element beats the base rule outright — no warning, no error, nothing for
+`tsc`, ESLint or the build to see. `components/ui/select.tsx` carries `shadow-xs`. Measured in
+Chrome: a keyboard-focused `<select>` computes `outline-style: none` and a `box-shadow` of
+`rgba(0, 0, 0, 0.05) 0 1px 2px` — Tailwind's own `shadow-xs`, not the sheet's. **Every
+`<select>` in the app had a one-pixel border colour change as its entire focus indicator**,
+and the `outline: none` in that same rule had already discarded the browser's fallback. This
+is B3's shape a second time: an unknown colour utility emitted no declaration and the Review
+button shipped transparent; here a losing layer emitted no ring and nine screens shipped with
+no keyboard affordance. Both were invisible to every check that is not a browser.
+
+**Where the ring did survive it was too faint.** On the wrapper patterns — `Input`,
+`AskPanel`, the checkbox and radio proxies — the ring painted correctly and measured
+**1.5517:1** against what sits behind it. WCAG 2.2 SC 1.4.11 asks for 3:1.
+
+**So the ring is an `outline`, at full ink.** `--focus-ring-width: 2px` (SC 2.4.11's minimum
+perimeter), `--focus-ring-offset: 2px` so the ring and a border that turns ink at the same
+moment read as two things, and `--focus-ring-color: var(--border-focus)`. Measured after:
+**18.88:1**. Nothing in this codebase sets `outline`, so no utility can reach it — which is
+the property `box-shadow` never had.
+
+`--shadow-focus` is kept and still applied, now as decoration: a soft halo inside the outline.
+It is no longer load-bearing, and its comment in `globals.css` says so.
+
+**One definition, three shapes.** A control whose visible box is not the focused element
+cannot use the base rule — a wrapper owns the box in `Input` and `AskPanel`, and a styled
+proxy beside a visually hidden input owns it in `Checkbox` and the verdict radio. Those five
+sites take a `focus-ring` utility (`@utility` in `globals.css`) through `focus-within:` and
+`peer-focus-visible:`, so the ring cannot drift apart from itself. The four textareas that
+*are* the focused element simply stopped saying `outline-none`.
+
+**The divergence from the kit is the point, not an accident.** The design system asks for the
+3 px ink-at-20 % ring in `docs/design/system/readme.md` and `tokens/effects.css`. That value
+fails the standard, and the app is what gets measured — the same call L1 records for the
+placeholder token. `README-TRACKED.md` names it so a re-sync does not quietly restore it.
+
+**Two things found while measuring, neither of them M6.**
+
+*The card's account of the `Input` was wrong, and so was my first reading of it.* The card says
+the ring survives at 1.55:1 there, which is right. My first browser reading said it did not
+survive at all — because these controls carry `transition-shadow` at `--duration-fast` and
+`getComputedStyle` during a transition returns the *interpolated* value. `focusByKeyboard`
+now awaits `getAnimations()` before reading. A fixed sleep would have been a guess; this is
+exact. ADR-0065 cuts both ways: reproduce before believing where a report points, and before
+believing it is wrong.
+
+*The design system's shadow tokens never reach the shadow utilities.* `--shadow-xs` in `:root`
+is `0 1px 2px rgba(17, 17, 17, 0.04)`, but a focused `<select>` computes
+`rgba(0, 0, 0, 0.05) 0 1px 2px` — Tailwind 4's own default. The `@theme inline` comment claims
+the sheet's variables override Tailwind's because they carry Tailwind's names; that holds for
+`--text-*`, `--radius-*` and `--font-*`, and does **not** hold for `--shadow-*`, because
+Tailwind inlines the shadow value into the utility instead of reading the variable. Every
+`shadow-xs`, `shadow-sm`, `shadow-md` and `shadow-lg` in the app is Tailwind's, not the kit's.
+Not fixed here — it is a separate finding, and a visual change across the whole app.
+
+**How this is pinned.** `e2e/focus-ring.spec.ts`, three journeys in a real browser against the
+document-kind `<Select>` and the `<Input>` beside it on `/bids/new`. It has to be a browser:
+jsdom resolves no cascade, composites no colour and paints no outline, which is exactly how
+this shipped. Each test was measured failing with the fix reverted. The first draft of the
+contrast test **passed against the defect** — Chrome keeps resolving `outline-color` while
+`outline-style` is `none`, so the helper read a healthy ratio off a ring that was not there.
+ADR-0063 for the second time; `paintedFocusRing` now reports 1:1 when nothing is drawn.

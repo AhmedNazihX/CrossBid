@@ -73,7 +73,7 @@ export function RowStatusEditor({ row, edits, isPhone = false }: RowStatusEditor
           aria-describedby={`${reasonId}-hint`}
           placeholder="The Finanzamt certificate covers this — see page 2."
           className={cn(
-            'w-full resize-y rounded-md border bg-surface-card px-3 py-2 text-base leading-[1.5] text-text-primary shadow-xs outline-none',
+            'w-full resize-y rounded-md border bg-surface-card px-3 py-2 text-base leading-[1.5] text-text-primary shadow-xs',
             'placeholder:text-text-placeholder focus-visible:border-border-focus focus-visible:shadow-[var(--shadow-focus)]',
             isReasonMissing ? 'border-status-danger' : 'border-border-default'
           )}

@@ -187,7 +187,7 @@ export function SettingsForm({ settings, onSaved }: SettingsFormProps) {
             aria-describedby={`${PROMPT_ID}-hint`}
             aria-invalid={serverErrors.byField.system_prompt === undefined ? undefined : true}
             disabled={busy}
-            className="w-full resize-y rounded-md border border-border-default bg-surface-card px-3 py-2 [font:var(--type-mono)] leading-[1.5] text-text-primary shadow-xs outline-none placeholder:text-text-placeholder focus-visible:border-border-focus focus-visible:shadow-[var(--shadow-focus)]"
+            className="w-full resize-y rounded-md border border-border-default bg-surface-card px-3 py-2 [font:var(--type-mono)] leading-[1.5] text-text-primary shadow-xs placeholder:text-text-placeholder focus-visible:border-border-focus focus-visible:shadow-[var(--shadow-focus)]"
           />
         </Field>
       </Card>

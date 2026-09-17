@@ -194,8 +194,27 @@
   --shadow-sm: 0 1px 3px rgba(17, 17, 17, 0.06), 0 1px 2px rgba(17, 17, 17, 0.04);
   --shadow-md: 0 4px 12px rgba(17, 17, 17, 0.08), 0 1px 3px rgba(17, 17, 17, 0.05);
   --shadow-lg: 0 12px 32px rgba(17, 17, 17, 0.12), 0 2px 6px rgba(17, 17, 17, 0.06);
+  /*
+   * Decoration only, and deliberately no longer the focus ring (ADR-0092). Two things were
+   * wrong with it in that job: at ink-20% it measures 1.5517:1 against the canvas where WCAG
+   * 2.2 SC 1.4.11 asks for 3:1, and a `box-shadow` written in `@layer base` loses outright to
+   * any `shadow-*` utility, because the cascade settles layers before specificity. That is
+   * how every `<select>` in the app came to have no focus ring at all. The ring below is an
+   * `outline`, which no utility in this codebase can reach.
+   */
   --shadow-focus: 0 0 0 3px rgba(17, 17, 17, 0.2);
   --shadow-active-nav: 0 1px 2px rgba(17, 17, 17, 0.06);
+  /*
+   * Focus ring. Full ink, measured in Chrome at 18.88:1 where the old one measured 1.5517:1
+   * (`e2e/focus-ring.spec.ts`). A deliberate divergence from `docs/design/system/readme.md`,
+   * which asks for the 3 px
+   * ink-at-20% ring above: the kit's value fails the standard, and the app is what is
+   * measured. 2 px is SC 2.4.11's minimum perimeter; the offset holds the ring clear of a
+   * border that turns ink at the same moment, so the two read as two things.
+   */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--border-focus);
   /* Motion */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
@@ -298,6 +317,18 @@
   --breakpoint-shell: 900px;
 }
 
+/*
+ * The same ring the `:focus-visible` rule below draws, as a utility, for the two cases where
+ * the focused element is not the one the user sees: a wrapper that owns the visible box
+ * (`focus-within:focus-ring`) and a styled proxy beside a visually hidden input
+ * (`peer-focus-visible:focus-ring`). One definition, so the ring cannot drift apart from
+ * itself — the app has three of the first and two of the second.
+ */
+@utility focus-ring {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
 /* ---------------------------------------------------------------- tokens/base.css */
 @layer base {
   html {
@@ -324,9 +355,21 @@
   *::after {
     box-sizing: border-box;
   }
-  /* Focus: the system's 3px ink-at-20% ring on every keyboard-focused control. */
+  /*
+   * Focus: an ink outline on every keyboard-focused control (ADR-0092).
+   *
+   * It is an `outline` and not a `box-shadow` on purpose. This rule is in `@layer base`, and
+   * a utility such as `shadow-xs` is in `@layer utilities`, which the cascade prefers whatever
+   * the specificity — so the shadow version of this rule was silently deleted on every
+   * control that carried one, and the `outline: none` that used to sit here threw away the
+   * browser's own fallback as well. Nothing in the sheet sets `outline`, so the ring holds.
+   *
+   * A control whose visible box is an ancestor (the `focus-within` wrappers) or a sibling
+   * proxy (the `peer-focus-visible` checkbox and radio) opts out here and uses the
+   * `focus-ring` utility on the element the user actually sees.
+   */
   :focus-visible {
-    outline: none;
-    box-shadow: var(--shadow-focus);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
   }
 }

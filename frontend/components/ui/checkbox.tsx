@@ -24,7 +24,7 @@ export function Checkbox({ label, description, className, ...rest }: CheckboxPro
         aria-hidden="true"
         className={cn(
           'mt-px inline-flex size-[18px] shrink-0 items-center justify-center rounded-xs border border-border-strong bg-surface-card transition-colors [transition-duration:var(--duration-fast)]',
-          'peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-focus-visible:shadow-[var(--shadow-focus)] peer-checked:[&>svg]:opacity-100'
+          'peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-focus-visible:shadow-[var(--shadow-focus)] peer-focus-visible:focus-ring peer-checked:[&>svg]:opacity-100'
         )}
       >
         <svg

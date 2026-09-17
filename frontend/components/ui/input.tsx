@@ -35,7 +35,7 @@ export function Input({ label, hint, error, icon, id, className, ...rest }: Inpu
       <span
         className={cn(
           'flex h-10 items-center gap-2 rounded-md border bg-surface-card px-3 shadow-xs transition-shadow [transition-duration:var(--duration-fast)]',
-          'focus-within:border-border-focus focus-within:shadow-[var(--shadow-focus)]',
+          'focus-within:border-border-focus focus-within:shadow-[var(--shadow-focus)] focus-within:focus-ring',
           error === undefined ? 'border-border-default' : 'border-status-danger',
           rest.disabled === true && 'opacity-50'
         )}

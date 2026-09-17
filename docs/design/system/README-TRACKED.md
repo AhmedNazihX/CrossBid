@@ -30,6 +30,22 @@ rsync -a --delete --exclude='.DS_Store' --exclude='.thumbnail' \
   ".claude/skills/CrossBid Design System/" docs/design/system/
 ```
 
+## Where the app deliberately does not follow it
+
+The app is what gets measured against WCAG, so where a kit value fails the standard the app
+diverges and records it. Two so far, both in `frontend/app/globals.css`:
+
+- **The focus ring** (ADR-0092). `readme.md` line 90 and `tokens/effects.css` ask for a 3 px
+  `--shadow-focus` ring, ink at 20 %. Measured in Chrome it is **1.5517:1** where SC 1.4.11
+  asks for 3:1, and because it is a `box-shadow` any `shadow-*` utility deletes it outright —
+  which is how every `<select>` in the app came to have no ring at all. The app draws a 2 px
+  ink `outline` instead, measured at 18.88:1. `--shadow-focus` is still applied, as decoration.
+- **The placeholder token** (finding L1, open). `--text-placeholder` is `stone-400`, 2.45:1
+  against white.
+
+A re-sync with the command above overwrites this directory, not the app's sheet, so neither
+divergence is undone by it. They are listed here so a re-sync does not look like it should.
+
 ## `uploads/`
 
 Reference images gathered while the system was designed, including screenshots of other

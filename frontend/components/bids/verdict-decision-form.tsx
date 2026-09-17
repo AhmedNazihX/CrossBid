@@ -156,7 +156,7 @@ export function VerdictDecisionForm({
                 />
                 <span
                   aria-hidden="true"
-                  className="mt-px inline-flex size-[18px] shrink-0 rounded-full border border-border-strong bg-surface-card transition-[border-width] [transition-duration:var(--duration-fast)] peer-checked:border-[5px] peer-checked:border-blue-500 peer-focus-visible:shadow-[var(--shadow-focus)]"
+                  className="mt-px inline-flex size-[18px] shrink-0 rounded-full border border-border-strong bg-surface-card transition-[border-width] [transition-duration:var(--duration-fast)] peer-checked:border-[5px] peer-checked:border-blue-500 peer-focus-visible:shadow-[var(--shadow-focus)] peer-focus-visible:focus-ring"
                 />
                 <span className="min-w-0">
                   <span className="block leading-5 font-medium [overflow-wrap:anywhere]">
@@ -206,7 +206,7 @@ export function VerdictDecisionForm({
             }}
             placeholder="What the agent could not see, and why you are deciding otherwise."
             className={cn(
-              'min-h-[84px] w-full rounded-md border bg-surface-card px-3 py-2.5 [font:var(--type-body)] text-text-primary shadow-xs outline-none transition-shadow [transition-duration:var(--duration-fast)] placeholder:text-text-placeholder focus:border-border-focus focus:shadow-[var(--shadow-focus)] disabled:opacity-50',
+              'min-h-[84px] w-full rounded-md border bg-surface-card px-3 py-2.5 [font:var(--type-body)] text-text-primary shadow-xs transition-shadow [transition-duration:var(--duration-fast)] placeholder:text-text-placeholder focus:border-border-focus focus:shadow-[var(--shadow-focus)] disabled:opacity-50',
               reasonError === undefined ? 'border-border-default' : 'border-status-danger'
             )}
           />
