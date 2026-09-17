@@ -101,3 +101,48 @@ export async function paintedContrast(locator: Locator): Promise<PaintedContrast
     ownBackground: painted.backgrounds[0] ?? 'none',
   }
 }
+
+export interface PaintedPlaceholder {
+  /** The placeholder against the background the eye sees behind it, ancestors composited in. */
+  readonly ratio: number
+  readonly placeholderColor: string
+  /** The `<input>`'s own `color`, i.e. what a typed value is painted in. */
+  readonly valueColor: string
+  readonly surface: string
+}
+
+/**
+ * The contrast an input's *placeholder* is painted with.
+ *
+ * The colour lives on a pseudo-element, so it is read with the second argument to
+ * `getComputedStyle`. That argument is also the trap: when a pseudo-element does not match,
+ * the call falls back to the element's own style rather than failing, so a broken read
+ * returns the ink a typed value is drawn in — 18:1, comfortably passing, against a
+ * placeholder that is not. `valueColor` is returned beside it so a caller can refuse a
+ * measurement where the two are identical instead of believing it.
+ */
+export async function paintedPlaceholderContrast(
+  locator: Locator
+): Promise<PaintedPlaceholder> {
+  const painted = await locator.evaluate((element) => {
+    const layers = (node: Element | null): readonly string[] =>
+      node === null
+        ? []
+        : [getComputedStyle(node).backgroundColor, ...layers(node.parentElement)]
+    return {
+      placeholder: getComputedStyle(element, '::placeholder').color,
+      value: getComputedStyle(element).color,
+      backgrounds: layers(element),
+    }
+  })
+  const effective = painted.backgrounds
+    .map(parseCssColor)
+    .reduceRight((under, top) => composite(top, under), OPAQUE_WHITE)
+  const placeholder = composite(parseCssColor(painted.placeholder), effective)
+  return {
+    ratio: contrastRatio(placeholder, effective),
+    placeholderColor: painted.placeholder,
+    valueColor: painted.value,
+    surface: `rgb(${Math.round(effective.r)}, ${Math.round(effective.g)}, ${Math.round(effective.b)})`,
+  }
+}

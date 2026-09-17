@@ -6393,3 +6393,67 @@ is still unconditional because the workspace's *first* load holds no tag; and th
 more on a last page" journey asserted a button's absence, so it passed against a build with
 no `LoadMore` component in it at all. That is ADR-0063 for the third and fourth time — an
 assertion of absence is not evidence unless the same test also sees the thing present.
+
+## ADR-0094 — The placeholder is a step darker than the kit draws it
+
+**Date:** 2026-09-17 · **Audit finding:** L1 · **Status:** accepted ·
+**Diverges from:** `docs/design/system/readme.md` line 62, deliberately
+
+`--text-placeholder` was `--cb-stone-400`, `#a8a29e`, copied from the kit like every other
+token in the sheet. Measured in Chrome on the white input box: **2.52:1**. WCAG 2.2 SC 1.4.3
+asks 4.5:1 of text this size, so it missed by nearly half — and it missed even the 3:1 that
+SC 1.4.11 asks of things that are *not* text. The token is now `--cb-stone-500`, `#78716c`,
+measured at **4.80:1**.
+
+**Why this is worth a record for one hex value.** A placeholder is not decoration here. Four
+of the six inputs that carry the token hold a *worked example* rather than a label repeat —
+`618320-2026` for the TED notice number, `sabine@example-it.de` on the sign-in form,
+`ISO/IEC 27001:2022` on a certificate row, `sk-or-v1-…` for the provider key. Each is telling
+a bidder the shape of the thing being asked for, which is a thing they must read to answer,
+and three of the four are the first field on their screen. The audit card called this craft;
+the measurement says it is the legibility of the app's own instructions.
+
+**One token, every input.** There is a single `placeholder:text-text-placeholder` utility,
+used at `components/ui/input.tsx:51` and in five components that style their own textarea
+(`ask-panel`, `verdict-decision-form`, `settings-form`, `row-status-editor`, `row-feedback`).
+So the whole defect is one line of the sheet, and the fix is one line of the sheet. There was
+no second definition and no per-screen override to hunt.
+
+**Stone-500 is `--text-muted`'s value too.** The palette runs stone-400 to stone-500 with
+nothing between, so "one step darker" lands exactly on the muted token. That is the two ends
+meeting rather than a copy-paste slip, and the comment in `globals.css` says so, because the
+next reader's first instinct will be to delete one of them. They stay two tokens: a darker
+muted or a lighter placeholder is then one edit, and merging them would make it two.
+
+**The divergence, and why the kit is not edited instead.** `docs/design/system/` is a vendored
+snapshot of a working copy that lives under `.claude/`, and a re-sync overwrites it
+(`README-TRACKED.md`). Editing the snapshot would be undone by the next `rsync` and would not
+reach the tooling that reads the working copy, so the divergence lives in the app's sheet,
+with the measurement beside it, and is listed in `README-TRACKED.md` so a re-sync does not
+look like it should restore `stone-400`. This is the second entry on that list; ADR-0092
+wrote the first and named this one as the same call.
+
+**How this is pinned.** `e2e/placeholder-contrast.spec.ts`, two journeys on `/bids/new` — the
+TED search box's `cyber security` and the start form's `618320-2026`, which sit on different
+grounds, so the ratio is measured against what is actually painted behind each. Both were
+measured failing with the token reverted, at 2.52:1 (ADR-0063).
+
+It is a browser test and not a parse of `globals.css` for the reason M6 and B3 both were: a
+colour utility naming a token that does not exist emits no declaration at all under Tailwind
+4's `--color-*: initial`, so a stylesheet that reads correctly proves nothing about what is
+drawn. `paintedPlaceholderContrast` in `e2e/support/contrast.ts` reads
+`getComputedStyle(el, '::placeholder')` and composites it over every ancestor's background.
+
+**The trap in that read, which would have made this test another one that cannot fail.**
+`getComputedStyle` with a pseudo-element argument does not fail when the pseudo matches
+nothing — it falls back to the element's own style. The element's own `color` is
+`--text-primary`, ink, about 18:1: a comfortable pass, reported by a measurement of the wrong
+thing. So the helper returns the value colour alongside, and both tests refuse a reading where
+the two are identical. ADR-0063 keeps arriving by a different door each time; this is the door
+it would have used here.
+
+**Not the sign-in form, where the audit found it.** The e2e server runs
+`NEXT_PUBLIC_AUTH_MODE=dev`, in which `/login` renders "this build does not sign people in"
+and has no form to measure (`components/auth/sign-in-card.tsx`). The token is the same one,
+reached through the same utility, so the measurement holds; it is recorded here because a
+reader of the card will look for the sign-in form in the spec and not find it.

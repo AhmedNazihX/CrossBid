@@ -40,8 +40,10 @@ diverges and records it. Two so far, both in `frontend/app/globals.css`:
   asks for 3:1, and because it is a `box-shadow` any `shadow-*` utility deletes it outright —
   which is how every `<select>` in the app came to have no ring at all. The app draws a 2 px
   ink `outline` instead, measured at 18.88:1. `--shadow-focus` is still applied, as decoration.
-- **The placeholder token** (finding L1, open). `--text-placeholder` is `stone-400`, 2.45:1
-  against white.
+- **The placeholder token** (ADR-0094). `readme.md` line 62 asks for `stone-400`, which
+  measures **2.52:1** on the white input box where SC 1.4.3 asks 4.5:1 — under the 3:1 asked
+  of things that are not text at all. The app uses `stone-500`, measured at 4.80:1. It is the
+  same colour as `--text-muted`, because the palette has no step between them.
 
 A re-sync with the command above overwrites this directory, not the app's sheet, so neither
 divergence is undone by it. They are listed here so a re-sync does not look like it should.

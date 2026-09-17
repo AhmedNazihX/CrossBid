@@ -2,7 +2,11 @@
  * The CrossBid design system's token sheet, in the one file the app reads it from.
  *
  * Values are copied verbatim from `.claude/skills/CrossBid Design System/tokens/*.css`
- * (colors, typography, spacing, effects, base) — never rounded, never substituted. The
+ * (colors, typography, spacing, effects, base) — never rounded, never substituted. Two are
+ * deliberately not the kit's, because the kit's value fails an accessibility standard and
+ * the app is what is measured: the focus ring (ADR-0092) and the placeholder colour
+ * (ADR-0094). Each says so in a comment beside it, with the ratio and the test that pins it.
+ * The
  * `@theme inline` block below maps the colours onto Tailwind's namespace so utilities such as
  * `bg-surface-card` and `text-text-muted` resolve to the same variables; the other
  * namespaces already share Tailwind's variable names (see the note inside the block).
@@ -67,7 +71,17 @@
   --text-primary: var(--cb-ink);
   --text-secondary: var(--cb-stone-600);
   --text-muted: var(--cb-stone-500);
-  --text-placeholder: var(--cb-stone-400);
+  /*
+   * A deliberate divergence from `docs/design/system/readme.md`, which asks for stone-400
+   * (ADR-0094). Stone-400 is `#a8a29e`, measured in Chrome at 2.52:1 on the white input box,
+   * where WCAG 2.2 SC 1.4.3 asks 4.5:1 of text this size — it missed even the 3:1 that is
+   * asked of things that are not text at all. Stone-500 measures 4.80:1
+   * (`e2e/placeholder-contrast.spec.ts`). The kit's value fails the standard, and the app is
+   * what is measured. It now holds the same colour as `--text-muted` above: the palette has
+   * no step between them, so that is the two ends meeting rather than a copy-paste slip, and
+   * they stay two tokens so a darker muted or a lighter placeholder is one edit.
+   */
+  --text-placeholder: var(--cb-stone-500);
   --text-inverse: var(--cb-white);
   --text-brand: var(--cb-blue-500);
   --text-accent: var(--cb-orange-600);
