@@ -28,6 +28,7 @@ import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
 import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
 import { DeleteBid } from './delete-bid'
+import { RunLiveness } from './run-liveness'
 import { UnsearchablePack } from './unsearchable-pack'
 import { VerdictPanel } from './verdict-panel'
 import type { SideTab, WorkspaceState } from './workspace-state'
@@ -162,7 +163,8 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
       {liveRegion}
       {isRunning && status.hint !== undefined && (
         <Notice className="mb-6">
-          <span className="font-medium text-text-primary">{status.label}.</span> {status.hint}
+          <span className="font-medium text-text-primary">{status.label}.</span> {status.hint}{' '}
+          <RunLiveness startedAt={bid.created_at} />
         </Notice>
       )}
       {bid.status === 'failed' && bid.failure_reason !== null && (

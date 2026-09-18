@@ -23,6 +23,7 @@ import { AskPanel } from './ask-panel'
 import { DecisionLine } from './decision-line'
 import { VerdictPanel } from './verdict-panel'
 import { DeleteBid } from './delete-bid'
+import { RunLiveness } from './run-liveness'
 import { UnsearchablePack } from './unsearchable-pack'
 import { PHONE_TABS, type PhoneTab, type WorkspaceState } from './workspace-state'
 
@@ -102,6 +103,12 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
         <p className="m-0 [font:var(--type-body-sm)] text-text-secondary">
           {plural(bid.documents.length, 'document')} · {plural(totalPages, 'page')}
           {isRunning && status.hint !== undefined ? ` · ${status.hint}` : ''}
+          {isRunning && (
+            <>
+              {' · '}
+              <RunLiveness startedAt={bid.created_at} />
+            </>
+          )}
         </p>
         {bid.verdict !== null && <DecisionLine bid={bid} verdict={bid.verdict} />}
         {bid.status === 'failed' && bid.failure_reason !== null && (
