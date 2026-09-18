@@ -26,7 +26,7 @@ models:
 # The slugs a chat role may be switched to (S5.1), and so the developer panel's model
 # picker (S4.6.2). This list is the verified set, not OpenRouter's catalogue: every slug
 # was confirmed with a live one-token call, and every one of them returns valid structured
-# output, which is what makes a switch safe mid-project. Three vendors, so the multi-model
+# output, which is what makes a switch safe mid-project. Four vendors, so the multi-model
 # comparison the story asks for is a configuration change.
 #
 # The loader refuses a `models:` entry above that is not on this list, so the two blocks
@@ -40,6 +40,13 @@ available_models:
   - anthropic/claude-haiku-4.5
   - google/gemini-2.5-flash
   - google/gemini-2.5-flash-lite
+  # Added 2026-09-18 to be trialled as `cheap`, because `openai/gpt-5.6-luna` rate-limits
+  # under the load `check_reqs` generates: measured 40/72 calls over three bursts of 24 at
+  # concurrency 8, every failure a 429, and 0/24 on the third burst. This slug answered
+  # 48/48 under the same load, and 12/12 on the adversarial guard fixtures with no false
+  # alarm on their decoys. A fourth vendor, so it can take `cheap` without displacing
+  # `fallback` or `judge`, both of which must stay a different vendor from it.
+  - deepseek/deepseek-v4.1-flash
 
 temperature: 0.0
 

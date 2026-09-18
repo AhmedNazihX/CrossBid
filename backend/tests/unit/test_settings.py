@@ -866,12 +866,20 @@ def test_every_configured_chat_slug_is_on_the_verified_list(valid_env: None) -> 
 
 def test_the_verified_list_offers_three_vendors(valid_env: None) -> None:
     """S5.1 is "among OpenAI, Anthropic, and Google slugs", so the list has to hold all
-    three for the story's comparison to be a configuration change."""
+    three for the story's comparison to be a configuration change.
+
+    A superset, not an equality: the story names the three the comparison needs, and says
+    nothing against a fourth. Asserting equality made *adding* a verified vendor fail, which
+    is the opposite of what a list of switchable models is for -- `deepseek/deepseek-v4.1-flash`
+    was added on 2026-09-18 because `openai/gpt-5.6-luna` rate-limits under load. What must
+    not drift is that every one of these answers, which the test below and
+    `VERIFY_MODEL_SLUGS=true` are what actually hold.
+    """
     # Act
     offered = load().runtime.available_models
 
     # Assert
-    assert {slug.split("/")[0] for slug in offered} == {"openai", "anthropic", "google"}
+    assert {"openai", "anthropic", "google"} <= {slug.split("/")[0] for slug in offered}
 
 
 def test_the_embedding_slug_is_exempt_from_the_verified_list(valid_env: None) -> None:

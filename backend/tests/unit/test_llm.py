@@ -218,6 +218,9 @@ def test_verification_probes_every_chat_slug_when_switched_on(
         "anthropic/claude-haiku-4.5",
         "google/gemini-2.5-flash",
         "google/gemini-2.5-flash-lite",
+        # Added 2026-09-18 to be trialled as `cheap`: luna answered 40 of 72 calls under the
+        # load `check_reqs` generates, every failure a 429. This one answered 48 of 48.
+        "deepseek/deepseek-v4.1-flash",
     ]
     assert opted_in.runtime.models.embed not in slugs
 
