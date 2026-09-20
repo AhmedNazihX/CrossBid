@@ -49,6 +49,7 @@ const NOTICE: TedNotice = {
   publication_number: '614251-2026',
   title: 'Deutschland – IT-Dienstleistungen – Rahmenvertrag VV2',
   buyer: 'Bundesamt für Beispiele',
+  buyer_countries: ['DEU'],
   description: null,
   deadline: '2026-10-07',
   deadline_utc_offset_minutes: 120,

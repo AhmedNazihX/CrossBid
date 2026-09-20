@@ -23,6 +23,7 @@ import pytest
 
 from crossbid.models.ted import TedSearchQuery
 from crossbid.reference.ted_client import (
+    FIELDS,
     SORT_CLAUSE,
     TedSearchClient,
     TedUnavailableError,
@@ -39,6 +40,7 @@ NOTICE: dict[str, Any] = {
     "title-proc": {"fra": "DSI-2026-20-RSSI"},
     "description-proc": {"fra": "La Direction des Systèmes d'information souhaite…"},
     "buyer-name": {"fra": ["SPL EAU DU BASSIN RENNAIS"]},
+    "buyer-country": ["FRA"],
     "deadline-receipt-tender-date-lot": ["2026-11-20+01:00", "2026-10-07+02:00"],
     "official-language": ["FRA"],
     "submission-language": ["FRA"],
@@ -668,3 +670,47 @@ def test_a_value_that_is_not_a_publication_number_never_reaches_ted(number: str)
     # Act / Assert
     with pytest.raises(TedUnavailableError, match="publication number"):
         client_for(refuse).search_by_publication_number(number)
+
+
+# --------------------------------------------------------------- the buyer's own country
+
+
+def test_the_buyer_country_is_requested_from_ted() -> None:
+    """Without it on the wire there is nothing for a screen to show (ADR-0111)."""
+    assert "buyer-country" in FIELDS
+
+
+def test_the_buyer_country_is_carried_onto_the_notice() -> None:
+    page = client_for(answering(BODY)).search(TedSearchQuery())
+
+    assert page.notices[0].buyer_countries == ("FRA",)
+
+
+def test_a_buyer_country_repeated_once_per_lot_is_reported_once() -> None:
+    """TED sends `['FRA', 'FRA']` for a two-lot notice; a badge wants it once."""
+    body = {**BODY, "notices": [{**NOTICE, "buyer-country": ["FRA", "FRA"]}]}
+
+    page = client_for(answering(body)).search(TedSearchQuery())
+
+    assert page.notices[0].buyer_countries == ("FRA",)
+
+
+def test_a_notice_naming_no_buyer_country_is_empty_rather_than_broken() -> None:
+    body = {**BODY, "notices": [{**NOTICE, "buyer-country": None}]}
+
+    assert client_for(answering(body)).search(TedSearchQuery()).notices[0].buyer_countries == ()
+
+
+def test_a_non_eu_buyer_country_survives_unmapped() -> None:
+    """The country that caused the bug report is **not** in `ALPHA2_TO_ALPHA3`.
+
+    `59532-2024` is bought in `GBR` and performed in `['DNK', 'FRA', 'GBR']`, so it answers a
+    France search honestly. Mapping through the EU-only alpha-2 table would blank exactly the
+    notice a bidder most needs explained, so the code is carried verbatim -- the same promise
+    `official_languages` already makes about ISO 639-3.
+    """
+    body = {**BODY, "notices": [{**NOTICE, "buyer-country": ["GBR"]}]}
+
+    assert client_for(answering(body)).search(TedSearchQuery()).notices[0].buyer_countries == (
+        "GBR",
+    )

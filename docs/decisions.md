@@ -7644,16 +7644,39 @@ words and not substrings (`cyber` does not find `cybersécurité`), and `OR` ins
 misbehaves silently exactly as it does inside `IN (...)` — `("a" OR "b")` returned *fewer*
 hits than either term alone.
 
-### Reported, not fixed
+### The two presentation defects it uncovered, both now fixed
 
-Two adjacent findings were raised with the user rather than changed here. The results list
-says "N open notices match" while nothing filters on a deadline — the three bad hits were
-published 2019, 2021 and 2024. `deadline-receipt-tender-date-lot >= today(0)` works (TED takes
-`today(N)` and `YYYYMMDD`, and 400s on `YYYY-MM-DD`), but it is too blunt to switch on
-silently: of 521 recent French CPV-72 contract notices only 170 carry a future lot deadline,
-so it would hide two thirds of genuinely open tenders that publish no lot-level date. And
-`buyer-country` is not among the requested `FIELDS`, so nothing on screen could have explained
-why a Czech-bought, France-performed notice appeared — which is why this arrived as a bug
-report rather than as an obvious fact.
+Reproducing the report turned up two things that were not the bug but had kept it invisible.
+
+**The list claimed "N open notices match", and nothing made that true.** TED's
+`totalNoticeCount` counts every notice matching the filters, and its oldest matches here were
+published in 2019. A deadline filter was probed and **rejected**:
+`deadline-receipt-tender-date-lot >= today(0)` works, but of 521 recent French CPV-72
+`cn-standard` notices only **170** carry a future lot deadline, so filtering would hide two
+thirds of genuinely open tenders whose buyers publish no lot-level date — trading a false
+claim for a worse one. So the word "open" is gone from the count, and the card now has
+**three** deadline states instead of two: `Due` in blue, `Closed` in red, and the unchanged
+`No deadline published` in grey. Silence means unknown and must never mean closed, which is
+also why `isNoticeClosed` compares dates in UTC: it errs towards calling a notice open, the
+only safe direction when the alternative is telling a bidder to skip a tender they could win.
+
+**The card could not say which country a notice belonged to.** `buyer-country` was not among
+the requested `FIELDS`, so the one fact that explains a British tender in a French search was
+never on the wire. It is now, as `TedNotice.buyer_countries`, and the card names it —
+**tinted as a warning when it is not the country searched on**, so the question answers itself
+where it is asked. The codes are carried **verbatim as alpha-3** rather than mapped through
+`ALPHA2_TO_ALPHA3`: that table is the 27 EU members a bidder may search, and the notice that
+provoked all this is bought in `GBR`. Mapping would have blanked exactly the row most in need
+of explaining. The frontend keeps its own alpha-3 table, covering the EU plus the non-EU
+buyers that really appear on EU notices, and falls back to the raw code for anything else.
+
+The empty state now names the keyword first — an English phrase matched as whole words against
+a French notice is the likeliest reason for no results, which is the same fact as the defect.
+
+### What stayed
+
+`tender-search.tsx` labels the control **"Where the work is"**, which is exactly what
+`place-of-performance` means. It was never lying, and it was not changed. Making the buyer's
+country visible beside it was the fix; renaming the filter would have been a different product.
 
 **ADR-0065 again**: the report named a symptom, and the cause was two fields away from it.

@@ -71,3 +71,90 @@ export function sourceLanguageOf(notice: TedNotice): 'fr' | 'de' | 'en' {
   if (first === 'eng') return 'en'
   return 'fr'
 }
+
+/**
+ * ISO alpha-3 → the alpha-2 the rest of the app speaks, and the name a bidder reads.
+ *
+ * Alpha-3 is the key because that is what TED sends and **the codes that matter most are not
+ * all EU**: the notice that provoked ADR-0111 is bought in `GBR`. Keying on the app's
+ * `BIDDER_COUNTRIES` instead would have resolved every country a bidder can search for and
+ * blanked exactly the ones they cannot, which is the opposite of useful here.
+ */
+const COUNTRIES: Readonly<Record<string, { readonly alpha2: string; readonly label: string }>> =
+  {
+    AUT: { alpha2: 'at', label: 'Austria' },
+    BEL: { alpha2: 'be', label: 'Belgium' },
+    BGR: { alpha2: 'bg', label: 'Bulgaria' },
+    HRV: { alpha2: 'hr', label: 'Croatia' },
+    CYP: { alpha2: 'cy', label: 'Cyprus' },
+    CZE: { alpha2: 'cz', label: 'Czechia' },
+    DNK: { alpha2: 'dk', label: 'Denmark' },
+    EST: { alpha2: 'ee', label: 'Estonia' },
+    FIN: { alpha2: 'fi', label: 'Finland' },
+    FRA: { alpha2: 'fr', label: 'France' },
+    DEU: { alpha2: 'de', label: 'Germany' },
+    GRC: { alpha2: 'gr', label: 'Greece' },
+    HUN: { alpha2: 'hu', label: 'Hungary' },
+    IRL: { alpha2: 'ie', label: 'Ireland' },
+    ITA: { alpha2: 'it', label: 'Italy' },
+    LVA: { alpha2: 'lv', label: 'Latvia' },
+    LTU: { alpha2: 'lt', label: 'Lithuania' },
+    LUX: { alpha2: 'lu', label: 'Luxembourg' },
+    MLT: { alpha2: 'mt', label: 'Malta' },
+    NLD: { alpha2: 'nl', label: 'Netherlands' },
+    POL: { alpha2: 'pl', label: 'Poland' },
+    PRT: { alpha2: 'pt', label: 'Portugal' },
+    ROU: { alpha2: 'ro', label: 'Romania' },
+    SVK: { alpha2: 'sk', label: 'Slovakia' },
+    SVN: { alpha2: 'si', label: 'Slovenia' },
+    ESP: { alpha2: 'es', label: 'Spain' },
+    SWE: { alpha2: 'se', label: 'Sweden' },
+    // Not EU members, and every one of them appears as a buyer on EU notices.
+    GBR: { alpha2: 'gb', label: 'United Kingdom' },
+    NOR: { alpha2: 'no', label: 'Norway' },
+    CHE: { alpha2: 'ch', label: 'Switzerland' },
+    ISL: { alpha2: 'is', label: 'Iceland' },
+    TUR: { alpha2: 'tr', label: 'Türkiye' },
+    UKR: { alpha2: 'ua', label: 'Ukraine' },
+    SRB: { alpha2: 'rs', label: 'Serbia' },
+    USA: { alpha2: 'us', label: 'United States' },
+  }
+
+/** The country's English name, or the code itself when it is one we do not carry. */
+export function countryNameOf(alpha3: string): string {
+  const code = alpha3.trim().toUpperCase()
+  return COUNTRIES[code]?.label ?? code
+}
+
+/**
+ * Is this notice bought somewhere other than the country the bidder searched on?
+ *
+ * The search filters on `place-of-performance`, which is a *list* — a pan-European framework
+ * is performed in France and bought in London, and answers a France search honestly. That is
+ * not a bug, but it is invisible, so the card says so. A notice naming no buyer country is
+ * not foreign; it is unknown, and unknown is not a warning.
+ */
+export function isBoughtElsewhere(notice: TedNotice, searchedAlpha2: string): boolean {
+  const searched = searchedAlpha2.trim().toLowerCase()
+  if (notice.buyer_countries.length === 0 || searched === '') return false
+  return !notice.buyer_countries.some(
+    (alpha3) => COUNTRIES[alpha3.trim().toUpperCase()]?.alpha2 === searched
+  )
+}
+
+/**
+ * Has the deadline already passed?
+ *
+ * **A notice with no published deadline is not closed** — we do not know, and saying
+ * otherwise would repeat the "open notices" claim this replaces. Only 170 of 521 recent
+ * French CPV-72 contract notices carry a lot-level deadline at all (ADR-0111), so silence
+ * is the common case, not the odd one.
+ *
+ * Compared as dates and in UTC, because TED publishes a deadline with no time of day. UTC
+ * makes it deterministic, and it errs towards *not* calling a notice closed — the only safe
+ * direction when the alternative is telling a bidder to skip a tender they could still win.
+ * A deadline falling today is open: the bidder still has the day.
+ */
+export function isNoticeClosed(notice: TedNotice, now: Date = new Date()): boolean {
+  return notice.deadline !== null && notice.deadline < now.toISOString().slice(0, 10)
+}

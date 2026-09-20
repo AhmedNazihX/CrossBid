@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Increments 0 to 4 are complete. Increment 5, the submission evidence, is in progress.**
 Increment 0 (the SP.1 extraction spike) is complete — see `docs/decisions.md` ADR-0003 for the
-recall result and its caveats. The decision log runs to **ADR-0110** with no gaps. **Twelve
+recall result and its caveats. The decision log runs to **ADR-0111** with no gaps. **Twelve
 migrations exist, `0001` through `0012`**, and `0001`–`0011` are applied to Frankfurt;
 **`0012` is not** — it drops `documents.bid_id` and `tender_chunks.bid_id`, is not online-safe,
 and the code on `main` requires it. 0008 and 0009 went on by hand on 2026-09-16, after a
@@ -67,8 +67,8 @@ repo from three increments earlier.
 Both of its two largest findings are closed. **No SQL executed against Postgres**:
 `pytest -m database` runs the migrations and `tests/integration/test_read_model_round_trip.py`
 against a throwaway pgvector on every push, and `make test-db` does it locally. **The frontend
-had no tests at all**; it now has two suites: `npm test` (119 Vitest tests in jsdom, the pure
-logic and the silent component branches) and `npm run test:e2e` (8 Playwright journeys against
+had no tests at all**; it now has two suites: `npm test` (267 Vitest tests in jsdom, the pure
+logic and the silent component branches) and `npm run test:e2e` (47 Playwright journeys against
 a real browser, which is the only thing that sees a collapsed layout or a colour utility that
 resolves to nothing). Both run in CI. The e2e suite claims the API origin at the browser's
 network edge and answers from fixtures typed against `lib/api.ts`, so it needs no database, no
@@ -192,6 +192,29 @@ These were checked against live endpoints; rely on them rather than re-deriving.
     `{'spa': ['Dirección General de Racionalización…']}`, not a string. `bids.buyer` is plain
     text, so S1.2.1 has to choose a language rather than assume one.
   - **No German or French CPV-72 notice sampled hosts its documents on TED.** The EU Funding & Tenders Portal (EU institutions and agencies, notices in English) is the only platform found that serves procurement documents as plain unauthenticated `GET` URLs, including a download-all zip. Its JSON APIs are not usable — `api.sedia-backoffice-production.eu/.../{uuid}-CN` is 403 and `api.tech.ec.europa.eu/search-api` does not index tender records.
+  Probed live on 2026-09-20, chasing "why does a France search return British tenders"
+  (ADR-0111). All four are about the *keyword*, which turned out to be the bug:
+  - **A quoted keyword is an EXACT PHRASE, not a set of words.** `FT ~ ("cyber security")`
+    returned **3** notices where `FT ~ ("cyber" "security")` returns **45** — same CPV, same
+    `place-of-performance IN (FRA)`, same `cn-standard`. Quote each word separately; quoting
+    the whole phrase is what shipped and it was wrong.
+  - **`FT` matches whole words, never substrings.** `cyber` does not find `cybersécurité`
+    (0 open hits against 6). A one-language keyword box is a real limit of the feature: an
+    English phrase against French notices matches only the notices written in English, which
+    on TED are the pan-European ones.
+  - **`OR` misbehaves inside `FT (...)` exactly as it does inside `IN (...)`**, and silently:
+    `("Cyber Security" OR "cybersécurité")` returned **2**, fewer than either term alone. No
+    400, just a wrong answer. Never emit one.
+  - **`place-of-performance` is multi-valued and is not the buyer's country.** A pan-European
+    framework lists 27 countries and answers a France search honestly while `buyer-country`
+    is `['GBR']` or `['CZE']` — that is not a filter bug. **`buyer-country` is queryable**
+    but narrower: on the search above it returns **0**, so it is not a drop-in replacement.
+    `organisation-country-buyer` is accepted and matches nothing — a silent zero; avoid it.
+  - **Date filters take `YYYYMMDD` or `today(N)`, and 400 on `YYYY-MM-DD`.**
+    `deadline-receipt-tender-date-lot >= today(0)` works, but it is a blunt instrument:
+    of 521 recent French CPV-72 `cn-standard` notices only **170** carry a future lot
+    deadline, so filtering on it hides two thirds of genuinely open tenders that publish no
+    lot-level date. Mark closed notices rather than hiding them.
 - **ESPD / DUME XML is the bridge to eCertis, confirmed on real data.** A French buyer's `DUME_acheteur.xml` (committed in the FR fixture) declares 30 `ccv:Criterion` elements carrying the canonical ESPD criterion UUIDs — e.g. `499efc97-2ac1-4af2-9e84-323c2ca67747` "Chiffre d'affaires annuel général", `1f49b3f0-d50f-43f6-8b30-4bafab108b9b` "Effectifs moyens annuels". These are the same ids eCertis is keyed on, so where a tender publishes a DUME the criterion mapping needs no LLM inference at all. Treat a published DUME as a high-confidence structured input, not as prose to extract.
 - **LLM provider is OpenRouter only** (the user holds no OpenAI or Anthropic key). Verified 2026-09-10 against `https://openrouter.ai/api/v1/models`: `openai/gpt-5.6-terra` ($2/$12 per 1M) and `openai/gpt-5.6-luna` ($0.20/$1.20) support `structured_outputs`, `response_format`, and `tools`; For the eval judge and the multi-model demo, **`anthropic/claude-sonnet-5` is NOT available on this account** (HTTP 404). Re-probed with live calls 2026-09-10 — the account's data policy filters most providers. The non-OpenAI models that actually answer are `anthropic/claude-haiku-4.5` ($1/$5, the eval judge), `google/gemini-2.5-flash` ($0.30/$2.50) and `google/gemini-2.5-flash-lite` ($0.10/$0.40). Also 404: `claude-opus-5`, `claude-sonnet-4.5`, `gemini-2.5-pro`, `deepseek-chat-v3.1`, `llama-4-maverick`, `qwen3-235b`, `mistral-medium-3.1`, `nova-pro-v1`, `command-a`. **Presence in `/models` does not mean usable — always probe with a live call** (ADR-0005). OpenRouter's `/api/v1/embeddings`, probed 2026-09-10, serves exactly three usable embeddings on this account: **`openai/text-embedding-3-small` (1536 dims, ~$0.027/1M) — the default**, `openai/text-embedding-3-large` (3072 dims, $0.13/1M) as the quality switch, and `qwen/qwen3-embedding-8b` (4096 dims, ~$0.057/1M) as the non-OpenAI multilingual option. 3-small is the default because 1536 dims is under pgvector's 2000-dim index cap (ADR-0004). `baai/bge-m3`, `google/gemini-embedding-001` and `openai/text-embedding-ada-002` return **HTTP 404** on this account's data policy; Cohere, Voyage, Mistral, Jina and Nomic embeddings do not exist on OpenRouter at all. There is no `/models` listing for embeddings — probe the endpoint. `gpt-4o` is legacy. Use `ChatOpenAI(base_url="https://openrouter.ai/api/v1")` with `extra_body={"usage": {"include": true}}` for per-response cost. Keep slugs in `backend/settings.default.yaml`; never hard-code a model name. **Every company runs on its own OpenRouter key (S5.4, ADR-0091).** Stored per company in `provider_keys`, Fernet-encrypted, last-4 hint only, verified against the provider on save, never logged and never returned. **Embeddings use it too** — that reverses the earlier "embeddings always use the app's OpenRouter route" rule — so a company with no key saved cannot upload a document or start a bid: the API answers **402**, and never falls back to the application key. `OPENROUTER_API_KEY` in the environment is now operator tooling only (`make eval`, the judge, the scripts, the startup slug probe). Direct OpenAI/Anthropic keys are refused on save: every configured slug is an OpenRouter slug, so such a key would have nothing to call.
 - **Supabase + LangGraph Postgres checkpointer/Store**: the transaction pooler does not support prepared statements. Use the direct connection locally and the session pooler in deployment. Measured on the project 2026-09-10: `max_connections=60`, 3 reserved, **12 sessions held by Supabase's own services before we connect** — `crossbid/db.py` pins these and sizes the one shared pool from them (ADR-0010). Verified in langgraph-checkpoint-postgres 3.1.2: **`AsyncPostgresSaver` serialises every operation on one `asyncio.Lock` even with a pool** (checkpoint throughput does not scale with pool size); `AsyncPostgresStore` does not; `store_vectors` is only created when an `index` config is passed. Both `.setup()`s are idempotent and run at API startup under an advisory lock — `scripts/migrate.py` never touches them.

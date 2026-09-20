@@ -82,6 +82,16 @@ class TedNotice(BaseModel):
     buyer: str | None = Field(
         description="The contracting authority, or null when the notice names none"
     )
+    buyer_countries: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Where the contracting authority sits, ISO 3166-1 alpha-3 exactly as TED writes "
+            "it, deduplicated. **Not the same thing as the country searched on**, which is "
+            "`place-of-performance`: a pan-European framework is performed in France and "
+            "bought in London, and answers a France search honestly (ADR-0111). Verbatim "
+            "rather than mapped to alpha-2, because a non-EU buyer has no alpha-2 here."
+        ),
+    )
     description: str | None = Field(
         description="The procedure's own summary, in its source language"
     )

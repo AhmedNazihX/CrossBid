@@ -30,7 +30,14 @@ import { Select } from '@/components/ui/select'
 import { describeApiError } from '@/lib/api-client'
 import { BIDDER_COUNTRIES } from '@/lib/companies'
 import { formatDate } from '@/lib/format'
-import { CPV_SUGGESTIONS, searchTenders, type TedNotice } from '@/lib/tenders'
+import {
+  countryNameOf,
+  CPV_SUGGESTIONS,
+  isBoughtElsewhere,
+  isNoticeClosed,
+  searchTenders,
+  type TedNotice,
+} from '@/lib/tenders'
 
 type Phase =
   | { readonly kind: 'idle' }
@@ -115,19 +122,27 @@ export function TenderSearch({ language, onPick }: TenderSearchProps) {
 
       {phase.kind === 'results' && phase.notices.length === 0 && (
         <Notice title="Nothing published under those filters">
-          TED answered, and no open contract notice matches. Widen the CPV, try a neighbouring
-          country, or drop the keyword.
+          TED answered, and no contract notice matches. Drop the keyword first — it is matched
+          as whole words against the notice&rsquo;s own language, so an English phrase rarely
+          finds a French tender. Then widen the CPV, or try a neighbouring country.
         </Notice>
       )}
 
       {phase.kind === 'results' && phase.notices.length > 0 && (
         <div className="flex flex-col gap-3">
           <p className="m-0 [font:var(--type-body-sm)] text-text-muted">
-            {phase.total.toLocaleString()} open notices match. Showing the most recent{' '}
+            {/* Not "open notices": TED counts every notice matching the filters, and its
+                oldest matches are years past their deadline. Each card says which it is. */}
+            {phase.total.toLocaleString()} notices match. Showing the most recent{' '}
             {phase.notices.length}.
           </p>
           {phase.notices.map((notice) => (
-            <NoticeResult key={notice.publication_number} notice={notice} onPick={onPick} />
+            <NoticeResult
+              key={notice.publication_number}
+              notice={notice}
+              searchedCountry={country}
+              onPick={onPick}
+            />
           ))}
         </div>
       )}
@@ -137,8 +152,16 @@ export function TenderSearch({ language, onPick }: TenderSearchProps) {
 
 function NoticeResult({
   notice,
+  searchedCountry,
   onPick,
-}: Readonly<{ notice: TedNotice; onPick: (notice: TedNotice) => void }>) {
+}: Readonly<{
+  notice: TedNotice
+  /** The alpha-2 the bidder searched on, so the card can say when the buyer is elsewhere. */
+  searchedCountry: string
+  onPick: (notice: TedNotice) => void
+}>) {
+  const isClosed = isNoticeClosed(notice)
+  const isForeign = isBoughtElsewhere(notice, searchedCountry)
   return (
     <Card>
       <div className="flex flex-col gap-3">
@@ -152,11 +175,26 @@ function NoticeResult({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={notice.deadline === null ? 'neutral' : 'info'} pill={false}>
+          {/* Three states, not two. A notice years past its deadline used to carry the same
+              blue "Due" chip as a live one, and TED serves plenty of them. "No deadline
+              published" stays its own answer: 351 of 521 recent French CPV-72 contract
+              notices carry none, so silence means unknown and never means closed. */}
+          <Badge
+            tone={notice.deadline === null ? 'neutral' : isClosed ? 'danger' : 'info'}
+            pill={false}
+          >
             {notice.deadline === null
               ? 'No deadline published'
-              : `Due ${formatDate(notice.deadline)}`}
+              : `${isClosed ? 'Closed' : 'Due'} ${formatDate(notice.deadline)}`}
           </Badge>
+          {/* The country clause filters on where the work happens, which for a pan-European
+              framework includes France while the buyer sits in London. That is an honest
+              match and it used to be invisible, which is how it arrived as a bug report. */}
+          {notice.buyer_countries.length > 0 && (
+            <Badge tone={isForeign ? 'warning' : 'neutral'} pill={false}>
+              Buyer in {notice.buyer_countries.map(countryNameOf).join(', ')}
+            </Badge>
+          )}
           {notice.official_languages.length > 0 && (
             <Badge tone="neutral" pill={false}>
               Written in {notice.official_languages.join(', ')}

@@ -85,6 +85,7 @@ FIELDS: Final[tuple[str, ...]] = (
     "title-proc",
     "description-proc",
     "buyer-name",
+    "buyer-country",
     "deadline-receipt-tender-date-lot",
     "selection-criterion-description-lot",
     "official-language",
@@ -360,6 +361,10 @@ def _notice(raw: Mapping[str, Any], preferred: str | None) -> TedNotice:
         or _in_language(raw.get("title-proc"), fallbacks)
         or "Untitled notice",
         buyer=_in_language(raw.get("buyer-name"), fallbacks),
+        # Verbatim, not mapped through `ALPHA2_TO_ALPHA3`: that table is the 27 EU members a
+        # bidder may search, and the notice that provoked ADR-0111 is bought in `GBR`. A
+        # reverse lookup would blank exactly the row most in need of explaining.
+        buyer_countries=_unique(raw.get("buyer-country")),
         description=_in_language(raw.get("description-proc"), fallbacks),
         deadline=deadline,
         deadline_utc_offset_minutes=offset,
