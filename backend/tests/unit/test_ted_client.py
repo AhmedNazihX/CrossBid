@@ -110,27 +110,53 @@ def test_the_notice_type_filter_can_be_lifted() -> None:
     assert "notice-type" not in build_query(TedSearchQuery(contract_notices_only=False))
 
 
-def test_a_keyword_becomes_a_quoted_full_text_clause() -> None:
+def test_a_keyword_becomes_one_quoted_token_per_word() -> None:
+    """Each word is quoted on its own, because one quoted *phrase* is an exact-phrase match.
+
+    Measured live on 2026-09-20, same CPV + `place-of-performance IN (FRA)` + `cn-standard`:
+    `FT ~ ("cyber security")` returns **3** notices, bought in GBR and CZE and published
+    between 2019 and 2024 — pan-European English-language frameworks that happen to list
+    France among many places of performance. `FT ~ ("cyber" "security")` returns **45**,
+    every one of the top hits bought in FRA. That is the whole defect: a bidder typing an
+    English phrase against French notices matched the handful of notices written in English.
+    """
     query = build_query(TedSearchQuery(keyword="cyber security"))
 
-    assert 'FT ~ ("cyber security")' in query
+    assert 'FT ~ ("cyber" "security")' in query
+
+
+def test_a_single_word_keyword_is_still_one_quoted_token() -> None:
+    assert 'FT ~ ("cyber")' in build_query(TedSearchQuery(keyword="cyber"))
+
+
+def test_an_accented_word_survives_tokenising() -> None:
+    """`FT` matches whole words, not substrings — `cyber` does not find `cybersécurité` — so
+    dropping the accent would silently lose the French half of a cross-border search."""
+    assert 'FT ~ ("cybersécurité")' in build_query(TedSearchQuery(keyword="cybersécurité"))
 
 
 def test_a_quote_in_a_keyword_cannot_break_out_of_the_clause() -> None:
-    """There is no documented escape, so the quote goes rather than the query breaking.
+    """Quoting is this module's injection guard, and per-token quoting keeps that promise.
 
-    The surviving `OR` is deliberate and harmless: it stays *inside* the quoted phrase, where
-    TED reads it as text to search for. What must never happen is the phrase ending early and
-    the rest becoming query syntax — which is what the quote count pins.
+    Dropping the quotes to get word-matching would have handed the keyword box the `OR` that
+    `_values` exists to keep out. Instead every token is quoted individually, so an injected
+    operator arrives as the literal text `"OR"` and the clause it was trying to open never
+    forms. The `(` never survives tokenising at all.
     """
     query = build_query(TedSearchQuery(keyword='cyber" OR notice-type IN (can-standard'))
 
-    assert query.count('"') == 2
-    assert query.index('FT ~ ("') < query.index(" OR ") < query.rindex('"')
+    assert " OR " not in query, "a bare OR escaped its quotes and became an operator"
+    assert "IN (can-standard" not in query, "the injected clause formed"
+    assert query.count('"') % 2 == 0, "a quote was left unpaired"
 
 
 def test_a_blank_keyword_adds_no_clause() -> None:
     assert "FT ~" not in build_query(TedSearchQuery(keyword="   "))
+
+
+def test_a_keyword_of_nothing_but_punctuation_adds_no_clause() -> None:
+    """`FT ~ ()` is a 400. Nothing survived tokenising, so there is no clause to add."""
+    assert "FT ~" not in build_query(TedSearchQuery(keyword='"" ((  ))'))
 
 
 def test_every_query_sorts_newest_first_inside_the_query_string() -> None:

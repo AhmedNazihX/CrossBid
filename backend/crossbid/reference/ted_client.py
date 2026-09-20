@@ -14,6 +14,13 @@ Search API v3*; what follows is what they mean for the code.
   else for an `OR` to get in. The one value that does not pass through it -- the publication
   number `search_by_publication_number` interpolates -- is shape-checked by `_checked_number`
   instead, because a promise with one exception in it is not a promise.
+* **A quoted keyword is an *exact phrase*, not a set of words.** `FT ~ ("cyber security")`
+  finds only notices carrying that phrase verbatim, which across languages is almost none --
+  measured on 2026-09-20, 3 results against 45 for `FT ~ ("cyber" "security")`, and all 3
+  were English-language pan-European frameworks. `FT` also matches **whole words, not
+  substrings**: `cyber` does not find `cybersécurité`. And `OR` misbehaves inside `FT (...)`
+  exactly as it does inside `IN (...)` -- `("a" OR "b")` returned *fewer* hits than either
+  term alone, silently -- so `_tokens` never emits one.
 * **Sorting lives inside the query string**, appended as `SORT BY publication-date DESC`. A
   JSON `"sort"` field is rejected outright (`Unrecognized field "sort"`), and `ASC` is 400 —
   so newest-first is not a preference here, it is the only order TED will serve.
@@ -270,9 +277,14 @@ def build_query(query: TedSearchQuery) -> str:
             clauses.append(f"place-of-performance IN ({_values(countries)})")
     if query.contract_notices_only:
         clauses.append(f"notice-type IN ({CONTRACT_NOTICE_TYPE})")
-    keyword = (query.keyword or "").strip()
-    if keyword:
-        clauses.append(f'FT ~ ("{_escaped(keyword)}")')
+    # One quoted token per word, never one quoted phrase. A phrase is an *exact* match, so
+    # `FT ~ ("cyber security")` found 3 notices where `FT ~ ("cyber" "security")` finds 45 --
+    # and all 3 were English-language pan-European frameworks bought outside the country the
+    # bidder asked for, which is how this surfaced as "why am I getting tenders from the UK".
+    keyword_tokens = _tokens(query.keyword or "")
+    if keyword_tokens:
+        quoted = " ".join(f'"{token}"' for token in keyword_tokens)
+        clauses.append(f"FT ~ ({quoted})")
     # The sort is appended with a space, never joined with `AND`: `... AND SORT BY ...` is
     # `QUERY_SYNTAX_ERROR ... mismatched input 'SORT'`. It is not a clause, it is a suffix.
     return f"{' AND '.join(clauses)} {SORT_CLAUSE}".strip() if clauses else SORT_CLAUSE
@@ -309,14 +321,28 @@ def _values(values: Iterable[str]) -> str:
     return " ".join(values)
 
 
-def _escaped(keyword: str) -> str:
-    """A quoted phrase, with the quote that would end it removed rather than escaped.
+_KEYWORD_TOKEN: Final = re.compile(r"[^\W_]+(?:['\u2019-][^\W_]+)*", re.UNICODE)
+"""One searchable word: letters and digits, joined across an apostrophe or a hyphen.
 
-    TED's expert syntax has no documented escape, so a `"` in a keyword cannot be passed
-    through safely. Dropping it changes the search slightly; passing it through would either
-    400 or, worse, change the meaning of the query around it.
+Everything else -- quotes, parentheses, the punctuation TED's expert syntax is built from --
+simply does not match, so it cannot reach the query. That is deliberate: `_tokens` is the
+keyword's half of the promise `_values` makes for lists."""
+
+
+def _tokens(keyword: str) -> tuple[str, ...]:
+    """The words of a keyword, each safe to quote on its own.
+
+    **Quoting is this module's injection guard, and splitting the keyword must not spend it.**
+    A single quoted phrase kept an injected `OR` harmlessly inside the quotes; unquoted terms
+    would match words as a bidder expects but would hand the keyword box the operator that
+    `_values` exists to keep out. Quoting each token separately is both: TED reads
+    `FT ~ ("cyber" "security")` as *all of these words*, and an injected operator arrives as
+    the literal text `"OR"` with no clause around it to open.
+
+    There is still no documented escape for `"`, so a quote is dropped rather than passed
+    through -- but now it is dropped by not being a word character, along with `(` and `)`.
     """
-    return keyword.replace('"', " ").strip()
+    return tuple(_KEYWORD_TOKEN.findall(keyword))
 
 
 # ---------------------------------------------------------------------- response mapping

@@ -7600,3 +7600,60 @@ is the artboard this component still implements. What went was the second glyph,
 header that no longer exists.
 
 248 frontend unit tests and 47 browser journeys green, plus lint, typecheck, prettier and build.
+
+## ADR-0111 — A keyword is a set of words, not a phrase
+
+**2026-09-20.** A bidder searched CPV 72000000, country France, keyword "Cyber Security" and
+got notices from the UK and Czechia, and reported it as a broken country filter.
+
+It was not one. `build_query` wrapped the whole keyword in one pair of quotes, and in TED's
+expert syntax a quoted string is an **exact-phrase match**. A French notice is written in
+French, so the literal English phrase matched almost nothing real — and the few notices that
+survived were multi-country, English-language framework contracts (NATO grid, EUSPA, ENISA)
+that list `FRA` among many places of performance while the buyer sits in London or Prague.
+They passed `place-of-performance IN (FRA)` honestly. The country clause was innocent.
+
+Measured live, same CPV + country + `notice-type IN (cn-standard)`:
+
+| Keyword clause | Results | Buyers of the top hits |
+|---|---|---|
+| `FT ~ ("Cyber Security")` — what shipped | **3** | GBR, CZE, CZE, published 2019–2024 |
+| `FT ~ ("cyber" "security")` — now | **45** | FRA throughout: Aéroports de Paris, Banque de France, Toulouse Métropole |
+| *no keyword at all* | 19 238 | FRA, FRA, FRA |
+
+The last row is the one that settled it: with the keyword gone the country filter returns
+French notices, so the field was never the problem. **`buyer-country IN (FRA)` was probed as
+the alternative and returns 0 on this search** — swapping the field would have made a bad
+result an empty one. `tender-search.tsx` already labels the control "Where the work is", which
+is exactly what `place-of-performance` means, so nothing there was lying either.
+
+### The fix, and the constraint on it
+
+Each word is quoted **separately** inside one clause. The obvious fix — dropping the quotes,
+which also works — was rejected: quoting is this module's injection guard. `_values` exists so
+that there is nowhere for an `OR` to get into a query, and `_checked_number` exists because a
+promise with one exception in it is not a promise. Unquoted keyword terms would have been a
+second exception. Per-token quoting is both properties at once: TED reads the clause as *all
+of these words*, and an injected operator arrives as the literal text `"OR"` with no clause
+around it to open. `_escaped` is replaced by `_tokens`, which keeps only letters and digits
+joined across hyphens and apostrophes — so `"`, `(` and `)` are dropped by never matching,
+rather than by being stripped.
+
+Two further facts the probes settled, now recorded in the module docstring: `FT` matches whole
+words and not substrings (`cyber` does not find `cybersécurité`), and `OR` inside `FT (...)`
+misbehaves silently exactly as it does inside `IN (...)` — `("a" OR "b")` returned *fewer*
+hits than either term alone.
+
+### Reported, not fixed
+
+Two adjacent findings were raised with the user rather than changed here. The results list
+says "N open notices match" while nothing filters on a deadline — the three bad hits were
+published 2019, 2021 and 2024. `deadline-receipt-tender-date-lot >= today(0)` works (TED takes
+`today(N)` and `YYYYMMDD`, and 400s on `YYYY-MM-DD`), but it is too blunt to switch on
+silently: of 521 recent French CPV-72 contract notices only 170 carry a future lot deadline,
+so it would hide two thirds of genuinely open tenders that publish no lot-level date. And
+`buyer-country` is not among the requested `FIELDS`, so nothing on screen could have explained
+why a Czech-bought, France-performed notice appeared — which is why this arrived as a bug
+report rather than as an obvious fact.
+
+**ADR-0065 again**: the report named a symptom, and the cause was two fields away from it.
