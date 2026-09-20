@@ -74,14 +74,14 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
       {announcement}
     </p>
   )
-  const askPanel = (variant: 'panel' | 'phone') => (
+  const askPanel = () => (
     <AskPanel
       chat={chat}
       feedback={feedback}
       bidderLanguage={bid.bidder_language}
       activeCitation={activeCitation}
       onCite={handleCite}
-      variant={variant}
+      variant="phone"
     />
   )
 
@@ -193,7 +193,7 @@ export function PhoneWorkspace({ state }: { readonly state: WorkspaceState }) {
           aria-labelledby={tabId(phonePanelId('ask'))}
           hidden={phoneTab !== 'ask'}
         >
-          {askPanel('phone')}
+          {askPanel()}
         </div>
         {pollError !== undefined && (
           <p className="m-0 [font:var(--type-body-sm)] text-text-muted">

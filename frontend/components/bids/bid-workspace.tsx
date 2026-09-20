@@ -40,17 +40,18 @@ export const BID_LOAD_DEADLINE_MS = 20_000
  * two seconds until the run reaches the interrupt, completes or fails, lists requirements
  * as soon as they exist, and pairs the list with the source panel.
  *
- * **The desktop right column is the phone's tab set, minus Matrix (ADR-0060).** Source, Ask
- * and Verdict share one 400 px column under one `Tabs`, and the column is sticky, so all
- * three stay in reach while the matrix scrolls. This replaced a stacked column (Source, then
- * Ask beneath it) with the verdict rendered *after* the whole matrix: measured on the FR bid
- * at 1440×900 the page was 23 204 px tall, "Ask the tender" began at y=1 351 and the verdict
- * at y=13 876 — the product's one output, fifteen screens down. Now the decision is a line
- * under the header, the header's "Review verdict" opens the Verdict tab, and a citation in
- * an answer or a row switches the column to Source and lands on the page, exactly as the
- * phone's tab does. On the phone the tabs are as they were: Matrix / Source / Verdict / Ask,
- * a tap away. Chat state lives in `useBidChat` here rather than in the panel, so a
- * breakpoint change or a tab switch does not lose the exchanges made so far.
+ * **The desktop gives each of the three its own place (ADR-0104).** "Ask the tender" sits
+ * above the matrix in the left column, the verdict has a sticky right rail to itself, and the
+ * source page opens as a drawer over both. This replaced ADR-0060's single tabbed 400 px
+ * column, which had put Source, Ask and Verdict in competition for one space — itself a fix
+ * for something worse, a stacked column with the verdict rendered *after* the whole matrix:
+ * measured on the FR bid at 1440×900 the page was 23 204 px tall, "Ask the tender" began at
+ * y=1 351 and the verdict at y=13 876, the product's one output fifteen screens down. What
+ * ADR-0060 bought is kept: the decision is a line under the header, the verdict is on screen
+ * in every state of the page, and a citation in an answer or a row opens the source on the
+ * page it cites. On the phone the tabs are as they were: Matrix / Source / Verdict / Ask, a
+ * tap away. Chat state lives in `useBidChat` here rather than in the panel, so a breakpoint
+ * change or a tab switch does not lose the exchanges made so far.
  *
  * **Both layouts carry the same `DecisionLine` under the header.** ADR-0060's point was
  * that the decision is above the fold; the first build gave that line to the desktop only,

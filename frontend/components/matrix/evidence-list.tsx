@@ -44,12 +44,13 @@ export function EvidenceList({
   return (
     <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
       {evidence.map((item, index) => {
+        const quote = item.quote ?? ''
         const citation: Citation = {
           documentId: item.document_id,
           documentName: item.document_name,
           page: item.page,
+          quote: quote === '' ? undefined : quote,
         }
-        const quote = item.quote ?? ''
         return (
           <li key={`${item.document_id}:${item.page}:${index}`} className="min-w-0">
             <CitationLink

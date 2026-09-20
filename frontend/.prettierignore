@@ -14,3 +14,7 @@ public/
 package-lock.json
 # Generated from the backend's OpenAPI schema; never hand-edited or reformatted.
 lib/api.ts
+
+# Captured measurement data, written by scripts/capture-real-quotes.mjs (ADR-0105).
+# Machine-written and 508 KB on one line; reformatting it would triple it for nothing.
+components/pdf/__fixtures__/real-quotes.json

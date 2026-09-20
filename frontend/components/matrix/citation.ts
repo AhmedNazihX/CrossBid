@@ -18,8 +18,24 @@ export interface Citation {
   readonly documentId?: string
   /** The eCertis criterion a page-less (ESPD) citation points at, shown in place of a page. */
   readonly criterionId?: string
+  /**
+   * The words this citation points at, for the source drawer to mark on the page (ADR-0105).
+   *
+   * Every citation has one — `Evidence.quote` and `Requirement.source_text` are both required
+   * and both verbatim — but it is optional here because a `Citation` is an address and a
+   * caller that only has the address is still making a valid one.
+   */
+  readonly quote?: string
 }
 
+/**
+ * Two citations point at the same place: the same file, the same page.
+ *
+ * **The quote is deliberately not compared.** This decides which citation the matrix draws as
+ * active, and two requirements citing two clauses of one page should both light up when that
+ * page is open — which is what "the panel is showing this" means. Comparing the quote as well
+ * would be a different feature, and not one anybody asked for.
+ */
 export function isSameCitation(a: Citation | undefined, b: Citation): boolean {
   return a !== undefined && a.documentName === b.documentName && a.page === b.page
 }

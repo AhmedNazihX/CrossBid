@@ -10,7 +10,7 @@ Sprint capstone (brief in `135.md`): build a useful AI agent with LangGraph, Ope
 
 ## Settled decisions (from the grill; do not reopen)
 
-**Cut from course build:** response drafting, second interrupt, DOCX export, OCR, `next-intl`, PDF quote highlighting (jump-to-page only), APScheduler, `deadline_calculator`, `web_search_buyer`, Ragas, RLS-as-isolation claim, feedback few-shot injection, Polish/Dutch tenders, LLM profile extraction, numeric verdict score.
+**Cut from course build:** response drafting, second interrupt, DOCX export, OCR, `next-intl`, ~~PDF quote highlighting (jump-to-page only)~~ — **reinstated 2026-09-20, see ADR-0105: the cited sentence is highlighted on the page with pdf.js, because Chrome's native viewer ignores `#search=` and so proved insufficient in ADR-0014's own terms** — APScheduler, `deadline_calculator`, `web_search_buyer`, Ragas, RLS-as-isolation claim, feedback few-shot injection, Polish/Dutch tenders, LLM profile extraction, numeric verdict score.
 
 **Kept / decided:**
 - Intake = TED notice via API (structured fields, no LLM) + manual upload of procurement documents. TED `document-url-lot` links land on national platforms; never fetch them (no scraping).

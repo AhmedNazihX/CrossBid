@@ -315,13 +315,19 @@ test('04 — the verdict and its open items', async ({ api, page }) => {
     json: { feedback: [] },
   })
 
+  // The rail is height-capped to the viewport and scrolls inside itself, so at 900 px an
+  // element shot of it comes out clipped, with "Your decision" cut in half and the rest of
+  // the box blank (measured). A taller window is the whole fix: the rail is then shorter
+  // than its cap and the shot is the entire panel.
+  await page.setViewportSize({ width: 1440, height: 1600 })
   await page.goto(`/bids/${BID_ID}`)
-  // The right-hand panel opens on Source; the verdict is a tab, so the shot has to ask for
-  // it. Without this, 03 and 04 are the same image — which is how the first run came out.
-  await page.getByRole('tab', { name: 'Verdict' }).click()
   await expect(page.getByText(/mandatory requirements supported/i).first()).toBeVisible()
 
-  await page.screenshot({ path: path.join(SHOTS, '04-verdict.png'), fullPage: true })
+  // Since ADR-0104 the verdict is not a tab to click but a rail that is always on screen, so
+  // a full-page shot here would be 03 again — which is how the first run of this file came
+  // out when the click was missing. The shot is the rail itself instead, which is what the
+  // guide's "the verdict and its open items" paragraph is pointing at anyway.
+  await page.locator('#verdict').screenshot({ path: path.join(SHOTS, '04-verdict.png') })
 })
 
 test('06 — a French tender read in German', async ({ api, page }) => {

@@ -7023,3 +7023,273 @@ rendered at all. Both new browser journeys fail with their fixes reverted.
 
 6 007 offline backend tests, 19 against a real pgvector, 217 frontend unit tests and 31
 browser journeys.
+
+## ADR-0104 — The verdict gets the rail, Ask gets the top, the source gets a drawer
+
+**Date:** 2026-09-20 · **Stories:** follow-up to S4.5.1 / S4.5.3 / S4.6.1 · **Status:** accepted
+**Supersedes:** ADR-0060's "the desktop right column becomes the phone's tab set". Its
+measurements and its guarantee stand; only the shape it chose is replaced.
+
+The user's verdict on the bid workspace was, again, one sentence: the compliance page is badly
+designed. The instruction that came with it was specific — put the verdict on the right on its
+own, put the chat above the requirements matrix, make the source page slide in from the right —
+and it came with a reference: **the examples screened on the landing page**.
+
+### The reference was already in the repo, and it is an artboard
+
+`components/landing/product-frame.tsx` is the browser-chrome mock under the hero, and it
+implements `Landing.dc.html`'s `ProductFrame`. It draws requirement rows on the left and the
+"CrossBid recommends" and "Awaiting review" cards alone on the right. No tab strip, no source
+frame, no chat in that column. The product's own marketing page has been showing this layout
+since the canvas was confirmed, and the built workspace had drifted away from it.
+
+So the deviation this entry records (ADR-0014 requires one) is not a free invention. `Main.dc.html`
+draws a permanent 400 px source column and `Verdict.dc.html` gives the verdict its own screen;
+the shape shipped here is the one a third artboard has always drawn.
+
+### What ADR-0060 got right, and what it cost
+
+ADR-0060 measured the page and found the verdict at **y=13 876** — fifteen screens down, after
+all 144 requirement rows — and "Ask the tender" at y=1 351, below the fold. Both findings were
+real and neither is disputed. Its fix put Source, Ask and Verdict into one 400 px sticky column
+under one `Tabs`, which raised all three to y=451.
+
+The cost was that three unrelated things then competed for one space:
+
+- **The verdict was one click away in every state of the page.** A tab is a promise that
+  something is there, not the thing being there.
+- **The source page had 400 px of a 1 440 px screen** to render A4 in.
+- **The chat was behind a tab**, which is cheaper than below the fold but is not free.
+- And the column was **height-capped**, which is what made blocker 4 of the 2026-09-15 audit
+  possible: flex took the shortfall out of the tab strip and shipped it 2 px tall, swallowing
+  every click on it at 1 280 px and above.
+
+### The shape, and where each guarantee now lives
+
+| | ADR-0060 | Now |
+|---|---|---|
+| Verdict | tab 3 of 3, 400 px column | the right rail, alone, sticky, 380 px |
+| Ask | tab 2 of 3 | above the matrix, left column |
+| Source | tab 1 of 3, 400 px | an overlay drawer, up to 920 px |
+
+**The verdict is no longer above the fold — it is simply on screen**, in every state, with no
+click. That is ADR-0060's guarantee strengthened rather than traded away, and `bid-workspace.spec.ts`
+asserts it directly: the rail's top is inside the viewport at 1440×900, measured red at
+**y=1 022** with the grid's second column dropped.
+
+**The rail is never empty.** Before the run writes a verdict it carries a card saying the
+verdict is written once checking has finished. A two-column page that becomes one column
+halfway through a run would be worse than either.
+
+**A citation still lands on its page in one click.** `handleCite` opens the drawer instead of
+selecting a tab; the phone's Source tab is untouched, so one handler still serves both widths.
+
+**The drawer is the design system's own dialog**, not a new pattern: `--overlay-scrim` at 40 %
+ink, a 280 ms `--ease-out` slide, Radix supplying the focus trap, Escape and the dialog role.
+`canvas.json`'s brief already recorded the source panel as the one screen the system had no
+component for; this is that screen finally using a component the system does have.
+
+### Two things the implementation had to fix rather than assume
+
+**Radix restores focus to a trigger this drawer does not have.** `DialogContent` ends its close
+by calling `event.preventDefault()` and focusing `triggerRef.current`. This drawer is opened
+from a citation anywhere in the matrix, from a citation in a chat answer, and from an "Open the
+pack" control — there is no one element Radix could mean, `triggerRef` is empty, and the
+default restore has already been prevented, so focus lands on the body. Measured, then fixed by
+recording the opener in `onOpenAutoFocus` and restoring it in `onCloseAutoFocus`. The test that
+caught it fails on exactly that assertion with the handler removed.
+
+**`cn` here is the `cn` package, not `tailwind-merge`.** `SheetContent` hard-codes the
+navigation drawer's `w-[300px]`, and a caller passing a wider class through `className` gets
+both declarations, with stylesheet order deciding. The width and the close label are props now.
+This is the same family of trap as `--color-*: initial`: the wrong thing does not fail, it
+quietly picks.
+
+**Above the matrix, the chat log needed a bound.** `ask-panel.tsx` reasoned — correctly — that
+a card in page flow with no scroller must anchor its input at the top and let turns fall away
+downward. In the left column "downward" means onto the matrix, one answer at a time. The
+`banner` variant caps the `role="log"` wrapper at 360 px and leaves the question box outside
+it, so the thing that must never move still never moves.
+
+### What this costs
+
+`e2e/tab-panels.spec.ts` loses its desktop half — there is no desktop tab set to name — and
+keeps the phone's, plus one assertion that the desktop tablist is gone. `e2e/bid-workspace.spec.ts`
+loses blocker 4's tab-strip test with the strip, and gains three: the verdict on the first
+screen, the drawer's open/Escape/focus contract, and the rail staying put while the matrix
+scrolls. **Each was measured failing with its fix reverted** (ADR-0063), and the reversion is
+named in each docstring.
+
+The sticky test needed its own fixture: the shipped parked bid is one requirement and renders
+a 1 468 px page, on which `sticky` is unobservable and the test would have passed with the
+property deleted — the precondition caught that before it shipped, which is the whole reason
+ADR-0063 asks for the precondition.
+
+Guide shot 04 no longer clicks a Verdict tab. It is an element shot of the rail at a 1 600 px
+viewport, because the rail is capped to the window and scrolls inside itself, so at 900 px the
+shot came out with "Your decision" cut in half and the rest of the box blank.
+
+217 frontend unit tests and 33 browser journeys green, plus lint, typecheck, build and
+prettier. Guide shot 01 fails on `main` as well and is untouched by this.
+
+## ADR-0105 — The native viewer proved insufficient, so the citation is marked on the page
+
+**Date:** 2026-09-20 · **Stories:** follow-up to S4.5.1 · **Status:** accepted
+**Opens the deferral in ADR-0014** ("no PDF library … until the native viewer proves
+insufficient") and **reverses a scope cut**: `docs/project-plan.md` listed "PDF quote
+highlighting (jump-to-page only)" among the items cut from the course build, and `CLAUDE.md`
+kept "citation highlighting in the PDF viewer" on the do-not-implement-until-decided list. The
+user decided on 2026-09-20.
+
+Two complaints about the drawer ADR-0104 shipped. A row of one chip per document sat above the
+viewer — a dozen on the DE pack — in a drawer opened to show *one* page of *one* file. And the
+page opened at the right number with nothing on it marked, leaving a bidder to find a German
+clause on a dense A4 page themselves, when the quote was already on screen in the matrix row
+they had just clicked.
+
+### The native viewer cannot do this, and that is the condition ADR-0014 set
+
+**Chrome's PDFium honours `page`, `zoom`, `view`, `nameddest` and `toolbar` in a URL fragment,
+and ignores `search`.** Firefox's viewer — which is pdf.js — honours it. So the one route that
+needs no library works in one browser and silently does nothing in the other, which is worse
+than not having it. There is no way to mark text inside an `<iframe>` we do not control.
+
+### What was already there
+
+Nothing had to be computed or stored. `Evidence.quote` and `Requirement.source_text` are both
+required, both verbatim, and both already rendered as blockquotes in the matrix. The single
+break in the chain was `Citation`, which carried an address and no words; it now carries
+`quote`, set at the three places that build one. `isSameCitation` deliberately still compares
+only document and page — it decides which row the matrix draws as active, and two requirements
+citing one page should both light up when that page is open.
+
+**There are no stored offsets or bounding boxes anywhere**, and `tender_chunks` keeps a page
+and its text and nothing geometric. So a highlight can only be found by matching words.
+
+### The shape
+
+`pdfjs-dist@6.3.289`, zero runtime dependencies, imported **dynamically inside an effect**.
+`/bids/[id]`'s First Load JS is unchanged at 165 kB: the library is a separate 435 kB chunk
+fetched the first time a drawer opens, and the worker is emitted as a same-origin
+`_next/static/media/*.mjs`, which is what `worker-src 'self'` already allowed. **No CSP change
+and no `next.config` change were needed.**
+
+Three layers: a `<canvas>` with the real glyphs, pdf.js's `TextLayer` over it, and the
+highlight boxes between them under `mix-blend-mode: multiply` so they tint rather than cover.
+
+**The text layer is not optional.** A bare canvas is a picture — nothing in it reaches a screen
+reader, nothing can be selected, the browser's own find goes blind. The `<iframe>` had all
+three for free, so leaving it out would have traded accessibility for a highlight.
+
+**The bytes are fetched once and passed as `data`, not as a URL.** The signed URL lives at most
+600 s and `useSignedUrl` rotates it 30 s early; handing pdf.js the URL would re-download on
+every rotation and, worse, fail a lazy range request with a 403 in the middle of reading. The
+effect is keyed on the document id, and the URL lives in a ref precisely so a rotation changes
+nothing.
+
+**`wasmUrl` and `standardFontDataUrl` both default to `null`, and a document that needs them
+renders without them after a `console.warn`.** That is the silent failure this repo forbids,
+and it lands where it hurts most: a scanned tender page is an image, and JBIG2 and JPEG 2000
+images are decoded by the WASM the viewer would not have had.
+`scripts/copy-pdfjs-assets.mjs` copies them into a gitignored `public/pdfjs/` from the
+`prebuild` and `predev` hooks, which covers CI and the Docker builder stage. `cmaps/` is
+deliberately not copied: 1.6 MB of CJK maps for a product that reads EU tenders.
+
+### Matching, and the refusal to guess
+
+`components/pdf/quote-match.ts` is pure and mentions neither pdf.js nor the DOM, so the hard
+half is unit-testable. Both sides are normalised the same way — whitespace collapsed,
+markdown emphasis stripped (`pymupdf4llm` stores `**Umsatz**` where the page says `Umsatz`,
+the trap `extract_reqs._normalised` exists for), soft hyphens dropped, typographic quotes and
+dashes canonicalised. Items are joined with a newline, never glued, so "Umsatz" on one line and
+"steuer" on the next cannot answer a search for "Umsatzsteuer".
+
+When the whole quote is not on the page it falls back to the longest prefix, halving down to a
+**40-character floor**, and below that returns nothing. **A wrong highlight is worse than
+none**: a confident box over the wrong clause of a compliance document is a defect nothing on
+the screen would reveal. When nothing is found the page still renders and says so.
+
+### The test that was wrong, and what fixed it
+
+The first version of the browser test compared the highlight only with the text layer, and
+**passed with `--total-scale-factor` deleted** — the one line whose absence mis-sizes the entire
+text layer. It had to: the boxes are built from a `Range` over that layer's own spans, so they
+inherit its geometry and move with its bugs. Every assertion still held while the page was
+wrong.
+
+The fix is `e2e/support/canvas-ink.ts`, which reads the pixels pdf.js actually painted and
+returns the bands of ink. The glyphs are the one witness that does not share the bug. With that
+block the test fails on the missing scale factor, on a matcher that returns everything, and on
+a `Citation` that drops its quote — each on the assertion that names it (ADR-0063). **The
+docstring claiming that reversion had been measured was written before it was; that is the
+mistake this paragraph exists to record.**
+
+The browser suite now serves a real 818-byte PDF (`e2e/fixtures/source-page.pdf`, built by the
+committed script beside it: uncompressed, base-14 Helvetica, WinAnsi, the cited sentence split
+across two lines and a distractor below it). It had been serving `text/html` for the signed
+URL, which the new renderer would have rejected — falling back to the `<iframe>` and turning
+every assertion into a test of the fallback.
+
+### Also in this change
+
+The chips are replaced by a `Select`, shown only when the pack has more than one document; the
+drawer's title names the file being read. And the `panel` variant of both `SourcePanel` and
+`AskPanel` is deleted — ADR-0104 left them with no caller, and dead branches acquire behaviour.
+
+### Two defects a bidder found within the hour, and what they were worth
+
+Both were reported against real tender **640160-2026**, and both are recorded here rather than
+quietly fixed, because each one says something the tests did not.
+
+**1. Safari could not render the page at all.** The drawer fell back to the browser's viewer
+with *"undefined is not a function (near '...value of readableStream...')"*. That is pdf.js's
+own `getTextContent()`, whose body is `for await (const value of readableStream)` — and **async
+iteration of a `ReadableStream` did not reach Safari until 18.4**. The fix is to hand
+`TextLayer` the stream from `streamTextContent()` instead; it reads it with `getReader()`,
+which every browser has, and it is one pass rather than two. Note that **running the suite in
+WebKit would not have caught this**: Playwright's WebKit is newer than the reporter's Safari and
+has the API. The regression test therefore deletes
+`ReadableStream.prototype[Symbol.asyncIterator]` in Chromium, which reproduces the failure
+exactly and keeps costing nothing.
+
+**2. In Chrome the page rendered and nothing was highlighted** — *"The cited words were not
+found on page 3"*. This is the one that matters. The matcher was written against a fixture
+**this repo generated**, and it passed; a fixture an implementation agrees with proves only that
+they agree. Measured against the three real packs already in `backend/tests/fixtures`, it was
+locating **573 of 626 citations (91.5 %)**. Four causes, each visible in the real text:
+
+| Cause | What the page has | What the extractor stored |
+|---|---|---|
+| Spacing around a colon in a table | `Elektronischer Katalog : Nicht zulässig` | `Elektronischer Katalog: Nicht zulässig` |
+| Hyphenation at a line break | `Haupt-` / `oder` | `Hauptoder` |
+| Inline HTML from `pymupdf4llm` | `tenderer8` | `tenderer<sup>8</sup>`, `above<br>EUR`, `<u>2ème`, `<mark>[</mark>` |
+| A prefix search that stepped over the answer | — | halving tried 200, 100, 50 and gave up where the true boundary was 55 |
+
+So whitespace is now **removed rather than collapsed** — pdf.js splits an item wherever the
+kerning changes and inserts no space where the page drew none, so any rule about how much
+whitespace counts as "the same" is wrong somewhere, and having none cannot be. A hyphen before
+removed whitespace goes with it. Inline tags are stripped. The prefix search became a binary
+search, which costs the same and answers the question.
+
+**A unit test had to be inverted to do it.** "does not glue two items into a word that is on
+neither" was guarding against a false positive that never happened and paying for it with 53
+real citations. It now asserts the opposite, and says so.
+
+| | before | after |
+|---|---|---|
+| DE | 295 / 311 | **311 / 311** |
+| FR | 101 / 114 | **113 / 114** |
+| EN | 177 / 201 | **201 / 201** |
+| **total** | **573 / 626 (91.5 %)** | **625 / 626 (99.8 %)** |
+
+The remaining miss is not a matcher failure: that French clause is on **no page of the
+document** in any form, so the "not found" notice is the true answer.
+
+**The measurement is now a test, not an anecdote.** `scripts/capture-real-quotes.mjs` captured
+the 626 real quotes with the text items pdf.js reports for each cited page;
+`quote-match.real.test.ts` re-measures all of them in 167 ms with no PDFs and no network, and
+fails the build if recall drops. Restoring the old normalisation scores 297/311, 105/114 and
+184/201 against it — measured, not assumed.
+
+239 frontend unit tests and 36 browser journeys green, plus lint, typecheck, prettier, build and
+`deps-check`. Guide shot 01 fails on `main` as well and is untouched.

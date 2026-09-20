@@ -387,3 +387,56 @@
     outline-offset: var(--focus-ring-offset);
   }
 }
+
+/*
+ * The pdf.js text layer (ADR-0105).
+ *
+ * `TextLayer` positions its spans entirely through CSS: it writes `--font-height`, `--scale-x`
+ * and `--rotate` onto each span and leaves the rules that read them to the page. This is the
+ * minimum of `pdfjs-dist@6.3.289`'s own `web/pdf_viewer.css` that makes that work — copied
+ * rather than imported, because that file is 3 500 lines of viewer chrome (toolbars, the
+ * annotation editor, the sidebar) and a static import of it would land in the route's
+ * stylesheet, undoing the dynamic import that keeps pdf.js out of the first load.
+ *
+ * **Re-check this block when pdfjs-dist is upgraded.** The contract is the class name
+ * `.textLayer`, the `--total-scale-factor` the component sets, and the three per-span
+ * variables above. `components/pdf/pdf-page-view.tsx` is the only caller.
+ */
+.textLayer {
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.textLayer .markedContent {
+  display: contents;
+}

@@ -1,10 +1,27 @@
 /**
- * `Main.dc.html` at 900 px and above: the matrix on the left, one 400 px sticky column of
- * Source / Ask / Verdict on the right (ADR-0060).
+ * The bid workspace at 900 px and above: the matrix on the left under "Ask the tender", the
+ * verdict alone in a sticky right rail, and the source page as a drawer over both (ADR-0104).
  *
- * Split out of `bid-workspace.tsx` with the phone layout beside it (audit M23). The markup is
- * unchanged; what it draws now arrives as `WorkspaceState` rather than being computed above
- * it.
+ * **What this deviates from, and what sanctions it.** `Main.dc.html` draws the matrix beside a
+ * permanent 400 px source column and puts the verdict on its own screen, `Verdict.dc.html`.
+ * ADR-0060 collapsed all three — Source, Ask and Verdict — into one tabbed 400 px column,
+ * which fixed a real measured problem (the verdict had been fifteen screens down) by making
+ * three unrelated things compete for one column. The drawing this layout follows instead is
+ * `Landing.dc.html`'s `ProductFrame`, the hero mock, which has always shown requirement rows
+ * on the left and the recommendation and review cards alone on the right.
+ *
+ * **ADR-0060's guarantee is kept, and strengthened.** Its finding was that the product's one
+ * output must be above the fold. A rail that only ever holds the verdict is stronger than a
+ * tab that holds it one click away: there is no state of this page in which the verdict is
+ * not on screen. The rail is never empty either — before the run writes a verdict it says so,
+ * so the two-column shape does not appear halfway through a run.
+ *
+ * **A citation still lands on its page in one click**, which is the other thing ADR-0060
+ * bought. `handleCite` opens the drawer rather than selecting a tab, and the drawer gets most
+ * of the window instead of 400 px of it.
+ *
+ * Split out of `bid-workspace.tsx` with the phone layout beside it (audit M23); what it draws
+ * arrives as `WorkspaceState` rather than being computed here.
  */
 'use client'
 
@@ -14,13 +31,13 @@ import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { PageHeader } from '@/components/layout/page-header'
 import { MatrixSummary } from '@/components/matrix/matrix-summary'
 import { RequirementList } from '@/components/matrix/requirement-list'
-import { SourcePanel } from '@/components/pdf/source-panel'
+import { SourceDrawer } from '@/components/pdf/source-drawer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Icon } from '@/components/ui/icons'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Notice } from '@/components/ui/notice'
-import { tabId, Tabs } from '@/components/ui/tabs'
 import { useRouter } from 'next/navigation'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
@@ -31,10 +48,7 @@ import { DeleteBid } from './delete-bid'
 import { RunLiveness } from './run-liveness'
 import { UnsearchablePack } from './unsearchable-pack'
 import { VerdictPanel } from './verdict-panel'
-import type { SideTab, WorkspaceState } from './workspace-state'
-
-/** One namespace for the right-hand column: the panel's id, and the tab's derived from it. */
-const sidePanelId = (value: SideTab): string => `side-panel-${value}`
+import type { WorkspaceState } from './workspace-state'
 
 export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) {
   // The bid stops existing when it is deleted, and the workspace polls it — so leaving is
@@ -45,8 +59,8 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
     pollError,
     selection,
     activeCitation,
-    sideTab,
-    setSideTab,
+    isSourceOpen,
+    setSourceOpen,
     announcement,
     edits,
     feedback,
@@ -66,26 +80,6 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
     reviewNote,
   } = state
 
-  const verdictPanel = (
-    <VerdictPanel
-      bid={bid}
-      rowEdits={edits.edits}
-      blockedRowCount={edits.blockers.length}
-      onReviewed={onReviewed}
-      onBackToMatrix={undefined}
-    />
-  )
-  const sideTabs: readonly { readonly value: SideTab; readonly label: string }[] =
-    bid.verdict === null
-      ? [
-          { value: 'source', label: 'Source' },
-          { value: 'ask', label: 'Ask' },
-        ]
-      : [
-          { value: 'source', label: 'Source' },
-          { value: 'ask', label: 'Ask' },
-          { value: 'verdict', label: 'Verdict' },
-        ]
   const reviewButton =
     bid.verdict === null ? (
       <Button
@@ -105,8 +99,10 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
       // colour under `--color-*: initial` emits nothing rather than failing, so the control
       // shipped as white text on a transparent ground (contrast 1.02:1). The icon is inline
       // because the `asChild` branch does not render the `icon` prop, as on `/bids`.
+      // Since ADR-0104 it carries no click handler: the rail it points at is already on
+      // screen, so the anchor only has to move focus there.
       <Button asChild className="hover:no-underline">
-        <Link href="#verdict" onClick={() => setSideTab('verdict')}>
+        <Link href="#verdict">
           <span className="inline-flex size-4">
             <Icon name="shield" size={16} />
           </span>
@@ -119,16 +115,6 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
     <p role="status" aria-live="polite" className="sr-only">
       {announcement}
     </p>
-  )
-  const askPanel = (variant: 'panel' | 'phone') => (
-    <AskPanel
-      chat={chat}
-      feedback={feedback}
-      bidderLanguage={bid.bidder_language}
-      activeCitation={activeCitation}
-      onCite={handleCite}
-      variant={variant}
-    />
   )
 
   return (
@@ -202,15 +188,43 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
           period="listed under the table"
         />
       </div>
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          {hasRows && (
-            <MatrixSummary
-              rows={bid.matrix_rows}
-              requirementCount={bid.requirements.length}
-              isChecking={isRunning}
-            />
-          )}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* Above the matrix, not in a side column: ADR-0060 found the chat below the fold
+              and moved it into a tab, which put it behind a click instead. Here it is the
+              first thing under the metrics, and its `banner` variant is the one that bounds
+              its own log so a long conversation cannot push the rows off the screen. */}
+          <AskPanel
+            chat={chat}
+            feedback={feedback}
+            bidderLanguage={bid.bidder_language}
+            activeCitation={activeCitation}
+            onCite={handleCite}
+            variant="banner"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            {hasRows && (
+              <MatrixSummary
+                rows={bid.matrix_rows}
+                requirementCount={bid.requirements.length}
+                isChecking={isRunning}
+                className="min-w-0 flex-1"
+              />
+            )}
+            {/* The drawer's other way in. A citation opens it on the page it cites; this
+                opens it on whatever was last looked at, for a bidder who wants to read the
+                pack rather than check a line. */}
+            {sourceDocuments.length > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Icon name="file" size={16} />}
+                onClick={() => setSourceOpen(true)}
+              >
+                Open the pack
+              </Button>
+            )}
+          </div>
           <RequirementList
             requirements={bid.requirements}
             rowsByRequirement={rowsByRequirement}
@@ -225,58 +239,39 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
             review={review}
           />
         </div>
-        {/* Below `xl` the grid is one column, and this panel goes FIRST (`order-first`): a
-            tabbed Source / Ask / Verdict under 144 rows would be the buried chat all over
-            again, just with tabs on it. Sticky at `xl`, so Source, Ask and Verdict stay in view while the matrix scrolls: the
-            measured page is 23 204 px tall and the column had left the screen by row 20.
-            It scrolls internally when taller than the viewport rather than pushing the page. */}
-        <div className="order-first flex min-w-0 flex-col gap-4 xl:order-none xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)] xl:overflow-y-auto">
-          <Tabs
-            items={sideTabs}
-            value={sideTab}
-            onChange={setSideTab}
-            fullWidth
-            aria-label="Workspace panels"
-            panelId={sidePanelId}
-          />
-          {/* All three stay mounted and are hidden, not unmounted: the PDF keeps its page, a
-              half-typed question survives a look at the source, and a half-written override
-              reason survives a look at the page it is about. The phone unmounts Source to
-              spare an iframe on a small device; a laptop has the memory. */}
-          <div
-            id={sidePanelId('source')}
-            role="tabpanel"
-            aria-labelledby={tabId(sidePanelId('source'))}
-            hidden={sideTab !== 'source'}
-          >
-            <SourcePanel
-              documents={sourceDocuments}
-              selection={selection}
-              onSelect={handleSelect}
-            />
+        {/* The rail is the verdict and nothing else. Sticky at `xl`, scrolling internally
+            when taller than the viewport rather than pushing the page: the measured page is
+            23 204 px tall and a non-sticky column had left the screen by row 20 (ADR-0060).
+            Below `xl` the grid is one column and the rail follows the matrix, which is the
+            right order once it is no longer carrying the chat and the source with it. */}
+        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)] xl:overflow-y-auto">
+          <div id="verdict" className="scroll-mt-4">
+            {bid.verdict !== null ? (
+              <VerdictPanel
+                bid={bid}
+                rowEdits={edits.edits}
+                blockedRowCount={edits.blockers.length}
+                onReviewed={onReviewed}
+                onBackToMatrix={undefined}
+              />
+            ) : (
+              <Card title="Verdict" icon={<Icon name="shield" size={20} />} padding={20}>
+                <p className="m-0 [font:var(--type-body-sm)] text-text-secondary">
+                  {reviewNote}
+                </p>
+              </Card>
+            )}
           </div>
-          <div
-            id={sidePanelId('ask')}
-            role="tabpanel"
-            aria-labelledby={tabId(sidePanelId('ask'))}
-            hidden={sideTab !== 'ask'}
-          >
-            {askPanel('panel')}
-          </div>
-          {bid.verdict !== null && (
-            <div
-              id={sidePanelId('verdict')}
-              role="tabpanel"
-              aria-labelledby={tabId(sidePanelId('verdict'))}
-              hidden={sideTab !== 'verdict'}
-            >
-              <div id="verdict" className="scroll-mt-4">
-                {verdictPanel}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+      <SourceDrawer
+        documents={sourceDocuments}
+        selection={selection}
+        onSelect={handleSelect}
+        activeCitation={activeCitation}
+        isOpen={isSourceOpen}
+        onOpenChange={setSourceOpen}
+      />
       <div className="mt-8 border-t border-border-subtle pt-5">
         {/* At the foot, away from Review verdict: a destructive action beside the primary one
             is a misclick waiting to happen, and this is not a step in the workflow. */}

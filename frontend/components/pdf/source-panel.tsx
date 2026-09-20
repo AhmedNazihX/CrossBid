@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
+import { Select } from '@/components/ui/select'
 import { formatPageList, shortDocumentName } from '@/lib/format'
 import { useSignedUrl } from '@/lib/use-signed-url'
+import { PdfPageView } from './pdf-page-view'
 
 export interface SourceSelection {
   readonly documentId: string
@@ -30,25 +32,40 @@ export interface SourcePanelProps {
   readonly documents: readonly SourceDocument[]
   readonly selection: SourceSelection | undefined
   readonly onSelect: (selection: SourceSelection) => void
-  /** `phone` fills the Source tab; `panel` is the 400 px card beside the matrix. */
-  readonly variant?: 'panel' | 'phone'
+  /** `phone` fills the Source tab; `drawer` is the overlay the desktop opens (ADR-0104). */
+  readonly variant?: 'phone' | 'drawer'
+  /**
+   * The cited sentence to mark on the page — `drawer` only, and only while the citation being
+   * shown is the one that opened it. The phone keeps the browser's own viewer, which cannot
+   * mark anything.
+   */
+  readonly highlightQuote?: string
 }
 
 /**
- * The 400 px "Source" card of `Main.dc.html` (story S4.5.1): document tabs, a page
- * indicator with 32 px previous / next controls, the PDF, and the unread-pages note.
+ * The "Source" card of `Main.dc.html` (story S4.5.1): the document being read, a page
+ * indicator with previous / next controls, the page itself, and the unread-pages note.
  *
- * The PDF is the browser's own viewer — an `<iframe>` on the document's signed URL with a
- * `#page=N` fragment (ADR-0014: no PDF library until the native viewer proves
- * insufficient). The iframe is keyed on document and page, so a citation click remounts it
- * and the viewer opens the cited page rather than staying where it was. The URL is
- * refreshed before it expires (`useSignedUrl`).
+ * The artboard draws this as a permanent 400 px column beside the matrix, one chip per
+ * document across the top. Since ADR-0104 the desktop opens it as a drawer instead, and since
+ * ADR-0105 **the chips are gone**: a drawer opened by a citation is showing one page of one
+ * file, and a dozen chips above the viewer were furniture from the column it used to be. A
+ * pack with more than one document gets a `Select` instead, which is one line rather than
+ * twelve and is the design system's own control; a single-document pack gets nothing, because
+ * the drawer's title already names the file.
+ *
+ * **Two renderers, on purpose.** `drawer` draws the page with pdf.js so the citation can be
+ * marked on it (`pdf-page-view.tsx` carries that whole argument). `phone` keeps the browser's
+ * own viewer in an `<iframe>` with a `#page=N` fragment, as ADR-0014 specified: a canvas and a
+ * synthetic text layer are worse than the native viewer on a touch screen, where pinch-zoom
+ * and the system's own reading tools are what a reader actually uses.
  */
 export function SourcePanel({
   documents,
   selection,
   onSelect,
-  variant = 'panel',
+  variant = 'drawer',
+  highlightQuote,
 }: SourcePanelProps) {
   const current = documents.find((d) => d.id === selection?.documentId) ?? documents[0]
   const page = current === undefined ? 1 : clampPage(selection?.page ?? 1, current.pages)
@@ -67,6 +84,9 @@ export function SourcePanel({
   const canGoBack = page > 1
   const canGoForward = current.pages === 0 || page < current.pages
   const controlSize = isPhone ? 'size-11' : 'size-8'
+  const frameHeight = isPhone
+    ? 'h-[60vh] min-h-[360px]'
+    : 'h-[calc(100dvh-260px)] min-h-[420px]'
 
   return (
     <Card
@@ -87,25 +107,19 @@ export function SourcePanel({
         )
       }
     >
-      <div className="-mt-1.5 mb-3 flex flex-wrap items-center gap-1.5">
-        <div role="group" aria-label="Documents" className="flex min-w-0 flex-wrap gap-1.5">
-          {documents.map((document) => {
-            const isCurrent = document.id === current.id
-            return (
-              <Button
-                key={document.id}
-                size="sm"
-                variant={isCurrent ? 'secondary' : 'ghost'}
-                aria-pressed={isCurrent}
-                title={document.name}
-                onClick={() => onSelect({ documentId: document.id, page: 1 })}
-                className={cn(isPhone && 'h-11')}
-              >
-                {shortDocumentName(document.name)}
-              </Button>
-            )
-          })}
-        </div>
+      <div className="-mt-1.5 mb-3 flex flex-wrap items-end gap-3">
+        {documents.length > 1 && (
+          <Select
+            label="Document"
+            className="min-w-0 flex-1"
+            options={documents.map((document) => ({
+              value: document.id,
+              label: shortDocumentName(document.name),
+            }))}
+            value={current.id}
+            onValueChange={(documentId) => onSelect({ documentId, page: 1 })}
+          />
+        )}
         <div className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
@@ -138,14 +152,22 @@ export function SourcePanel({
       </div>
 
       <div className="rounded-md border border-border-default bg-surface-sunken p-4">
-        {pageUrl !== undefined ? (
+        {url !== undefined && !isPhone ? (
+          <PdfPageView
+            url={url}
+            documentId={current.id}
+            documentName={current.name}
+            page={page}
+            quote={highlightQuote}
+          />
+        ) : pageUrl !== undefined ? (
           <iframe
             key={`${current.id}:${page}`}
             src={pageUrl}
             title={`${current.name}, page ${page}`}
             className={cn(
               'block w-full border border-border-default bg-surface-card shadow-sm',
-              isPhone ? 'h-[60vh] min-h-[360px]' : 'h-[560px]'
+              frameHeight
             )}
           />
         ) : error !== undefined ? (
@@ -160,10 +182,7 @@ export function SourcePanel({
         ) : (
           <p
             role="status"
-            className={cn(
-              'm-0 flex items-center justify-center text-text-muted',
-              isPhone ? 'h-[60vh] min-h-[360px]' : 'h-[560px]'
-            )}
+            className={cn('m-0 flex items-center justify-center text-text-muted', frameHeight)}
           >
             Opening {shortDocumentName(current.name)}…
           </p>

@@ -25,8 +25,12 @@ export interface AskPanelProps {
   readonly activeCitation: Citation | undefined
   /** The workspace's citation handler — the same one the matrix uses, so a cited page opens the same way. */
   readonly onCite: (citation: Citation) => void
-  /** `phone` fills the Ask tab with 40 px controls; `panel` is the card under the source panel. */
-  readonly variant?: 'panel' | 'phone'
+  /**
+   * `phone` fills the Ask tab with 40 px controls; `banner` is the card above the requirements
+   * matrix on the desktop (ADR-0104), and is the variant whose turn log has a scroller of its
+   * own. There is no third: the `panel` variant died with ADR-0104's side column.
+   */
+  readonly variant?: 'phone' | 'banner'
 }
 
 /**
@@ -48,6 +52,15 @@ export interface AskPanelProps {
  * question box never moves, the answer lands directly beneath the words the bidder just
  * typed, and earlier turns fall away downward. It is also the shape the ask bar has on the
  * dashboard: the bar, then what came of it.
+ *
+ * **The `banner` variant is the one exception, and it is the reason for the paragraph above
+ * rather than a contradiction of it.** Since ADR-0104 the desktop puts this card *above* the
+ * requirements matrix instead of in a tabbed side column, which is where a bidder looks for
+ * it — but "turns fall away downward" then means they fall away *onto the matrix*, pushing
+ * the rows the bidder came for off the screen one answer at a time. So in `banner`, and only
+ * there, the log gets a bounded scroller. The question box stays outside it, so the thing
+ * that must never move still never moves; what is bounded is the history, which is the part
+ * a bidder scrolls on purpose.
  *
  * **Only this session's exchanges are shown, and the panel says so.** The server keeps the
  * thread, so a follow-up question reaches an agent that remembers the last one, but no route
@@ -95,12 +108,13 @@ export function AskPanel({
   bidderLanguage,
   activeCitation,
   onCite,
-  variant = 'panel',
+  variant = 'banner',
 }: AskPanelProps) {
   const [draft, setDraft] = useState('')
   const fieldId = useId()
   const hintId = `${fieldId}-hint`
   const isPhone = variant === 'phone'
+  const isBanner = variant === 'banner'
   const size = isPhone ? 'md' : 'sm'
   const isBlocked = chat.blockedUntil !== undefined
   const canSend = draft.trim() !== '' && !chat.isAsking && !isBlocked
@@ -190,7 +204,11 @@ export function AskPanel({
       ) : (
         // The live region wraps the list rather than being the list: `role="log"` on the
         // `<ol>` itself would replace its list role and orphan every `<li>` for a reader.
-        <div role="log" aria-label="Questions and answers" className="mt-5">
+        <div
+          role="log"
+          aria-label="Questions and answers"
+          className={cn('mt-5', isBanner && 'max-h-[360px] overflow-y-auto pr-1')}
+        >
           <ol className="m-0 flex list-none flex-col gap-5 p-0">
             {newestFirst.map((exchange) => (
               <li key={exchange.id} className="min-w-0 border-t border-border-default pt-4">

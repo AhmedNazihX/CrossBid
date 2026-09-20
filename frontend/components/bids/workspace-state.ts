@@ -34,13 +34,6 @@ import { BID_STATUS_LABELS } from './bid-status'
 import { citationsOf, useBidChat, type BidChatController } from './use-bid-chat'
 
 export type PhoneTab = 'matrix' | 'source' | 'verdict' | 'ask'
-/**
- * The desktop right column's segments: the phone's set minus Matrix, which on desktop is the
- * left column. Same vocabulary, same `Tabs`, so a bidder who learned the phone learns nothing
- * new on a laptop — and so the verdict is one click from the top of the page rather than
- * fifteen screens below it (ADR-0060).
- */
-export type SideTab = 'source' | 'ask' | 'verdict'
 
 export const PHONE_TABS: readonly { value: PhoneTab; label: string }[] = [
   { value: 'matrix', label: 'Matrix' },
@@ -158,8 +151,13 @@ export interface WorkspaceState {
   readonly activeCitation: Citation | undefined
   readonly phoneTab: PhoneTab
   readonly setPhoneTab: (value: PhoneTab) => void
-  readonly sideTab: SideTab
-  readonly setSideTab: (value: SideTab) => void
+  /**
+   * Whether the desktop's source drawer is open (ADR-0104). The phone keeps its Source tab;
+   * this is the desktop's equivalent, and it is deliberately not a tab value — the drawer is
+   * an overlay over the whole workspace, not one of a set of things the right rail can be.
+   */
+  readonly isSourceOpen: boolean
+  readonly setSourceOpen: (isOpen: boolean) => void
 
   readonly announcement: string
   readonly edits: RowEditsController
@@ -227,7 +225,7 @@ export function useWorkspaceState(initial: BidResponse): WorkspaceState {
   const [selection, setSelection] = useState<SourceSelection | undefined>(undefined)
   const [activeCitation, setActiveCitation] = useState<Citation | undefined>(undefined)
   const [phoneTab, setPhoneTab] = useState<PhoneTab>('matrix')
-  const [sideTab, setSideTab] = useState<SideTab>('source')
+  const [isSourceOpen, setSourceOpen] = useState(false)
   const announcement = useStatusAnnouncement(bid)
   const edits = useRowEdits(bid.matrix_rows)
   // Loaded once per bid and passed to both layouts and to the Ask panel, so thirty rows and
@@ -271,8 +269,10 @@ export function useWorkspaceState(initial: BidResponse): WorkspaceState {
       if (document !== undefined) {
         setSelection({ documentId: document.id, page: citation.page })
       }
+      // Both layouts answer a citation the same way: the phone moves to its Source tab, the
+      // desktop slides the drawer in over the verdict rail.
       setPhoneTab('source')
-      setSideTab('source')
+      setSourceOpen(true)
     },
     [sourceDocuments]
   )
@@ -298,8 +298,8 @@ export function useWorkspaceState(initial: BidResponse): WorkspaceState {
     activeCitation,
     phoneTab,
     setPhoneTab,
-    sideTab,
-    setSideTab,
+    isSourceOpen,
+    setSourceOpen,
     announcement,
     edits,
     feedback,

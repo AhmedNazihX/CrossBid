@@ -323,7 +323,7 @@ Status, as of 2026-09-15: **done** — built, tested and committed; **built · f
 | 1 | C | S4.0.1 design canvas via `/design`; user confirms before workspace components are coded | M | Must | done | S0.4.1 |
 | 1 | C | S4.1.2 layout, nav, theme | S | Must | done | S0.4.2 (hand-written types ok) |
 | 1 | C | S4.2.2 document upload with status | M | Must | done | S4.1.2, S2.2.3 |
-| 1 | C | S4.5.1 workspace two-pane, react-pdf, polling (matrix-row criterion finishes in Inc 2) | L | Must | done | S3.1.1, S4.0.1 |
+| 1 | C | S4.5.1 workspace two-pane, pdf.js source drawer with citation highlighting (ADR-0104/0105), polling (matrix-row criterion finishes in Inc 2) | L | Must | done | S3.1.1, S4.0.1 |
 | 1 | D | S6.2 EN golden tender | M | Must | done | — |
 | 2 | B | S3.2.3 recall script against golden labels (reused by S7.1) | S | Must | done | S3.2.1, S6.4 |
 | 2 | A | S1.1.2 ecertis_evidence_lookup tool | M | Must | done | S1.1.1 |

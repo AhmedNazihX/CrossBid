@@ -47,6 +47,12 @@ export interface FakeResponse {
   readonly json?: unknown
   /** A raw body instead, e.g. the page a signed document URL opens; `contentType` names it. */
   readonly body?: string
+  /**
+   * A file on disk to serve instead of a body — the source drawer renders a real PDF with
+   * pdf.js since ADR-0105, and a `string` body would be re-encoded as UTF-8 and hand it bytes
+   * that are not the file. Playwright infers the content type from the extension.
+   */
+  readonly path?: string
   readonly contentType?: string
   /**
    * Response headers beyond the CORS ones — `ETag` for the conditional poll (M13). Merged
@@ -207,6 +213,15 @@ export class FakeApi {
       return
     }
     const headers = { ...CORS_HEADERS, ...answer.headers }
+    if (answer.path !== undefined) {
+      await route.fulfill({
+        status: answer.status,
+        path: answer.path,
+        contentType: answer.contentType,
+        headers,
+      })
+      return
+    }
     await route.fulfill(
       answer.body === undefined
         ? { status: answer.status, json: answer.json, headers }

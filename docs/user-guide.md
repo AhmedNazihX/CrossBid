@@ -93,8 +93,10 @@ and about 200 pages, and reaches review in roughly five minutes.
 One row per requirement the tender places on you. Four things to read:
 
 - **The requirement**, as the tender words it, with the document and page it came from. Click
-  the citation to open that page in the panel on the right. Every row has one — an
-  uncited requirement is not something Crossbid will show you.
+  the citation and the source page slides in from the right, open at that page and **with the
+  cited sentence marked on it**; press Escape to send it away again. If the words cannot be
+  located on the page the panel says so rather than marking a guess. Every row has a citation —
+  an uncited requirement is not something Crossbid will show you.
 - **The evidence status**, which is the agent's answer, one of four words:
   - **Supported** — a document of yours settles it, and the row says which and where.
   - **Partially supported** — some of it is evidenced and some is not. This is the honest
@@ -110,9 +112,10 @@ One row per requirement the tender places on you. Four things to read:
 
 ![The verdict](user-guide/img/04-verdict.png)
 
-The banner gives the agent's recommendation — **go**, **conditional**, **no-go**, or
-**insufficient evidence** — with the count of mandatory requirements supported and the gaps
-that remain. Each gap names what was required and what you actually have.
+The verdict has the right-hand rail to itself and stays there while you scroll the matrix. It
+gives the agent's recommendation — **go**, **conditional**, **no-go**, or **insufficient
+evidence** — with the count of mandatory requirements supported and the gaps that remain. Each
+gap names what was required and what you actually have.
 
 **The verdict is advisory and is labelled so.** Open *Review verdict* to go through the matrix
 row by row: change a status, give a reason, attach a document. Your edits are held locally
@@ -122,7 +125,7 @@ decided, not from what the agent guessed.
 
 ### Ask the tender
 
-The **Ask** tab beside the source panel answers questions about this tender in your language —
+**Ask the tender** sits above the matrix and answers questions about this tender in your language —
 *"what is the deadline for questions?"*, *"which form do I need for subcontractors?"* Every
 answer carries citations, and clicking one opens the page it came from. An answer it cannot
 cite comes back saying so rather than guessing.

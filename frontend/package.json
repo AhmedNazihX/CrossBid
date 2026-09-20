@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-pdfjs-assets.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-pdfjs-assets.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -22,6 +24,7 @@
     "@supabase/supabase-js": "^2.116.0",
     "cn": "^0.2.6",
     "next": "15.5.25",
+    "pdfjs-dist": "^6.3.289",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },

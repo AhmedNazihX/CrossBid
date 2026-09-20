@@ -8,7 +8,7 @@
 #          transitive = pulled in by a direct dependency
 #          dev = build, lint, test, or type-check tooling only
 #
-# 801 packages: 160 backend, 641 frontend
+# 814 packages: 160 backend, 654 frontend
 
 
 ## backend (160)
@@ -174,7 +174,7 @@ xxhash                                       4.0.1           transitive
 yarl                                         1.24.5          transitive
 zstandard                                    0.25.0          transitive
 
-## frontend (641)
+## frontend (654)
 
 @adobe/css-tools                             4.5.0           dev
 @alloc/quick-lru                             5.3.0           dev
@@ -284,6 +284,18 @@ zstandard                                    0.25.0          transitive
 @jridgewell/resolve-uri                      3.1.2           dev
 @jridgewell/sourcemap-codec                  1.6.0           dev
 @jridgewell/trace-mapping                    0.3.31          dev
+@napi-rs/canvas                              1.0.9           transitive
+@napi-rs/canvas-android-arm64                1.0.9           transitive
+@napi-rs/canvas-darwin-arm64                 1.0.9           transitive
+@napi-rs/canvas-darwin-x64                   1.0.9           transitive
+@napi-rs/canvas-linux-arm-gnueabihf          1.0.9           transitive
+@napi-rs/canvas-linux-arm64-gnu              1.0.9           transitive
+@napi-rs/canvas-linux-arm64-musl             1.0.9           transitive
+@napi-rs/canvas-linux-riscv64-gnu            1.0.9           transitive
+@napi-rs/canvas-linux-x64-gnu                1.0.9           transitive
+@napi-rs/canvas-linux-x64-musl               1.0.9           transitive
+@napi-rs/canvas-win32-arm64-msvc             1.0.9           transitive
+@napi-rs/canvas-win32-x64-msvc               1.0.9           transitive
 @napi-rs/lzma-linux-x64-gnu                  1.5.1           dev
 @napi-rs/wasm-runtime                        1.2.4           dev
 @next/env                                    15.5.25         transitive
@@ -693,6 +705,7 @@ path-key                                     3.1.1           dev
 path-parse                                   1.0.7           dev
 pathe                                        2.0.3           dev
 pathval                                      2.0.1           dev
+pdfjs-dist                                   6.3.289         direct
 picocolors                                   1.1.1           transitive
 picomatch                                    2.3.2           dev
 picomatch                                    4.0.7           dev

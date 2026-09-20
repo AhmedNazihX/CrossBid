@@ -1,6 +1,6 @@
 /**
- * The bid workspace at desktop width — `/bids/{id}`, `Main.dc.html` (S7.7; blockers 3 and 4
- * of the 2026-09-15 audit).
+ * The bid workspace at desktop width — `/bids/{id}` (S7.7; blockers 3 and 4 of the
+ * 2026-09-15 audit, then the reshape of ADR-0104).
  *
  * **Blocker 3 — the "Review verdict" control was white text on a transparent ground.** Its
  * class string named `bg-accent-default`, which the `@theme` block never declares. Under
@@ -10,31 +10,23 @@
  * the first test reads the control's computed colours and composites them the way the
  * screen does (`support/contrast.ts`).
  *
- * **Blocker 4 — the right column's tab strip was 2 px tall at ≥ 1280 px.** The column is a
- * height-capped flex column (`max-h-[calc(100dvh-2rem)]`, scrolling internally while sticky)
- * and the tablist had no `shrink-0` and, being `overflow-hidden`, no intrinsic minimum — so
- * once the column's content exceeded the cap, flex took the whole shortfall out of the strip
- * and clipped the 38 px tabs behind its borders. A real click on Source / Ask / Verdict was
- * intercepted for as long as Playwright cared to wait; ADR-0060's control had never worked
- * at the width it was designed for. Possible because the phone layout, which is what got
- * looked at, has no height cap.
+ * **Blocker 4 — the right column's tab strip was 2 px tall at ≥ 1280 px** — is gone with the
+ * strip. ADR-0104 took Source, Ask and Verdict out of one tabbed 400 px column: Ask went
+ * above the matrix, the source became a drawer, and the rail now holds the verdict alone.
+ * What that blocker was really protecting is still protected, one layer up: the rail is
+ * height-capped and sticky, and the three tests below assert the two things ADR-0060 bought
+ * and ADR-0104 had to keep — **the verdict is on screen** and **a citation reaches its
+ * page** — plus the drawer's own contract.
  *
- * **The collapse needs pressure, and the test proves it has some.** With little in the
- * column nothing is squeezed and `shrink-0` changes nothing — a first version of this test
- * passed with the defect put back. What squeezed the column in production was the Source
- * panel: a 560 px frame under a chip per document, and a pack has a dozen. So the fixture
- * carries the DE pack, the fake also serves the page the signed URL frames, and the test
- * asserts the column actually overflows before it asserts anything about the strip —
- * without that check a lighter fixture would quietly make the test vacuous again. The
- * strip's height is a weak signal on its own; the strong ones are that the point at a tab's
- * centre hits that tab, and that a real click lands well inside the five seconds the
- * shipped defect swallowed.
+ * **Each test was measured failing with its fix reverted** (ADR-0063); the reversion is named
+ * in each one's comment, because a layout test that has never been red is decoration.
  *
  * The bid is `awaitingReviewBidFixture`: parked at the interrupt with a verdict written, the
- * one state where the control is an enabled anchor and the column carries its Verdict tab.
+ * one state where the header control is an enabled anchor and the rail carries a real panel.
  */
-import type { Locator, Page } from '@playwright/test'
+import path from 'node:path'
 
+import { inkBands } from './support/canvas-ink'
 import type { FakeApi } from './support/fake-api'
 import { paintedContrast } from './support/contrast'
 import { awaitingReviewBidFixture, BID_ID, packDocumentsFixture } from './support/fixtures'
@@ -42,14 +34,14 @@ import { expect, test } from './support/test'
 
 /** WCAG 2.x AA for text that is neither large nor bold: the control is 14 px medium. */
 const MIN_TEXT_CONTRAST = 4.5
-/** The segmented control's tabs are 38 px (`components/ui/tabs.tsx`); the shipped strip was 2 px. */
-const MIN_TABLIST_HEIGHT_PX = 38
-/** The shipped strip swallowed a click for Playwright's default five seconds; a working one takes milliseconds. */
+/** A real pointer click on a working control takes milliseconds, not Playwright's five seconds. */
 const CLICK_BUDGET_MS = 1_500
 /** The signed URL's lifetime; far enough out that the panel does not refresh it mid-test. */
 const SIGNED_URL_TTL_MS = 10 * 60 * 1_000
+/** The one-page PDF the drawer renders. `fixtures/make-source-page-pdf.mjs` wrote it. */
+const SOURCE_PDF = path.resolve(__dirname, 'fixtures/source-page.pdf')
 
-test.describe('Bid workspace — the desktop layout of ADR-0060', () => {
+test.describe('Bid workspace — the desktop layout of ADR-0104', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
   test.beforeEach(async ({ api, apiOrigin, page }) => {
@@ -58,10 +50,12 @@ test.describe('Bid workspace — the desktop layout of ADR-0060', () => {
     api.on('GET', `/bids/${BID_ID}/feedback`, { status: 200, json: { feedback: [] } })
     // The attach control lists company evidence while the bid is parked.
     api.on('GET', '/documents', { status: 200, json: { documents: [] } })
-    // The source panel opens the first document: it asks for a signed URL, then frames it.
-    // The fake hands out a URL on its own origin and serves the page, so the frame is the
-    // real 560 px thing it is on a real bid, and no request leaves the test.
-    const sourcePage = `${apiOrigin}/e2e/source-page`
+    // The drawer opens the cited document: it asks for a signed URL, then renders it with
+    // pdf.js. The fake hands out a URL on its own origin and serves a **real one-page PDF**
+    // (`e2e/fixtures/source-page.pdf`), because since ADR-0105 the drawer parses those bytes
+    // — an HTML body would fail to parse, fall back to the `<iframe>`, and quietly turn every
+    // assertion below into a test of the fallback. No request leaves the test.
+    const sourcePage = `${apiOrigin}/e2e/source-page.pdf`
     api.on('GET', /^\/documents\/[^/]+\/url$/, () => ({
       status: 200,
       json: {
@@ -69,15 +63,14 @@ test.describe('Bid workspace — the desktop layout of ADR-0060', () => {
         expires_at: new Date(Date.now() + SIGNED_URL_TTL_MS).toISOString(),
       },
     }))
-    api.on('GET', '/e2e/source-page', {
+    api.on('GET', '/e2e/source-page.pdf', {
       status: 200,
-      contentType: 'text/html',
-      body: '<!doctype html><title>e2e source page</title><p>The PDF viewer would be here.</p>',
+      contentType: 'application/pdf',
+      path: SOURCE_PDF,
     })
 
     await page.goto(`/bids/${BID_ID}`)
     await expect(page.getByRole('heading', { level: 1, name: bid.title })).toBeVisible()
-    await expect(page.getByTitle(/page 1$/)).toBeVisible()
   })
 
   test('the Review verdict control is painted, with readable contrast', async ({ page }) => {
@@ -95,103 +88,296 @@ test.describe('Bid workspace — the desktop layout of ADR-0060', () => {
     ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST)
   })
 
-  test('the right column’s tab strip keeps its height under pressure, and a click lands', async ({
+  /**
+   * ADR-0060's whole finding, restated for the shape that replaced it: the product's one
+   * output is on the first screen. It used to be at y=13 876. Under ADR-0060 it was one tab
+   * click away; now it is simply there.
+   *
+   * Measured red by dropping the grid's second column, which is where ADR-0060's predecessor
+   * had the verdict — stacked after the matrix instead of beside it. On this one-requirement
+   * fixture the rail's top came back at **y=1 022 in a 900 px viewport**, and it is 144 rows
+   * further down on the FR bid.
+   */
+  test('the verdict is on the first screen, with no scrolling and no click', async ({
     page,
   }) => {
-    const tablist = page.getByRole('tablist', { name: 'Workspace panels' })
-    await expect(tablist).toBeAttached()
-    const ask = tablist.getByRole('tab', { name: 'Ask' })
-    const source = tablist.getByRole('tab', { name: 'Source' })
+    const rail = page.locator('#verdict')
+    await expect(rail).toBeVisible()
 
-    // The strip is the first child of the sticky column; the column is what caps the height.
-    const column = tablist.locator('..')
-    const measured = await measureStrip(tablist, ask, column)
-    test.info().annotations.push({
-      type: 'tablist',
-      description: `height ${measured.tablistHeight}px; column scrollHeight ${measured.columnScrollHeight}px, clientHeight ${measured.columnClientHeight}px; centre of Ask hits: ${measured.askCentreHits}`,
+    const viewportHeight = page.viewportSize()?.height ?? 0
+    const top = await rail.evaluate((element) => element.getBoundingClientRect().top)
+    expect(
+      top,
+      `the verdict rail starts at y=${Math.round(top)} in a ${viewportHeight}px viewport: it is below the fold`
+    ).toBeLessThan(viewportHeight)
+
+    // Not merely present — the recommendation itself is readable without moving.
+    await expect(rail.getByRole('heading', { name: 'CrossBid recommends' })).toBeVisible()
+    await expect(rail.getByText(/mandatory requirement.? supported/i).first()).toBeVisible()
+  })
+
+  /**
+   * The other thing ADR-0060 bought and ADR-0104 had to keep: a citation lands on its page.
+   * It used to switch the column to its Source tab; it now opens the drawer, which is the
+   * design system's dialog — so Escape closes it and focus comes back to where it started,
+   * and both of those are part of the contract rather than Radix trivia.
+   *
+   * Measured red twice, each on the assertion it protects: with `setSourceOpen(true)` removed
+   * from `handleCite` the click opened nothing and `getByRole('dialog')` was never found;
+   * with `onCloseAutoFocus` removed from `SourceDrawer`, Escape still closed the drawer and
+   * `toBeFocused` failed — Radix prevents the default restore and focuses a trigger this
+   * drawer does not have, so focus landed on the body. That second one is the whole reason
+   * the handler exists.
+   */
+  test('a citation opens the source drawer, and Escape closes it and gives focus back', async ({
+    page,
+  }) => {
+    const citation = page
+      .getByRole('button', { name: /^Open .*, page \d+, in the source/ })
+      .first()
+    await expect(citation).toBeVisible()
+
+    await citation.click({ timeout: CLICK_BUDGET_MS })
+    const drawer = page.getByRole('dialog')
+    await expect(drawer).toBeVisible()
+    // The page it cites is actually rendered, not just a shell that slid in.
+    await expect(drawer.locator('canvas')).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(drawer).toBeHidden()
+    await expect(citation).toBeFocused()
+  })
+
+  /**
+   * The other half of ADR-0105: the cited sentence is marked **on the page**, not merely
+   * opened at. Everything this asserts is invisible to the unit suite — jsdom has no layout,
+   * so `getClientRects` returns nothing there and the boxes have no size to check. The
+   * matching that decides *which* characters is pinned in `components/pdf/quote-match.test.ts`,
+   * including against this very fixture's text.
+   *
+   * The boxes are asserted by geometry, not by count alone: a highlight covering the whole
+   * page and a highlight of zero size are both "at least one box", and both are broken.
+   *
+   * **Why the canvas pixels are read at the end.** The first version of this test compared the
+   * highlight only with the text layer, and passed with `--total-scale-factor` deleted — the
+   * line whose absence mis-sizes the whole text layer. It had to: the boxes come from a
+   * `Range` over that layer's own spans, so they inherit its geometry and move with its bugs.
+   * The glyphs pdf.js painted on the canvas are the one witness that does not, which is why
+   * the last block reads them (`support/canvas-ink.ts`).
+   *
+   * Measured red three ways: with `quote` dropped from the `Citation` built in
+   * `requirement-list.tsx` (no boxes at all); with `--total-scale-factor` removed from
+   * `pdf-page-view.tsx` (the boxes no longer cover the ink); and with `locateQuote` made to
+   * match the whole page (a box lands on the distractor line).
+   */
+  test('the cited sentence is marked on the page, and nothing else is', async ({ page }) => {
+    const citation = page
+      .getByRole('button', { name: /^Open .*, page \d+, in the source/ })
+      .first()
+    await citation.click({ timeout: CLICK_BUDGET_MS })
+
+    const drawer = page.getByRole('dialog')
+    const canvas = drawer.locator('canvas')
+    await expect(canvas).toBeVisible()
+
+    // The text layer is what makes the page readable to a screen reader and selectable at
+    // all; it is also where the highlight gets its geometry. Its absence is a silent
+    // accessibility regression, so it is asserted directly.
+    await expect(drawer.locator('.textLayer')).toContainText('Mindestjahresumsatz')
+
+    const boxes = drawer.locator('[data-testid="pdf-highlight"]')
+    await expect(boxes.first()).toBeVisible()
+
+    const canvasBox = await canvas.boundingBox()
+    const count = await boxes.count()
+    expect(canvasBox).not.toBeNull()
+    for (let index = 0; index < count; index += 1) {
+      const box = await boxes.nth(index).boundingBox()
+      expect(box, `highlight ${index} has no box`).not.toBeNull()
+      if (box === null || canvasBox === null) continue
+      // Inside the page…
+      expect(box.x).toBeGreaterThanOrEqual(canvasBox.x - 2)
+      expect(box.y).toBeGreaterThanOrEqual(canvasBox.y - 2)
+      expect(box.x + box.width).toBeLessThanOrEqual(canvasBox.x + canvasBox.width + 2)
+      // …and the size of a line of text, not of the page and not of nothing.
+      expect(box.width).toBeGreaterThan(20)
+      expect(box.height).toBeGreaterThan(4)
+      expect(box.height).toBeLessThan(canvasBox.height / 4)
+    }
+
+    // The sentence wraps in the fixture, so it is marked as two runs.
+    expect(count).toBeGreaterThanOrEqual(2)
+
+    // **The independent check.** Everything above compares the highlight with the text layer,
+    // and the highlight is *derived* from the text layer — so if that layer is misaligned with
+    // the page, the highlight is misaligned by exactly as much and every assertion so far
+    // still passes. The glyphs painted on the canvas are the only witness that does not share
+    // the bug, so the boxes are checked against the ink itself.
+    const bands = await inkBands(canvas)
+    expect(bands.length, 'the fixture paints three lines of text').toBeGreaterThanOrEqual(3)
+    const [firstLine, , thirdLine] = bands
+    const first = await boxes.first().boundingBox()
+    expect(first).not.toBeNull()
+    if (first !== null && firstLine !== undefined && canvasBox !== null) {
+      const left = first.x - canvasBox.x
+      const right = left + first.width
+      // The first cited line is covered: the box starts no later than the ink and ends no
+      // earlier, within a couple of pixels of slack for the quad's rounding.
+      expect(left, 'the highlight starts right of the first glyph').toBeLessThanOrEqual(
+        firstLine.left + 2
+      )
+      expect(right, 'the highlight ends left of the last glyph').toBeGreaterThanOrEqual(
+        firstLine.right - 2
+      )
+      // …and it is that line's ink, not a band of the page at some other height.
+      const top = first.y - canvasBox.y
+      expect(top).toBeLessThanOrEqual(firstLine.top + 2)
+      expect(top + first.height).toBeGreaterThanOrEqual(firstLine.bottom - 2)
+    }
+
+    // The third band is the distractor, which was never cited and must stay unmarked.
+    const lowest = Math.max(
+      ...(await Promise.all(
+        Array.from({ length: count }, async (_unused, index) => {
+          const box = await boxes.nth(index).boundingBox()
+          return box === null || canvasBox === null ? 0 : box.y + box.height - canvasBox.y
+        })
+      ))
+    )
+    expect(thirdLine, 'the distractor line is not on the page').not.toBeUndefined()
+    if (thirdLine !== undefined) {
+      expect(lowest, 'a highlight reaches the line that was never cited').toBeLessThan(
+        thirdLine.top
+      )
+    }
+  })
+
+  /**
+   * Safari, reproduced in Chromium by removing the one API it lacks.
+   *
+   * Reported from the real product on 2026-09-20: the drawer fell back to the browser's viewer
+   * with *"undefined is not a function (near '...value of readableStream...')"*. That is
+   * pdf.js's `getTextContent()`, whose body is `for await (const value of readableStream)` —
+   * and **async iteration of a `ReadableStream` did not reach Safari until 18.4**. Playwright's
+   * WebKit is newer than the reporter's Safari and has it, so running the suite in WebKit would
+   * *not* have caught this and will not keep it away. Deleting the API does both, in the
+   * browser the suite already runs.
+   *
+   * Measured red against the previous implementation: with `getTextContent()` restored, the
+   * drawer shows the fallback notice and no highlight.
+   */
+  test('the page still renders where ReadableStream cannot be async-iterated', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      // Safari < 18.4, exactly: the stream works, iterating it with `for await` does not.
+      delete (ReadableStream.prototype as unknown as Record<symbol, unknown>)[
+        Symbol.asyncIterator
+      ]
     })
+    await page.reload()
 
+    await page
+      .getByRole('button', { name: /^Open .*, page \d+, in the source/ })
+      .first()
+      .click({ timeout: CLICK_BUDGET_MS })
+
+    const drawer = page.getByRole('dialog')
+    await expect(drawer.locator('canvas')).toBeVisible()
+    await expect(drawer.locator('[data-testid="pdf-highlight"]').first()).toBeVisible()
+    await expect(drawer.getByText(/without the citation marked on it/i)).toHaveCount(0)
+  })
+
+  /**
+   * A citation whose words are not on the page says so, and still shows the page.
+   *
+   * This is the failure mode that matters most: a matcher that guesses would draw a confident
+   * box over the wrong clause of a German tender, and nothing about the screen would look
+   * wrong. Measured red by making `locateQuote` fall back to the first text item when it finds
+   * nothing — the notice disappears and a box appears.
+   */
+  test('a quote that is not on the page is said out loud, not guessed at', async ({
+    api,
+    page,
+  }) => {
+    const bid = awaitingReviewBidFixture()
+    const requirement = bid.requirements[0]
+    if (requirement === undefined) throw new Error('the parked fixture carries no requirement')
+    api.on('GET', `/bids/${BID_ID}`, {
+      status: 200,
+      json: {
+        ...bid,
+        requirements: [
+          { ...requirement, source_text: 'Eine Klausel die auf dieser Seite gar nicht steht.' },
+        ],
+      },
+    })
+    await page.reload()
+
+    await page
+      .getByRole('button', { name: /^Open .*, page \d+, in the source/ })
+      .first()
+      .click({ timeout: CLICK_BUDGET_MS })
+
+    const drawer = page.getByRole('dialog')
+    await expect(drawer.locator('canvas')).toBeVisible()
+    await expect(drawer.getByText(/were not found on page/i)).toBeVisible()
+    await expect(drawer.locator('[data-testid="pdf-highlight"]')).toHaveCount(0)
+  })
+
+  /**
+   * The rail is `sticky` and scrolls internally rather than leaving the screen. The measured
+   * page is 23 204 px tall on the FR bid and a non-sticky column had gone by row 20.
+   *
+   * The precondition is asserted first and deliberately: on a short fixture the page does not
+   * scroll at all, `sticky` changes nothing, and this test would pass with the property
+   * deleted — which is exactly how the first version of blocker 4's test went vacuous
+   * (ADR-0063). It is not hypothetical here: the first version of *this* test used the shipped
+   * one-requirement fixture, whose page is 1 468 px, and the precondition caught it. Measured
+   * red by removing `xl:sticky xl:top-4` with the forty-row fixture in place.
+   */
+  test('the verdict rail stays on screen while the matrix scrolls', async ({ api, page }) => {
+    // The shipped fixture is one requirement and renders a page shorter than the viewport,
+    // where `sticky` is unobservable. The pressure is the point of this test, so it brings
+    // its own: forty rows, which is a quarter of the FR bid's 144.
+    api.on('GET', `/bids/${BID_ID}`, { status: 200, json: longMatrixBidFixture(40) })
+    await page.reload()
+    const rail = page.locator('#verdict')
+    await expect(rail).toBeVisible()
+    const viewportHeight = page.viewportSize()?.height ?? 0
+
+    const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight)
     expect(
-      measured.tablistHeight,
-      `the tablist is ${measured.tablistHeight}px tall: flex has shrunk it to its borders`
-    ).toBeGreaterThanOrEqual(MIN_TABLIST_HEIGHT_PX)
-    expect(
-      measured.askCentreHits,
-      `the point at the Ask tab’s centre lands on "${measured.askCentreHits}", not on the tab: it is clipped or covered`
-    ).toBe('tab')
+      documentHeight,
+      `the page is ${documentHeight}px in a ${viewportHeight}px viewport: nothing scrolls, and this test cannot fail for the defect it protects`
+    ).toBeGreaterThan(viewportHeight * 2)
 
-    // A real pointer click, on a budget far under the five seconds the defect swallowed.
-    await expect(source).toHaveAttribute('aria-selected', 'true')
-    await ask.click({ timeout: CLICK_BUDGET_MS })
-    await expect(ask).toHaveAttribute('aria-selected', 'true')
-    await expect(source).toHaveAttribute('aria-selected', 'false')
-    await expect(
-      page.getByRole('textbox', { name: 'Your question about this tender' })
-    ).toBeVisible()
-    await expect(await panelOf(page, source)).toBeHidden()
-
-    // The header's control is the third way in: it opens the Verdict tab (ADR-0060).
-    await page.getByRole('link', { name: 'Review verdict' }).click({ timeout: CLICK_BUDGET_MS })
-    const verdict = tablist.getByRole('tab', { name: 'Verdict' })
-    await expect(verdict).toHaveAttribute('aria-selected', 'true')
-    await expect(await panelOf(page, verdict)).toBeVisible()
-
-    // Last, the precondition: the column really was over its cap, so the strip really was
-    // under the pressure that collapsed it. A lighter fixture makes this test say nothing,
-    // and this is where it would say so.
-    expect(
-      measured.columnScrollHeight,
-      'the side column is not over its height cap: nothing squeezes the strip, and this test cannot fail for the defect it protects'
-    ).toBeGreaterThan(measured.columnClientHeight)
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await expect(rail).toBeInViewport()
   })
 })
 
-interface StripMeasurement {
-  readonly tablistHeight: number
-  readonly columnScrollHeight: number
-  readonly columnClientHeight: number
-  /** `'tab'` when `elementFromPoint` at the tab's centre is the tab; otherwise what it hit. */
-  readonly askCentreHits: string
-}
-
-async function measureStrip(
-  tablist: Locator,
-  tab: Locator,
-  column: Locator
-): Promise<StripMeasurement> {
-  const [tablistHeight, columnBox, askCentreHits] = await Promise.all([
-    tablist.evaluate((element) => element.getBoundingClientRect().height),
-    column.evaluate((element) => ({
-      scrollHeight: element.scrollHeight,
-      clientHeight: element.clientHeight,
-    })),
-    tab.evaluate((element) => {
-      const rect = element.getBoundingClientRect()
-      const hit = document.elementFromPoint(
-        rect.left + rect.width / 2,
-        rect.top + rect.height / 2
-      )
-      if (hit === null) return 'nothing'
-      return element.contains(hit)
-        ? 'tab'
-        : `${hit.tagName.toLowerCase()}[role=${hit.getAttribute('role')}]`
-    }),
-  ])
-  return {
-    tablistHeight,
-    columnScrollHeight: columnBox.scrollHeight,
-    columnClientHeight: columnBox.clientHeight,
-    askCentreHits,
+/**
+ * The parked bid with its single requirement repeated `count` times, ids made unique so the
+ * matrix indexes them as distinct rows. Only the height matters here, not the content.
+ */
+function longMatrixBidFixture(count: number) {
+  const base = awaitingReviewBidFixture()
+  const requirement = base.requirements[0]
+  const row = base.matrix_rows[0]
+  if (requirement === undefined || row === undefined) {
+    throw new Error('the parked fixture no longer carries a requirement and a row')
   }
-}
-
-/** The panel a tab controls, found through its ARIA wiring rather than through a class or an id. */
-async function panelOf(page: Page, tab: Locator): Promise<Locator> {
-  const controls = await tab.getAttribute('aria-controls')
-  if (controls === null) {
-    throw new Error('the tab names no panel: aria-controls is missing')
-  }
-  return page.locator(`[role="tabpanel"][id="${controls}"]`)
+  const requirements = Array.from({ length: count }, (_unused, index) => ({
+    ...requirement,
+    id: `${requirement.id}-${index}`,
+  }))
+  const matrixRows = requirements.map((each, index) => ({
+    ...row,
+    id: `${row.id}-${index}`,
+    requirement_id: each.id,
+  }))
+  return { ...base, requirements, matrix_rows: matrixRows }
 }
 
 test.describe('Bid workspace — a pack Ask cannot read', () => {

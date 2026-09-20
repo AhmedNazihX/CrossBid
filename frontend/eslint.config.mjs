@@ -18,6 +18,9 @@ const eslintConfig = [
       'node_modules/**',
       '.next/**',
       '.next-verify/**',
+      // pdf.js's own runtime assets, copied in by `scripts/copy-pdfjs-assets.mjs` (ADR-0105).
+      // Vendored emscripten output: not ours to lint, and 160 warnings deep if it is.
+      'public/pdfjs/**',
       'out/**',
       'build/**',
       'next-env.d.ts',

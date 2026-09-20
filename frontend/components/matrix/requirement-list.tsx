@@ -229,6 +229,7 @@ function RequirementRow({
     documentName: requirement.document_name,
     page: requirement.page ?? null,
     criterionId: requirement.ecertis_criterion_id ?? undefined,
+    quote: requirement.source_text,
   }
   const explained = requirementTextIn(requirement, language)
   const canSwitch = isSwitchable(requirement, bidderLanguage)
