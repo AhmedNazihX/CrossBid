@@ -10,6 +10,7 @@ import { describeApiError } from '@/lib/api-client'
 import {
   getDocument,
   hasPages,
+  analysesUsing,
   isDeletable,
   isDocumentSettled,
   type DocumentResponse,
@@ -86,9 +87,9 @@ export function DocumentRow({
       >
         <span className="block">{value.name}</span>
         {!isDeletable(value) && (
-          <Tag className="mt-1.5" title={IN_A_BID_EXPLANATION}>
-            In a bid — cannot be deleted
-            <span className="sr-only">. {IN_A_BID_EXPLANATION}</span>
+          <Tag className="mt-1.5" title={explainInUse(value)}>
+            In {analysesUsing(value)} — cannot be deleted
+            <span className="sr-only">. {explainInUse(value)}</span>
           </Tag>
         )}
       </th>
@@ -183,12 +184,19 @@ function UnreadPages({
 }
 
 /**
- * Why a document a bid has claimed cannot be ticked: the API refuses to delete it with a 409,
- * because that run's requirements cite its pages. A checkbox that can only lead to a refusal
- * is worse than no checkbox, so the box is disabled and the row says what is true instead.
+ * Why a document an analysis is using cannot be ticked: the API refuses to delete it with a
+ * 409, because that run's requirements cite its pages. A checkbox that can only lead to a
+ * refusal is worse than no checkbox, so the box is disabled and the row says what is true.
+ *
+ * One template, grammatical at one and at many, because a document may now be used by several
+ * analyses at once (ADR-0103) and the count is what makes the sentence actionable.
  */
-const IN_A_BID_EXPLANATION =
-  'This document belongs to a bid, and that bid cites its pages. Delete the bid to remove it.'
+function explainInUse(document: DocumentResponse): string {
+  return (
+    `Used by ${analysesUsing(document)}, whose requirements cite its pages. ` +
+    'Delete those analyses and this file can be deleted too.'
+  )
+}
 
 /**
  * The row's tick box, and the whole of the row's part in deleting.
@@ -217,12 +225,12 @@ function SelectDocument({
     <Checkbox
       checked={isSelected}
       disabled={isClaimed}
-      title={isClaimed ? IN_A_BID_EXPLANATION : undefined}
+      title={isClaimed ? explainInUse(document) : undefined}
       onChange={(event) => onSelectedChange(document, event.target.checked)}
       label={
         <span className="sr-only">
           {isClaimed
-            ? `${document.name} — in a bid, cannot be deleted`
+            ? `${document.name} — used by ${analysesUsing(document)}, cannot be deleted`
             : `Select ${document.name}`}
         </span>
       }

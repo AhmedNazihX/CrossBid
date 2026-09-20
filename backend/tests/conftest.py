@@ -312,6 +312,9 @@ class FakeCursor:
         self._rows = list(rows)
         self._log = log
         self.rowcount = -1
+        # Set to raise from `executemany`, which is how a test puts a writer's second
+        # statement under the failure its transaction block exists to survive.
+        self.fail_executemany: BaseException | None = None
 
     async def __aenter__(self) -> FakeCursor:
         return self
@@ -328,6 +331,8 @@ class FakeCursor:
         rows = list(params_seq)
         self._log.append(RecordedStatement(sql=sql, params=rows, is_many=True))
         self.rowcount = len(rows)
+        if self.fail_executemany is not None:
+            raise self.fail_executemany
 
     async def fetchone(self) -> Mapping[str, Any] | None:
         return self._rows[0] if self._rows else None
@@ -339,11 +344,39 @@ class FakeCursor:
 class FakeConnection:
     """One cursor per connection, so `cursor()` and `execute()` write to the same log."""
 
-    def __init__(self, rows: Sequence[Mapping[str, Any]], log: list[RecordedStatement]) -> None:
+    def __init__(
+        self,
+        rows: Sequence[Mapping[str, Any]],
+        log: list[RecordedStatement],
+        transactions: list[str] | None = None,
+    ) -> None:
         self._cursor = FakeCursor(rows, log)
+        self.transactions = [] if transactions is None else transactions
 
     def cursor(self, **_kwargs: Any) -> FakeCursor:
         return self._cursor
+
+    def transaction(self) -> Any:
+        """`AsyncConnection.transaction()`, recording only how the block ended.
+
+        Every pooled connection is `autocommit=True` (`db.pool_connection_kwargs`), so a
+        writer whose statements have to land together must open a block explicitly. Recording
+        the outcome is what lets a test prove a failed pair rolled back — counting borrows
+        never could.
+        """
+        outcomes = self.transactions
+
+        class _Block:
+            async def __aenter__(self) -> Any:
+                return self
+
+            async def __aexit__(
+                self, exc_type: type[BaseException] | None, *_exc: object
+            ) -> bool:
+                outcomes.append("rollback" if exc_type is not None else "commit")
+                return False
+
+        return _Block()
 
     async def execute(self, sql: str, params: Any = None) -> FakeCursor:
         return await self._cursor.execute(sql, params)
@@ -356,6 +389,9 @@ class FakeConnectionSource:
         self.log: list[RecordedStatement] = []
         self.borrows = 0
         self._rows = rows
+        #: How each transaction block this source handed out ended, in order.
+        self.transactions: list[str] = []
+        self.connections: list[FakeConnection] = []
 
     def connection(self) -> Any:
         source = self
@@ -363,7 +399,9 @@ class FakeConnectionSource:
         class _Borrow:
             async def __aenter__(self) -> FakeConnection:
                 source.borrows += 1
-                return FakeConnection(source._rows, source.log)
+                made = FakeConnection(source._rows, source.log, source.transactions)
+                source.connections.append(made)
+                return made
 
             async def __aexit__(self, *_exc: object) -> None:
                 return None
@@ -776,7 +814,7 @@ class InMemoryRecords:
 
     async def delete(self, *, company_id: uuid.UUID, document_id: uuid.UUID) -> bool:
         found = self.rows.get(document_id)
-        if found is None or found.company_id != company_id or found.bid_id is not None:
+        if found is None or found.company_id != company_id or found.bid_count:
             return False
         del self.rows[document_id]
         return True

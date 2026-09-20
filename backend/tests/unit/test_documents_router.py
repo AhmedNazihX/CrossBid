@@ -44,7 +44,6 @@ from crossbid.main import create_app
 from crossbid.models import DocumentKind
 from crossbid.readmodel.documents import DocumentsReadModel, DocumentStatus, ReadModelError
 from crossbid.routers.documents import (
-    DOCUMENT_IN_USE_DETAIL,
     EMPTY_FILE_DETAIL,
     MAX_UPLOAD_BYTES,
     NO_FILENAME_DETAIL,
@@ -63,6 +62,7 @@ from crossbid.routers.documents import (
     DocumentListResponse,
     DocumentResponse,
     DocumentUrlResponse,
+    document_in_use_detail,
     get_document_records,
     get_document_store,
     get_pipeline,
@@ -171,7 +171,7 @@ def test_an_upload_is_accepted_with_an_id_and_the_uploaded_status(api: TestClien
     assert body["status"] == "uploaded"
     assert body["kind"] == "company_evidence"
     assert body["name"] == ORIGINAL_FILENAME
-    assert body["bid_id"] is None
+    assert body["bid_count"] == 0
     assert body["failure_reason"] is None
     assert body["pages"] == 0
     assert body["unread_pages"] == [] and body["unread_page_count"] == 0
@@ -854,11 +854,11 @@ def delete_api(
         yield client
 
 
-def attach_to_a_bid(pipeline: Harness, document_id: str) -> None:
-    """Put the row where `POST /bids` puts it: claimed by a run, so its pages are cited."""
+def attach_to_a_bid(pipeline: Harness, document_id: str, bid_count: int = 1) -> None:
+    """Put the row where `POST /bids` puts it: cited by a run, so its pages are pointed at."""
     key = uuid.UUID(document_id)
     pipeline.records.rows[key] = pipeline.records.rows[key].model_copy(
-        update={"bid_id": uuid.uuid4()}
+        update={"bid_count": bid_count}
     )
 
 
@@ -892,7 +892,7 @@ def test_deleting_a_document_a_bid_has_claimed_is_refused_and_keeps_it(
 
     # Assert
     assert response.status_code == 409
-    assert response.json() == {"detail": DOCUMENT_IN_USE_DETAIL}
+    assert response.json() == {"detail": document_in_use_detail(ORIGINAL_FILENAME, 1)}
     assert uuid.UUID(document_id) in pipeline.records.rows
     assert deleting.removed == []
 

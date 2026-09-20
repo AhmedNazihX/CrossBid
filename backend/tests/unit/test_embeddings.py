@@ -34,6 +34,7 @@ from crossbid.ingestion.embeddings import (
     COMPANY_SEARCH_SQL,
     DEFAULT_SEARCH_LIMIT,
     DELETE_TENDER_CHUNKS_SQL,
+    DOCUMENT_CHUNK_COUNT_SQL,
     EMBEDDINGS_MAX_ATTEMPTS,
     OPENROUTER_EMBEDDINGS_PATH,
     SEARCH_STATEMENTS,
@@ -52,6 +53,7 @@ from crossbid.llm import OPENROUTER_BASE_URL
 from crossbid.settings import ModelRole, Settings
 from tests.conftest import (
     FAKE_OPENROUTER_KEY,
+    FakeConnection,
     FakeConnectionSource,
 )
 
@@ -628,8 +630,10 @@ def test_search_signatures_make_an_unscoped_call_impossible() -> None:
         ChunkVectorStore.search_company_chunks: {"company_id"},
         ChunkVectorStore.search_tender_chunks: {"company_id", "bid_id"},
         ChunkVectorStore.insert_company_chunks: {"company_id"},
-        ChunkVectorStore.insert_tender_chunks: {"company_id", "bid_id"},
-        ChunkVectorStore.replace_tender_chunks: {"company_id", "bid_id"},
+        # Document-scoped since ADR-0103: a document's passages are the document's, so
+        # `bid_id` would be the wrong scope rather than a missing one.
+        ChunkVectorStore.replace_tender_chunks: {"company_id", "document_id"},
+        ChunkVectorStore.count_tender_chunks: {"company_id", "document_id"},
     }
 
     # Assert
@@ -838,21 +842,34 @@ async def test_inserting_company_chunks_binds_every_column() -> None:
 
 
 @pytest.mark.anyio
-async def test_inserting_tender_chunks_binds_the_bid_as_well() -> None:
+async def test_counting_a_documents_passages_is_not_scoped_by_bid() -> None:
+    """What the reuse guard asks, and the scope that makes reuse possible at all.
+
+    A second analysis of the same tender must find the first one's passages, so the count
+    names the company and the document and deliberately not the bid (ADR-0103)."""
     # Arrange
-    embedded = (EmbeddedChunk(chunk=chunk(), embedding=(0.5,)),)
-    vector_store, source = store()
+    vector_store, source = store([{"chunks": 12}])
 
     # Act
-    await vector_store.insert_tender_chunks(
-        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=embedded
+    found = await vector_store.count_tender_chunks(
+        company_id=COMPANY_ID, document_id=DOCUMENT_ID
     )
 
     # Assert
-    statement = source.only
-    assert statement.sql == TENDER_INSERT_SQL
-    assert statement.params[0]["bid_id"] == BID_ID
-    assert statement.params[0]["company_id"] == COMPANY_ID
+    assert found == 12
+    assert source.only.sql == DOCUMENT_CHUNK_COUNT_SQL
+    assert source.only.params == {"company_id": COMPANY_ID, "document_id": DOCUMENT_ID}
+
+
+@pytest.mark.anyio
+async def test_a_document_with_no_passages_counts_zero() -> None:
+    """`fetchone` returning nothing is "not indexed", never an error."""
+    vector_store, _source = store()
+
+    assert (
+        await vector_store.count_tender_chunks(company_id=COMPANY_ID, document_id=DOCUMENT_ID)
+        == 0
+    )
 
 
 @pytest.mark.anyio
@@ -865,7 +882,7 @@ async def test_replacing_tender_chunks_deletes_this_document_before_it_inserts()
 
     # Act
     written = await vector_store.replace_tender_chunks(
-        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=embedded
+        company_id=COMPANY_ID, document_id=DOCUMENT_ID, chunks=embedded
     )
 
     # Assert -- delete first, insert second, same connection
@@ -877,24 +894,23 @@ async def test_replacing_tender_chunks_deletes_this_document_before_it_inserts()
 
 
 @pytest.mark.anyio
-async def test_the_delete_is_scoped_to_one_document_of_one_bid_of_one_company() -> None:
-    """Re-indexing one file of a twenty-eight-file pack must not empty its siblings."""
+async def test_the_delete_is_scoped_to_one_document_of_one_company() -> None:
+    """Re-indexing one file of a twenty-eight-file pack must not empty its siblings.
+
+    Scoped to the document rather than to a bid since ADR-0103: the passages belong to the
+    file, so replacing them replaces them for every analysis citing it."""
     # Arrange
     vector_store, source = store()
 
     # Act
     await vector_store.replace_tender_chunks(
-        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=()
+        company_id=COMPANY_ID, document_id=DOCUMENT_ID, chunks=()
     )
 
     # Assert
     deletion = source.log[0]
     assert deletion.sql == DELETE_TENDER_CHUNKS_SQL
-    assert deletion.params == {
-        "company_id": COMPANY_ID,
-        "bid_id": BID_ID,
-        "document_id": DOCUMENT_ID,
-    }
+    assert deletion.params == {"company_id": COMPANY_ID, "document_id": DOCUMENT_ID}
 
 
 @pytest.mark.anyio
@@ -905,12 +921,65 @@ async def test_replacing_with_nothing_still_deletes() -> None:
 
     # Act
     written = await vector_store.replace_tender_chunks(
-        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=()
+        company_id=COMPANY_ID, document_id=DOCUMENT_ID, chunks=()
     )
 
     # Assert
     assert written == 0
     assert [entry.sql for entry in source.log] == [DELETE_TENDER_CHUNKS_SQL]
+
+
+@pytest.mark.anyio
+async def test_replacing_tender_chunks_rolls_back_when_the_insert_fails() -> None:
+    """The delete and the insert land together, or neither does.
+
+    This method's docstring has always claimed "one connection and one transaction", and it
+    was never true: every pooled connection is `autocommit=True` (`db.pool_connection_kwargs`),
+    so without an explicit block the delete commits on its own and a failure part-way through
+    the insert leaves the document with *some* of its passages, or none.
+
+    That was a quiet corruption while every bid re-embedded its own copy. Once a document's
+    corpus is shared and reused (ADR-0103), it becomes permanent: the next run sees rows,
+    concludes the document is already indexed, and never repairs it. So the reuse guard is
+    only sound if this pair is atomic.
+    """
+    # Arrange
+    embedded = (EmbeddedChunk(chunk=chunk(), embedding=(0.5,)),)
+    vector_store, source = store()
+    boom = RuntimeError("connection reset mid-batch")
+
+    # Act
+    with pytest.raises(RuntimeError):
+        await _failing_insert(vector_store, source, embedded, boom)
+
+    # Assert
+    assert source.transactions == ["rollback"], (
+        "the delete must be rolled back with the insert, or the document keeps a corpus "
+        "that is neither the old one nor the new one"
+    )
+
+
+async def _failing_insert(
+    vector_store: ChunkVectorStore,
+    source: FakeConnectionSource,
+    embedded: Sequence[EmbeddedChunk],
+    boom: BaseException,
+) -> None:
+    """Runs `replace_tender_chunks` with the batch insert set to fail."""
+    original = FakeConnection.cursor
+
+    def cursor(self: FakeConnection, **kwargs: Any) -> Any:
+        made = original(self, **kwargs)
+        made.fail_executemany = boom
+        return made
+
+    FakeConnection.cursor = cursor  # type: ignore[method-assign]
+    try:
+        await vector_store.replace_tender_chunks(
+            company_id=COMPANY_ID, document_id=DOCUMENT_ID, chunks=embedded
+        )
+    finally:
+        FakeConnection.cursor = original  # type: ignore[method-assign]
 
 
 @pytest.mark.anyio
@@ -932,6 +1001,11 @@ async def test_pages_are_bound_as_a_list_not_a_tuple() -> None:
 
 @pytest.mark.anyio
 async def test_inserting_nothing_borrows_no_connection() -> None:
+    """Only the company insert can skip the connection.
+
+    `replace_tender_chunks` must still borrow one for an empty batch, because its delete is
+    the point: a re-index that now withholds every chunk has to remove the old ones. That is
+    `test_replacing_with_nothing_still_deletes`."""
     # Arrange
     vector_store, source = store()
 
@@ -939,13 +1013,9 @@ async def test_inserting_nothing_borrows_no_connection() -> None:
     written = await vector_store.insert_company_chunks(
         company_id=COMPANY_ID, document_id=DOCUMENT_ID, chunks=()
     )
-    written_tender = await vector_store.insert_tender_chunks(
-        company_id=COMPANY_ID, bid_id=BID_ID, document_id=DOCUMENT_ID, chunks=()
-    )
 
     # Assert
     assert written == 0
-    assert written_tender == 0
     assert source.borrows == 0
     assert source.log == []
 

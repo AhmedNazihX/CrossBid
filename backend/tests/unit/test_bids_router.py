@@ -84,7 +84,6 @@ def document_row(
     owner: str = COMPANY_ID,
     kind: DocumentKind = DocumentKind.TENDER_DOCUMENT,
     status: DocumentStatus = DocumentStatus.READY,
-    bid_id: str | None = None,
     name: str = "Bewerbungsbedingungen.pdf",
     searchable: bool | None = True,
 ) -> tuple[str, BidDocumentRow]:
@@ -97,7 +96,6 @@ def document_row(
         storage_path=f"{owner}/doc/{name}",
         kind=kind,
         status=status,
-        bid_id=bid_id,
         pages=12,
         unread_pages=(3,),
         searchable=searchable,
@@ -133,13 +131,23 @@ class InMemoryReadModel:
         self.attach_error: BidStateError | None = None
         self.claimed: list[str] = []
         self.attached: list[tuple[str, list[str]]] = []
+        #: Document ids each bid cites, the fake's stand-in for `bid_documents`.
+        self.cited: dict[str, list[str]] = {}
         self.failed: list[tuple[str, str]] = []
         self.bid_reads: list[str] = []
         self.deleted: list[str] = []
         self.delete_returns = True
 
-    def add_document(self, owner: str, row: BidDocumentRow) -> BidDocumentRow:
+    def add_document(
+        self, owner: str, row: BidDocumentRow, *, cited_by: str | None = None
+    ) -> BidDocumentRow:
+        """Put a document in the library, and optionally record an analysis citing it.
+
+        `cited_by` is a separate argument rather than a field on the row because that is what
+        it is in the schema since ADR-0103: a link, and one document may carry several."""
         self.documents[row.id] = (owner, row)
+        if cited_by is not None:
+            self.cited.setdefault(cited_by, []).append(row.id)
         return row
 
     def add_bid(self, **overrides: Any) -> BidRow:
@@ -168,8 +176,16 @@ class InMemoryReadModel:
     async def documents_by_id(
         self, db: Any, *, company_id: str, document_ids: Sequence[str]
     ) -> list[BidDocumentRow]:
+        """As `SELECT_DOCUMENTS_BY_ID` returns them -- **without `searchable`**.
+
+        That statement does not select the column; only `SELECT_BID_DOCUMENTS` does. The fake
+        used to hand back whatever the fixture held, which defaults to `True`, and that one
+        difference hid a 500 on every `POST /bids` from 6 000 passing tests: the route
+        assembles its 202 from these rows, and `_searchable_of` raises rather than invent the
+        value. A fake more generous than its statement is a fake that proves nothing.
+        """
         return [
-            row
+            row.model_copy(update={"searchable": None})
             for identifier in document_ids
             for owner, row in [self.documents.get(identifier, ("", None))]
             if row is not None and owner == company_id
@@ -206,8 +222,9 @@ class InMemoryReadModel:
             raise self.attach_error
         self.attached.append((bid_id, list(document_ids)))
         for identifier in document_ids:
-            owner, row = self.documents[identifier]
-            self.documents[identifier] = (owner, row.model_copy(update={"bid_id": bid_id}))
+            # A citation, not a claim: the same document may be cited by several bids at
+            # once since ADR-0103, so this is a link and not a column on the row.
+            self.cited.setdefault(bid_id, []).append(identifier)
 
     async def mark_bid_failed(
         self, db: Any, *, company_id: str, bid_id: str, reason: str
@@ -229,12 +246,9 @@ class InMemoryReadModel:
             return False
         self.deleted.append(bid_id)
         del self.bids[bid_id]
-        for document_id, (owner, document) in list(self.documents.items()):
-            if document.bid_id == bid_id:
-                self.documents[document_id] = (
-                    owner,
-                    document.model_copy(update={"bid_id": None}),
-                )
+        # Only the citations go. The documents are the bidder's, and other analyses may be
+        # citing them at this moment.
+        self.cited.pop(bid_id, None)
         return True
 
     async def list_bids(
@@ -271,10 +285,12 @@ class InMemoryReadModel:
     async def bid_documents(
         self, db: Any, *, company_id: str, bid_id: str
     ) -> list[BidDocumentRow]:
+        identifiers = self.cited.get(bid_id, [])
         return [
             row
-            for owner, row in self.documents.values()
-            if owner == company_id and row.bid_id == bid_id
+            for identifier in identifiers
+            for owner, row in [self.documents[identifier]]
+            if owner == company_id
         ]
 
 
@@ -484,15 +500,54 @@ def test_a_tender_notice_may_start_a_bid(
     assert response.status_code == 202
 
 
-def test_a_document_already_attached_to_another_bid_is_409(
+def test_the_202_says_whether_each_document_can_be_searched(
     client: TestClient, read_model: InMemoryReadModel
 ) -> None:
-    row = read_model.add_document(*document_row(bid_id=str(uuid.uuid4()), name="RC.pdf"))
+    """`POST /bids` answered **500 on every call** until 2026-09-20, and said so to nobody.
+
+    The route assembled its 202 from `documents_by_id`, which does not select `searchable`,
+    and `_searchable_of` raises rather than invent it. The bid and its run were already
+    created by then, so the browser showed "the API could not be reached" while the analysis
+    ran on regardless — and a bidder who believed it and pressed Start again got a second
+    analysis. That is what the duplicate `618320-2026` bids on the demo account are.
+
+    Six thousand tests passed throughout, because the fake `documents_by_id` handed back the
+    fixture's `searchable=True` where the statement returns nothing at all. The fake now
+    mirrors the statement, which is what makes this test able to fail.
+    """
+    row = read_model.add_document(*document_row(name="RC.pdf"))
 
     response = client.post("/bids", json=start_body(row.id), headers=headers())
 
-    assert response.status_code == 409
-    assert response.json()["detail"] == "Document RC.pdf already belongs to another bid."
+    assert response.status_code == 202, response.text
+    [document] = response.json()["documents"]
+    assert document["searchable"] is True, (
+        "read back through the statement that selects it, not guessed"
+    )
+
+
+def test_two_analyses_may_be_started_from_the_same_document(
+    client: TestClient, read_model: InMemoryReadModel
+) -> None:
+    """The refusal this replaces is the whole reason a pack had to be uploaded twice.
+
+    `POST /bids` used to answer 409 "already belongs to another bid" for any document a run
+    already cited, so comparing two configurations on one tender -- or re-checking it after a
+    corrigendum -- meant re-uploading every file, re-paying to embed it, and keeping two
+    copies of the same PDF in Storage. A document is the bidder's, not the bid's (ADR-0103).
+    """
+    row = read_model.add_document(*document_row(name="RC.pdf"))
+
+    first = client.post("/bids", json=start_body(row.id), headers=headers())
+    second = client.post("/bids", json=start_body(row.id), headers=headers())
+
+    assert first.status_code == 202, first.text
+    assert second.status_code == 202, second.text
+    assert first.json()["id"] != second.json()["id"], "two analyses, not one"
+    assert [bid for bid, ids in read_model.attached if ids == [row.id]] == [
+        first.json()["id"],
+        second.json()["id"],
+    ], "both cite the same document"
 
 
 def test_an_unknown_company_is_404(client: TestClient, read_model: InMemoryReadModel) -> None:
@@ -589,7 +644,7 @@ def test_get_bid_returns_the_polling_shape(
         )
     ]
     read_model.matrix_rows[bid.id] = matrix
-    document = read_model.add_document(*document_row(bid_id=bid.id))
+    document = read_model.add_document(*document_row(), cited_by=bid.id)
 
     # Act
     response = client.get(f"/bids/{bid.id}", headers=headers())
@@ -1199,7 +1254,7 @@ def test_unread_pages_and_problems_are_both_listed_on_the_bid(
     bid = read_model.add_bid(
         status=BidStatus.AWAITING_REVIEW, problems=[unreadable.model_dump(mode="json")]
     )
-    read_model.add_document(*document_row(bid_id=bid.id, name="Anlage_7_Scan.pdf"))
+    read_model.add_document(*document_row(name="Anlage_7_Scan.pdf"), cited_by=bid.id)
 
     # Act
     body = client.get(f"/bids/{bid.id}", headers=headers()).json()
@@ -1613,17 +1668,21 @@ def test_deleting_a_finished_bid_answers_204_and_frees_its_documents(
 ) -> None:
     """The bidder's own files survive the analysis that read them.
 
-    `documents.bid_id` cascades, so the whole point of the read model detaching first is that
-    the rows are still there afterwards — and, being detached, deletable again.
+    Only the citation goes. `documents.bid_id` used to cascade from `bids`, which is why the
+    read model had to detach first; since ADR-0103 the link lives in `bid_documents` and the
+    document row is never the bid's to take. Another analysis may be citing it right now.
     """
     bid = read_model.add_bid(status=BidStatus.COMPLETE)
-    read_model.add_document(*document_row(bid_id=bid.id))
+    row = read_model.add_document(*document_row(), cited_by=bid.id)
 
     response = deleting_client.delete(f"/bids/{bid.id}", headers=headers())
 
     assert response.status_code == 204, response.text
     assert read_model.deleted == [bid.id]
-    assert [row.bid_id for _, row in read_model.documents.values()] == [None]
+    assert [held.id for _, held in read_model.documents.values()] == [row.id], (
+        "the file is still in the bidder's library"
+    )
+    assert read_model.cited.get(bid.id) is None, "only the citation went"
     assert checkpointer.deleted == [f"bid:{bid.id}", f"bid:{bid.id}:chat"], (
         "the run's thread and the chat's, or the conversation outlives the bid"
     )

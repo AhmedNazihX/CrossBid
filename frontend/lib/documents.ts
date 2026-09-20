@@ -8,6 +8,7 @@
  */
 import type { components } from './api'
 import { apiRequest } from './api-client'
+import { plural } from './format'
 
 export type DocumentResponse = components['schemas']['DocumentResponse']
 export type DocumentKind = components['schemas']['DocumentKind']
@@ -189,8 +190,38 @@ export function validateUploadFile(
  * for about an hour, and a mutation test proved that two of them were never exercised.
  */
 export function isDeletable(document: DocumentResponse): boolean {
-  return document.bid_id === null
+  return document.bid_count === 0
 }
+
+/**
+ * "1 analysis" / "3 analyses" — the count both screens print, worded once.
+ *
+ * Two screens say this about the same document and they must agree: `/company` refuses to
+ * delete it, and the start picker offers it anyway. Said with one number and one word, those
+ * read as one fact; said with two, they read as a contradiction. "analysis" rather than "bid"
+ * because that is what the rest of the flow calls it — *Analyse tender*, *Delete analysis*.
+ */
+export function analysesUsing(document: DocumentResponse): string {
+  return plural(document.bid_count, 'analysis', 'analyses')
+}
+
+/**
+ * Rows per request when the panel fetches the library.
+ *
+ * The API's ceiling, not its default of 50. The start picker *filters* this list, and a list
+ * something filters is only correct when it is complete: a bidder with eighty documents was
+ * silently shown the newest fifty, so a pack uploaded two analyses ago was missing from the
+ * checklist with nothing on screen to say a page was left behind (ADR-0103).
+ */
+export const DOCUMENT_PAGE_SIZE = 200
+
+/**
+ * How many pages the panel will follow on its own before handing back to "Load more".
+ *
+ * A bound rather than a loop: five requests is 1 000 documents, past which a bidder's real
+ * problem is a screen with a thousand rows on it, and the button is the honest answer.
+ */
+export const MAX_AUTO_PAGES = 5
 
 /** One page of the company's documents, newest first, with where to continue (M13). */
 export async function listDocuments(

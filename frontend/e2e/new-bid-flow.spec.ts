@@ -30,6 +30,7 @@ import {
   DOCUMENT_ID,
   documentFixture,
   queuedBidFixture,
+  SECOND_DOCUMENT_ID,
   type DocumentResponse,
 } from './support/fixtures'
 import { multipartField, multipartFilename } from './support/fake-api'
@@ -145,5 +146,112 @@ test.describe('Analyse tender — upload the pack, then start', () => {
       notice_number: NOTICE_NUMBER,
       document_ids: [DOCUMENT_ID],
     })
+  })
+})
+
+test.describe('Analyse tender — a pack another analysis already uses', () => {
+  /**
+   * Its own describe because these two set up `GET /documents` *before* the page loads: the
+   * panel fetches once on mount, and a reload inside the test would count that fetch twice.
+   */
+  test.beforeEach(async ({ api }) => {
+    api.on('GET', '/companies/me', { status: 200, json: companyProfileFixture() })
+    // A bid that lists no documents: these tests end at the workspace's URL, and a bid
+    // carrying a pack makes the Source panel ask for a signed URL nothing here stubs.
+    api.on('GET', `/bids/${BID_ID}`, { status: 200, json: queuedBidFixture({ documents: [] }) })
+    api.on('GET', `/bids/${BID_ID}/feedback`, { status: 200, json: { feedback: [] } })
+  })
+
+  async function openStepThree(page: import('@playwright/test').Page) {
+    const hydrated = page.waitForResponse((response) =>
+      new URL(response.url()).pathname.endsWith('/companies/me')
+    )
+    await page.goto('/bids/new')
+    await hydrated
+    await page.getByRole('button', { name: 'Enter it yourself' }).click()
+  }
+
+  test('a document other analyses already use is offered, and its id is sent', async ({
+    api,
+    page,
+  }) => {
+    /**
+     * The defect this change exists for, end to end in a browser (ADR-0103).
+     *
+     * The picker filtered on `bid_id === null`, so a pack any earlier analysis held was not
+     * rendered at all — and re-analysing the same tender meant uploading every file again,
+     * paying to embed it again, and keeping a second copy in Storage. A jsdom test can pin
+     * the filter; only this one proves the panel's fetch reaches the checklist with the
+     * count intact.
+     */
+    api.on('GET', '/documents', {
+      status: 200,
+      json: {
+        documents: [documentFixture({ id: DOCUMENT_ID, name: PACK_FILE, bid_count: 2 })],
+      },
+    })
+    api.on('POST', '/bids', { status: 202, json: queuedBidFixture({ documents: [] }) })
+    await openStepThree(page)
+
+    const checklist = page.getByRole('group', { name: 'Procurement documents' })
+    await expect(checklist.getByText(PACK_FILE, { exact: true })).toBeVisible()
+    await expect(checklist.getByText(/used by 2 analyses/)).toBeVisible()
+
+    const tick = checklist.getByRole('checkbox', { name: new RegExp(PACK_FILE) })
+    await expect(tick).toBeEnabled()
+    await checklist.getByText(PACK_FILE, { exact: true }).click()
+    await expect(page.getByText('1 of 1 ready selected')).toBeVisible()
+
+    await page.getByLabel('Notice number', { exact: true }).fill(NOTICE_NUMBER)
+    await page.getByRole('button', { name: 'Start analysis' }).click()
+    await expect(page).toHaveURL(new RegExp(`/bids/${BID_ID}$`))
+
+    const started = api.requests.find((r) => r.method === 'POST' && r.path === '/bids')
+    expect(JSON.parse(started?.body ?? '{}')).toMatchObject({
+      document_ids: [DOCUMENT_ID],
+    })
+  })
+
+  test('the documents list is fetched to the end, not one default page', async ({
+    api,
+    page,
+  }) => {
+    /**
+     * The second, independent way a pack went missing: the panel asked for no `limit`, took
+     * the API's default of 50, and left the rest behind a button that sits under step 2's
+     * table rather than beside the step 3 checklist that is short of rows.
+     */
+    const second = documentFixture({ id: SECOND_DOCUMENT_ID, name: 'Anlage_3.pdf' })
+    api.on('GET', '/documents', (request) =>
+      request.path.includes('cursor=')
+        ? { status: 200, json: { documents: [second], next_cursor: null } }
+        : {
+            status: 200,
+            json: {
+              documents: [documentFixture({ id: DOCUMENT_ID, name: PACK_FILE })],
+              next_cursor: 'page-two',
+            },
+          }
+    )
+    await openStepThree(page)
+
+    // No click on "Load more": the second page must arrive on its own.
+    const checklist = page.getByRole('group', { name: 'Procurement documents' })
+    await expect(checklist.getByText('Anlage_3.pdf', { exact: true })).toBeVisible()
+
+    // The list endpoint only: `/documents/{id}/url` is a different call. Counted by shape
+    // rather than exactly, because React's development double-invoke runs the mount effect
+    // twice and the number of *fetches* is not what this test is about.
+    const listed = api.requests.filter(
+      (r) => r.method === 'GET' && /^\/documents(\?|$)/.test(r.path)
+    )
+    expect(
+      listed.every((r) => r.path.includes('limit=200')),
+      'every page asks for the ceiling'
+    ).toBe(true)
+    expect(
+      listed.some((r) => r.path.includes('cursor=page-two')),
+      'the cursor the first page returned was followed without a click'
+    ).toBe(true)
   })
 })

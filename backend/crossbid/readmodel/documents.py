@@ -26,10 +26,11 @@ Two things a reader might otherwise take for oversights:
 * **A read for another company's id returns `None`, never an error.** The router turns that
   into HTTP 404. A distinct "forbidden" answer would confirm that the document exists, which
   is the leak S2.2.2 is about; the read model does not know the difference and must not.
-* **`bid_id` is not an argument of `insert`.** A document is uploaded before the bid it will
-  belong to exists — S4.3.1's flow uploads the pack and then presses Start — and S3.1.1's
-  `POST /bids` attaches the documents by id. The column is read back on every record so the
-  browser can show the link once it is set; it is never written from here.
+* **A document is not owned by a bid.** It is uploaded before any bid exists — S4.3.1's flow
+  uploads the pack and then presses Start — and `POST /bids` records the citation in
+  `bid_documents`. Since ADR-0103 a document may be cited by **many** analyses at once, so the
+  read models carry `bid_count` rather than a single `bid_id`: zero is what makes a document
+  deletable, and the number is what the picker prints.
 
 The status values are defined here rather than in `crossbid/models/`, next to the column
 they constrain, because nothing below the read model reads them.
@@ -89,9 +90,15 @@ class DocumentRecord(BaseModel):
 
     id: uuid.UUID
     company_id: uuid.UUID
-    bid_id: uuid.UUID | None = Field(
-        default=None, description="Null until S3.1.1 attaches the document to a bid"
+    bid_count: int | None = Field(
+        default=None,
+        description="Bids citing this document, or None when the statement did not ask",
     )
+    """How many analyses cite this file. `None` is the third state and it is deliberate.
+
+    Only the three read statements select it; every writer's `returning` clause genuinely
+    cannot know, and defaulting those to `0` would hand a reader "this document is in no bid"
+    as though it had been looked up. Same convention as `BidDocumentRow.searchable`."""
     kind: DocumentKind
     name: str = Field(min_length=1, description="The filename the bidder chose, verbatim")
     storage_path: str = Field(min_length=1, description="The sanitised Storage key (S2.2.2)")
@@ -138,7 +145,7 @@ class ConnectionSource(Protocol):
 # ------------------------------------------------------------------------- statements
 
 DOCUMENT_COLUMNS: Final[LiteralString] = (
-    "id, company_id, bid_id, kind, name, storage_path, status, failure_reason, "
+    "id, company_id, kind, name, storage_path, status, failure_reason, "
     "pages, unread_pages, flagged_chunks, created_at, updated_at"
 )
 """Every column `DocumentRecord` reads. Written out verbatim in each statement below rather
@@ -148,7 +155,7 @@ of them contains this exact text, which is what keeps the six copies from drifti
 INSERT_DOCUMENT_SQL: Final[LiteralString] = """
 insert into documents (id, company_id, kind, name, storage_path, status)
 values (%(id)s, %(company_id)s, %(kind)s, %(name)s, %(storage_path)s, 'uploaded')
-returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
+returning id, company_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 """The first status is written, not left to the column default, so the statement says what
@@ -158,7 +165,7 @@ MARK_PARSED_SQL: Final[LiteralString] = """
 update documents
 set status = 'parsed', pages = %(pages)s, unread_pages = %(unread_pages)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
-returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
+returning id, company_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 
@@ -166,7 +173,7 @@ MARK_STATUS_SQL: Final[LiteralString] = """
 update documents
 set status = %(status)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
-returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
+returning id, company_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 """`embedded` and `ready`, the two transitions that carry nothing but the new status.
@@ -176,7 +183,7 @@ SET_FLAGGED_CHUNKS_SQL: Final[LiteralString] = """
 update documents
 set flagged_chunks = %(flagged_chunks)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
-returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
+returning id, company_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 """S2.3.1 — the chunk numbers the injection guard refused.
@@ -191,7 +198,7 @@ MARK_FAILED_SQL: Final[LiteralString] = """
 update documents
 set status = 'failed', failure_reason = %(reason)s, updated_at = now()
 where id = %(document_id)s and company_id = %(company_id)s
-returning id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
+returning id, company_id, kind, name, storage_path, status, failure_reason,
 pages, unread_pages, flagged_chunks, created_at, updated_at
 """
 
@@ -214,30 +221,47 @@ right now by a worker that is still alive.
 """
 
 SELECT_DOCUMENT_SQL: Final[LiteralString] = """
-select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, flagged_chunks, created_at, updated_at
+select id, company_id, kind, name, storage_path, status, failure_reason,
+pages, unread_pages, flagged_chunks, created_at, updated_at,
+(select count(*) from bid_documents
+  where bid_documents.document_id = documents.id
+    and bid_documents.company_id = documents.company_id) as bid_count
 from documents
 where id = %(document_id)s and company_id = %(company_id)s
 """
 
 DELETE_DOCUMENT_SQL: Final[LiteralString] = """
 delete from documents
-where id = %(document_id)s and company_id = %(company_id)s and bid_id is null
+where id = %(document_id)s
+  and company_id = %(company_id)s
+  and not exists (
+      select 1
+      from bid_documents
+      where bid_documents.document_id = documents.id
+        and bid_documents.company_id = documents.company_id
+  )
 returning id
 """
-"""Scoped by company *and* by `bid_id is null`, so the statement itself is the guarantee.
+"""Scoped by company *and* by "no analysis cites it", so the statement is the guarantee.
 
-The router refuses an attached document with a 409 before it gets here, which is what gives
+The router refuses a cited document with a 409 before it gets here, which is what gives
 the bidder a sentence to act on. This clause is the same rule written where a race cannot get
 around it: a bid started between the router's read and this write finds no row to delete, the
 delete reports nothing deleted, and the file stays with the run that cites it.
+
+**A `not exists`, deliberately, and not `on delete restrict` on the link table.** A restrict
+would raise `ForeignKeyViolation` out of `delete`, and three callers depend on it *returning*
+`False` instead. The foreign key stays `cascade`; the refusal lives here.
 
 `company_chunks` and `tender_chunks` cascade on `documents (id)` (migration 0001), so the
 document's text leaves the corpus with it and no orphaned embedding can be retrieved after."""
 
 LIST_DOCUMENTS_SQL: Final[LiteralString] = """
-select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, flagged_chunks, created_at, updated_at
+select id, company_id, kind, name, storage_path, status, failure_reason,
+pages, unread_pages, flagged_chunks, created_at, updated_at,
+(select count(*) from bid_documents
+  where bid_documents.document_id = documents.id
+    and bid_documents.company_id = documents.company_id) as bid_count
 from documents
 where company_id = %(company_id)s
 order by created_at desc, id desc
@@ -252,8 +276,11 @@ rows on a page that shows the newest few.
 and it is what makes the cursor exact rather than nearly right."""
 
 LIST_DOCUMENTS_AFTER_SQL: Final[LiteralString] = """
-select id, company_id, bid_id, kind, name, storage_path, status, failure_reason,
-pages, unread_pages, flagged_chunks, created_at, updated_at
+select id, company_id, kind, name, storage_path, status, failure_reason,
+pages, unread_pages, flagged_chunks, created_at, updated_at,
+(select count(*) from bid_documents
+  where bid_documents.document_id = documents.id
+    and bid_documents.company_id = documents.company_id) as bid_count
 from documents
 where company_id = %(company_id)s
   and (created_at, id) < (%(after_created_at)s, %(after_id)s)

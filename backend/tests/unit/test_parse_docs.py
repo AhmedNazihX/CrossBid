@@ -67,7 +67,6 @@ def row(
         storage_path=f"{COMPANY_ID}/{identifier}/{name}",
         kind=kind,
         status=DocumentStatus.READY,
-        bid_id=BID_ID,
         pages=0,
     )
 

@@ -165,8 +165,9 @@ Two top-level folders, `backend/` and `frontend/`, each a self-contained project
 **Read-model tables (Postgres, written by the API; LangGraph tables are created separately by `.setup()`).**
 - `companies(id, owner_user_id, name, country, legal_form, language, tone, active_provider enum default 'openrouter_app', profile jsonb)`
 - `provider_keys(company_id, provider enum(openai, anthropic, openrouter), encrypted_key bytea, key_hint text, verified_at, created_at, PK(company_id, provider))`
-- `documents(id, company_id, bid_id nullable, kind enum, storage_path, pages, unread_pages int[], flagged_chunks int[], expiry date nullable)`
-- `company_chunks` / `tender_chunks(id, document_id, company_id, bid_id, page, text, embedding vector(1536))` — 1536 for `text-embedding-3-small` (ADR-0004); an HNSW index is possible because this is under pgvector's 2000-dim cap
+- `documents(id, company_id, kind enum, storage_path, pages, unread_pages int[], flagged_chunks int[], expiry date nullable)`
+- `bid_documents(bid_id, document_id, company_id, created_at, PK(bid_id, document_id))` — which analyses cite which documents. A document may be cited by many at once and is embedded once (ADR-0103); `documents.bid_id` was a single column until migration 0012, which is what made re-analysing a tender mean uploading its pack again
+- `company_chunks` / `tender_chunks(id, document_id, company_id, page, text, embedding vector(1536))` — 1536 for `text-embedding-3-small` (ADR-0004); an HNSW index is possible because this is under pgvector's 2000-dim cap. Neither carries a bid: passages belong to the document, and every analysis citing it searches the same ones
 - `bids(id, company_id, ted_publication_number, title, buyer, source_language, deadline, thread_id, status enum, verdict jsonb, provider_used text)`
 - `requirements(id, bid_id, category, kind, source_text, source_lang, page, translation, ecertis_criterion_id, deadline)`
 - `matrix_rows(id, requirement_id, status, evidence jsonb, ecertis_evidence jsonb, agent_rationale, reviewer_status, override_reason, attached_doc_ids, reviewed_at)`

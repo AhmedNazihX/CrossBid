@@ -14,7 +14,12 @@ import { Select } from '@/components/ui/select'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { startBid } from '@/lib/bids'
-import { hasPages, TENDER_DOCUMENT_KINDS, type DocumentResponse } from '@/lib/documents'
+import {
+  analysesUsing,
+  hasPages,
+  TENDER_DOCUMENT_KINDS,
+  type DocumentResponse,
+} from '@/lib/documents'
 import { plural } from '@/lib/format'
 import { sourceLanguageOf, type TedNotice } from '@/lib/tenders'
 import { retryAt, useRateLimit } from '@/lib/use-rate-limit'
@@ -106,9 +111,11 @@ export interface StartBidFormProps {
   readonly notice?: TedNotice
   /**
    * The company's documents as `DocumentsPanel` currently knows them — every kind, every
-   * status. This form keeps the tender kinds not yet on a bid and lets only the `ready` ones
-   * be ticked, so a file uploaded a moment ago shows here at once, disabled, and becomes
-   * tickable the poll after it is ready.
+   * status. This form keeps the tender kinds and lets only the `ready` ones be ticked, so a
+   * file uploaded a moment ago shows here at once, disabled, and becomes tickable the poll
+   * after it is ready. A file other analyses already use is offered too, marked with how
+   * many (ADR-0103); it used to be filtered out entirely, which is what made re-analysing a
+   * tender mean uploading its pack again.
    */
   readonly documentList: DocumentListState
 }
@@ -118,7 +125,7 @@ export interface StartBidFormProps {
  * S4.3.1, whose TED search and in-flow upload landed in Increment 4).
  *
  * A notice number, the tender's language, a checklist of the company's tender documents
- * (kinds in `TENDER_DOCUMENT_KINDS`, not yet attached to a bid), and Start analysis →
+ * (every kind in `TENDER_DOCUMENT_KINDS`), and Start analysis →
  * `POST /bids` → the workspace. Documents still processing are listed but cannot be chosen,
  * with their status; the API's `detail` is shown on any refusal — except a 429 whose wait
  * the browser can read, which disables Start until the second the API named and says the
@@ -157,9 +164,7 @@ export function StartBidForm({ notice, documentList }: StartBidFormProps) {
   const tenderDocuments = useMemo(
     () =>
       documentList.phase === 'loaded'
-        ? documentList.documents.filter(
-            (document) => TENDER_DOCUMENT_KINDS.has(document.kind) && document.bid_id === null
-          )
+        ? documentList.documents.filter((document) => TENDER_DOCUMENT_KINDS.has(document.kind))
         : [],
     [documentList]
   )
@@ -439,6 +444,14 @@ function describeDocument(document: DocumentResponse): string {
     if (document.unread_page_count > 0) {
       parts.push(`${plural(document.unread_page_count, 'page')} without a text layer`)
     }
+  }
+  if (document.bid_count > 0) {
+    // A fact, not a warning: the file is still selectable, and choosing it takes nothing
+    // away from the analyses that have it (ADR-0103). It goes in the description rather
+    // than in a badge of its own so that it lands inside the checkbox's accessible name --
+    // `Checkbox` renders the description inside the `<label>` -- and so that /company's
+    // "cannot be deleted" tag and this line tell one story with one number.
+    parts.push(`used by ${analysesUsing(document)}`)
   }
   return parts.join(' \u00b7 ')
 }

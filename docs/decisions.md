@@ -6927,3 +6927,99 @@ would not start: `coalesce(b.bidder_language, …)` against a database without m
 again, where a missing 0008 made every bid fetch 500 — **this migration must be applied before
 this code runs**, and an API pointed at an unmigrated database now fails loudly at boot rather
 than on the first request.
+
+---
+
+## ADR-0103 — One tender pack, many analyses, embedded once
+
+**Date:** 2026-09-19 · **Found in the running product** · **Status:** accepted
+**Amends:** ADR-0088, which named `documents.bid_id is null` as the rule the screen mirrors.
+
+Comparing two checking models on FRONTEX `640160-2026` meant starting a second analysis of a
+tender whose six PDFs were already uploaded. **They were not in the picker at all** — not
+greyed out, not explained, simply absent — and the only way through was to upload all six
+again.
+
+That is expensive rather than untidy. Nothing in the upload path dedupes — no unique
+constraint, no content hash — so each re-upload is a new row, a new Storage object, and a
+fresh embedding pass over the whole pack. A bidder re-checking a tender after a corrigendum
+paid for all of it twice.
+
+### Three layers said the same thing
+
+1. **Arity.** `documents.bid_id` was a single nullable column (`0001_init.sql:123`). One bid
+   per document, by construction.
+2. **The claim.** `ATTACH_DOCUMENTS` was `update documents set bid_id = … where … and bid_id
+   is null`, and `routers/bids.py` answered **409 "already belongs to another bid."**
+3. **The vectors.** `tender_chunks.bid_id` was `NOT NULL` and `TENDER_SEARCH_SQL` filtered on
+   it, so even a shared row could not have reached its embeddings from a second bid.
+
+The browser's `document.bid_id === null` only mirrored layer 2. **No test pinned it**, in
+either suite — the one clause whose removal is the feature was the one nothing measured.
+
+### The shape was already in the schema
+
+`company_chunks` is byte-for-byte `tender_chunks` **without `bid_id`**: company evidence is
+embedded once at upload and shared by every bid, attached per row through
+`matrix_rows.attached_doc_ids`. The comment above both tables in 0001 already said they "only
+ever join through `documents`". Tender documents were the outlier, so this follows the
+precedent rather than inventing one.
+
+Migration `0012` adds `bid_documents (bid_id, document_id, company_id)`, backfills it, and
+drops both `bid_id` columns. The primary key is the whole pair, which is what stops the
+retrieval join returning one passage once per citing bid — a fan-out that raises no error and
+reads downstream as several independent pieces of evidence for one clause. Composite foreign
+keys on `(company_id, id)` make a cross-tenant citation unrepresentable rather than merely
+wrong.
+
+**The migration is not online-safe and the file says so.** The drops break the deployed API
+the instant they commit, and the new code cannot run against the old schema: there is no
+version overlap. Stop, migrate, deploy.
+
+### It exposed a bug that had to be fixed first
+
+`replace_tender_chunks` claimed in its own docstring that its delete and insert shared a
+transaction. **They did not** — pooled connections are `autocommit=True` and there was no
+`connection.transaction()` block — so a failure part-way through the batch left a document
+with some of its passages.
+
+That was a quiet corruption while every bid embedded its own copy. With a presence-based
+reuse guard it becomes permanent: the next run sees rows, concludes "already indexed", and
+never repairs it. The block was added first, with a test measured failing against the old
+code (`assert [] == ['rollback']`).
+
+### What was decided, and what was not
+
+- **`bid_count: int` replaces `bid_id` on `DocumentResponse`.** A count, not a boolean: the
+  picker and the delete tag both print the number. Not a list of ids — nothing needs them yet,
+  and an aggregate on a paged query for a link nobody asked for is a cost without a reader.
+- **The vocabulary is "analysis", not "bid"**, in the UI and in the 409. The flow is *Analyse
+  tender* and the button is *Delete analysis*; a tag reading "In a bid" beside a count of
+  three is wrong.
+- **The picker shows an in-use document rather than hiding it**, marked *used by 2 analyses*
+  in the description line — which is inside the checkbox's accessible name, because `Checkbox`
+  renders the description inside the `<label>`. **`NewBid.dc.html` has no in-use state**, so
+  this implements no artboard and says so (ADR-0014).
+- **The documents list is now fetched to the end** (200 a page, five pages), not left at the
+  API's default of 50 behind a button. A list that something else *filters* is only correct
+  when it is complete, and this was a second, independent way a pack went missing.
+- **No attach/detach on an existing bid.** The schema now permits it and it is one statement,
+  but a bid is a snapshot: its requirements cite pages and its verdict was scored against
+  exactly that pack. "Add a document to this analysis" is a re-run story with its own cost.
+- **Deleting an analysis no longer touches documents at all.** `DETACH_DOCUMENTS` is gone;
+  only the links cascade. Its passages survive too — `tender_chunks.bid_id` used to cascade
+  from `bids`, which on a shared corpus would delete something another live analysis is
+  searching, silently, because retrieval returning nothing is not an error anywhere here.
+
+### Evidence
+
+Every behavioural claim was measured failing first. `test_one_document_serves_two_live_bids_at_once`
+and `test_deleting_one_bid_leaves_the_other_bids_corpus_intact` failed with `BidStateError`
+from the old `and bid_id is null`. The reuse guard's test fails `assert 1 == 87` with the
+guard removed. The picker's four tests were measured against a *faithful port* — `bid_id ===
+null` translated literally to `bid_count === 0`, green and still broken — and failed with
+"Unable to find an accessible element with the role checkbox", which is the row not being
+rendered at all. Both new browser journeys fail with their fixes reverted.
+
+6 007 offline backend tests, 19 against a real pgvector, 217 frontend unit tests and 31
+browser journeys.

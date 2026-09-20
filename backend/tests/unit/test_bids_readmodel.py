@@ -240,7 +240,6 @@ def document_record(**overrides: Any) -> dict[str, Any]:
         "storage_path": f"{COMPANY_ID}/doc/Bewerbungsbedingungen.pdf",
         "kind": "tender_document",
         "status": "ready",
-        "bid_id": None,
         "pages": 12,
         "unread_pages": [3, 4],
     }
@@ -714,19 +713,18 @@ async def test_documents_by_id_binds_uuids_and_reads_the_status() -> None:
         storage_path=record["storage_path"],
         kind=DocumentKind.TENDER_DOCUMENT,
         status=DocumentStatus.READY,
-        bid_id=None,
         pages=12,
         unread_pages=(3, 4),
     )
 
 
 async def test_bid_documents_reads_the_attached_rows() -> None:
-    db = FakeDatabase(Scripted([document_record(bid_id=BID_ID, unread_pages=None)]))
+    db = FakeDatabase(Scripted([document_record(unread_pages=None)]))
 
     [row] = await bid_documents(db, company_id=str(COMPANY_ID), bid_id=str(BID_ID))
 
     assert db.statements == [bids.SELECT_BID_DOCUMENTS]
-    assert row.bid_id == str(BID_ID)
+    assert db.params() == {"company_id": str(COMPANY_ID), "bid_id": str(BID_ID)}
     assert row.unread_pages == ()
 
 
@@ -762,7 +760,6 @@ def test_bid_document_row_is_frozen() -> None:
         storage_path="p",
         kind=DocumentKind.TENDER_DOCUMENT,
         status=DocumentStatus.READY,
-        bid_id=None,
         pages=1,
     )
     with pytest.raises(Exception, match="frozen"):

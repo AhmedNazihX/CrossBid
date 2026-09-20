@@ -416,11 +416,23 @@ from tender_chunks
 join documents
   on documents.id = tender_chunks.document_id
  and documents.company_id = tender_chunks.company_id
+join bid_documents
+  on bid_documents.document_id = tender_chunks.document_id
+ and bid_documents.company_id = tender_chunks.company_id
 where tender_chunks.company_id = %(company_id)s
-  and tender_chunks.bid_id = %(bid_id)s
+  and bid_documents.bid_id = %(bid_id)s
   and tender_chunks.embedding is not null
 order by tender_chunks.embedding <=> %(embedding)s
 limit %(limit)s
+"""
+"""One bid's tender corpus, reached through the documents it cites (ADR-0103).
+
+**The join cannot fan a passage out, and that is load-bearing.** `bid_documents`' primary key
+is `(bid_id, document_id)`, so filtering on one `bid_id` matches at most one link row per
+document and each chunk is returned once. Widen that key, or join on `document_id` alone, and
+a passage comes back once per citing bid -- with no error anywhere, reading downstream as
+several independent pieces of evidence for one clause. That is why there is no `distinct`
+here: it would hide the breakage rather than prevent it.
 """
 
 COMPANY_CORPUS_SQL: Final[LiteralString] = """
@@ -434,8 +446,11 @@ limit 1
 TENDER_CORPUS_SQL: Final[LiteralString] = """
 select 1
 from tender_chunks
+join bid_documents
+  on bid_documents.document_id = tender_chunks.document_id
+ and bid_documents.company_id = tender_chunks.company_id
 where tender_chunks.company_id = %(company_id)s
-  and tender_chunks.bid_id = %(bid_id)s
+  and bid_documents.bid_id = %(bid_id)s
   and tender_chunks.embedding is not null
 limit 1
 """
@@ -453,6 +468,28 @@ change.
 thousand chunks should not be counted to learn that it has some.
 """
 
+DOCUMENT_CHUNK_COUNT_SQL: Final[LiteralString] = """
+select count(*) as chunks
+from tender_chunks
+where tender_chunks.company_id = %(company_id)s
+  and tender_chunks.document_id = %(document_id)s
+  and tender_chunks.embedding is not null
+"""
+"""How many retrievable passages a document already has, across every bid that cites it.
+
+The reuse guard (ADR-0103): a document embedded for one analysis is embedded for all of them,
+so the second analysis of a tender asks this and skips the work. Deliberately **not** scoped
+by bid -- that is the whole point.
+
+`count(*)` rather than `select 1 ... limit 1`, unlike `TENDER_CORPUS_SQL`: the caller puts the
+number in its log line and in `index_pack.py`'s output, and a document has hundreds of
+passages, not millions.
+
+Presence is a sound test for "fully indexed" only because `replace_tender_chunks` writes its
+delete and its insert inside one transaction. If that block is ever removed, a half-written
+corpus becomes permanent here.
+"""
+
 SEARCH_STATEMENTS: Final[tuple[LiteralString, ...]] = (COMPANY_SEARCH_SQL, TENDER_SEARCH_SQL)
 """Every statement that reads chunks. `test_embeddings.py` asserts each one is scoped."""
 
@@ -466,24 +503,30 @@ values
 
 TENDER_INSERT_SQL: Final[LiteralString] = """
 insert into tender_chunks
-    (company_id, bid_id, document_id, page, pages, text, token_count, embedding)
+    (company_id, document_id, page, pages, text, token_count, embedding)
 values
-    (%(company_id)s, %(bid_id)s, %(document_id)s, %(page)s, %(pages)s, %(text)s,
+    (%(company_id)s, %(document_id)s, %(page)s, %(pages)s, %(text)s,
      %(token_count)s, %(embedding)s)
 """
 
 
 DELETE_TENDER_CHUNKS_SQL: Final[LiteralString] = """
 delete from tender_chunks
-where company_id = %(company_id)s and bid_id = %(bid_id)s and document_id = %(document_id)s
+where company_id = %(company_id)s and document_id = %(document_id)s
 """
 """What makes indexing a tender document safe to run twice.
 
 `parse_docs` is a graph node, and a process that dies before it finishes runs it again from
 the start on resume (`resume_unfinished_runs`) -- so an insert with no delete in front of it
 would give the second attempt a doubled corpus, where every retrieval returns each passage
-twice and a reviewer reads the same clause as two pieces of evidence. Scoped by all three
-ids, so re-indexing one document of a pack never touches its siblings.
+twice and a reviewer reads the same clause as two pieces of evidence. Scoped to the document,
+so re-indexing one document of a pack never touches its siblings.
+
+**It is no longer scoped by bid, and that is the point of ADR-0103.** A document's passages
+belong to the document, not to whichever analysis embedded them first, so replacing them
+replaces them for every bid that cites it. That is what makes the corpus reusable -- and it
+is also why the delete and the insert below must share a transaction: half a replacement is
+now half a replacement for everybody.
 """
 
 
@@ -581,55 +624,52 @@ class ChunkVectorStore:
         ]
         return await self._insert(COMPANY_INSERT_SQL, rows)
 
-    async def insert_tender_chunks(
-        self,
-        *,
-        company_id: uuid.UUID,
-        bid_id: uuid.UUID,
-        document_id: uuid.UUID,
-        chunks: Sequence[EmbeddedChunk],
+    async def count_tender_chunks(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID
     ) -> int:
-        """Store a tender document's chunks. Returns how many rows were written.
+        """Retrievable passages this document already has, across every bid citing it.
 
-        **Unused in production, and a deletion candidate (ADR-0057).** For three increments
-        this was the only writer of `tender_chunks` and nothing called it; the fix that gave
-        the table a real writer used `replace_tender_chunks` instead, because indexing has
-        to be safe to run twice. Nothing now reaches this method outside its own tests.
-
-        Left in place deliberately rather than removed in the same commit as the fix, so
-        that one change did one thing. It is *not* a second writer — anything indexing a
-        tender document wants `replace_tender_chunks` — and if you are reading this while
-        wondering which to call, that is the answer.
+        What the reuse guard asks before embedding anything (ADR-0103). Zero means "index
+        it"; anything else means the work is already paid for.
         """
-        rows = [
-            self._row(embedded, company_id=company_id, document_id=document_id)
-            | {"bid_id": bid_id}
-            for embedded in chunks
-        ]
-        return await self._insert(TENDER_INSERT_SQL, rows)
+        async with self._source.connection() as connection:
+            cursor = await connection.execute(
+                DOCUMENT_CHUNK_COUNT_SQL,
+                {"company_id": company_id, "document_id": document_id},
+            )
+            row = await cursor.fetchone()
+        return 0 if row is None else int(row["chunks"])
 
     async def replace_tender_chunks(
         self,
         *,
         company_id: uuid.UUID,
-        bid_id: uuid.UUID,
         document_id: uuid.UUID,
         chunks: Sequence[EmbeddedChunk],
     ) -> int:
-        """Delete this document's chunks for this bid, then write these. Returns how many.
+        """Delete this document's chunks, then write these. Returns how many.
 
-        One connection and one transaction, so a crash between the two cannot leave the bid
-        with a document that has no passages at all -- which would read downstream as "this
+        One connection and one **explicit** transaction, so a crash between the two cannot
+        leave the document with no passages at all -- which would read downstream as "this
         tender says nothing about that", the most expensive wrong answer this system can
         give. See `DELETE_TENDER_CHUNKS_SQL` for why the delete is there in the first place.
+
+        The block is not decoration: every pooled connection is `autocommit=True`
+        (`db.pool_connection_kwargs`), so without it the delete commits on its own. This
+        method claimed atomicity for months and did not have it; the claim only became load
+        bearing with ADR-0103, because the reuse guard treats "has any passage" as "is fully
+        indexed" and a half-written corpus would then never be repaired.
         """
-        scope = {"company_id": company_id, "bid_id": bid_id, "document_id": document_id}
+        scope = {"company_id": company_id, "document_id": document_id}
         rows = [
             self._row(embedded, company_id=company_id, document_id=document_id)
-            | {"bid_id": bid_id}
             for embedded in chunks
         ]
-        async with self._source.connection() as connection, connection.cursor() as cursor:
+        async with (
+            self._source.connection() as connection,
+            connection.transaction(),
+            connection.cursor() as cursor,
+        ):
             await cursor.execute(DELETE_TENDER_CHUNKS_SQL, scope)
             if not rows:
                 return 0

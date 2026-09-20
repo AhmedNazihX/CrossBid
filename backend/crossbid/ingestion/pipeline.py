@@ -30,12 +30,11 @@ business reading, and the second is what the caller already holds.
 
 **Only company evidence is embedded at upload.** A company's evidence pack outlives any bid
 and is what `company_rag_search` reads, so its vectors go into `company_chunks` here. A
-tender document is uploaded *before* its bid exists — S4.3.1's flow uploads the pack and then
-presses Start, and S3.1.1's `POST /bids` attaches the documents — and `tender_chunks.bid_id`
-is `NOT NULL`, so there is nowhere to put its vectors yet. It is stored, parsed (the page
-counts and the scanned-PDF refusal below apply to every kind) and goes `parsed → ready`; the
-graph reads the file back from Storage and owns its vectors under the bid. `EMBEDDED_KINDS`
-is the one place that rule is written.
+tender document is uploaded *before* any bid cites it — S4.3.1's flow uploads the pack and
+then presses Start — so embedding it here would pay for every pack a bidder never analyses.
+It is stored, parsed (the page counts and the scanned-PDF refusal below apply to every kind)
+and goes `parsed → ready`; `parse_docs` embeds it on first use and every later analysis reuses
+those passages (ADR-0103). `EMBEDDED_KINDS` is the one place that rule is written.
 
 **A published ESPD request takes the short path (S2.5.1).** `TENDER_ESPD_REQUEST` is the one
 kind that is not a PDF: it is stored, read by `ingestion/espd.py` — hardened XML, see

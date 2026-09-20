@@ -31,6 +31,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import psycopg
 import pytest
 
 from crossbid.db import Database
@@ -529,9 +530,8 @@ async def test_the_backfill_selects_exactly_the_bids_with_no_corpus(db: Database
         kind=DocumentKind.TENDER_ESPD_REQUEST, notice="614253-2026"
     )
     # One chunk is all it takes to be "indexed": the question is existence, not completeness.
-    await ChunkVectorStore(db).insert_tender_chunks(
+    await ChunkVectorStore(db).replace_tender_chunks(
         company_id=uuid.UUID(company_id),
-        bid_id=uuid.UUID(indexed),
         document_id=indexed_document,
         chunks=[
             EmbeddedChunk(
@@ -596,9 +596,8 @@ async def test_a_documents_searchability_is_read_with_the_document(db: Database)
     await attach_documents(
         db, company_id=company_id, bid_id=bid.id, document_ids=[str(one) for one in ids]
     )
-    await ChunkVectorStore(db).insert_tender_chunks(
+    await ChunkVectorStore(db).replace_tender_chunks(
         company_id=uuid.UUID(company_id),
-        bid_id=uuid.UUID(bid.id),
         document_id=ids[0],
         chunks=[
             EmbeddedChunk(
@@ -776,3 +775,247 @@ async def test_a_bid_keeps_the_language_it_was_analysed_in(db: Database) -> None
     )
     listed = await list_bids(db, company_id=company_id, limit=DEFAULT_PAGE_SIZE)
     assert [row.bidder_language for row in listed.items] == ["de"], "the list reads it too"
+
+
+# ------------------------------------------------- one document, many bids (ADR-0103)
+
+
+async def _ready_tender_document(db: Database, *, company_id: str, name: str) -> uuid.UUID:
+    """One `ready` tender document, the state a bid may be started from."""
+    records = DocumentsReadModel(db)
+    document_id = uuid.uuid4()
+    await records.insert(
+        company_id=uuid.UUID(company_id),
+        document_id=document_id,
+        kind=DocumentKind.TENDER_DOCUMENT,
+        name=name,
+        storage_path=f"{company_id}/{document_id}/{name}",
+    )
+    await records.mark_ready(company_id=uuid.UUID(company_id), document_id=document_id)
+    return document_id
+
+
+def _passage(document_id: uuid.UUID, text: str) -> EmbeddedChunk:
+    return EmbeddedChunk(
+        chunk=Chunk(
+            document_id=str(document_id), index=0, pages=(1,), text=text, token_count=6
+        ),
+        embedding=tuple([0.0] * VECTOR_DIMENSIONS),
+    )
+
+
+@skip_without_database
+async def test_one_document_serves_two_live_bids_at_once(db: Database) -> None:
+    """The point of the change: one pack, two analyses, embedded once (ADR-0103).
+
+    Before this, `documents.bid_id` was a single column and `tender_chunks.bid_id` was
+    `NOT NULL`, so a second analysis of the same tender meant uploading the pack again and
+    paying to embed it again. Three things only a real database can answer are asserted
+    together here, because each of them alone would pass against a broken version of the
+    other two:
+
+    * the link table accepts both bids -- arity,
+    * each bid retrieves the passage -- the join is scoped by bid and still reaches it,
+    * each bid retrieves it **once** -- `bid_documents`' primary key is what stops the join
+      fanning one passage out into one hit per citing bid. That failure has no error and no
+      exception; it reads downstream as several independent pieces of evidence for one
+      clause, which is the worst shape a bug can take in an advisory tool.
+    """
+    company_id = str(uuid.uuid4())
+    await CompaniesReadModel(db).create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    document_id = await _ready_tender_document(
+        db, company_id=company_id, name="Leistungsbeschreibung.pdf"
+    )
+    first = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="640160-2026",
+        title="Erste Analyse",
+        source_language="de",
+        bidder_language="de",
+    )
+    second = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="640160-2026",
+        title="Zweite Analyse",
+        source_language="de",
+        bidder_language="de",
+    )
+
+    for bid in (first, second):
+        await attach_documents(
+            db, company_id=company_id, bid_id=bid.id, document_ids=[str(document_id)]
+        )
+    # Embedded once, by whichever analysis reached `parse_docs` first.
+    written = await ChunkVectorStore(db).replace_tender_chunks(
+        company_id=uuid.UUID(company_id),
+        document_id=document_id,
+        chunks=[_passage(document_id, "Mindestumsatz 3 Mio EUR")],
+    )
+
+    assert written == 1, "one passage, written once"
+    for bid in (first, second):
+        matches = await ChunkVectorStore(db).search_tender_chunks(
+            company_id=uuid.UUID(company_id),
+            bid_id=uuid.UUID(bid.id),
+            embedding=[0.0] * VECTOR_DIMENSIONS,
+        )
+        assert len(matches) == 1, (
+            f"bid {bid.title} must see the shared passage exactly once, not once per citing bid"
+        )
+        assert matches[0].text == "Mindestumsatz 3 Mio EUR"
+    rows = await bid_documents(db, company_id=company_id, bid_id=second.id)
+    assert [(row.name, row.searchable) for row in rows] == [
+        ("Leistungsbeschreibung.pdf", True)
+    ], "the second analysis reads the first one's corpus as its own"
+
+
+@skip_without_database
+async def test_deleting_one_bid_leaves_the_other_bids_corpus_intact(db: Database) -> None:
+    """The regression that matters most, and the exact inverse of the old cascade.
+
+    `tender_chunks.bid_id references bids (id) on delete cascade` meant deleting an analysis
+    deleted its corpus. Once a document's passages are shared, that cascade would delete a
+    corpus another live analysis is still searching -- silently, because retrieval returning
+    nothing is not an error anywhere in this system. Migration 0012 removes the column and
+    with it the cascade; this is what says so.
+    """
+    company_id = str(uuid.uuid4())
+    await CompaniesReadModel(db).create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    document_id = await _ready_tender_document(
+        db, company_id=company_id, name="Vergabeunterlagen.pdf"
+    )
+    doomed = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="640160-2026",
+        title="Wird gelöscht",
+        source_language="de",
+        bidder_language="de",
+    )
+    survivor = await create_bid(
+        db,
+        company_id=company_id,
+        notice_number="640160-2026",
+        title="Bleibt",
+        source_language="de",
+        bidder_language="de",
+    )
+    for bid in (doomed, survivor):
+        await attach_documents(
+            db, company_id=company_id, bid_id=bid.id, document_ids=[str(document_id)]
+        )
+    await ChunkVectorStore(db).replace_tender_chunks(
+        company_id=uuid.UUID(company_id),
+        document_id=document_id,
+        chunks=[_passage(document_id, "Eignungskriterien")],
+    )
+    # Only a parked or finished analysis may be deleted; a queued one is still being written.
+    await set_bid_status(db, company_id=company_id, bid_id=doomed.id, status=BidStatus.COMPLETE)
+
+    assert await delete_bid(db, company_id=company_id, bid_id=doomed.id) is True
+
+    matches = await ChunkVectorStore(db).search_tender_chunks(
+        company_id=uuid.UUID(company_id),
+        bid_id=uuid.UUID(survivor.id),
+        embedding=[0.0] * VECTOR_DIMENSIONS,
+    )
+    assert len(matches) == 1, "the surviving analysis can still search the shared document"
+    assert matches[0].text == "Eignungskriterien"
+    surviving = await bid_documents(db, company_id=company_id, bid_id=survivor.id)
+    assert [row.name for row in surviving] == ["Vergabeunterlagen.pdf"]
+
+
+@skip_without_database
+async def test_a_document_two_analyses_cite_cannot_be_deleted_until_both_are(
+    db: Database,
+) -> None:
+    """The delete rule, which is now a count rather than a column.
+
+    `DELETE_DOCUMENT_SQL` carried `and bid_id is null`; it now carries a `not exists` against
+    `bid_documents`, and the router reads the same count to write the 409 the bidder sees. The
+    two must agree, or the screen offers a control whose only outcome is a refusal.
+    """
+    company_id = str(uuid.uuid4())
+    await CompaniesReadModel(db).create(
+        company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+    )
+    records = DocumentsReadModel(db)
+    document_id = await _ready_tender_document(db, company_id=company_id, name="Eignung.pdf")
+    bids = []
+    for title in ("Erste", "Zweite"):
+        bid = await create_bid(
+            db,
+            company_id=company_id,
+            notice_number="640160-2026",
+            title=title,
+            source_language="de",
+            bidder_language="de",
+        )
+        await attach_documents(
+            db, company_id=company_id, bid_id=bid.id, document_ids=[str(document_id)]
+        )
+        bids.append(bid)
+
+    async def count() -> int | None:
+        record = await records.get(company_id=uuid.UUID(company_id), document_id=document_id)
+        assert record is not None
+        return record.bid_count
+
+    assert await count() == 2
+    assert (
+        await records.delete(company_id=uuid.UUID(company_id), document_id=document_id)
+    ) is False, "two analyses cite it"
+
+    for bid in bids:
+        await set_bid_status(
+            db, company_id=company_id, bid_id=bid.id, status=BidStatus.COMPLETE
+        )
+    await delete_bid(db, company_id=company_id, bid_id=bids[0].id)
+
+    assert await count() == 1
+    assert (
+        await records.delete(company_id=uuid.UUID(company_id), document_id=document_id)
+    ) is False, "one still does"
+
+    await delete_bid(db, company_id=company_id, bid_id=bids[1].id)
+
+    assert await count() == 0
+    assert (
+        await records.delete(company_id=uuid.UUID(company_id), document_id=document_id)
+    ) is True, "nothing cites it now, so the bidder may have their file back"
+
+
+@skip_without_database
+async def test_a_citation_cannot_cross_a_tenant(db: Database) -> None:
+    """`bid_documents.company_id` is denormalised, so on its own nothing stops a row naming
+    one company's bid and another's document. The composite foreign keys make that
+    unrepresentable rather than merely wrong — this is the test that they are there."""
+    first, second = str(uuid.uuid4()), str(uuid.uuid4())
+    companies = CompaniesReadModel(db)
+    for company_id in (first, second):
+        await companies.create(
+            company_id=uuid.UUID(company_id), owner_user_id=uuid.uuid4(), profile=PROFILE
+        )
+    theirs = await _ready_tender_document(db, company_id=second, name="Fremd.pdf")
+    mine = await create_bid(
+        db,
+        company_id=first,
+        notice_number="640160-2026",
+        title="Meine Analyse",
+        source_language="de",
+        bidder_language="de",
+    )
+
+    with pytest.raises(psycopg.errors.ForeignKeyViolation):
+        async with db.connection() as conn:
+            await conn.execute(
+                "insert into bid_documents (bid_id, document_id, company_id) "
+                "values (%(bid_id)s, %(document_id)s, %(company_id)s)",
+                {"bid_id": mine.id, "document_id": theirs, "company_id": first},
+            )

@@ -49,7 +49,7 @@ export function DocumentsTable({
   return (
     <DataTable
       caption="Your company's documents, newest first, with their processing status."
-      footer="A document marked In a bid cannot be deleted: that bid's requirements cite its pages, so removing the file would leave them pointing at a page nobody can open — delete the bid instead. Unread pages have no text layer — a scan without OCR — and the agent says so rather than guessing what is on them. Withheld passages read like instructions aimed at the agent rather than tender text, so they were kept from it; the rest of the file was read as normal."
+      footer="A document an analysis is using cannot be deleted: those analyses' requirements cite its pages, so removing the file would leave them pointing at a page nobody can open — delete the analyses instead. The same file can be read by any number of analyses, and using it again takes nothing away from the ones that have it. Unread pages have no text layer — a scan without OCR — and the agent says so rather than guessing what is on them. Withheld passages read like instructions aimed at the agent rather than tender text, so they were kept from it; the rest of the file was read as normal."
     >
       <thead>
         <tr>

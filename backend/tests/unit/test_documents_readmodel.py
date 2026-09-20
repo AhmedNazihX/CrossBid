@@ -62,7 +62,6 @@ def document_row(**overrides: Any) -> dict[str, Any]:
     row: dict[str, Any] = {
         "id": DOCUMENT_ID,
         "company_id": COMPANY_ID,
-        "bid_id": None,
         "kind": "company_evidence",
         "name": "Nachweis ISO 27001 (2026).pdf",
         "storage_path": f"{COMPANY_ID}/{DOCUMENT_ID}/Nachweis_ISO_27001_2026_.pdf",
@@ -125,9 +124,18 @@ def test_every_statement_returns_the_full_record_column_list(sql: str) -> None:
     assert DOCUMENT_COLUMNS in _one_line(sql)
 
 
-def test_the_column_list_names_exactly_the_record_fields() -> None:
+def test_the_column_list_names_exactly_the_stored_record_fields() -> None:
+    """`DOCUMENT_COLUMNS` is every field that is a *column*, in order.
+
+    `bid_count` is the one field that is not. It is counted from `bid_documents` by the three
+    read statements and is `None` everywhere else, because a writer's `returning` clause
+    genuinely cannot know it (ADR-0103) -- the same three-state convention as
+    `BidDocumentRow.searchable`. Naming it here would put it in five `returning` lists that
+    have nothing to return for it."""
     columns = [column.strip() for column in DOCUMENT_COLUMNS.split(",")]
-    assert columns == list(DocumentRecord.model_fields)
+    stored = [name for name in DocumentRecord.model_fields if name != "bid_count"]
+    assert columns == stored
+    assert "bid_count" in DocumentRecord.model_fields, "computed, but still read back"
 
 
 def test_the_statements_are_the_eight_the_module_defines() -> None:

@@ -60,21 +60,28 @@ class FakeEmbedder:
 
 
 class RecordingWriter:
-    def __init__(self) -> None:
+    def __init__(self, existing: int = 0) -> None:
         self.calls: list[dict[str, object]] = []
+        self.counted: list[dict[str, object]] = []
+        #: Passages the document already has, i.e. what the reuse guard will find.
+        self.existing = existing
+
+    async def count_tender_chunks(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID
+    ) -> int:
+        self.counted.append({"company_id": company_id, "document_id": document_id})
+        return self.existing
 
     async def replace_tender_chunks(
         self,
         *,
         company_id: uuid.UUID,
-        bid_id: uuid.UUID,
         document_id: uuid.UUID,
         chunks: Sequence[EmbeddedChunk],
     ) -> int:
         self.calls.append(
             {
                 "company_id": company_id,
-                "bid_id": bid_id,
                 "document_id": document_id,
                 "texts": [embedded.chunk.text for embedded in chunks],
             }
@@ -96,9 +103,15 @@ def parsed(*texts: str) -> ParsedDocument:
     )
 
 
-def indexer(writer: RecordingWriter, embedder: FakeEmbedder) -> ChunkingTenderIndexer:
+def indexer(
+    writer: RecordingWriter, embedder: FakeEmbedder, *, force: bool = False
+) -> ChunkingTenderIndexer:
     return ChunkingTenderIndexer(
-        chunker=OneChunkPerPage(), embedder=embedder, writer=writer, confirm=agree
+        chunker=OneChunkPerPage(),
+        embedder=embedder,
+        writer=writer,
+        confirm=agree,
+        force=force,
     )
 
 
@@ -118,9 +131,11 @@ async def test_a_tender_document_becomes_retrievable_passages_under_its_bid() ->
     assert writer.calls[0]["texts"] == [ORDINARY, ORDINARY]
 
 
-async def test_the_rows_carry_the_bid_and_the_company_that_own_them() -> None:
-    """`tender_chunks.bid_id` is why this cannot happen at upload: the bid does not exist
-    yet when the pack is uploaded."""
+async def test_the_rows_carry_the_company_and_the_document_that_own_them() -> None:
+    """Passages belong to the document, not to the analysis that happened to embed them.
+
+    They used to carry `bid_id`, which is what made a second analysis of the same tender pay
+    to embed the same pages again (ADR-0103)."""
     # Arrange
     writer, embedder = RecordingWriter(), FakeEmbedder()
 
@@ -132,8 +147,47 @@ async def test_the_rows_carry_the_bid_and_the_company_that_own_them() -> None:
     # Assert
     call = writer.calls[0]
     assert call["company_id"] == COMPANY_ID
-    assert call["bid_id"] == BID_ID
     assert call["document_id"] == DOCUMENT_ID
+    assert "bid_id" not in call, "the bid is the caller, not the owner of the passages"
+
+
+async def test_a_document_already_indexed_is_not_embedded_again() -> None:
+    """The reuse guard, and the whole saving (ADR-0103).
+
+    A second analysis of the same tender finds the first one's passages and skips straight
+    past chunking, the injection review and the embedder. On a 200-page pack that is most of
+    what the run would otherwise spend.
+    """
+    # Arrange
+    writer, embedder = RecordingWriter(existing=87), FakeEmbedder()
+
+    # Act
+    written = await indexer(writer, embedder)(
+        company_id=COMPANY_ID, bid_id=BID_ID, parsed=parsed(ORDINARY)
+    )
+
+    # Assert
+    assert written == 87, "the passages that are already there are the answer"
+    assert embedder.texts == [], "nothing was sent to the embeddings API"
+    assert writer.calls == [], "and nothing was rewritten"
+    assert writer.counted == [{"company_id": COMPANY_ID, "document_id": DOCUMENT_ID}]
+
+
+async def test_force_reindexes_a_document_that_is_already_indexed() -> None:
+    """The one case the guard must not win: a chunker or embedding model changed, so the
+    stored vectors are stale. `scripts/index_pack.py` sets it; no request path does."""
+    # Arrange
+    writer, embedder = RecordingWriter(existing=87), FakeEmbedder()
+
+    # Act
+    await indexer(writer, embedder, force=True)(
+        company_id=COMPANY_ID, bid_id=BID_ID, parsed=parsed(ORDINARY)
+    )
+
+    # Assert
+    assert embedder.texts == [ORDINARY]
+    assert writer.calls, "the corpus was replaced"
+    assert writer.counted == [], "and the guard was not even asked"
 
 
 async def test_a_flagged_chunk_is_withheld_from_the_corpus() -> None:

@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Increments 0 to 4 are complete. Increment 5, the submission evidence, is in progress.**
 Increment 0 (the SP.1 extraction spike) is complete — see `docs/decisions.md` ADR-0003 for the
-recall result and its caveats. The decision log runs to **ADR-0096** with no gaps. Nine
-migrations exist, `0001` through `0009`, and all nine are applied to Frankfurt as of
-2026-09-16 00:43 — 0008 and 0009 went on by hand that morning, after a missing 0008 made every
-bid fetch return 500. **Check before any live work.**
+recall result and its caveats. The decision log runs to **ADR-0103** with no gaps. **Twelve
+migrations exist, `0001` through `0012`**, and `0001`–`0011` are applied to Frankfurt;
+**`0012` is not** — it drops `documents.bid_id` and `tender_chunks.bid_id`, is not online-safe,
+and the code on `main` requires it. 0008 and 0009 went on by hand on 2026-09-16, after a
+missing 0008 made every bid fetch return 500. **Check before any live work.**
 
 **S7.1, S7.3, S7.4 and S7.5 have landed.** `make eval` works, and `docs/architecture.md`,
 `docs/user-guide.md` and `docs/critique.md` all exist — the guide with eight images, seven of

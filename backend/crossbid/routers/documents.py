@@ -30,7 +30,7 @@ only be a 202 followed by a failure.
 
 Every route depends on `auth.current_company` and scopes by `company.company_id`. A document
 that belongs to another company answers **404**, never 403 (S2.2.2's reasoning: a "forbidden"
-confirms the id exists). There is no `bid_id` on the upload: the pack is uploaded first and
+confirms the id exists). There is no bid on the upload: the pack is uploaded first and
 S3.1.1's `POST /bids` attaches it (see `ingestion.pipeline`).
 
 `POST /documents` also carries S2.3.3's per-company hourly limit, which answers **429** with
@@ -145,10 +145,20 @@ XML_TOO_LARGE_DETAIL: Final = (
 EMPTY_FILE_DETAIL: Final = "The uploaded file is empty."
 TOO_LARGE_DETAIL: Final = f"The file is larger than {MAX_UPLOAD_MEGABYTES} MB."
 NO_SUCH_DOCUMENT_DETAIL: Final = "No such document."
-DOCUMENT_IN_USE_DETAIL: Final = (
-    "This document is part of a bid that has already been started, and the requirements in "
-    "that bid cite its pages. Delete the bid to remove it."
-)
+
+
+def document_in_use_detail(name: str, bid_count: int) -> str:
+    """Why a cited document cannot be deleted, and how many analyses are in the way.
+
+    The count is what makes the sentence actionable: "delete the analysis" is advice a bidder
+    can follow, "delete the three analyses" is advice they can plan around."""
+    analyses = "analysis" if bid_count == 1 else "analyses"
+    return (
+        f"{name} is cited by {bid_count} {analyses}, whose requirements point at its pages. "
+        f"Delete {'that analysis' if bid_count == 1 else 'those analyses'} first."
+    )
+
+
 NOT_DELETED_DETAIL: Final = "The document could not be deleted right now. Try again."
 STORAGE_NOT_CONFIGURED_DETAIL: Final = (
     "Document storage is not configured on this server, so uploads are unavailable."
@@ -172,8 +182,13 @@ class DocumentResponse(BaseModel):
         )
     )
     name: str = Field(description="The filename as uploaded")
-    bid_id: uuid.UUID | None = Field(
-        description="The bid this document is attached to; null until a bid is started with it"
+    bid_count: int = Field(
+        description=(
+            "How many analyses cite this document. 0 means it can be deleted; any other "
+            "number means DELETE answers 409, and is what the picker shows as "
+            "'used by N analyses'. One document may be cited by many analyses at once: its "
+            "text is embedded once and every one of them searches the same passages."
+        )
     )
     status: DocumentStatus = Field(
         description="uploaded → parsed → embedded → ready, or failed with failure_reason"
@@ -203,7 +218,7 @@ class DocumentResponse(BaseModel):
             id=record.id,
             kind=record.kind,
             name=record.name,
-            bid_id=record.bid_id,
+            bid_count=record.bid_count or 0,
             status=record.status,
             failure_reason=record.failure_reason,
             pages=record.pages,
@@ -410,8 +425,11 @@ async def delete_document(
     record = await records.get(company_id=_company_uuid(company), document_id=document_id)
     if record is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_SUCH_DOCUMENT_DETAIL)
-    if record.bid_id is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail=DOCUMENT_IN_USE_DETAIL)
+    if record.bid_count:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail=document_in_use_detail(record.name, record.bid_count),
+        )
     try:
         # The Storage client is synchronous; keep the request loop free while it deletes.
         await asyncio.to_thread(

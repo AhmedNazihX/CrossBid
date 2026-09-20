@@ -21,11 +21,11 @@ export interface DeleteBidProps {
  *
  * **The confirmation names what stays, not only what goes**, because the asymmetry is the whole
  * point and it runs opposite to the fear. What goes is the analysis: the requirements, the
- * matrix, the verdict, the review and the corpus it searched. What stays is the bidder's own
- * uploaded documents — and, having been detached from the bid, they become deletable again,
- * which is the other half of what "delete this tender" means. The spend stays in the cost
- * console with the bid's name gone. A bidder reading "are you sure?" would reasonably assume
- * their files were about to go with it.
+ * matrix, the verdict and the review. What stays is the bidder's own uploaded documents, and
+ * their passages: a document may be cited by several analyses at once (ADR-0103), so deleting
+ * one removes its citation and nothing else, and the file becomes deletable only once no
+ * analysis is using it. The spend stays in the cost console with the bid's name gone. A bidder
+ * reading "are you sure?" would reasonably assume their files were about to go with it.
  *
  * **The server's refusal is shown as the server wrote it.** A 409 while the run is going says
  * to wait rather than to retry, and a generic "could not delete" would throw that away — the
@@ -76,8 +76,8 @@ export function DeleteBid({ bidId, title, onDeleted, className }: DeleteBidProps
       <p className="m-0 [font:var(--type-body-sm)] text-text-primary">
         Delete the analysis of <strong className="font-medium">{title}</strong>? Its
         requirements, matrix and verdict go and cannot be brought back. The documents you
-        uploaded are <strong className="font-medium">kept</strong>, and deleting this frees them
-        to be deleted too.
+        uploaded are <strong className="font-medium">kept</strong>, and stay available to your
+        other analyses.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <Button

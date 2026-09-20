@@ -101,7 +101,7 @@ async def test_accept_records_the_uploaded_row_without_touching_storage() -> Non
     assert record.status is DocumentStatus.UPLOADED
     assert record.company_id == COMPANY_ID
     assert record.kind is DocumentKind.COMPANY_EVIDENCE
-    assert record.bid_id is None
+    assert record.bid_count is None, "no statement asked; the record does not guess"
     assert h.records.statuses_of(record.id) == [DocumentStatus.UPLOADED]
     assert h.store.uploads == [] and h.parser.sources == []
 
@@ -232,7 +232,8 @@ async def test_chunks_and_vectors_are_paired_and_written_under_the_company() -> 
 
 @pytest.mark.anyio
 async def test_only_company_evidence_is_embedded_at_upload() -> None:
-    """Tender vectors need a bid (`tender_chunks.bid_id` is NOT NULL), and there is none yet."""
+    """A tender document is not embedded at upload: `parse_docs` does it on first use and
+    every later analysis reuses those passages (ADR-0103)."""
     assert frozenset({DocumentKind.COMPANY_EVIDENCE}) == EMBEDDED_KINDS
 
 

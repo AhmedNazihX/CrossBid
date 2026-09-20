@@ -9,7 +9,9 @@ import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
 import { describeApiError } from '@/lib/api-client'
 import {
+  DOCUMENT_PAGE_SIZE,
   listDocuments,
+  MAX_AUTO_PAGES,
   TENDER_DOCUMENT_KINDS,
   uploadDocument,
   type DocumentKind,
@@ -83,19 +85,56 @@ export function DocumentsPanel({
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [moreMessage, setMoreMessage] = useState<string | undefined>(undefined)
+  const [isAutoPaging, setIsAutoPaging] = useState(false)
 
+  /**
+   * The whole library, a page at a time (ADR-0103).
+   *
+   * It used to fetch once with no `limit`, taking the API's default of 50 and leaving the
+   * rest behind a button. That is defensible for a list a bidder browses and wrong for one
+   * the start picker *filters*: the row a bidder is looking for was simply not there, with
+   * nothing on screen to say a page had been skipped.
+   *
+   * `loaded` is set after the **first** page, so nothing waits on the tail; the later pages
+   * append as they arrive and flow to the picker through the same memo. A page that fails
+   * keeps what is already on screen and leaves `nextCursor` where it was, so the existing
+   * "Load more" offers exactly the retry it always did.
+   */
   useEffect(() => {
     const controller = new AbortController()
-    listDocuments({ signal: controller.signal })
-      .then((page) => {
-        setDocuments(page.documents)
-        setNextCursor(page.nextCursor)
-        setLoadState({ phase: 'loaded' })
-      })
+    const followPages = async () => {
+      let cursor: string | undefined
+      for (let page = 0; page < MAX_AUTO_PAGES; page += 1) {
+        const answer = await listDocuments({
+          limit: DOCUMENT_PAGE_SIZE,
+          cursor,
+          signal: controller.signal,
+        })
+        if (controller.signal.aborted) return
+        setDocuments((held) => {
+          if (page === 0) return answer.documents
+          const known = new Set(held.map((one) => one.id))
+          return [...held, ...answer.documents.filter((one) => !known.has(one.id))]
+        })
+        setNextCursor(answer.nextCursor)
+        if (page === 0) setLoadState({ phase: 'loaded' })
+        if (answer.nextCursor === undefined) return
+        cursor = answer.nextCursor
+      }
+    }
+    setIsAutoPaging(true)
+    followPages()
       .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setLoadState({ phase: 'failed', message: describeApiError(cause) })
-        }
+        if (controller.signal.aborted) return
+        setLoadState((held) =>
+          held.phase === 'loading'
+            ? { phase: 'failed', message: describeApiError(cause) }
+            : held
+        )
+        setMoreMessage((held) => held ?? describeApiError(cause))
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsAutoPaging(false)
       })
     return () => controller.abort()
   }, [])
@@ -109,7 +148,7 @@ export function DocumentsPanel({
     if (nextCursor === undefined || isLoadingMore) return
     setIsLoadingMore(true)
     setMoreMessage(undefined)
-    listDocuments({ cursor: nextCursor })
+    listDocuments({ limit: DOCUMENT_PAGE_SIZE, cursor: nextCursor })
       .then((page) => {
         setDocuments((held) => {
           const known = new Set(held.map((d) => d.id))
@@ -211,7 +250,7 @@ export function DocumentsPanel({
         selected={documents.filter((d) => selectedIds.has(d.id))}
       />
       <LoadMore
-        hasMore={nextCursor !== undefined && listState.phase === 'loaded'}
+        hasMore={nextCursor !== undefined && !isAutoPaging && listState.phase === 'loaded'}
         isLoadingMore={isLoadingMore}
         message={moreMessage}
         onLoadMore={loadMore}

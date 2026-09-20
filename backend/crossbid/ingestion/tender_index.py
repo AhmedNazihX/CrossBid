@@ -9,12 +9,14 @@ The failure was invisible in exactly the way this codebase is worst at catching:
 worked, its tests passed, its answer was well-formed, and it was empty.
 
 **Why it happens here and not at upload.** `ingestion/pipeline.py` explains the split and it
-was always right: a tender document is uploaded *before* its bid exists -- the flow uploads
-the pack and then presses Start -- and `tender_chunks.bid_id` is `NOT NULL`, so at upload
-there is nowhere to put the vectors. The bid exists by the time `parse_docs` runs, and
-`parse_docs` already holds every document parsed. So the work lands where the pipeline's own
-docstring always said it would: "the graph reads the file back from Storage and owns its
-vectors under the bid".
+was always right: `parse_docs` already holds every document parsed, so the vectors are one
+step from the text that produced them, and nothing has to read the file back twice.
+
+The *original* reason was narrower and no longer applies -- `tender_chunks.bid_id` was
+`NOT NULL`, and a tender document is uploaded before its bid exists, so at upload there was
+nowhere to put the vectors. Migration 0012 removed that column (ADR-0103). Indexing stays here
+anyway, because embedding at upload would pay for every document a bidder never starts a bid
+with; the reuse guard below is what makes the *second* analysis free.
 
 **Flagged chunks are withheld, and the same PDF is still fully extracted.** This corpus is
 read by a RAG tool and pasted into prompts as evidence, which is precisely the path ADR-0049
@@ -63,11 +65,14 @@ class Chunking(Protocol):
 class TenderChunkWriter(Protocol):
     """The slice of `ChunkVectorStore` this needs. See `replace_tender_chunks` for why."""
 
+    async def count_tender_chunks(
+        self, *, company_id: uuid.UUID, document_id: uuid.UUID
+    ) -> int: ...
+
     async def replace_tender_chunks(
         self,
         *,
         company_id: uuid.UUID,
-        bid_id: uuid.UUID,
         document_id: uuid.UUID,
         chunks: Sequence[EmbeddedChunk],
     ) -> int: ...
@@ -91,17 +96,42 @@ class ChunkingTenderIndexer:
         embedder: Embedder,
         writer: TenderChunkWriter,
         confirm: InjectionConfirmer,
+        force: bool = False,
     ) -> None:
         self._chunker = chunker
         self._embedder = embedder
         self._writer = writer
         self._confirm = confirm
+        self._force = force
+        """Index even when the document already has passages.
+
+        For the one case the reuse guard must not win: a chunker or embedding model changed
+        and the stored vectors are stale. `scripts/index_pack.py` sets it; nothing in a
+        request path does."""
 
     async def __call__(
         self, *, company_id: uuid.UUID, bid_id: uuid.UUID, parsed: ParsedDocument
     ) -> int:
-        """Index one document and return how many passages the bid can now retrieve."""
+        """Index one document and return how many passages the bid can now retrieve.
+
+        **A document is embedded once, not once per analysis (ADR-0103).** Its passages are
+        keyed by document, so a second bid citing the same file retrieves the first one's
+        corpus. Re-embedding would cost real money for byte-identical vectors, and on a
+        200-page pack it is most of what a run spends.
+        """
         document_id = uuid.UUID(parsed.document_id)
+        if not self._force:
+            existing = await self._writer.count_tender_chunks(
+                company_id=company_id, document_id=document_id
+            )
+            if existing:
+                logger.info(
+                    "bid %s document %s already indexed: reusing %d passage(s)",
+                    bid_id,
+                    document_id,
+                    existing,
+                )
+                return existing
         # In a worker thread for the reason `pipeline.py` gives: chunking is synchronous
         # and a pack is hundreds of pages, and this runs inside a bid whose browser is
         # polling `GET /bids/{id}` every two seconds.
@@ -119,7 +149,6 @@ class ChunkingTenderIndexer:
             )
         written = await self._writer.replace_tender_chunks(
             company_id=company_id,
-            bid_id=bid_id,
             document_id=document_id,
             chunks=await embed_chunks(self._embedder, kept),
         )

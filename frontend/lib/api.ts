@@ -209,11 +209,12 @@ export interface paths {
          *     its retrieval corpus — everything that *is* the analysis, by cascade — and the LangGraph
          *     threads the run and its chat lived on.
          *
-         *     **What stays:** the documents. They are the bidder's own files, they can be attached to a
-         *     later bid, and their bytes are in Storage. `readmodel.bids.delete_bid` detaches them before
-         *     the delete, which both saves them from `documents.bid_id`'s cascade and releases the lock
-         *     that stops an attached document being deleted — so a tender analysis and the papers it read
-         *     are two things a bidder can throw away separately. The spend stays too (migration 0010).
+         *     **What stays:** the documents, and their passages. They are the bidder's own files, other
+         *     analyses may be citing them at this moment, and their bytes are in Storage. Only the
+         *     `bid_documents` links cascade, so deleting an analysis removes its citation and nothing
+         *     else — a tender analysis and the papers it read are two things a bidder throws away
+         *     separately, and the papers may be in use elsewhere (ADR-0103). The spend stays too
+         *     (migration 0010).
          *
          *     **A running bid is a 409**, not a silent refusal: the runner's task is still writing rows,
          *     and deleting under it would fail those writes on a foreign key in the middle of a paid run.
@@ -1102,10 +1103,10 @@ export interface components {
              */
             name: string;
             /**
-             * Bid Id
-             * @description The bid this document is attached to; null until a bid is started with it
+             * Bid Count
+             * @description How many analyses cite this document. 0 means it can be deleted; any other number means DELETE answers 409, and is what the picker shows as 'used by N analyses'. One document may be cited by many analyses at once: its text is embedded once and every one of them searches the same passages.
              */
-            bid_id: string | null;
+            bid_count: number;
             /** @description uploaded → parsed → embedded → ready, or failed with failure_reason */
             status: components["schemas"]["DocumentStatus"];
             /**

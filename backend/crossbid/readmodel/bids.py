@@ -182,7 +182,6 @@ class BidDocumentRow(BaseModel):
     kind: DocumentKind
     status: DocumentStatus
     """Where the upload has got to (S2.2.3). Only `READY` documents may start a bid."""
-    bid_id: str | None
     pages: int
     unread_pages: tuple[int, ...] = ()
     searchable: bool | None = None
@@ -386,14 +385,17 @@ select language from companies where id = %(company_id)s
 """
 
 _DOCUMENT_COLUMNS: Final[LiteralString] = (
-    "id, name, storage_path, kind, status, bid_id, pages, unread_pages"
+    "documents.id, documents.name, documents.storage_path, documents.kind, "
+    "documents.status, documents.pages, documents.unread_pages"
 )
+"""Qualified, because `SELECT_BID_DOCUMENTS` joins `bid_documents` since ADR-0103 and an
+unqualified `id` would be ambiguous the day another column is added to either table."""
 
 SELECT_DOCUMENTS_BY_ID: Final[LiteralString] = f"""
 select {_DOCUMENT_COLUMNS}
 from documents
-where company_id = %(company_id)s and id = any(%(document_ids)s)
-order by name
+where documents.company_id = %(company_id)s and documents.id = any(%(document_ids)s)
+order by documents.name
 """  # noqa: S608 -- module literals only
 
 SELECT_BID_DOCUMENTS: Final[LiteralString] = f"""
@@ -402,12 +404,15 @@ select {_DOCUMENT_COLUMNS},
            select 1
            from tender_chunks
            where tender_chunks.document_id = documents.id
-             and tender_chunks.bid_id = documents.bid_id
+             and tender_chunks.company_id = documents.company_id
              and tender_chunks.embedding is not null
        ) as searchable
 from documents
-where company_id = %(company_id)s and bid_id = %(bid_id)s
-order by name
+join bid_documents
+  on bid_documents.document_id = documents.id
+ and bid_documents.company_id = documents.company_id
+where documents.company_id = %(company_id)s and bid_documents.bid_id = %(bid_id)s
+order by documents.name
 """  # noqa: S608 -- module literals only
 """The bid's pack, and whether a retrieval tool can reach each document.
 
@@ -422,20 +427,6 @@ unscoped statement — correctly, since the guard cannot know a fragment from a 
 subquery is scoped by the row it correlates to, and that row is scoped by the `where` below.
 """
 
-DETACH_DOCUMENTS: Final[LiteralString] = """
-update documents
-set bid_id = null
-where company_id = %(company_id)s and bid_id = %(bid_id)s
-"""
-"""Hands the bidder's files back before the bid that held them is deleted.
-
-Two things at once, and the second is easy to miss. `documents.bid_id` is
-`references bids (id) on delete cascade`, so deleting a bid **deletes its documents** — the
-bidder's own uploads, which outlive any one analysis and whose bytes are still in Storage. And
-`DELETE_DOCUMENT_SQL` refuses any document carrying a `bid_id`, which is the lock that stops a
-file being deleted out from under a run that cites it. Setting the column null both saves the
-files and releases that lock, which is the whole of what deleting an analysis should do."""
-
 DELETE_BID: Final[LiteralString] = """
 delete from bids
 where id = %(bid_id)s and company_id = %(company_id)s and status = any(%(statuses)s)
@@ -448,10 +439,21 @@ act on. This clause is that rule written where a race cannot get around it: a ru
 between the router's read and this write finds no row to delete."""
 
 ATTACH_DOCUMENTS: Final[LiteralString] = """
-update documents
-set bid_id = %(bid_id)s
-where company_id = %(company_id)s and id = any(%(document_ids)s) and bid_id is null
+insert into bid_documents (bid_id, document_id, company_id)
+select %(bid_id)s, documents.id, %(company_id)s
+from documents
+where documents.company_id = %(company_id)s and documents.id = any(%(document_ids)s)
+on conflict (bid_id, document_id) do nothing
 """
+"""Cites documents from a bid, without taking them from anyone (ADR-0103).
+
+`insert ... select from documents` rather than `insert ... values`: the tenant predicate then
+decides which rows exist to insert at all, so an id belonging to another company inserts
+nothing and `attach_documents`' `rowcount` check refuses the whole call. That is the same
+guarantee the old `and bid_id is null` gave, arrived at for a better reason -- it used to
+double as the one-bid-per-document rule, which is exactly the rule being removed.
+
+`on conflict do nothing` so a retried attach is a no-op rather than a `UniqueViolation`."""
 
 SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     SELECT_BIDS_AFTER,
@@ -470,7 +472,6 @@ SCOPED_STATEMENTS: Final[tuple[LiteralString, ...]] = (
     SELECT_DOCUMENTS_BY_ID,
     SELECT_BID_DOCUMENTS,
     ATTACH_DOCUMENTS,
-    DETACH_DOCUMENTS,
     DELETE_BID,
 )
 """Every statement that touches tenant data. A test asserts each carries the predicate."""
@@ -799,12 +800,19 @@ async def delete_bid(db: ConnectionSource, *, company_id: str, bid_id: str) -> b
     `False` covers an unknown id, another company's id, and a bid whose graph is still running
     — all three of which the router tells apart for the bidder before reaching this.
 
-    **The documents are detached first, in the same transaction.** Everything else a bid owns
-    is meant to go with it: requirements, matrix rows, tender chunks, reviews and feedback all
-    cascade, and they *are* the analysis. Its documents are not — they are the bidder's own
-    files, they can be attached to a later bid, and their bytes live in Storage where this
-    statement cannot reach, so the cascade would take the rows and orphan the objects.
-    Detaching also releases the delete lock, which is the other half of what a bidder means.
+    **The documents were never the bid's to take, since ADR-0103.** Everything else a bid owns
+    is meant to go with it: requirements, matrix rows, reviews and feedback all cascade, and
+    they *are* the analysis. Its documents are not — they are the bidder's own files, they may
+    be cited by other analyses at the same time, and their bytes live in Storage where this
+    statement cannot reach. Only the `bid_documents` links cascade, which removes the citation
+    and nothing else. This used to need a `DETACH_DOCUMENTS` statement and a transaction around
+    the pair, because `documents.bid_id` cascaded and would have deleted the bidder's uploads.
+
+    **Its passages survive too**, which is the half worth stating: `tender_chunks.bid_id` was
+    `references bids (id) on delete cascade` until 0012, so deleting an analysis deleted its
+    corpus. A shared corpus must not work that way — another live analysis is searching it, and
+    retrieval returning nothing is not an error anywhere in this system, so the damage would be
+    silent.
 
     Its spend stays as well, by a schema decision rather than one made here: migration 0010
     made `llm_usage.bid_id` `set null`, so the cost survives with the bid's name gone.
@@ -812,8 +820,7 @@ async def delete_bid(db: ConnectionSource, *, company_id: str, bid_id: str) -> b
     The checkpoint the run lived in is **not** deleted here — `routers/bids.py` asks LangGraph
     for that with `adelete_thread`, because those tables are its schema and not ours.
     """
-    async with db.connection() as conn, conn.transaction():
-        await conn.execute(DETACH_DOCUMENTS, {"company_id": company_id, "bid_id": bid_id})
+    async with db.connection() as conn:
         record = await (
             await conn.execute(
                 DELETE_BID,
@@ -836,10 +843,11 @@ async def attach_documents(
     claimed one of them. That is a `BidStateError`, not a silent partial bid.
 
     The check runs inside the transaction, which is what makes the sentence above true.
-    Pooled connections are `autocommit=True`, so raising after the statement used to leave
-    the rows that *did* match attached to a bid the router then marked `failed` -- and
-    `ATTACH_DOCUMENTS` requires `bid_id is null`, so those documents could never be attached
-    to another bid again. A partial attach was permanent.
+    Pooled connections are `autocommit=True`, so raising after the statement would leave the
+    rows that *did* match cited by a bid the router then marks `failed` -- a half-made
+    analysis holding some of its pack. That is merely untidy since ADR-0103, where it used to
+    be permanent: `ATTACH_DOCUMENTS` required `bid_id is null`, so a partially attached
+    document could never be attached to anything again.
     """
     if not document_ids:
         raise BidStateError("a bid needs at least one document to parse")
@@ -889,7 +897,6 @@ def _document_row(record: Mapping[str, Any]) -> BidDocumentRow:
         storage_path=str(record["storage_path"]),
         kind=DocumentKind(record["kind"]),
         status=DocumentStatus(record["status"]),
-        bid_id=_optional_str(record["bid_id"]),
         pages=int(record["pages"]),
         unread_pages=tuple(int(page) for page in record.get("unread_pages") or ()),
         searchable=_optional_bool(record.get("searchable")),

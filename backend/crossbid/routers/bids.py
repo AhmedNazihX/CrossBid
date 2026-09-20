@@ -409,7 +409,17 @@ async def start_bid(
     logger.info(
         "Bid %s started for company %s with %d document(s)", bid.id, company_id, len(rows)
     )
-    return BidResponse.assemble(bid, requirements=[], documents=rows)
+    # Read the pack back through the statement that selects `searchable`. `rows` came from
+    # `documents_by_id`, which does not, and `_searchable_of` refuses to invent it -- so
+    # assembling the 202 from those rows raised `ValueError` on **every** start, after the
+    # bid and its run already existed. The browser saw "the API could not be reached" while
+    # the analysis ran on regardless, and a bidder who believed it and pressed Start again
+    # got a second one (found 2026-09-20; it is what the duplicate 618320-2026 bids are).
+    #
+    # One extra read, on a route that runs once per bid rather than every two seconds, so
+    # ADR-0093's budget for the polling path is not what is being spent here.
+    attached = await bid_documents(db, company_id=company_id, bid_id=bid.id)
+    return BidResponse.assemble(bid, requirements=[], documents=attached)
 
 
 @router.post(
@@ -528,11 +538,12 @@ async def delete_bid_analysis(
     its retrieval corpus — everything that *is* the analysis, by cascade — and the LangGraph
     threads the run and its chat lived on.
 
-    **What stays:** the documents. They are the bidder's own files, they can be attached to a
-    later bid, and their bytes are in Storage. `readmodel.bids.delete_bid` detaches them before
-    the delete, which both saves them from `documents.bid_id`'s cascade and releases the lock
-    that stops an attached document being deleted — so a tender analysis and the papers it read
-    are two things a bidder can throw away separately. The spend stays too (migration 0010).
+    **What stays:** the documents, and their passages. They are the bidder's own files, other
+    analyses may be citing them at this moment, and their bytes are in Storage. Only the
+    `bid_documents` links cascade, so deleting an analysis removes its citation and nothing
+    else — a tender analysis and the papers it read are two things a bidder throws away
+    separately, and the papers may be in use elsewhere (ADR-0103). The spend stays too
+    (migration 0010).
 
     **A running bid is a 409**, not a silent refusal: the runner's task is still writing rows,
     and deleting under it would fail those writes on a foreign key in the middle of a paid run.
@@ -697,8 +708,12 @@ def _verdict_of(bid: BidRow) -> Verdict | None:
 
 
 def _check_documents(document_ids: list[str], rows: list[BidDocumentRow]) -> None:
-    """Every id names one of the caller's ready, unattached tender documents, or a 4xx says
-    which does not. Ids of other companies are simply absent from `rows`, hence 404."""
+    """Every id names one of the caller's ready tender documents, or a 4xx says which does
+    not. Ids of other companies are simply absent from `rows`, hence 404.
+
+    **Being cited by another analysis is no longer a refusal (ADR-0103).** It used to answer
+    409 "already belongs to another bid", which is what made re-analysing a tender mean
+    uploading its pack a second time. A document is the bidder's, not the bid's."""
     found = {row.id for row in rows}
     missing = [identifier for identifier in document_ids if identifier not in found]
     if missing:
@@ -710,11 +725,6 @@ def _check_documents(document_ids: list[str], rows: list[BidDocumentRow]) -> Non
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Document {row.name} is company evidence, not a tender document.",
-            )
-        if row.bid_id is not None:
-            raise HTTPException(
-                status.HTTP_409_CONFLICT,
-                detail=f"Document {row.name} already belongs to another bid.",
             )
         if row.status is not DocumentStatus.READY:
             raise HTTPException(

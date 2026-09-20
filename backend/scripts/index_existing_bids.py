@@ -76,20 +76,31 @@ select bids.id::text                as bid_id,
        bids.created_at              as created_at,
        count(documents.id)          as documents
 from bids
-join documents on documents.bid_id = bids.id
+join bid_documents on bid_documents.bid_id = bids.id
+join documents
+  on documents.id = bid_documents.document_id
+ and documents.company_id = bid_documents.company_id
 where documents.kind = any(%(kinds)s)
   and not exists (
-      select 1 from tender_chunks where tender_chunks.bid_id = bids.id
+      select 1
+      from tender_chunks
+      where tender_chunks.document_id = bid_documents.document_id
+        and tender_chunks.company_id = bid_documents.company_id
   )
 group by bids.id, bids.company_id, bids.ted_publication_number, bids.title, bids.created_at
 order by bids.created_at
 """
 """Bids holding a document a search could have read, and no chunk to read it from.
 
-`not exists` rather than a `left join … having count = 0`: the question is whether the bid has
-*any* chunk, and the planner can stop at the first one. `kind = any(...)` keeps ESPD requests
-out of the count — a published DUME is XML, `parse_docs` skips it before parsing, and a bid
-whose only document is one has nothing to index and should not be listed as work.
+Since ADR-0103 the `not exists` is per **document**, not per bid, and the question it asks is
+the better one: a bid may hold one document another analysis already embedded and one that was
+never indexed at all, and only the second is work. Chunks belong to documents now, so a bid
+"having chunks" was never quite the right test.
+
+`not exists` rather than a `left join … having count = 0`: the question is whether the
+document has *any* chunk, and the planner can stop at the first one. `kind = any(...)` keeps
+ESPD requests out of the count — a published DUME is XML, `parse_docs` skips it before
+parsing, and a bid whose only document is one has nothing to index and is not work.
 """
 
 INDEXABLE_KINDS: Final = (DocumentKind.TENDER_DOCUMENT.value, DocumentKind.TENDER_NOTICE.value)

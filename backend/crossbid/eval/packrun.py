@@ -311,7 +311,6 @@ def pack_documents(
             storage_path=f"{company_id}/{path.stem}/{path.name}",
             kind=_kind_of(path, pack_dir=pack_dir),
             status=DocumentStatus.READY,
-            bid_id=bid_id,
             pages=0,
         )
         for path in pack_paths(pack_dir)

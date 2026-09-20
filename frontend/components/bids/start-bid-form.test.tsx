@@ -171,3 +171,61 @@ describe('StartBidForm — a 429 is a wait, not an error (M12)', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('StartBidForm — a document other analyses already use', () => {
+  const IN_USE = {
+    phase: 'loaded',
+    documents: [documentFixture({ id: DOCUMENT_ID, name: PACK_FILE, bid_count: 2 })],
+  } as const
+
+  test('offers a document two other analyses are already using', async () => {
+    /**
+     * The clause no test ever pinned, and the whole reason a pack had to be uploaded twice.
+     *
+     * The picker filtered on `bid_id === null`, so a document any earlier analysis held was
+     * not rendered at all — not greyed out, not explained, simply absent. Comparing two
+     * configurations on one tender meant re-uploading every file and re-paying to embed it.
+     */
+    render(<StartBidForm notice={NOTICE} documentList={IN_USE} />)
+
+    const box = screen.getByRole('checkbox', { name: /Leistungsbeschreibung\.pdf/ })
+    expect(box).toBeEnabled()
+
+    await userEvent.setup().click(box)
+    expect(screen.getByText('1 of 1 ready selected')).toBeInTheDocument()
+  })
+
+  test('says how many analyses are using it, and says nothing when none are', () => {
+    const mixed = {
+      phase: 'loaded',
+      documents: [
+        documentFixture({ id: DOCUMENT_ID, name: PACK_FILE, bid_count: 2 }),
+        documentFixture({ id: 'd2', name: 'Anlage_3.pdf', bid_count: 0 }),
+      ],
+    } as const
+    render(<StartBidForm notice={NOTICE} documentList={mixed} />)
+
+    expect(screen.getByText(/used by 2 analyses/)).toBeInTheDocument()
+    expect(screen.queryByText(/Anlage_3\.pdf.*used by/)).not.toBeInTheDocument()
+  })
+
+  test('puts the count in the checkbox name, where a screen reader reaches it', () => {
+    // A marker rendered beside the label rather than inside it is invisible to assistive
+    // technology, which is the regression this guards.
+    render(<StartBidForm notice={NOTICE} documentList={IN_USE} />)
+
+    expect(screen.getByRole('checkbox', { name: /used by 2 analyses/ })).toBeInTheDocument()
+  })
+
+  test('still refuses to tick a document that is in use and not yet ready', () => {
+    const unready = {
+      phase: 'loaded',
+      documents: [
+        documentFixture({ id: DOCUMENT_ID, name: PACK_FILE, bid_count: 2, status: 'parsed' }),
+      ],
+    } as const
+    render(<StartBidForm notice={NOTICE} documentList={unready} />)
+
+    expect(screen.getByRole('checkbox', { name: /Leistungsbeschreibung\.pdf/ })).toBeDisabled()
+  })
+})

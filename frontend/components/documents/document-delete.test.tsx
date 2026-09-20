@@ -37,19 +37,26 @@ vi.mock('@/lib/documents', async () => {
 const FIRST = documentFixture({
   id: '44444444-4444-4444-8444-444444444441',
   name: 'Leistungsbeschreibung.pdf',
-  bid_id: null,
+  bid_count: 0,
 })
 
 const SECOND = documentFixture({
   id: '44444444-4444-4444-8444-444444444443',
   name: 'Handelsregisterauszug.pdf',
-  bid_id: null,
+  bid_count: 0,
 })
 
 const IN_A_BID = documentFixture({
   id: '44444444-4444-4444-8444-444444444442',
   name: 'Rahmenvereinbarung.pdf',
-  bid_id: '55555555-5555-4555-8555-555555555555',
+  bid_count: 2,
+})
+
+/** Two above, one here: an implementation that hard-codes the singular cannot pass both. */
+const IN_ONE_BID = documentFixture({
+  id: '44444444-4444-4444-8444-444444444444',
+  name: 'Vergabeunterlagen.pdf',
+  bid_count: 1,
 })
 
 beforeEach(() => {
@@ -176,7 +183,19 @@ describe('choosing documents and deleting them', () => {
 
     // Visible text, not a tooltip: a disabled box with a `title` tells a sighted user
     // nothing unless they happen to hover it.
-    expect(within(row).getByText(/In a bid — cannot be deleted/)).toBeInTheDocument()
+    expect(within(row).getByText(/In 2 analyses — cannot be deleted/)).toBeInTheDocument()
+  })
+
+  test('the marker counts the analyses rather than saying "a bid"', () => {
+    // A document may be used by several analyses at once since ADR-0103, so a constant
+    // string would be wrong for all but one of them. Both branches in one render.
+    render(<Harness documents={[IN_ONE_BID, IN_A_BID]} />)
+
+    const one = screen.getByRole('row', { name: /Vergabeunterlagen\.pdf/ })
+    const two = screen.getByRole('row', { name: /Rahmenvereinbarung\.pdf/ })
+
+    expect(within(one).getByText(/In 1 analysis — cannot be deleted/)).toBeInTheDocument()
+    expect(within(two).getByText(/In 2 analyses — cannot be deleted/)).toBeInTheDocument()
   })
 
   test('a document that can be deleted carries no such marker', () => {
@@ -185,13 +204,14 @@ describe('choosing documents and deleting them', () => {
     const row = screen.getByRole('row', { name: /Leistungsbeschreibung\.pdf/ })
 
     expect(within(row).queryByText(/cannot be deleted/)).not.toBeInTheDocument()
+    expect(within(row).queryByText(/used by/i)).not.toBeInTheDocument()
   })
 
   test('the table says once why those documents are refused', () => {
     render(<Harness documents={[IN_A_BID]} />)
 
     expect(
-      screen.getByText(/requirements cite its pages.*delete the bid instead/i)
+      screen.getByText(/requirements cite its pages.*delete the analyses instead/i)
     ).toBeInTheDocument()
   })
 
