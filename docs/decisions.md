@@ -7562,3 +7562,41 @@ Both measured failing with their fix reverted (ADR-0063): at `rows={2}` the box 
 before anything is typed, and at `href="/dashboard"` the URL after the click is the dashboard's.
 
 248 frontend unit tests and 46 browser journeys green, plus lint, typecheck, prettier and build.
+
+## ADR-0110 — The Ask box loses its frame and keeps its name
+
+**Date:** 2026-09-20 · **Stories:** follow-up to S4.6.1 · **Status:** accepted
+**Amends ADR-0107 and ADR-0109**, which shrank this card twice without questioning the card.
+
+Two rounds of trimming took the Ask block from 261 px to 218 px by making its contents smaller.
+The remaining height was not contents at all:
+
+- the composer **already carries its own border and shadow**, so the `Card` around it was a
+  bordered box inside a bordered box;
+- and **"Ask the tender" labelled a field that labels itself** — the box's own placeholder is a
+  question, rotating through six of them.
+
+So the card and the visible title are gone, and what is left is the bar and the answers under
+it, sitting directly in the page. **147 px** — 44 % less than where this started.
+
+### The heading is kept, and that is the whole care of this change
+
+`Card` rendered its `title` as a real `h2`; that is how heading navigation reached this part of
+the page, and it is not chrome. Removing the frame must not remove the structure, so the
+heading stays **`sr-only`** and names the region through `aria-labelledby` on a `<section>`. A
+sighted reader loses a title that said nothing the field did not; a screen-reader user loses
+nothing at all.
+
+The test for this is the interesting one, because **`not.toBeVisible()` is the wrong
+assertion** and was tried first: Playwright counts an `sr-only` element as *visible*, since
+Tailwind hides it by clipping a 1×1 box rather than by `visibility`. The property that actually
+separates "named but not drawn" from "drawn" is its size, so that is what is asserted. Measured
+red by deleting the heading: the region then has no accessible name.
+
+### What did not change
+
+The composer's own search glyph stays — it belongs to the ask bar of `Dashboard.dc.html`, which
+is the artboard this component still implements. What went was the second glyph, on the card
+header that no longer exists.
+
+248 frontend unit tests and 47 browser journeys green, plus lint, typecheck, prettier and build.

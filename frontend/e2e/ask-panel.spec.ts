@@ -132,6 +132,29 @@ test.describe('Ask the tender — the question that cycles', () => {
     expect(await height()).toBe(atRest)
   })
 
+  /**
+   * The section is still named, although nothing draws its name (ADR-0110).
+   *
+   * The `Card` that used to wrap this rendered "Ask the tender" as a real `h2`, which is how
+   * heading navigation reached it. Taking the card away for the visual reasons in ADR-0110
+   * must not take that with it, so the heading stays `sr-only` and names the region. This is
+   * the kind of promise that decays silently — nothing on screen changes when it breaks.
+   *
+   * Measured red by deleting the `sr-only` heading: the region has no accessible name.
+   */
+  test('the section keeps its name although the title is not drawn', async ({ page }) => {
+    await page.goto(`/bids/${BID_ID}`)
+
+    await expect(page.getByRole('region', { name: 'Ask the tender' })).toBeAttached()
+
+    // Named, not drawn. `not.toBeVisible()` is the wrong assertion here and was tried first:
+    // Playwright counts an `sr-only` element as visible, because it is 1×1 and clipped rather
+    // than hidden. The property that actually distinguishes the two is its size.
+    const box = await page.getByRole('heading', { name: 'Ask the tender' }).boundingBox()
+    expect(box, 'the heading is not in the layout at all').not.toBeNull()
+    expect(box?.height ?? 0, 'the heading is drawn at a readable size').toBeLessThanOrEqual(2)
+  })
+
   test('the send control is named, and only live once there is a question', async ({
     page,
   }) => {

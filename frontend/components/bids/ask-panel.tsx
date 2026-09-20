@@ -15,7 +15,6 @@ import { EvidenceList } from '@/components/matrix/evidence-list'
 import { FeedbackControls } from '@/components/matrix/row-feedback'
 import { answerTarget, type RowFeedbackController } from '@/components/matrix/use-row-feedback'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
@@ -47,11 +46,11 @@ export interface AskPanelProps {
  *
  * **What it implements, and what has no artboard.** The ask bar of `Dashboard.dc.html` is
  * the artboard for the question box — a search glyph, an unadorned field and an action row
- * inside one bordered, `--shadow-xs` box — and it is reproduced at the card's body scale,
- * because the artboard draws it at the dashboard's hero width and 17 px type does not fit a
- * 400 px column. The log of turns under it has no artboard: the canvas of ADR-0014 predates
- * the route. So, like `row-feedback.tsx`, it is assembled from primitives the artboards
- * already fixed — `Card`, `Eyebrow`, the matrix's own `EvidenceList` and `Notice`,
+ * inside one bordered, `--shadow-xs` box — and that bar is now the whole of this component's
+ * chrome: ADR-0110 took away the `Card` that used to wrap it, which had put a bordered box
+ * inside a bordered box. The log of turns under it has no artboard: the canvas of ADR-0014
+ * predates the route. So, like `row-feedback.tsx`, it is assembled from primitives the
+ * artboards already fixed — `Eyebrow`, the matrix's own `EvidenceList` and `Notice`,
  * `Button` — and invents no spacing, colour or type of its own.
  *
  * **The box is at the top and the newest exchange is under it.** This card sits in the
@@ -124,6 +123,7 @@ export function AskPanel({
   const [draft, setDraft] = useState('')
   const boxRef = useRef<HTMLTextAreaElement>(null)
   const fieldId = useId()
+  const headingId = `${fieldId}-heading`
   const hintId = `${fieldId}-hint`
   const isPhone = variant === 'phone'
   const isBanner = variant === 'banner'
@@ -186,7 +186,17 @@ export function AskPanel({
       : 'Enter sends · Shift+Enter for a new line'
 
   return (
-    <Card title="Ask the tender" icon={<Icon name="search" size={20} />} padding={16}>
+    // No card and no visible title (ADR-0110). The composer already carries a border, so a
+    // second frame around it was a box inside a box, and "Ask the tender" over a field whose
+    // own placeholder asks a question was a label for something that labels itself.
+    //
+    // **The heading is kept, not deleted.** `Card` rendered its title as a real `h2`, which is
+    // how heading navigation reached this part of the page; dropping the chrome must not drop
+    // that, so the heading stays `sr-only` and names the region through `aria-labelledby`.
+    <section aria-labelledby={headingId} className="min-w-0">
+      <h2 id={headingId} className="sr-only">
+        Ask the tender
+      </h2>
       <form
         onSubmit={handleSubmit}
         className={cn(
@@ -292,7 +302,7 @@ export function AskPanel({
           </ol>
         </div>
       )}
-    </Card>
+    </section>
   )
 }
 
