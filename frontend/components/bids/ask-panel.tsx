@@ -1,6 +1,13 @@
 'use client'
 
-import { useId, useState, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
 import { cn } from 'cn'
 
 import type { Citation } from '@/components/matrix/citation'
@@ -103,6 +110,9 @@ export interface AskPanelProps {
  * number of seconds — is shown verbatim under the question, the way
  * `sign-in-card.tsx` shows Supabase's rate-limit text rather than "something went wrong".
  */
+/** About five rows; past it the box scrolls rather than eating the page. */
+const MAX_BOX_HEIGHT_PX = 132
+
 export function AskPanel({
   chat,
   feedback,
@@ -112,6 +122,7 @@ export function AskPanel({
   variant = 'banner',
 }: AskPanelProps) {
   const [draft, setDraft] = useState('')
+  const boxRef = useRef<HTMLTextAreaElement>(null)
   const fieldId = useId()
   const hintId = `${fieldId}-hint`
   const isPhone = variant === 'phone'
@@ -121,6 +132,27 @@ export function AskPanel({
   const placeholder = useRotatingPlaceholder(draft !== '' || chat.isAsking)
   const canSend = draft.trim() !== '' && !chat.isAsking && !isBlocked
   const newestFirst = [...chat.exchanges].reverse()
+
+  /**
+   * The box is one line at rest and grows with the question.
+   *
+   * It was `rows={2}`, which spent a line of height on a box that is empty almost all of the
+   * time — and this card sits directly above the matrix, so it paid that on every bid. Two
+   * details matter: the height is reset to `0px` before `scrollHeight` is read, because
+   * `scrollHeight` on an already-tall box reports the old height and the box could then only
+   * ever grow; and this is `useLayoutEffect`, so the box is never painted at the wrong size.
+   * Clearing the draft after a send collapses it again for free.
+   *
+   * The first auto-growing textarea in this repo — there was no helper to reuse.
+   */
+  useLayoutEffect(() => {
+    const box = boxRef.current
+    if (box === null) {
+      return
+    }
+    box.style.height = '0px'
+    box.style.height = `${Math.min(box.scrollHeight, MAX_BOX_HEIGHT_PX)}px`
+  }, [draft])
 
   async function send() {
     if (!canSend) {
@@ -145,17 +177,20 @@ export function AskPanel({
     }
   }
 
+  // One line. What this used to also say — where answers come from and that they carry their
+  // page — now sits in the empty state, which is where a first-time reader is and where there
+  // is room for it. The rate-limit sentence is the one case worth a second line.
   const hint =
     chat.blockedUntil !== undefined
       ? `This company has used its hour's questions. Ask again at ${formatTime(new Date(chat.blockedUntil))}.`
-      : 'Enter sends, Shift+Enter starts a new line. Answered from this tender, your documents and the matrix, in your language, with the page it came from.'
+      : 'Enter sends · Shift+Enter for a new line'
 
   return (
-    <Card title="Ask the tender" icon={<Icon name="search" size={20} />} padding={20}>
+    <Card title="Ask the tender" icon={<Icon name="search" size={20} />} padding={16}>
       <form
         onSubmit={handleSubmit}
         className={cn(
-          'rounded-[14px] border border-border-default bg-surface-card px-4 pt-3.5 pb-3 shadow-xs transition-shadow [transition-duration:var(--duration-fast)]',
+          'rounded-[14px] border border-border-default bg-surface-card px-4 pt-3 pb-2.5 shadow-xs transition-shadow [transition-duration:var(--duration-fast)]',
           'focus-within:border-border-focus focus-within:shadow-[var(--shadow-focus)] focus-within:focus-ring'
         )}
       >
@@ -166,14 +201,15 @@ export function AskPanel({
           <Icon name="search" size={20} className="mt-1.5 shrink-0 text-text-muted" />
           <div className="relative min-w-0 flex-1">
             <textarea
+              ref={boxRef}
               id={fieldId}
-              rows={2}
+              rows={1}
               value={draft}
               maxLength={MAX_QUESTION_CHARS}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={handleKeyDown}
               aria-describedby={hintId}
-              className="w-full min-w-0 resize-none bg-transparent py-1.5 text-base leading-[1.5] text-text-primary outline-none"
+              className="block w-full min-w-0 resize-none overflow-y-auto bg-transparent py-1.5 text-base leading-[1.5] text-text-primary outline-none"
             />
             {/* The rotating question, drawn over the empty field rather than set as its
                 `placeholder`, because a `placeholder` attribute cannot animate. It is
@@ -200,7 +236,7 @@ export function AskPanel({
             )}
           </div>
         </div>
-        <div className="mt-3.5 flex items-end justify-between gap-3">
+        <div className="mt-2.5 flex items-end justify-between gap-3">
           <p
             id={hintId}
             className={cn(
@@ -225,10 +261,10 @@ export function AskPanel({
       </form>
 
       {newestFirst.length === 0 ? (
-        <p className="m-0 mt-4 [font:var(--type-body-sm)] text-text-secondary">
-          Every answer points at a page you can open. What is asked here is kept with the bid on
-          the server, so a follow-up question is understood in context — but only the questions
-          asked in this tab are listed below.
+        <p className="m-0 mt-3 [font:var(--type-body-sm)] text-text-secondary">
+          Answered from this tender, your documents and the matrix — in your language, with the
+          page it came from. Only this tab&rsquo;s questions are listed, though the bid keeps
+          the thread.
         </p>
       ) : (
         // The live region wraps the list rather than being the list: `role="log"` on the

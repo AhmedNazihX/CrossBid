@@ -31,11 +31,7 @@ export function MobileHeader() {
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border-default bg-surface-card pr-3 pl-4 shell:hidden">
-      <Link
-        href="/dashboard"
-        className="inline-flex rounded-md"
-        aria-label="CrossBid — dashboard"
-      >
+      <Link href="/" className="inline-flex rounded-md" aria-label="CrossBid — home">
         <Image
           src="/logo-lockup.svg"
           alt="CrossBid"

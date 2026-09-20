@@ -95,6 +95,43 @@ test.describe('Ask the tender — the question that cycles', () => {
     ).toBe(first)
   })
 
+  /**
+   * The box is one line at rest and grows with the question (ADR-0109).
+   *
+   * It was `rows={2}`, which spent a line of height on a box that is empty almost all of the
+   * time — and this card sits directly above the matrix, so every bid paid it. Asserted
+   * against the textarea's own height rather than the card's, so it states the behaviour
+   * instead of pinning a layout number that any copy change would move.
+   *
+   * Measured red at `rows={2}`: the box is two lines tall before anything is typed.
+   */
+  test('the question box is one line until it needs more', async ({ page }) => {
+    await page.goto(`/bids/${BID_ID}`)
+    const box = page.getByRole('textbox', { name: 'Your question about this tender' })
+    await expect(box).toBeVisible()
+
+    const height = async (): Promise<number> =>
+      box.evaluate((element) => element.getBoundingClientRect().height)
+    const lineHeight = await box.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).lineHeight)
+    )
+
+    const atRest = await height()
+    expect(atRest, 'the box is taller than one line before anything is typed').toBeLessThan(
+      lineHeight * 2
+    )
+
+    await box.fill(
+      'Welche Nachweise verlangt der Auftraggeber für die wirtschaftliche und finanzielle ' +
+        'Leistungsfähigkeit des Bieters, und bis wann müssen sie eingereicht werden?'
+    )
+    expect(await height(), 'the box did not grow with the question').toBeGreaterThan(atRest)
+
+    // And it collapses again, so a sent question does not leave the page stretched.
+    await box.fill('')
+    expect(await height()).toBe(atRest)
+  })
+
   test('the send control is named, and only live once there is a question', async ({
     page,
   }) => {

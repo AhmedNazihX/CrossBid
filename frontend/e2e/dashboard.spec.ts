@@ -47,3 +47,26 @@ test('the dashboard lists the company’s bids without logging an error', async 
 
   expect(consoleErrors).toEqual([])
 })
+
+/**
+ * The shell's logo leads to the landing page (ADR-0109).
+ *
+ * It led to `/dashboard`, which is the usual convention for a signed-in app — the logo is the
+ * app's own home. This reverses that on purpose, so the test asserts the **destination** and
+ * not only that the logo is a link: the accessible name alone passed against the old target
+ * too, and a name is not where a click goes.
+ *
+ * Measured red against `href="/dashboard"`: the URL after the click is the dashboard's.
+ */
+test('the logo leads back to the landing page', async ({ api, page }) => {
+  api.on('GET', '/bids', { status: 200, json: { bids: [] } })
+
+  await page.goto('/dashboard')
+  const logo = page.getByRole('link', { name: 'CrossBid — home' })
+  await expect(logo).toBeVisible()
+
+  await logo.click()
+
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Know if you can win/i)
+})

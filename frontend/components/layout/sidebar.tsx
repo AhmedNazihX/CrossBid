@@ -16,11 +16,7 @@ export function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-[var(--sidebar-width)] shrink-0 flex-col px-5 py-7 shell:flex">
       <div className="flex items-center px-2 py-1">
-        <Link
-          href="/dashboard"
-          className="inline-flex rounded-md"
-          aria-label="CrossBid — dashboard"
-        >
+        <Link href="/" className="inline-flex rounded-md" aria-label="CrossBid — home">
           <Image
             src="/logo-lockup.svg"
             alt="CrossBid"

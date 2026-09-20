@@ -18,7 +18,13 @@ export const ASK_PLACEHOLDERS: readonly string[] = [
   'Who is the contracting authority?',
 ]
 
-/** How long each question rests before the next one replaces it. */
-export const ASK_PLACEHOLDER_INTERVAL_MS = 3_200
+/**
+ * How long each question rests before the next one replaces it.
+ *
+ * 3.2 s first, which read as a carousel that had stalled. 2.2 s is long enough to finish the
+ * longest of them — "Which certificates does the buyer accept?" — and short enough that the
+ * box looks like it is offering rather than waiting.
+ */
+export const ASK_PLACEHOLDER_INTERVAL_MS = 2_200
 /** How long the outgoing question takes to leave, which is `--duration-base`. */
 export const ASK_PLACEHOLDER_FADE_MS = 200

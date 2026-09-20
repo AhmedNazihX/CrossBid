@@ -7495,3 +7495,70 @@ matrix's own body text**, and **the recommendation's title is one line**. Measur
 against the matrix's 14, and at two lines with the `Tag` back in `actions` (ADR-0063).
 
 248 frontend unit tests and 44 browser journeys green, plus lint, typecheck, prettier and build.
+
+## ADR-0109 — Three corrections from using the page
+
+**Date:** 2026-09-20 · **Stories:** follow-up to S4.6.1 and the shell · **Status:** accepted
+**Amends ADR-0107** (the Ask box) and reverses a navigation convention.
+
+None of these came from reading the code. They came from the built page.
+
+### The Ask card was spending its height on chrome — 261 px → 218 px
+
+Empty and 660 px wide, the card was about 261 px, and it sits **directly above the matrix**, so
+every bid paid it. The height was not in the content:
+
+| | was | now |
+|---|---|---|
+| The question box | `rows={2}` — two lines for a box that is empty almost always | one line, growing as it is typed into |
+| The hint | long enough to wrap to two lines | `Enter sends · Shift+Enter for a new line` |
+| Card padding | 20 px | 16 px |
+
+**The first auto-growing textarea in this repo** — a grep for `scrollHeight` found none, so
+there was no helper to reuse. Two details are load-bearing and neither is obvious: the height
+is set to `0px` before `scrollHeight` is read, because `scrollHeight` on an already-tall box
+reports the height it has and the box could then only ever grow; and it is a `useLayoutEffect`,
+so the box is never painted at the wrong size. Clearing the draft after a send collapses it for
+free.
+
+**Nothing was deleted.** What the hint used to also say — that answers come from this tender,
+the bidder's documents and the matrix, in the bidder's language, carrying the page they came
+from — moved into the empty state, which is where a first-time reader is and where there is
+room. The rate-limit sentence still replaces the hint and may still take two lines; that state
+is worth them.
+
+An intermediate version of this scored 244 px, because the rewritten empty-state text ran to
+three lines — the saving had been spent on the sentence meant to hold it. Measured, tightened,
+re-measured.
+
+### The rotation was slow — 3.2 s → 2.2 s
+
+`ASK_PLACEHOLDER_INTERVAL_MS`. 3.2 s read as a carousel that had stalled. 2.2 s is still long
+enough to finish the longest question in the set. The 200 ms fade is unchanged; it is the
+`--duration-base` the animation was built on.
+
+### The logo leads to the landing page, which is a reversal
+
+`sidebar.tsx` and `mobile-header.tsx` pointed at `/dashboard` — the usual convention for a
+signed-in app, where the logo is the *app's* home. Both now point at `/`.
+
+**This is a deliberate reversal and is recorded as one**, because a future reader would
+otherwise take it for an accident and quietly change it back. A signed-in bidder clicking the
+logo now leaves for the marketing page; `Dashboard` is the first item in the nav directly
+beneath it, so the old destination costs one click.
+
+The label is not new: `aria-label="CrossBid — home"` is what `landing-nav.tsx`, `auth-card.tsx`
+and the not-found page already use, so the shell stops being the odd one out.
+
+### Tests
+
+Two browser tests, because none of this is visible to jsdom. **The box is one line at rest and
+grows with the question**, asserted against the textarea's own height rather than the card's so
+it states the behaviour instead of pinning a layout number that any copy change would move. And
+**the logo's destination** — not merely that it is a link, because the accessible name alone
+passed against the old target too, and a name is not where a click goes.
+
+Both measured failing with their fix reverted (ADR-0063): at `rows={2}` the box is two lines
+before anything is typed, and at `href="/dashboard"` the URL after the click is the dashboard's.
+
+248 frontend unit tests and 46 browser journeys green, plus lint, typecheck, prettier and build.
