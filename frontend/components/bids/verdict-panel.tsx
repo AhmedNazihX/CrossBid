@@ -112,8 +112,10 @@ export function VerdictPanel({
   const isRail = layout === 'rail'
   const evidence = (
     <>
-      <RecommendationCard bid={current} verdict={verdict} />
-      {verdict !== undefined && <VerdictGaps gaps={verdict.gaps} labels={labels} />}
+      <RecommendationCard bid={current} verdict={verdict} isCompact={isRail} />
+      {verdict !== undefined && (
+        <VerdictGaps gaps={verdict.gaps} labels={labels} isCompact={isRail} />
+      )}
     </>
   )
   const decision = (
@@ -123,10 +125,11 @@ export function VerdictPanel({
           bid={state.bid}
           decision={submittedDecision}
           onBackToMatrix={onBackToMatrix}
+          isCompact={isRail}
         />
       )}
       {state.phase === 'conflict' && (
-        <ConflictCard bid={state.bid} onBackToMatrix={onBackToMatrix} />
+        <ConflictCard bid={state.bid} onBackToMatrix={onBackToMatrix} isCompact={isRail} />
       )}
       {(state.phase === 'editing' || state.phase === 'submitting') &&
         (isAwaitingReview(bid) ? (
@@ -141,7 +144,7 @@ export function VerdictPanel({
             isCompact={isRail}
           />
         ) : (
-          <NotParkedCard bid={bid} onBackToMatrix={onBackToMatrix} />
+          <NotParkedCard bid={bid} onBackToMatrix={onBackToMatrix} isCompact={isRail} />
         ))}
     </>
   )
@@ -168,7 +171,19 @@ export function VerdictPanel({
             as well means it is on screen from the first paint and stays there — measured at
             y=1257 (off screen) without this line and y=860 with it. The card is opaque, so
             the evidence scrolls under it rather than through it. */}
-        <div className="sticky bottom-0 max-h-[60%] shrink-0 overflow-y-auto">{decision}</div>
+        <div className="sticky bottom-0 shrink-0">
+          {/* The evidence slides *under* the pinned decision, and without this it was simply
+              guillotined — a sentence cut mid-word against an opaque card edge, which reads as
+              a rendering fault rather than as a layer. A short fade to the frame's own colour
+              is the design system's `--protect-gradient` idea applied to a white ground. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 -top-5 h-5 bg-[linear-gradient(to_bottom,transparent,var(--surface-card))]"
+          />
+          {/* `dvh` rather than the `60%` this used to be: the percentage resolved against a
+              parent with no definite height, so it constrained nothing. */}
+          <div className="max-h-[60dvh] overflow-y-auto">{decision}</div>
+        </div>
       </div>
     )
   }
@@ -207,17 +222,27 @@ function announce(phase: ReviewState['phase']): string {
 function RecommendationCard({
   bid,
   verdict,
+  isCompact = false,
 }: {
   readonly bid: BidResponse
   readonly verdict: Verdict | undefined
+  readonly isCompact?: boolean
 }) {
   const stamp = formatDateTime(bid.updated_at ?? bid.created_at)
+  const hasStamp = stamp !== '—'
   return (
     <Card
       title="CrossBid recommends"
       icon={<Icon name="spark" size={20} />}
-      actions={stamp === '—' ? undefined : <Tag mono>{stamp}</Tag>}
+      padding={isCompact ? 20 : 24}
+      // In the rail the stamp comes out of the header row. `Card` puts `actions` beside the
+      // title and the `Tag` never shrinks, so at 380 px "CrossBid recommends" wrapped onto two
+      // lines — and a run stamp is not a peer of the card's name in any case (ADR-0108).
+      actions={hasStamp && !isCompact ? <Tag mono>{stamp}</Tag> : undefined}
     >
+      {isCompact && hasStamp && (
+        <p className="m-0 -mt-1 mb-3 [font:var(--type-mono)] text-text-muted">{stamp}</p>
+      )}
       {verdict === undefined ? (
         <p className="m-0 text-text-secondary">
           The agent has not scored this bid, so there is no recommendation to confirm. Any
@@ -226,12 +251,29 @@ function RecommendationCard({
       ) : (
         <>
           <div className="mb-3.5 flex flex-wrap items-center gap-3.5">
-            <VerdictChip verdict={verdict.decision} size="lg" advisory />
-            <span className="[font:var(--type-body)] text-text-secondary">
+            {/* `lg` is 16 px and `whitespace-nowrap`, which in a 332 px content box also
+                pushed the count onto its own line. `md` is the page's own body size. */}
+            <VerdictChip verdict={verdict.decision} size={isCompact ? 'md' : 'lg'} advisory />
+            <span
+              className={cn(
+                'text-text-secondary',
+                // The same sentence lives at 12 px in `decision-line.tsx`, which is what it is:
+                // a caption under the chip rather than a second paragraph.
+                isCompact ? '[font:var(--type-body-sm)]' : '[font:var(--type-body)]'
+              )}
+            >
               {countSentence(verdict)}
             </span>
           </div>
-          <p className="m-0 [font:var(--type-body-lg)] [overflow-wrap:anywhere]">
+          {/* `--type-body-lg` is 17 px — the same size as the card's own title, which is why
+              the card read as one undifferentiated block. `--type-body` is what `ask-panel`
+              already uses for the equivalent long-form answer. */}
+          <p
+            className={cn(
+              'm-0 [overflow-wrap:anywhere]',
+              isCompact ? '[font:var(--type-body)]' : '[font:var(--type-body-lg)]'
+            )}
+          >
             {verdict.rationale}
           </p>
         </>
@@ -257,20 +299,25 @@ function RecordedCard({
   bid,
   decision,
   onBackToMatrix,
+  isCompact = false,
 }: {
   readonly bid: BidResponse
   readonly decision: Decision | undefined
   readonly onBackToMatrix?: () => void
+  readonly isCompact?: boolean
 }) {
   const status = BID_STATUS_LABELS[bid.status]
   return (
     <Card
       title="Your decision is recorded"
       icon={<Icon name="check" size={20} />}
+      padding={isCompact ? 20 : 24}
       actions={<Badge tone={status.tone}>{status.label}</Badge>}
     >
       <p className="m-0 mb-3.5 flex flex-wrap items-center gap-3">
-        {decision !== undefined && <VerdictChip verdict={decision} size="lg" confirmed />}
+        {decision !== undefined && (
+          <VerdictChip verdict={decision} size={isCompact ? 'md' : 'lg'} confirmed />
+        )}
         <span className="text-text-secondary">
           Submitted with {plural(bid.matrix_rows.length, 'matrix row')}.
         </span>
@@ -296,15 +343,18 @@ function RecordedCard({
 function ConflictCard({
   bid,
   onBackToMatrix,
+  isCompact = false,
 }: {
   readonly bid: BidResponse | undefined
   readonly onBackToMatrix?: () => void
+  readonly isCompact?: boolean
 }) {
   const status = bid === undefined ? undefined : BID_STATUS_LABELS[bid.status]
   return (
     <Card
       title="This review was not submitted"
       icon={<Icon name="alert" size={20} />}
+      padding={isCompact ? 20 : 24}
       actions={
         status === undefined ? undefined : <Badge tone={status.tone}>{status.label}</Badge>
       }
@@ -330,15 +380,18 @@ function ConflictCard({
 function NotParkedCard({
   bid,
   onBackToMatrix,
+  isCompact = false,
 }: {
   readonly bid: BidResponse
   readonly onBackToMatrix?: () => void
+  readonly isCompact?: boolean
 }) {
   const status = BID_STATUS_LABELS[bid.status]
   return (
     <Card
       title="Your decision"
       icon={<Icon name="shield" size={20} />}
+      padding={isCompact ? 20 : 24}
       actions={<Badge tone={status.tone}>{status.label}</Badge>}
     >
       <Notice tone={bid.status === 'failed' ? 'danger' : 'neutral'} title={status.label}>

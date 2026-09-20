@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { cn } from 'cn'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -29,6 +30,8 @@ export interface VerdictGapsProps {
   readonly gaps: readonly Gap[]
   /** Requirement id → the matrix's display label, from `requirementLabels`. */
   readonly labels: ReadonlyMap<string, string>
+  /** The rail's density: 20 px cards, as every other narrow surface here uses (ADR-0108). */
+  readonly isCompact?: boolean
 }
 
 interface GapSection {
@@ -60,7 +63,7 @@ const SECTIONS: readonly GapSection[] = [
  */
 const SHOWN_BY_DEFAULT = 5
 
-export function VerdictGaps({ gaps, labels }: VerdictGapsProps) {
+export function VerdictGaps({ gaps, labels, isCompact = false }: VerdictGapsProps) {
   return (
     <>
       {SECTIONS.map((section) => {
@@ -74,6 +77,7 @@ export function VerdictGaps({ gaps, labels }: VerdictGapsProps) {
             section={section}
             gaps={listed}
             labels={labels}
+            isCompact={isCompact}
           />
         )
       })}
@@ -85,18 +89,24 @@ function GapSectionCard({
   section,
   gaps,
   labels,
+  isCompact,
 }: {
   readonly section: GapSection
   readonly gaps: readonly Gap[]
   readonly labels: ReadonlyMap<string, string>
+  readonly isCompact: boolean
 }) {
   const [isExpanded, setExpanded] = useState(false)
   const isCapped = gaps.length > SHOWN_BY_DEFAULT
   const shown = isExpanded || !isCapped ? gaps : gaps.slice(0, SHOWN_BY_DEFAULT)
   return (
-    <Card title={section.title} icon={<Icon name={section.icon} size={20} />}>
+    <Card
+      title={section.title}
+      icon={<Icon name={section.icon} size={20} />}
+      padding={isCompact ? 20 : 24}
+    >
       <p className="m-0 mb-3.5 [font:var(--type-body-sm)] text-text-muted">{section.summary}</p>
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+      <ul className={cn('m-0 flex list-none flex-col p-0', isCompact ? 'gap-2.5' : 'gap-3')}>
         {shown.map((gap) => (
           <GapLine
             key={`${gap.requirement_id}-${gap.summary}`}

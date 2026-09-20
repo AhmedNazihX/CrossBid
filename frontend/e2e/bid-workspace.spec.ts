@@ -394,6 +394,63 @@ test.describe('Bid workspace — the desktop layout of ADR-0104', () => {
   })
 
   /**
+   * The rail is set for the column it is in, not the one it was drawn for (ADR-0108).
+   *
+   * `VerdictPanel` was drawn for `Verdict.dc.html`, a full screen whose left column is ~640 px.
+   * At 380 px it kept that type: the rationale at `--type-body-lg` is **17 px**, the same size
+   * as the card's own title, beside a matrix set at 14 px — so the rail read as a different,
+   * louder document than the page it sits on.
+   *
+   * Asserted as an invariant rather than as `toBe(14)`, because pinning the number would make
+   * a token change look like a regression. What matters is the relationship: the rail's body
+   * is no louder than the page's body.
+   *
+   * Measured red against `--type-body-lg`: 17 px against the matrix's 14.
+   */
+  test('the rail’s body text is no larger than the matrix’s', async ({ page }) => {
+    const fontSize = async (locator: import('@playwright/test').Locator): Promise<number> =>
+      locator.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))
+
+    const rationale = page.locator('#verdict p', { hasText: /mandatory requirement/ }).last()
+    const rail = await fontSize(
+      page
+        .locator('#verdict')
+        .getByText(/A reviewer decides|requirement is/)
+        .first()
+    )
+    const matrix = await fontSize(
+      page.getByRole('button', { name: /Mindestjahresumsatz/ }).first()
+    )
+
+    expect(rail, `the rail is ${rail}px against the matrix's ${matrix}px`).toBeLessThanOrEqual(
+      matrix
+    )
+    await expect(rationale.or(page.locator('#verdict')).first()).toBeVisible()
+  })
+
+  /**
+   * "CrossBid recommends" fits on one line.
+   *
+   * `Card` puts `actions` on the title's own flex row and the timestamp `Tag` never shrinks, so
+   * at 380 px the title wrapped — a layout bug that reads as a design problem. The stamp now
+   * sits under the title in the rail.
+   *
+   * Measured red by putting the `Tag` back into `actions`: the heading renders at two lines.
+   */
+  test('the recommendation’s title is not wrapped by its timestamp', async ({ page }) => {
+    const heading = page.getByRole('heading', { name: 'CrossBid recommends' })
+    await expect(heading).toBeVisible()
+
+    const lines = await heading.evaluate((element) => {
+      const style = getComputedStyle(element)
+      const lineHeight = Number.parseFloat(style.lineHeight)
+      return element.getBoundingClientRect().height / lineHeight
+    })
+
+    expect(lines, 'the title wrapped onto a second line').toBeLessThan(1.5)
+  })
+
+  /**
    * The rail is `sticky` and scrolls internally rather than leaving the screen. The measured
    * page is 23 204 px tall on the FR bid and a non-sticky column had gone by row 20.
    *

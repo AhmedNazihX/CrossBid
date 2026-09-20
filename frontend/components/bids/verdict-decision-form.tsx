@@ -166,7 +166,12 @@ export function VerdictDecisionForm({
   }
 
   return (
-    <Card title="Your decision" headingLevel="h2" icon={<Icon name="shield" size={20} />}>
+    <Card
+      title="Your decision"
+      headingLevel="h2"
+      icon={<Icon name="shield" size={20} />}
+      padding={isCompact ? 20 : 24}
+    >
       <form onSubmit={handleSubmit} aria-busy={isSubmitting} noValidate>
         {isCompact && (
           // A real disclosure: the control names what it reveals, says whether it is open, and

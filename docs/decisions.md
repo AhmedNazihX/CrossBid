@@ -7432,3 +7432,66 @@ by leaving the overlay mounted — so both are known to fail for the defect they
 
 248 frontend unit tests and 42 browser journeys green, plus lint, typecheck, prettier and
 build.
+
+## ADR-0108 — The rail is set for the column it is in, not the one it was drawn for
+
+**Date:** 2026-09-20 · **Stories:** follow-up to S4.5.3 · **Status:** accepted
+**Amends ADR-0104 and ADR-0106**, which moved the verdict panel twice without touching its type.
+
+`VerdictPanel` was drawn for `Verdict.dc.html` — a full 1440×900 screen whose left column is
+about 640 px. It now renders in a 380 px rail beside a matrix set at 14 px, and it kept the type
+of the page it left:
+
+| In the rail | Token | Size | The page beside it |
+|---|---|---|---|
+| The rationale | `--type-body-lg` | **17 px** | the Ask panel's answer — the same kind of text — is **14 px** |
+| The verdict chip | `size="lg"` | **16 px** | body is 14 px; nothing else in the app uses `lg` |
+| The count sentence | `--type-body` | 14 px | the identical sentence in `DecisionLine` is **12 px** |
+| Card padding | default | **24 px** | `ask-panel`, `source-panel` and the rail's own placeholder card use **20 px** |
+
+Two facts make the diagnosis exact. **`--type-h4` and `--type-body-lg` are both 17 px**, so in
+`RecommendationCard` the title and the body were the same size and differed only in weight —
+the card had no internal hierarchy at all. And **the rail already contained a 20 px / 12 px
+card**: the placeholder at `desktop-workspace.tsx:270` shown before a verdict exists. The panel
+that replaced it jumped to 24 px / 17 px, so the rail was inconsistent with itself.
+
+Separately, **"CrossBid recommends" wrapped onto two lines**, because `Card` puts `actions` on
+the title's own flex row and the timestamp `Tag` never shrinks. A layout bug reading as a design
+problem.
+
+### The pass, and what it deliberately did not do
+
+Behind the `layout === 'rail'` flag the panel already carries, so **`wide` is untouched** and
+still renders the artboard at 900–1279 px and on the phone: cards to `padding={20}`, the
+rationale to `--type-body`, the count to `--type-body-sm`, the chip to `size="md"`, and the
+timestamp out of `actions` and under the title as a mono line.
+
+**Card titles stay at 17 px**, against the option that was first agreed. Three reasons, and they
+are the interesting part of this entry. The design system names 17 px semibold for a card title
+(`readme.md:66`, `:97`). The rail's titles are already *identical* to "Ask the tender" beside
+them — they match, and shrinking them would break that. And **no component in this repo varies
+font size by prop**: every existing density prop (`isPhone`, `variant`, `isCompact`) is a
+*touch-target* axis, so a type axis would have been a new concept invented for one card. The
+card read heavy because the **body** was title-sized; fixing the body gives the title its job
+back.
+
+The levers used are the ones the app already has — the `Card` `padding` prop, `VerdictChip`
+`size`, and the existing tokens. No new mechanism.
+
+### A bug this made visible
+
+The pinned decision of ADR-0106 sits over the scrolling evidence, and it had been **cutting the
+paragraph above it mid-word against an opaque card edge** — which reads as a rendering fault
+rather than as a layer. It shows plainly in the regenerated guide shot 03. A short fade to the
+frame's own colour above the footer fixes it: the design system's `--protect-gradient` idea on a
+white ground. The footer's `max-h-[60%]` also became `max-h-[60dvh]`, because a percentage
+resolved against a parent with no definite height and so constrained nothing.
+
+### Tests
+
+Two browser assertions, written as relationships rather than as pixel values so a token change
+cannot look like a regression: **nothing in the rail's recommendation is larger than the
+matrix's own body text**, and **the recommendation's title is one line**. Measured red at 17 px
+against the matrix's 14, and at two lines with the `Tag` back in `actions` (ADR-0063).
+
+248 frontend unit tests and 44 browser journeys green, plus lint, typecheck, prettier and build.
