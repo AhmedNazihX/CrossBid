@@ -440,3 +440,32 @@
 .textLayer .markedContent {
   display: contents;
 }
+
+/*
+ * The Ask box's rotating question (ADR-0107).
+ *
+ * Two named keyframes rather than a transition, because the entering question has to start
+ * from below and a transition cannot animate an element that has only just mounted. Both are
+ * used through `motion-safe:` — and the rotation itself does not start at all under
+ * `prefers-reduced-motion`, so these never run there.
+ */
+@keyframes ask-placeholder-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ask-placeholder-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}

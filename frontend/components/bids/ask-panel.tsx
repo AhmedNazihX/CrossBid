@@ -14,6 +14,7 @@ import { Icon } from '@/components/ui/icons'
 import { Notice } from '@/components/ui/notice'
 import { MAX_QUESTION_CHARS, type ChatTurn } from '@/lib/chat'
 import { formatTime } from '@/lib/format'
+import { useRotatingPlaceholder } from './use-rotating-placeholder'
 import type { BidChatController, ChatExchange } from './use-bid-chat'
 
 export interface AskPanelProps {
@@ -115,8 +116,9 @@ export function AskPanel({
   const hintId = `${fieldId}-hint`
   const isPhone = variant === 'phone'
   const isBanner = variant === 'banner'
-  const size = isPhone ? 'md' : 'sm'
   const isBlocked = chat.blockedUntil !== undefined
+  // Paused the moment there is something to read in the box, and while sending.
+  const placeholder = useRotatingPlaceholder(draft !== '' || chat.isAsking)
   const canSend = draft.trim() !== '' && !chat.isAsking && !isBlocked
   const newestFirst = [...chat.exchanges].reverse()
 
@@ -162,17 +164,41 @@ export function AskPanel({
         </label>
         <div className="flex items-start gap-3">
           <Icon name="search" size={20} className="mt-1.5 shrink-0 text-text-muted" />
-          <textarea
-            id={fieldId}
-            rows={2}
-            value={draft}
-            maxLength={MAX_QUESTION_CHARS}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={handleKeyDown}
-            aria-describedby={hintId}
-            placeholder="Ask about this tender…"
-            className="w-full min-w-0 resize-none bg-transparent py-1.5 text-base leading-[1.5] text-text-primary outline-none placeholder:text-text-placeholder"
-          />
+          <div className="relative min-w-0 flex-1">
+            <textarea
+              id={fieldId}
+              rows={2}
+              value={draft}
+              maxLength={MAX_QUESTION_CHARS}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleKeyDown}
+              aria-describedby={hintId}
+              className="w-full min-w-0 resize-none bg-transparent py-1.5 text-base leading-[1.5] text-text-primary outline-none"
+            />
+            {/* The rotating question, drawn over the empty field rather than set as its
+                `placeholder`, because a `placeholder` attribute cannot animate. It is
+                `aria-hidden` and not focusable: the box is named by its `<label>`, which never
+                changes, so nothing a screen reader reads is moving. */}
+            {draft === '' && (
+              <span
+                aria-hidden="true"
+                data-testid="ask-placeholder"
+                className="pointer-events-none absolute inset-x-0 top-1.5 block truncate text-base leading-[1.5] text-text-placeholder"
+              >
+                <span
+                  key={placeholder.key}
+                  className={cn(
+                    'block truncate',
+                    placeholder.isLeaving
+                      ? 'motion-safe:animate-[ask-placeholder-out_200ms_var(--ease-out)_forwards]'
+                      : 'motion-safe:animate-[ask-placeholder-in_240ms_var(--ease-out)]'
+                  )}
+                >
+                  {placeholder.text}
+                </span>
+              </span>
+            )}
+          </div>
         </div>
         <div className="mt-3.5 flex items-end justify-between gap-3">
           <p
@@ -184,13 +210,16 @@ export function AskPanel({
           >
             {hint}
           </p>
+          {/* Icon-only and round, so the toolbar row reads as a bar rather than as a second
+              sentence. It keeps a real name for anyone who cannot see the arrow. */}
           <Button
             type="submit"
-            size={size}
+            shape="circle"
+            size={isPhone ? 'md' : 'sm'}
             disabled={!canSend}
-            iconRight={<Icon name="arrow" size={16} />}
+            aria-label={chat.isAsking ? 'Asking…' : 'Ask the tender'}
           >
-            {chat.isAsking ? 'Asking…' : 'Ask'}
+            <Icon name="arrow" size={16} />
           </Button>
         </div>
       </form>

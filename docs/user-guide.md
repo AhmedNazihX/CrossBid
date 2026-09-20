@@ -132,7 +132,8 @@ decided, not from what the agent guessed.
 
 ### Ask the tender
 
-**Ask the tender** sits above the matrix and answers questions about this tender in your language —
+**Ask the tender** sits above the matrix and answers questions about this tender in your
+language. The empty box cycles through questions it can answer, if you want a starting point —
 *"what is the deadline for questions?"*, *"which form do I need for subcontractors?"* Every
 answer carries citations, and clicking one opens the page it came from. An answer it cannot
 cite comes back saying so rather than guessing.

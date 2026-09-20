@@ -7379,3 +7379,56 @@ asserts.
 
 248 frontend unit tests and 38 browser journeys green, plus lint, typecheck, prettier and
 build. Guide shot 01 fails on `main` as well and is untouched.
+
+## ADR-0107 — The Ask box asks a question instead of instructing one
+
+**Date:** 2026-09-20 · **Stories:** follow-up to S4.6.1 · **Status:** accepted
+**No artboard.** The ask bar of `Dashboard.dc.html` is what the box was built from, and the
+canvas has nothing for the rotation; this entry is the deviation ADR-0014 asks for.
+
+The box said *"Ask about this tender…"*, which tells a bidder the mechanism and nothing about
+what it is good for. The reference the user gave — an AI chat input with a placeholder that
+cycles — answers a different question: *what would I even ask?* So the empty box now shows a
+real question that changes every few seconds, and `ASK_PLACEHOLDERS` holds six that a tender
+pack can actually answer ("What is the deadline for questions?", "Which form do I need for
+subcontractors?", …). **No microphone and no attachment**: there is no speech-to-text here and
+nothing on this route takes an upload, so a control for either would be a promise the product
+does not keep.
+
+### The animation is decoration, and it is built so that it stays decoration
+
+A `placeholder` attribute cannot animate, so the question is an overlay drawn over the empty
+field. That would be an accessibility regression if it were also the field's name, so it is
+**`aria-hidden`** and the box keeps the `<label>` it already had — *"Your question about this
+tender"*, which never changes. Nothing a screen reader reads moves.
+
+**It stops for three reasons.** As soon as the box has text, because a suggestion competing
+with a half-typed question is noise. While the tab is hidden, because a timer firing into a
+background tab is work nobody sees. And **under `prefers-reduced-motion: reduce` it never
+starts** — not "the same carousel without the slide". WCAG 2.2.2 is about *auto-updating*
+information rather than only about movement, so a reader who asked for less motion gets one
+question that stays put.
+
+### Two shapes that had to be props rather than classes
+
+`Button` gained `shape="circle"` for the icon-only send control. It could not be a `className`:
+`cn` here is the `cn` package and not `tailwind-merge`, so `rounded-full size-9` from a caller
+would have been emitted *alongside* `rounded-md px-3` with stylesheet order picking the winner.
+That is the same trap `SheetContent`'s `widthClass` was given a prop for (ADR-0105), and it is
+worth stating as a rule: **in this repo a variant is a prop, because a class cannot override.**
+
+### What is tested, and why it is all in the browser
+
+`e2e/ask-panel.spec.ts`. None of this is visible to Vitest: jsdom has no timers a user can
+watch, no `prefers-reduced-motion`, and no way to tell a rotation that stopped from one that
+never started. Four journeys — the question really changes; it disappears the moment the box
+has text; under reduced motion it never moves; and the icon-only send control carries a name
+and is dead until there is something to send.
+
+The reduced-motion test is the one that could have been worthless, because it asserts that
+*nothing* happened and would pass just as well if the rotation were broken everywhere. It was
+measured red by making the hook ignore `prefersReducedMotion` — and the "stops on typing" test
+by leaving the overlay mounted — so both are known to fail for the defect they name (ADR-0063).
+
+248 frontend unit tests and 42 browser journeys green, plus lint, typecheck, prettier and
+build.

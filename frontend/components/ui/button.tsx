@@ -11,6 +11,8 @@ import * as Slot from '@radix-ui/react-slot'
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'inverse' | 'danger'
 export type ButtonSize = 'sm' | 'md' | 'lg'
+/** `circle` is the square-sided icon-only button — the Ask box's send control (ADR-0107). */
+export type ButtonShape = 'default' | 'circle'
 
 const VARIANT_CLASSES: Readonly<Record<ButtonVariant, string>> = {
   primary:
@@ -31,9 +33,24 @@ const SIZE_CLASSES: Readonly<Record<ButtonSize, string>> = {
   lg: 'h-12 gap-2 px-5 text-[length:var(--text-md)]',
 }
 
+/**
+ * The circular shape's sizes, which **replace** the ones above rather than being layered over
+ * them. `cn` here is the `cn` package and not `tailwind-merge`, so a caller passing
+ * `rounded-full size-9` through `className` would get `px-3` and `rounded-md` emitted as well
+ * and leave the winner to stylesheet order — the same trap `SheetContent`'s `widthClass` was
+ * given a prop for (ADR-0105).
+ */
+const CIRCLE_SIZE_CLASSES: Readonly<Record<ButtonSize, string>> = {
+  sm: 'size-8',
+  md: 'size-10',
+  lg: 'size-12',
+}
+
 export interface ButtonProps extends React.ComponentProps<'button'> {
   readonly variant?: ButtonVariant
   readonly size?: ButtonSize
+  /** `circle` drops the label padding for an icon-only control; give it an `aria-label`. */
+  readonly shape?: ButtonShape
   /** 16 px glyph before the label. */
   readonly icon?: React.ReactNode
   /** 16 px glyph after the label. */
@@ -46,6 +63,7 @@ export interface ButtonProps extends React.ComponentProps<'button'> {
 export function Button({
   variant = 'primary',
   size = 'md',
+  shape = 'default',
   icon,
   iconRight,
   fullWidth = false,
@@ -55,12 +73,14 @@ export function Button({
   type,
   ...rest
 }: ButtonProps) {
+  const isCircle = shape === 'circle'
   const classes = cn(
-    'inline-flex shrink-0 items-center justify-center rounded-md border font-medium leading-none whitespace-nowrap',
+    'inline-flex shrink-0 items-center justify-center border font-medium leading-none whitespace-nowrap',
+    isCircle ? 'rounded-full' : 'rounded-md',
     'transition-colors [transition-duration:var(--duration-fast)] [transition-timing-function:var(--ease-standard)]',
     'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
     VARIANT_CLASSES[variant],
-    SIZE_CLASSES[size],
+    isCircle ? CIRCLE_SIZE_CLASSES[size] : SIZE_CLASSES[size],
     fullWidth && 'flex w-full',
     className
   )
