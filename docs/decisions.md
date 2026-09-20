@@ -7293,3 +7293,89 @@ fails the build if recall drops. Restoring the old normalisation scores 297/311,
 
 239 frontend unit tests and 36 browser journeys green, plus lint, typecheck, prettier, build and
 `deps-check`. Guide shot 01 fails on `main` as well and is untouched.
+
+## ADR-0106 — The decision is pinned, and the gap list stops being endless
+
+**Date:** 2026-09-20 · **Stories:** follow-up to S4.5.3 · **Status:** accepted
+**Amends ADR-0104**, which gave the verdict the rail and stopped one step short.
+
+ADR-0104 fixed the verdict being hard to reach. It did not fix **the decision** being hard to
+reach, and the decision is the only thing on that screen a person is there to do. The rail
+stacked `CrossBid recommends` → gaps → `Your decision`, and measured at 1440×900:
+
+- the decision card alone is **670–720 px**, about **four fifths of the rail's entire 868 px
+  scroll viewport**;
+- `verdict-gaps.tsx` had **no cap and no collapse** — the FR bid's **142 gaps** put roughly
+  **ten thousand pixels** between the recommendation and the decision;
+- so Confirm rendered at **y=1257 in a 900 px window**, measured.
+
+### The suite had already photographed this and I called it a screenshot quirk
+
+Guide shot 04 carried `setViewportSize({ width: 1440, height: 1600 })` with a comment I wrote
+myself: at 900 px the shot "came out with *Your decision* cut in half and the rest of the box
+blank". That was the defect, and the taller window was a workaround for it rather than a
+framing choice. Recorded here because a test that photographs a bug and calls it a quirk is
+worse than no test.
+
+### What the artboard does that a 380 px rail cannot
+
+`Verdict.dc.html` is a **full 1440×900 screen**: `minmax(0,1.4fr) minmax(0,1fr)`, the decision
+card a right-hand column **top-aligned with the recommendation**, and **four** gap rows. Both
+of the things that make it work are unavailable in the rail — the two columns need 768 px of
+panel for `@3xl` to fire, and the gap list had grown from four rows to 142.
+
+So the rail gets a different shape, and the artboard keeps its own:
+
+- `VerdictPanel` takes `layout: 'wide' | 'rail'`. **`wide` is unchanged** and is still what the
+  900–1279 px width and the phone render — the artboard's layout, which is *only* reachable
+  below `xl`, an inversion worth knowing.
+- **`rail`** is a flex column: the recommendation and the gaps scroll, the decision is the
+  footer. `min-h-0` on the column and on the scrolling child is the load-bearing pair — a flex
+  child will not shrink below its content without it, and the first build of this shipped
+  without it on the panel root and changed nothing at all.
+- The footer is **also `sticky bottom-0`**. The rail's box starts ~450 px down the page, so a
+  viewport-height rail has its foot below the fold until the rail pins; sticking the decision
+  to the bottom of the window as well puts it on screen from the first paint. Measured: y=1257
+  without it, **y=835 at the top of the page and y=819 after scrolling** with it.
+
+### The decision form shows the common path and hides the rest
+
+Confirming the agent is what a reviewer usually does, and the agent's own decision is already
+preselected — so the common path is two controls. In `rail` the card is the acknowledgement,
+a Confirm that **names the decision it will record** ("Confirm · Conditional"), and a
+disclosure for the four options and the override reason. Nothing is removed and no rule
+changes.
+
+**The disclosure opens itself whenever a refusal would point inside it.** That is the whole
+risk of collapsing a form: "required" is a dead end when the field is behind a panel. The
+refusal sets a target and an effect moves focus once React has drawn it, because focusing an
+element that is not yet rendered lands on nothing. A bid the agent never scored starts open —
+there is nothing to confirm.
+
+### The gap lists are capped at five
+
+The artboard draws four. Rendering all 142 was drift, and it was the single biggest
+contributor to the fold. The count rides on the control — "Show all 142 · 137 more" — so the
+number is a fact a reviewer has whether or not they open the list.
+
+### The net that was not there
+
+`verdict-decision-form.test.tsx` was 41 lines asserting one `maxLength`, and **no test anywhere
+clicked Confirm**. The override gate, the acknowledgement gate, the blocked-row ordering and
+the one-shot submit were covered only by ADR-0028's manual walk through a live FR bid. That was
+tolerable for a flat card and is not for one with a disclosure in it, so this change adds the
+net before moving under it: **nine unit tests** for the gates and the compact shape, and **two
+browser journeys** — the decision on screen from the first paint, and the first test in this
+repo that actually confirms a verdict end to end.
+
+Each was measured failing with its fix reverted: the gate tests against the acknowledgement
+check and the blocked-row ordering, the disclosure test against `setChoicesOpen(true)`, and the
+browser tests against `layout="wide"` with the gap cap removed (Confirm back at y=1257) and
+against the acknowledgement gate (submitted on the first click).
+
+Guide shot 04 is now 1200 px — enough for the whole rail in one image, and **no longer hiding
+anything**: at 900 px the decision is whole and pinned, which is what the new browser test
+asserts.
+
+248 frontend unit tests and 38 browser journeys green, plus lint, typecheck, prettier and
+build. Guide shot 01 fails on `main` as well and is untouched.

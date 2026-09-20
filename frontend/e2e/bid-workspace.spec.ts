@@ -326,6 +326,74 @@ test.describe('Bid workspace — the desktop layout of ADR-0104', () => {
   })
 
   /**
+   * The decision is on screen, and it is not the last thing in the rail (ADR-0106).
+   *
+   * ADR-0104 put the verdict in the rail and stopped there. The decision form is 670–720 px —
+   * four fifths of the rail's whole 868 px viewport — and `verdict-gaps.tsx` drew every gap it
+   * was given, so on the FR bid's 142 the reviewer's one action sat about ten thousand pixels
+   * below the recommendation. This fixture carries twelve, which is enough to push it off
+   * screen under the old layout and small enough to stay honest.
+   *
+   * Measured red twice: with the gap cap removed from `verdict-gaps.tsx` **and** with
+   * `layout="rail"` reverted to `wide`, the Confirm button lands at y=1257 in a 900 px window.
+   */
+  test('the decision is in the rail’s foot, on screen from the first paint', async ({
+    api,
+    page,
+  }) => {
+    api.on('GET', `/bids/${BID_ID}`, { status: 200, json: gappyBidFixture(12) })
+    await page.reload()
+
+    const confirm = page.getByRole('button', { name: /^Confirm/ })
+    await expect(confirm).toBeVisible()
+    // Not merely rendered somewhere in a scroller: inside the window, with no scrolling at all.
+    await expect(confirm).toBeInViewport()
+    // The acknowledgement's own input is `sr-only` (the painted box is a sibling span), so the
+    // visible text is what a reviewer actually sees and what can actually be measured.
+    await expect(page.getByText('I have reviewed the compliance matrix')).toBeInViewport()
+
+    // And it stays there while the evidence above it scrolls.
+    await page.evaluate(() => window.scrollTo(0, 800))
+    await expect(confirm).toBeInViewport()
+  })
+
+  /**
+   * The review round-trip, which **nothing tested before ADR-0106** — `grep "Confirm verdict"`
+   * over the suite matched no spec, so the acknowledgement gate, the one-shot submit and the
+   * recorded state were covered only by ADR-0028's manual walk through a live bid.
+   *
+   * Measured red by removing the `hasReviewed` gate from `handleSubmit`: the first click then
+   * submits and the "not submitted" notice never appears.
+   */
+  test('a verdict is confirmed, and only after the matrix is acknowledged', async ({
+    api,
+    page,
+  }) => {
+    const parked = awaitingReviewBidFixture()
+    let posted: unknown
+    api.on('POST', `/bids/${BID_ID}/review`, (request) => {
+      posted = JSON.parse(request.body ?? '{}')
+      return {
+        status: 200,
+        json: { ...parked, status: 'complete', decision: 'conditional' },
+      }
+    })
+
+    const confirm = page.getByRole('button', { name: /^Confirm/ })
+    await confirm.click({ timeout: CLICK_BUDGET_MS })
+    // Refused, in the words the acknowledgement itself uses.
+    await expect(page.getByText('This review was not submitted')).toBeVisible()
+    expect(posted, 'the review was sent before it was acknowledged').toBeUndefined()
+
+    // Clicking the label is what a reviewer does; the input itself is `sr-only`.
+    await page.getByText('I have reviewed the compliance matrix').click()
+    await confirm.click({ timeout: CLICK_BUDGET_MS })
+
+    await expect(page.getByText('Your decision is recorded')).toBeVisible()
+    expect(posted).toMatchObject({ decision: 'conditional' })
+  })
+
+  /**
    * The rail is `sticky` and scrolls internally rather than leaving the screen. The measured
    * page is 23 204 px tall on the FR bid and a non-sticky column had gone by row 20.
    *
@@ -356,6 +424,24 @@ test.describe('Bid workspace — the desktop layout of ADR-0104', () => {
     await expect(rail).toBeInViewport()
   })
 })
+
+/** The parked bid with `count` open items, which is what pushes the decision down the rail. */
+function gappyBidFixture(count: number) {
+  const base = awaitingReviewBidFixture()
+  const requirement = base.requirements[0]
+  const verdict = base.verdict
+  if (requirement === undefined || verdict === null) {
+    throw new Error('the parked fixture no longer carries a requirement and a verdict')
+  }
+  const gaps = Array.from({ length: count }, (_unused, index) => ({
+    requirement_id: requirement.id,
+    severity: index % 3 === 0 ? ('blocking' as const) : ('open_item' as const),
+    summary: `Lücke ${index + 1}: eine Anforderung, die der Bieter noch nicht belegt hat.`,
+    required: 'Drei Geschäftsjahre',
+    actual: 'Zwei Geschäftsjahre',
+  }))
+  return { ...base, verdict: { ...verdict, gaps } }
+}
 
 /**
  * The parked bid with its single requirement repeated `count` times, ids made unique so the

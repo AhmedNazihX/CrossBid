@@ -115,7 +115,14 @@ One row per requirement the tender places on you. Four things to read:
 The verdict has the right-hand rail to itself and stays there while you scroll the matrix. It
 gives the agent's recommendation — **go**, **conditional**, **no-go**, or **insufficient
 evidence** — with the count of mandatory requirements supported and the gaps that remain. Each
-gap names what was required and what you actually have.
+gap names what was required and what you actually have; a long list shows the first few and
+says how many more there are.
+
+**Your decision sits at the foot of the rail and stays in view.** Confirming what CrossBid
+recommends takes two things: tick *I have reviewed the compliance matrix*, then press the
+button, which names the decision it will record. To decide otherwise, open *Record a different
+decision* — the four options and the reason box are there, and a reason is required whenever
+your decision differs from the agent's.
 
 **The verdict is advisory and is labelled so.** Open *Review verdict* to go through the matrix
 row by row: change a status, give a reason, attach a document. Your edits are held locally

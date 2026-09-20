@@ -68,6 +68,13 @@ export interface VerdictPanelProps {
   readonly onReviewed: (bid: BidResponse) => void
   /** Renders "Back to matrix" when given; the caller decides what that means. */
   readonly onBackToMatrix?: () => void
+  /**
+   * `wide` is the artboard: the evidence and the decision side by side once the panel itself
+   * is wide enough. `rail` is the workspace's 380 px column (ADR-0106): the evidence scrolls
+   * and the decision is pinned under it, because side by side cannot happen at that width and
+   * stacked put the decision below ten thousand pixels of gaps.
+   */
+  readonly layout?: 'wide' | 'rail'
   readonly className?: string
 }
 
@@ -77,6 +84,7 @@ export function VerdictPanel({
   blockedRowCount = 0,
   onReviewed,
   onBackToMatrix,
+  layout = 'wide',
   className,
 }: VerdictPanelProps) {
   const { state, isLocked, submit } = useReviewSubmission(bid.id, onReviewed)
@@ -101,44 +109,76 @@ export function VerdictPanel({
   const current = settledBid ?? bid
   const verdict = current.verdict ?? undefined
 
+  const isRail = layout === 'rail'
+  const evidence = (
+    <>
+      <RecommendationCard bid={current} verdict={verdict} />
+      {verdict !== undefined && <VerdictGaps gaps={verdict.gaps} labels={labels} />}
+    </>
+  )
+  const decision = (
+    <>
+      {state.phase === 'reviewed' && (
+        <RecordedCard
+          bid={state.bid}
+          decision={submittedDecision}
+          onBackToMatrix={onBackToMatrix}
+        />
+      )}
+      {state.phase === 'conflict' && (
+        <ConflictCard bid={state.bid} onBackToMatrix={onBackToMatrix} />
+      )}
+      {(state.phase === 'editing' || state.phase === 'submitting') &&
+        (isAwaitingReview(bid) ? (
+          <VerdictDecisionForm
+            agentDecision={verdict?.decision}
+            isLocked={isLocked}
+            isSubmitting={state.phase === 'submitting'}
+            submitError={state.phase === 'editing' ? state.error : undefined}
+            blockedRowCount={blockedRowCount}
+            onSubmit={handleSubmit}
+            onBackToMatrix={onBackToMatrix}
+            isCompact={isRail}
+          />
+        ) : (
+          <NotParkedCard bid={bid} onBackToMatrix={onBackToMatrix} />
+        ))}
+    </>
+  )
+  // Rendered from the first paint, empty, so that a screen reader is listening before the
+  // decision leaves the screen — a live region added with its text is not read.
+  const liveRegion = (
+    <p role="status" aria-live="polite" className="sr-only">
+      {announce(state.phase)}
+    </p>
+  )
+
+  if (isRail) {
+    return (
+      // `min-h-0` on the column and on the scrolling child is the load-bearing pair: a flex
+      // child will not shrink below its content without it, so the body would never scroll and
+      // the decision would be pushed straight back out of the rail. The footer is capped at
+      // 60 % and scrolls itself, so an expanded form is usable on a short window too.
+      <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col gap-4', className)}>
+        {liveRegion}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">{evidence}</div>
+        {/* `sticky bottom-0` on top of being the flex footer, because the rail's own box
+            starts ~450 px down the page: capped to the viewport height, its foot sits below
+            the fold until the rail pins. Sticking the decision to the bottom of the viewport
+            as well means it is on screen from the first paint and stays there — measured at
+            y=1257 (off screen) without this line and y=860 with it. The card is opaque, so
+            the evidence scrolls under it rather than through it. */}
+        <div className="sticky bottom-0 max-h-[60%] shrink-0 overflow-y-auto">{decision}</div>
+      </div>
+    )
+  }
+
   return (
     <div className={cn('@container', className)}>
       <div className="grid items-start gap-5 @3xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        {/* Rendered from the first paint, empty, so that a screen reader is listening before
-          the decision leaves the screen — a live region added with its text is not read. */}
-        <p role="status" aria-live="polite" className="sr-only">
-          {announce(state.phase)}
-        </p>
-        <div className="flex min-w-0 flex-col gap-5">
-          <RecommendationCard bid={current} verdict={verdict} />
-          {verdict !== undefined && <VerdictGaps gaps={verdict.gaps} labels={labels} />}
-        </div>
-        <div className="flex min-w-0 flex-col gap-5">
-          {state.phase === 'reviewed' && (
-            <RecordedCard
-              bid={state.bid}
-              decision={submittedDecision}
-              onBackToMatrix={onBackToMatrix}
-            />
-          )}
-          {state.phase === 'conflict' && (
-            <ConflictCard bid={state.bid} onBackToMatrix={onBackToMatrix} />
-          )}
-          {(state.phase === 'editing' || state.phase === 'submitting') &&
-            (isAwaitingReview(bid) ? (
-              <VerdictDecisionForm
-                agentDecision={verdict?.decision}
-                isLocked={isLocked}
-                isSubmitting={state.phase === 'submitting'}
-                submitError={state.phase === 'editing' ? state.error : undefined}
-                blockedRowCount={blockedRowCount}
-                onSubmit={handleSubmit}
-                onBackToMatrix={onBackToMatrix}
-              />
-            ) : (
-              <NotParkedCard bid={bid} onBackToMatrix={onBackToMatrix} />
-            ))}
-        </div>
+        {liveRegion}
+        <div className="flex min-w-0 flex-col gap-5">{evidence}</div>
+        <div className="flex min-w-0 flex-col gap-5">{decision}</div>
       </div>
     </div>
   )

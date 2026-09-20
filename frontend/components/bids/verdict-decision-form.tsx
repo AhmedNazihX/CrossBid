@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { cn } from 'cn'
 
 import { MAX_REASON_CHARS } from '@/components/matrix/row-edit-rules'
@@ -27,6 +27,16 @@ import {
  * pressing the button that commits the bid. Nothing is silently disabled instead: a control
  * that cannot be pressed cannot explain itself, so Confirm stays live until the call is
  * actually in flight and a refusal names what is missing and puts the cursor there.
+ *
+ * **`isCompact` is the rail's shape (ADR-0106), and it hides nothing that is needed.** Drawn
+ * whole the card is 670–720 px, which is four fifths of the 380 px rail's entire scroll
+ * viewport, so the decision sat below everything. Confirming the agent is the common path and
+ * needs two controls — the acknowledgement and the button — so those stay; the four radios and
+ * the reason box move behind a disclosure. **The disclosure opens itself whenever a refusal
+ * would otherwise point at something the reviewer cannot see**, which is the whole risk of
+ * collapsing a form and is why `pendingFocus` exists: the field has to be rendered before it
+ * can be focused, so the refusal sets the target and an effect moves focus once React has
+ * drawn it. A bid the agent never scored starts expanded — there is nothing to confirm.
  */
 export interface VerdictDecisionFormProps {
   /** The agent's advisory decision, or `undefined` when it never scored this bid. */
@@ -45,6 +55,8 @@ export interface VerdictDecisionFormProps {
   readonly blockedRowCount: number
   readonly onSubmit: (decision: Decision, overrideReason: string | undefined) => void
   readonly onBackToMatrix?: () => void
+  /** The rail's shape: the common path only, with the four choices behind a disclosure. */
+  readonly isCompact?: boolean
 }
 
 const REASON_HINT =
@@ -73,6 +85,7 @@ export function VerdictDecisionForm({
   blockedRowCount,
   onSubmit,
   onBackToMatrix,
+  isCompact = false,
 }: VerdictDecisionFormProps) {
   // Seeded once, which is sound because the agent's verdict cannot change while the bid is
   // parked: confirming is the common path, so the agent's own decision starts selected.
@@ -81,8 +94,12 @@ export function VerdictDecisionForm({
   const [hasReviewed, setHasReviewed] = useState(false)
   const [reasonError, setReasonError] = useState<string | undefined>(undefined)
   const [formError, setFormError] = useState<string | undefined>(undefined)
+  // A bid the agent never scored has nothing to confirm, so the choices cannot start hidden.
+  const [isChoicesOpen, setChoicesOpen] = useState(agentDecision === undefined)
+  const [pendingFocus, setPendingFocus] = useState<'choice' | 'reason' | undefined>(undefined)
 
   const groupName = useId()
+  const choicesId = useId()
   const reasonId = useId()
   const reasonHintId = `${reasonId}-hint`
   const firstChoiceRef = useRef<HTMLInputElement>(null)
@@ -91,6 +108,19 @@ export function VerdictDecisionForm({
 
   const isReasonRequired = isOverride(agentDecision, decision)
   const message = formError ?? submitError
+  const areChoicesShown = !isCompact || isChoicesOpen
+  const chosen = DECISION_CHOICES.find((choice) => choice.value === decision)
+
+  // Focus after the disclosure has opened, not before: a refusal that points at a field React
+  // has not drawn yet lands on nothing, which is exactly the failure collapsing a form invites.
+  useEffect(() => {
+    if (pendingFocus === undefined) {
+      return
+    }
+    const target = pendingFocus === 'reason' ? reasonRef.current : firstChoiceRef.current
+    target?.focus()
+    setPendingFocus(undefined)
+  }, [pendingFocus])
 
   function handleChoose(next: Decision) {
     setDecision(next)
@@ -107,14 +137,16 @@ export function VerdictDecisionForm({
     }
     if (decision === undefined) {
       setFormError(NO_DECISION_CHOSEN)
-      firstChoiceRef.current?.focus()
+      setChoicesOpen(true)
+      setPendingFocus('choice')
       return
     }
     const trimmed = reason.trim()
     if (isOverride(agentDecision, decision) && trimmed.length === 0) {
       setFormError(undefined)
       setReasonError(OVERRIDE_NEEDS_A_REASON)
-      reasonRef.current?.focus()
+      setChoicesOpen(true)
+      setPendingFocus('reason')
       return
     }
     if (!hasReviewed) {
@@ -136,81 +168,100 @@ export function VerdictDecisionForm({
   return (
     <Card title="Your decision" headingLevel="h2" icon={<Icon name="shield" size={20} />}>
       <form onSubmit={handleSubmit} aria-busy={isSubmitting} noValidate>
-        <fieldset className="m-0 min-w-0 border-0 p-0">
-          <legend className="sr-only">Your decision on this tender</legend>
-          <div className="flex flex-col gap-3">
-            {DECISION_CHOICES.map((choice, index) => (
-              <label
-                key={choice.value}
-                className="flex cursor-pointer items-start gap-2.5 [font:var(--type-body)] has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-50"
-              >
-                <input
-                  ref={index === 0 ? firstChoiceRef : undefined}
-                  type="radio"
-                  name={groupName}
-                  value={choice.value}
-                  checked={decision === choice.value}
-                  disabled={isLocked}
-                  onChange={() => handleChoose(choice.value)}
-                  className="peer sr-only"
-                />
-                <span
-                  aria-hidden="true"
-                  className="mt-px inline-flex size-[18px] shrink-0 rounded-full border border-border-strong bg-surface-card transition-[border-width] [transition-duration:var(--duration-fast)] peer-checked:border-[5px] peer-checked:border-blue-500 peer-focus-visible:shadow-[var(--shadow-focus)] peer-focus-visible:focus-ring"
-                />
-                <span className="min-w-0">
-                  <span className="block leading-5 font-medium [overflow-wrap:anywhere]">
-                    {choice.label}
-                    {choice.value === agentDecision && (
-                      <span className="font-normal text-text-muted">
-                        {' '}
-                        · CrossBid&rsquo;s recommendation
-                      </span>
-                    )}
-                  </span>
-                  <span className="block [font:var(--type-body-sm)] text-text-muted [overflow-wrap:anywhere]">
-                    {choice.description}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <Field
-          id={reasonId}
-          label={`Reason for overriding ${isReasonRequired ? '(required)' : '(optional)'}`}
-          hint={REASON_HINT}
-          error={reasonError}
-          hintId={reasonHintId}
-          className="mt-3.5"
-        >
-          <textarea
-            ref={reasonRef}
-            id={reasonId}
-            name="override_reason"
-            rows={4}
-            value={reason}
-            // The server's `MAX_COMMENT_CHARS`, mirrored as the row editor and the feedback
-            // comment already do (ADR-0064: both sides hold the fact, so the server's number
-            // wins). Without it this was the one box that could send a reason the server
-            // refused, and the 422 came back as a pydantic list (audit M18).
-            maxLength={MAX_REASON_CHARS}
+        {isCompact && (
+          // A real disclosure: the control names what it reveals, says whether it is open, and
+          // points at the region, so a screen reader is told the same thing the chevron says.
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="-ml-3 mb-1"
+            aria-expanded={isChoicesOpen}
+            aria-controls={choicesId}
             disabled={isLocked}
-            required={isReasonRequired}
-            aria-describedby={reasonHintId}
-            aria-invalid={reasonError === undefined ? undefined : true}
-            onChange={(event) => {
-              setReason(event.target.value)
-              setReasonError(undefined)
-            }}
-            placeholder="What the agent could not see, and why you are deciding otherwise."
-            className={cn(
-              'min-h-[84px] w-full rounded-md border bg-surface-card px-3 py-2.5 [font:var(--type-body)] text-text-primary shadow-xs transition-shadow [transition-duration:var(--duration-fast)] placeholder:text-text-placeholder focus:border-border-focus focus:shadow-[var(--shadow-focus)] disabled:opacity-50',
-              reasonError === undefined ? 'border-border-default' : 'border-status-danger'
-            )}
-          />
-        </Field>
+            onClick={() => setChoicesOpen((open) => !open)}
+            iconRight={<Icon name={isChoicesOpen ? 'chev' : 'chevR'} size={16} />}
+          >
+            {isChoicesOpen ? 'Keep CrossBid’s recommendation' : 'Record a different decision'}
+          </Button>
+        )}
+        <div id={choicesId} hidden={!areChoicesShown}>
+          <fieldset className="m-0 min-w-0 border-0 p-0">
+            <legend className="sr-only">Your decision on this tender</legend>
+            <div className="flex flex-col gap-3">
+              {DECISION_CHOICES.map((choice, index) => (
+                <label
+                  key={choice.value}
+                  className="flex cursor-pointer items-start gap-2.5 [font:var(--type-body)] has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-50"
+                >
+                  <input
+                    ref={index === 0 ? firstChoiceRef : undefined}
+                    type="radio"
+                    name={groupName}
+                    value={choice.value}
+                    checked={decision === choice.value}
+                    disabled={isLocked}
+                    onChange={() => handleChoose(choice.value)}
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="mt-px inline-flex size-[18px] shrink-0 rounded-full border border-border-strong bg-surface-card transition-[border-width] [transition-duration:var(--duration-fast)] peer-checked:border-[5px] peer-checked:border-blue-500 peer-focus-visible:shadow-[var(--shadow-focus)] peer-focus-visible:focus-ring"
+                  />
+                  <span className="min-w-0">
+                    <span className="block leading-5 font-medium [overflow-wrap:anywhere]">
+                      {choice.label}
+                      {choice.value === agentDecision && (
+                        <span className="font-normal text-text-muted">
+                          {' '}
+                          · CrossBid&rsquo;s recommendation
+                        </span>
+                      )}
+                    </span>
+                    <span className="block [font:var(--type-body-sm)] text-text-muted [overflow-wrap:anywhere]">
+                      {choice.description}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <Field
+            id={reasonId}
+            label={`Reason for overriding ${isReasonRequired ? '(required)' : '(optional)'}`}
+            hint={REASON_HINT}
+            error={reasonError}
+            hintId={reasonHintId}
+            className="mt-3.5"
+          >
+            <textarea
+              ref={reasonRef}
+              id={reasonId}
+              name="override_reason"
+              rows={4}
+              value={reason}
+              // The server's `MAX_COMMENT_CHARS`, mirrored as the row editor and the feedback
+              // comment already do (ADR-0064: both sides hold the fact, so the server's number
+              // wins). Without it this was the one box that could send a reason the server
+              // refused, and the 422 came back as a pydantic list (audit M18).
+              maxLength={MAX_REASON_CHARS}
+              disabled={isLocked}
+              required={isReasonRequired}
+              aria-describedby={reasonHintId}
+              aria-invalid={reasonError === undefined ? undefined : true}
+              onChange={(event) => {
+                setReason(event.target.value)
+                setReasonError(undefined)
+              }}
+              placeholder="What the agent could not see, and why you are deciding otherwise."
+              className={cn(
+                'min-h-[84px] w-full rounded-md border bg-surface-card px-3 py-2.5 [font:var(--type-body)] text-text-primary shadow-xs transition-shadow [transition-duration:var(--duration-fast)] placeholder:text-text-placeholder focus:border-border-focus focus:shadow-[var(--shadow-focus)] disabled:opacity-50',
+                reasonError === undefined ? 'border-border-default' : 'border-status-danger'
+              )}
+            />
+          </Field>
+        </div>
 
         <div className="my-[18px] h-px bg-border-default" />
 
@@ -240,7 +291,11 @@ export function VerdictDecisionForm({
             icon={<Icon name="shield" size={16} />}
             className="flex-1"
           >
-            {isSubmitting ? 'Confirming…' : 'Confirm verdict'}
+            {isSubmitting
+              ? 'Confirming…'
+              : isCompact && chosen !== undefined
+                ? `Confirm · ${chosen.label}`
+                : 'Confirm verdict'}
           </Button>
           {onBackToMatrix !== undefined && (
             <Button type="button" variant="secondary" onClick={onBackToMatrix}>

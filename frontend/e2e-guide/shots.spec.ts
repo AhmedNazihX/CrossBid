@@ -315,11 +315,13 @@ test('04 — the verdict and its open items', async ({ api, page }) => {
     json: { feedback: [] },
   })
 
-  // The rail is height-capped to the viewport and scrolls inside itself, so at 900 px an
-  // element shot of it comes out clipped, with "Your decision" cut in half and the rest of
-  // the box blank (measured). A taller window is the whole fix: the rail is then shorter
-  // than its cap and the shot is the entire panel.
-  await page.setViewportSize({ width: 1440, height: 1600 })
+  // A taller window than the suite's 1440×900, and the reason is **not** the one it used to
+  // be. Before ADR-0106 this said 1600 px because at 900 px the shot came out with "Your
+  // decision" cut in half and the rest of the box blank — a defect, photographed. That is
+  // fixed: at 900 px the decision is now whole and pinned at the rail's foot. What 900 px
+  // cannot show is the gap list *behind* that pinned footer, and "its open items" is half of
+  // this shot's caption. 1200 px is the height at which the whole rail fits at once.
+  await page.setViewportSize({ width: 1440, height: 1200 })
   await page.goto(`/bids/${BID_ID}`)
   await expect(page.getByText(/mandatory requirements supported/i).first()).toBeVisible()
 

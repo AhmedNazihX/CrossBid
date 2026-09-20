@@ -39,6 +39,7 @@ import { Icon } from '@/components/ui/icons'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Notice } from '@/components/ui/notice'
 import { useRouter } from 'next/navigation'
+import { RAIL_MEDIA_QUERY, useMediaQuery } from '@/lib/use-media-query'
 import { Tag } from '@/components/ui/tag'
 import { describeApiError } from '@/lib/api-client'
 import { formatLanguage, formatLanguagePair, plural } from '@/lib/format'
@@ -54,6 +55,10 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
   // The bid stops existing when it is deleted, and the workspace polls it — so leaving is
   // part of the delete rather than something the bidder is left to do.
   const router = useRouter()
+  // The rail exists only from `xl`; below it the panel has the full content width and the
+  // artboard's two columns are right. `undefined` until the query has answered, which the
+  // `=== true` below treats as "not the rail" — the wider layout is the safe default.
+  const isRail = useMediaQuery(RAIL_MEDIA_QUERY)
   const {
     bid,
     pollError,
@@ -243,9 +248,15 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
             when taller than the viewport rather than pushing the page: the measured page is
             23 204 px tall and a non-sticky column had left the screen by row 20 (ADR-0060).
             Below `xl` the grid is one column and the rail follows the matrix, which is the
-            right order once it is no longer carrying the chat and the source with it. */}
-        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)] xl:overflow-y-auto">
-          <div id="verdict" className="scroll-mt-4">
+            right order once it is no longer carrying the chat and the source with it.
+
+            **The scroll lives inside the panel, not here (ADR-0106).** This element used to
+            carry `overflow-y-auto`, which meant the decision scrolled away with everything
+            above it; the panel's `rail` layout now owns the split, so the evidence scrolls and
+            the decision stays pinned under it. `min-h-0` is what lets the panel shrink to fit
+            rather than growing past the cap and taking the decision out of view again. */}
+        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)]">
+          <div id="verdict" className="scroll-mt-4 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
             {bid.verdict !== null ? (
               <VerdictPanel
                 bid={bid}
@@ -253,6 +264,7 @@ export function DesktopWorkspace({ state }: { readonly state: WorkspaceState }) 
                 blockedRowCount={edits.blockers.length}
                 onReviewed={onReviewed}
                 onBackToMatrix={undefined}
+                layout={isRail === true ? 'rail' : 'wide'}
               />
             ) : (
               <Card title="Verdict" icon={<Icon name="shield" size={20} />} padding={20}>

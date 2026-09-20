@@ -1,3 +1,8 @@
+'use client'
+
+import { useState } from 'react'
+
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Icon } from '@/components/ui/icons'
 import { Tag } from '@/components/ui/tag'
@@ -13,6 +18,12 @@ import { requirementLabel } from '@/lib/format'
  * and a different verdict and which merely improve the offer — a single list of "gaps" would
  * make an open item look like a blocker and push a bidder away from a tender they could win.
  * Each line carries the requirement's `REQ-` label so it can be found again in the matrix.
+ *
+ * **Each list is capped, and that is a correction rather than a feature.** `Verdict.dc.html`
+ * draws four gap rows; this rendered every one of them, and the FR bid has 142. At the rail's
+ * 380 px that is ten thousand pixels of cards between the recommendation and the decision the
+ * reviewer came to make — the fold ADR-0106 is about. The first few are shown and the rest are
+ * one click away, which is the artboard's shape with an honest count on it.
  */
 export interface VerdictGapsProps {
   readonly gaps: readonly Gap[]
@@ -43,6 +54,12 @@ const SECTIONS: readonly GapSection[] = [
   },
 ]
 
+/**
+ * How many gaps a list shows before it asks. Five rather than the artboard's four because a
+ * fifth line costs nothing and the round number reads as a cap rather than as all there is.
+ */
+const SHOWN_BY_DEFAULT = 5
+
 export function VerdictGaps({ gaps, labels }: VerdictGapsProps) {
   return (
     <>
@@ -52,27 +69,58 @@ export function VerdictGaps({ gaps, labels }: VerdictGapsProps) {
           return null
         }
         return (
-          <Card
+          <GapSectionCard
             key={section.severity}
-            title={section.title}
-            icon={<Icon name={section.icon} size={20} />}
-          >
-            <p className="m-0 mb-3.5 [font:var(--type-body-sm)] text-text-muted">
-              {section.summary}
-            </p>
-            <ul className="m-0 flex list-none flex-col gap-3 p-0">
-              {listed.map((gap) => (
-                <GapLine
-                  key={`${gap.requirement_id}-${gap.summary}`}
-                  gap={gap}
-                  label={labels.get(gap.requirement_id)}
-                />
-              ))}
-            </ul>
-          </Card>
+            section={section}
+            gaps={listed}
+            labels={labels}
+          />
         )
       })}
     </>
+  )
+}
+
+function GapSectionCard({
+  section,
+  gaps,
+  labels,
+}: {
+  readonly section: GapSection
+  readonly gaps: readonly Gap[]
+  readonly labels: ReadonlyMap<string, string>
+}) {
+  const [isExpanded, setExpanded] = useState(false)
+  const isCapped = gaps.length > SHOWN_BY_DEFAULT
+  const shown = isExpanded || !isCapped ? gaps : gaps.slice(0, SHOWN_BY_DEFAULT)
+  return (
+    <Card title={section.title} icon={<Icon name={section.icon} size={20} />}>
+      <p className="m-0 mb-3.5 [font:var(--type-body-sm)] text-text-muted">{section.summary}</p>
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+        {shown.map((gap) => (
+          <GapLine
+            key={`${gap.requirement_id}-${gap.summary}`}
+            gap={gap}
+            label={labels.get(gap.requirement_id)}
+          />
+        ))}
+      </ul>
+      {isCapped && (
+        // The count is on the control, not hidden behind it: "and 137 more" is the fact a
+        // reviewer needs to judge the tender, whether or not they open the list.
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-3 -ml-3"
+          aria-expanded={isExpanded}
+          onClick={() => setExpanded((open) => !open)}
+        >
+          {isExpanded
+            ? `Show the first ${SHOWN_BY_DEFAULT}`
+            : `Show all ${gaps.length} · ${gaps.length - SHOWN_BY_DEFAULT} more`}
+        </Button>
+      )}
+    </Card>
   )
 }
 
